@@ -111,7 +111,7 @@ class InternalMessageResource extends Resource
                     ->label('Assunto')
                     ->searchable()
                     ->sortable()
-                    ->weight(FontWeight::Medium)
+                    ->weight('font-medium')
                     ->limit(50),
                 
                 TextColumn::make('priority')

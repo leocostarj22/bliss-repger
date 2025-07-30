@@ -9,8 +9,17 @@ use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Actions\Action;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Auth;
+use App\Models\InternalMessage;
 use Filament\Support\Enums\FontWeight;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\Section;
+use Filament\Tables\Actions\ViewAction;
+use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Hidden;
+use Illuminate\Support\Facades\Auth;
+use Filament\Forms\Form;
 
 class InboxResource extends Resource
 {
@@ -36,8 +45,8 @@ class InboxResource extends Resource
                     ->label('Remetente')
                     ->searchable()
                     ->sortable()
-                    ->weight(fn (MessageRecipient $record): FontWeight => 
-                        $record->read_at ? FontWeight::Normal : FontWeight::Bold
+                    ->weight(fn (MessageRecipient $record): string => 
+                        $record->read_at ? 'font-normal' : 'font-bold'
                     ),
                 
                 TextColumn::make('message.subject')
@@ -45,8 +54,8 @@ class InboxResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->limit(50)
-                    ->weight(fn (MessageRecipient $record): FontWeight => 
-                        $record->read_at ? FontWeight::Normal : FontWeight::Bold
+                    ->weight(fn (MessageRecipient $record): string => 
+                        $record->read_at ? 'font-normal' : 'font-bold'
                     ),
                 
                 TextColumn::make('message.priority')
@@ -83,11 +92,95 @@ class InboxResource extends Resource
             ])
             ->actions([
                 Action::make('read')
-                    ->label('Ler')
+                    ->label('Ler Mensagem')
                     ->icon('heroicon-o-eye')
-                    ->action(function (MessageRecipient $record) {
+                    ->modalHeading(fn (MessageRecipient $record): string => $record->message->subject)
+                    ->modalWidth('4xl')
+                    ->infolist([
+                        Section::make('Detalhes da Mensagem')
+                            ->schema([
+                                TextEntry::make('message.sender.name')
+                                    ->label('De'),
+                                TextEntry::make('message.priority')
+                                    ->label('Prioridade')
+                                    ->badge()
+                                    ->color(fn (string $state): string => match ($state) {
+                                        'low' => 'gray',
+                                        'normal' => 'primary', 
+                                        'high' => 'warning',
+                                        'urgent' => 'danger',
+                                    })
+                                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                                        'low' => 'Baixa',
+                                        'normal' => 'Normal',
+                                        'high' => 'Alta', 
+                                        'urgent' => 'Urgente',
+                                    }),
+                                TextEntry::make('message.sent_at')
+                                    ->label('Enviada em')
+                                    ->dateTime('d/m/Y H:i'),
+                            ])
+                            ->columns(3),
+                        Section::make('Conteúdo')
+                            ->schema([
+                                TextEntry::make('message.body')
+                                    ->label('')
+                                    ->html()
+                                    ->columnSpanFull(),
+                            ])
+                    ])
+                    ->after(function (MessageRecipient $record) {
                         $record->markAsRead();
                     }),
+                
+                Action::make('reply')
+                    ->label('Responder')
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->color('primary')
+                    ->form([
+                        Hidden::make('original_message_id')
+                            ->default(fn (MessageRecipient $record) => $record->message_id),
+                        
+                        TextInput::make('subject')
+                            ->label('Assunto')
+                            ->default(fn (MessageRecipient $record) => 'Re: ' . $record->message->subject)
+                            ->required()
+                            ->maxLength(255),
+                        
+                        RichEditor::make('body')
+                            ->label('Mensagem')
+                            ->required()
+                            ->columnSpanFull(),
+                    ])
+                    ->action(function (MessageRecipient $record, array $data) {
+                        // Criar nova mensagem como resposta
+                        $reply = InternalMessage::create([
+                            'subject' => $data['subject'],
+                            'body' => $data['body'],
+                            'priority' => 'normal',
+                            'status' => 'sent',
+                            'sender_id' => Auth::id(),
+                            'sent_at' => now(),
+                        ]);
+                        
+                        // Adicionar o remetente original como destinatário
+                        MessageRecipient::create([
+                            'message_id' => $reply->id,
+                            'recipient_id' => $record->message->sender_id,
+                            'type' => 'to',
+                        ]);
+                        
+                        // Marcar mensagem original como lida
+                        $record->markAsRead();
+                        
+                        // Notificação de sucesso
+                        \Filament\Notifications\Notification::make()
+                            ->title('Resposta enviada com sucesso!')
+                            ->success()
+                            ->send();
+                    })
+                    ->modalHeading('Responder Mensagem')
+                    ->modalWidth('4xl'),
                 
                 Action::make('star')
                     ->label(fn (MessageRecipient $record): string => 
