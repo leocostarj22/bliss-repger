@@ -1,61 +1,176 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sistema de Gestão Empresarial - BlissRepGer
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+<div align="center">
+  <img src="public/images/multicontact.png" alt="BlissRepGer Logo" width="200">
+  
+  [![Laravel](https://img.shields.io/badge/Laravel-12.x-red.svg)](https://laravel.com)
+  [![Filament](https://img.shields.io/badge/Filament-3.3-orange.svg)](https://filamentphp.com)
+  [![PHP](https://img.shields.io/badge/PHP-8.2+-blue.svg)](https://php.net)
+  [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+</div>
 
-## About Laravel
+## 📋 Descrição
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+O **BlissRepGer** é um sistema completo de gestão empresarial desenvolvido em Laravel com interface administrativa moderna utilizando Filament. O sistema oferece funcionalidades abrangentes para gestão de tickets, funcionários, empresas, departamentos e muito mais.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 🚀 Tecnologias Utilizadas
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **Framework:** Laravel 12.x
+- **Interface Admin:** Filament 3.3
+- **PHP:** 8.2+
+- **Base de Dados:** MySQL
+- **Frontend:** Blade Templates + Filament UI
+- **Testes:** Pest PHP
+- **Qualidade de Código:** Laravel Pint
 
-## Learning Laravel
+## 📦 Funcionalidades Principais
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 🎫 Sistema de Tickets
+- ✅ Criação e gestão de tickets de suporte
+- ✅ Sistema de prioridades (Baixa, Média, Alta, Urgente)
+- ✅ Estados de ticket (Aberto, Em Progresso, Pendente, Resolvido, Fechado)
+- ✅ Atribuição de tickets a utilizadores
+- ✅ Sistema de comentários e anexos
+- ✅ Filtros avançados e pesquisa
+- ✅ Controlo de prazos e tickets em atraso
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### 👥 Gestão de Utilizadores
+- ✅ Sistema de autenticação e autorização
+- ✅ Perfis de utilizador com fotos
+- ✅ Gestão de permissões baseada em funções
+- ✅ Registo de último login
+- ✅ Integração com sistema de funcionários
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 🏢 Gestão Empresarial
+- **Empresas:** Gestão completa de empresas clientes
+- **Departamentos:** Organização por setores/departamentos
+- **Funcionários:** Gestão de recursos humanos com dados completos
+- **Categorias:** Classificação de tickets e serviços
 
-## Laravel Sponsors
+### 🔐 Sistema de Permissões
+| Função | Descrição | Permissões |
+|--------|-----------|------------|
+| **Administrador** | Acesso total ao sistema | Todas as permissões |
+| **Gestor** | Gestão de equipas e relatórios | Tickets, Utilizadores, Relatórios |
+| **Supervisor** | Supervisão de agentes e tickets | Tickets, Visualização de utilizadores |
+| **Agente** | Gestão de tickets atribuídos | Tickets próprios |
+| **Cliente** | Acesso limitado aos próprios tickets | Visualização própria |
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 📊 Funcionalidades Adicionais
+- 📈 Dashboard com métricas e estatísticas
+- 📎 Sistema de anexos para tickets
+- 📄 Gestão de documentos de funcionários
+- 🌐 Interface multilingue (Português)
+- 🔔 Sistema de notificações
+- 📊 Relatórios e análises
 
-### Premium Partners
+## 🛠️ Instalação
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### Pré-requisitos
+- PHP 8.2 ou superior
+- Composer
+- MySQL/MariaDB
+- Node.js e NPM (para assets)
 
-## Contributing
+### Passos de Instalação
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+1. **Clone o repositório:**
+   ```bash
+   git clone <url-do-repositorio>
+   cd blissrepger
+   ```
 
-## Code of Conduct
+2. **Instale as dependências:**
+   ```bash
+   composer install
+   npm install
+   ```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+3. **Configure o ambiente:**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
 
-## Security Vulnerabilities
+4. **Configure a base de dados no arquivo `.env`:**
+   ```env
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=blissrepger
+   DB_USERNAME=seu_usuario
+   DB_PASSWORD=sua_senha
+   ```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+5. **Execute as migrações e seeders:**
+   ```bash
+   php artisan migrate --seed
+   ```
 
-## License
+6. **Crie o link simbólico para storage:**
+   ```bash
+   php artisan storage:link
+   ```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+7. **Compile os assets:**
+   ```bash
+   npm run build
+   ```
+
+8. **Inicie o servidor:**
+   ```bash
+   php artisan serve
+   ```
+
+## 🔧 Configuração
+
+### Acesso Administrativo
+Após a instalação, acesse `/admin` para entrar no painel administrativo.
+
+### Configurações de Storage
+O sistema utiliza storage público para imagens e anexos. Certifique-se de que o link simbólico foi criado corretamente.
+
+### Configurações de Email
+Configure as definições de email no arquivo `.env` para notificações:
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=seu_servidor_smtp
+MAIL_PORT=587
+MAIL_USERNAME=seu_email
+MAIL_PASSWORD=sua_senha
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=noreply@blissrepger.com
+MAIL_FROM_NAME="BlissRepGer"
+```
+
+## 📁 Estrutura do Projeto
+
+### 🧪 Testes
+Execute os testes com:
+
+### 📝 Contribuição
+1.
+Faça fork do projeto
+2.
+Crie uma branch para sua feature (git checkout -b feature/nova-funcionalidade)
+3.
+Commit suas mudanças (git commit -am 'Adiciona nova funcionalidade')
+4.
+Push para a branch (git push origin feature/nova-funcionalidade)
+5.
+Abra um Pull Request
+
+### 📄 Licença
+Este projeto está licenciado sob a Licença MIT - veja o arquivo LICENSE para detalhes.
+
+### 🆘 Suporte
+Para suporte e dúvidas:
+
+Abra uma issue no repositório
+Consulte a documentação do Laravel
+Consulte a documentação do Filament
+
+### 🔄 Atualizações
+Para manter o sistema atualizado:
+
+Desenvolvido por Leonardo Silva - usando Laravel e Filament
