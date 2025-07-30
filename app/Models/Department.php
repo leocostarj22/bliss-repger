@@ -58,6 +58,11 @@ class Department extends Model
         return $this->hasMany(User::class);
     }
 
+    public function employees(): HasMany
+    {
+        return $this->hasMany(Employee::class);
+    }
+
     // Scopes
     public function scopeActive($query)
     {

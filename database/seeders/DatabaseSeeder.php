@@ -12,9 +12,10 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            RoleSeeder::class,
             DepartmentSeeder::class,
             CategorySeeder::class,
-            RoleSeeder::class,
+            EmployeeSeeder::class, // Adicionar esta linha
         ]);
     }
 }

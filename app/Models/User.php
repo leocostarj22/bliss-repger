@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
@@ -22,7 +23,9 @@ class User extends Authenticatable
         'role',
         'phone',
         'bio',
+        'photo_path', // Adicionar esta linha
         'is_active',
+        'last_login_at',
     ];
 
     protected $hidden = [
@@ -124,4 +127,18 @@ class User extends Authenticatable
     {
         $this->update(['last_login_at' => now()]);
     }
+
+    /**
+     * Método para retornar a URL da foto de perfil para o Filament
+     */
+    public function getFilamentAvatarUrl(): ?string
+    {
+        if ($this->photo_path) {
+            return \Illuminate\Support\Facades\Storage::disk('public')->url($this->photo_path);
+        }
+        
+        // Retorna um avatar padrão baseado no nome do usuário
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&background=random';
+    }
+
 }

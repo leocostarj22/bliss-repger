@@ -32,6 +32,13 @@ class UserResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Informações Pessoais')
                     ->schema([
+                        Forms\Components\FileUpload::make('photo_path')
+                            ->label('Foto')
+                            ->image()
+                            ->directory('users/photos')
+                            ->visibility('public') // Correto para acesso público
+                            ->columnSpanFull(),
+                        
                         Forms\Components\TextInput::make('name')
                             ->label('Nome')
                             ->required()

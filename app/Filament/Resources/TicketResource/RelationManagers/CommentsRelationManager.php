@@ -9,6 +9,7 @@ use Filament\Forms\FormsComponent;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 
 
 class CommentsRelationManager extends RelationManager
