@@ -17,8 +17,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use App\Filament\Resources\TicketResource\Widgets\StatsOverview;
-use Filament\Events\Auth\Registered;
+use pxlrbt\FilamentSpotlight\SpotlightPlugin;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Event;
 
@@ -46,6 +45,9 @@ class AdminPanelProvider extends PanelProvider
                 Widgets\FilamentInfoWidget::class,
                 \App\Filament\Resources\TicketResource\Widgets\StatsOverview::class,
 
+            ])
+            ->plugins([
+                SpotlightPlugin::make(),
             ])
             ->middleware([
                 EncryptCookies::class,

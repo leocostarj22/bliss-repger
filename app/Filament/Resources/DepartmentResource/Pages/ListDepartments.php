@@ -16,4 +16,9 @@ class ListDepartments extends ListRecords
             Actions\CreateAction::make(),
         ];
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return static::getResource()::getUrl('index');
+    }
 }

@@ -4,9 +4,6 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\EmployeeResource\Pages;
 use App\Models\Employee;
-use App\Models\User;
-use App\Models\Department;
-use App\Models\Company;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -17,13 +14,14 @@ use Filament\Forms\Components\Tabs;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
-use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Resources\EmployeeResource\Widgets\EmployeeStatsOverview;
 use App\Filament\Resources\EmployeeResource\Widgets\EmployeeStatusWidget;
 use App\Filament\Resources\EmployeeResource\Widgets\BirthdayWidget;
 use App\Filament\Resources\EmployeeResource\Widgets\NewHiresWidget;
 use App\Filament\Resources\EmployeeResource\Widgets\EmployeesByDepartmentChart;
 use App\Filament\Resources\EmployeeResource\Widgets\EmploymentTypeChart;
+use Filament\Forms\Components\FileUpload;
+
 
 class EmployeeResource extends Resource
 {
@@ -427,7 +425,7 @@ class EmployeeResource extends Resource
         return [
             'index' => Pages\ListEmployees::route('/'),
             'create' => Pages\CreateEmployee::route('/create'),
-            //'view' => Pages\ViewEmployee::route('/{record}'),
+            'view' => Pages\ViewEmployee::route('/{record}'),
             'edit' => Pages\EditEmployee::route('/{record}/edit'),
         ];
     }

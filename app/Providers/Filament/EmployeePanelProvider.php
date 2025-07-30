@@ -17,6 +17,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use pxlrbt\FilamentSpotlight\SpotlightPlugin;
 
 class EmployeePanelProvider extends PanelProvider
 {
@@ -27,8 +28,10 @@ class EmployeePanelProvider extends PanelProvider
             ->path('/employee')
             ->login()
             ->authGuard('employee')
+            ->topNavigation()
+            ->brandLogo(asset('images/multicontact.png'))
             ->colors([
-                'primary' => Color::Blue,
+                'primary' => Color::Purple,
             ])
             ->discoverResources(in: app_path('Filament/Employee/Resources'), for: 'App\\Filament\\Employee\\Resources')
             ->discoverPages(in: app_path('Filament/Employee/Pages'), for: 'App\\Filament\\Employee\\Pages')
@@ -38,6 +41,9 @@ class EmployeePanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Employee/Widgets'), for: 'App\\Filament\\Employee\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
+            ])
+            ->plugins([
+                SpotlightPlugin::make(),
             ])
             ->middleware([
                 EncryptCookies::class,

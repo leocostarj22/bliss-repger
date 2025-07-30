@@ -131,14 +131,13 @@ class User extends Authenticatable
     /**
      * Método para retornar a URL da foto de perfil para o Filament
      */
-    public function getFilamentAvatarUrl(): ?string
+    public function getAvatarUrlAttribute()
     {
         if ($this->photo_path) {
-            return \Illuminate\Support\Facades\Storage::disk('public')->url($this->photo_path);
+            return asset('storage/' . $this->photo_path);
         }
         
-        // Retorna um avatar padrão baseado no nome do usuário
-        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&background=random';
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name);
     }
 
 }

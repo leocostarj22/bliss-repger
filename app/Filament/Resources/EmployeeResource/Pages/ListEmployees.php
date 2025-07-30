@@ -34,4 +34,9 @@ class ListEmployees extends ListRecords
             EmployeeResource\Widgets\EmploymentTypeChart::class,
         ];
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return static::getResource()::getUrl('index');
+    }
 }
