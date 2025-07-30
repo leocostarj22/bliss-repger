@@ -43,8 +43,7 @@ class MessagesOverview extends BaseWidget
             Stat::make('Mensagens Não Lidas', $unreadMessages)
                 ->description('Mensagens recebidas')
                 ->descriptionIcon('heroicon-m-envelope')
-                ->color('warning')
-                ->url(route('filament.admin.resources.inbox.index')),
+                ->color('warning'),
             
             Stat::make('Enviadas Este Mês', $sentThisMonth)
                 ->description('Mensagens enviadas')
@@ -54,8 +53,7 @@ class MessagesOverview extends BaseWidget
             Stat::make('Rascunhos', $drafts)
                 ->description('Mensagens em rascunho')
                 ->descriptionIcon('heroicon-m-document-text')
-                ->color('gray')
-                ->url(route('filament.admin.resources.internal-messages.index')),
+                ->color('gray'),
             
             Stat::make('Com Estrela', $starred)
                 ->description('Mensagens importantes')

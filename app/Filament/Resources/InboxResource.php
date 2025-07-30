@@ -3,7 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Models\MessageRecipient;
-use App\Models\InternalMessage;
+use App\Filament\Resources\InboxResource\Pages;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
@@ -87,7 +87,6 @@ class InboxResource extends Resource
                     ->icon('heroicon-o-eye')
                     ->action(function (MessageRecipient $record) {
                         $record->markAsRead();
-                        // Redirecionar para visualização da mensagem
                     }),
                 
                 Action::make('star')
@@ -121,7 +120,7 @@ class InboxResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => \App\Filament\Resources\InboxResource\Pages\ListInbox::route('/'),
+            'index' => Pages\ListInbox::route('/'),
         ];
     }
 }
