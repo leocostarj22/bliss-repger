@@ -44,7 +44,8 @@ class AdminPanelProvider extends PanelProvider
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
                 \App\Filament\Resources\TicketResource\Widgets\StatsOverview::class,
-                \App\Filament\Widgets\MessagesOverview::class, // Adicionar esta linha
+                \App\Filament\Widgets\MessagesOverview::class,
+                \App\Filament\Widgets\AdminPostsWidget::class, // Novo widget de posts
             ])
             ->plugins([
                 SpotlightPlugin::make(),
@@ -73,3 +74,4 @@ class AdminPanelProvider extends PanelProvider
             });
     }
 }
+// ... existing code ...

@@ -36,7 +36,7 @@ class TicketResource extends Resource
 {
     protected static ?string $model = Ticket::class;
     
-    protected static ?string $navigationGroup = 'Chamados';
+    protected static ?string $navigationGroup = 'Suporte';
     protected static ?string $navigationIcon = 'heroicon-o-ticket';
     protected static ?string $navigationLabel = 'Tickets';
     protected static ?string $modelLabel = 'Ticket';

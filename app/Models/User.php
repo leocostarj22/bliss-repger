@@ -113,6 +113,11 @@ class User extends Authenticatable
         return $this->role === 'supervisor' || $this->roleModel?->name === 'supervisor';
     }
 
+    public function hasRole(string $role): bool
+    {
+        return $this->role === $role || $this->roleModel?->name === $role;
+    }
+
     public function hasPermission(string $permission): bool
     {
         return $this->roleModel?->hasPermission($permission) ?? false;
