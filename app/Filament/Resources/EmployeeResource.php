@@ -286,33 +286,33 @@ class EmployeeResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('photo_path')
                     ->label('Foto')
-                    ->circular()
+                    ->square()
                     ->defaultImageUrl(fn () => 'https://ui-avatars.com/api/?name=User&background=random'),
                 
-                Tables\Columns\TextColumn::make('employee_code')
-                    ->label('Código')
-                    ->searchable()
-                    ->sortable(),
+                //Tables\Columns\TextColumn::make('employee_code')
+                //    ->label('Código')
+                //    ->searchable()
+                //    ->sortable(),
                 
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nome')
                     ->searchable()
                     ->sortable(),
                 
-                Tables\Columns\TextColumn::make('nif')
-                    ->label('NIF')
-                    ->searchable(),
+                //Tables\Columns\TextColumn::make('nif')
+                //    ->label('NIF')
+                //    ->searchable(),
                 
-                Tables\Columns\TextColumn::make('document_type')
-                    ->label('Tipo de Documento')
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'cartao_cidadao' => 'Cartão de Cidadão',
-                        'titulo_residencia' => 'Título de Residência',
-                        'passaporte' => 'Passaporte',
-                        'bilhete_identidade' => 'Bilhete de Identidade',
-                        'outro' => 'Outro',
-                        default => $state,
-                    }),
+                //Tables\Columns\TextColumn::make('document_type')
+                //    ->label('Tipo de Documento')
+                //    ->formatStateUsing(fn (string $state): string => match ($state) {
+                //        'cartao_cidadao' => 'Cartão de Cidadão',
+                //        'titulo_residencia' => 'Título de Residência',
+                //        'passaporte' => 'Passaporte',
+                //        'bilhete_identidade' => 'Bilhete de Identidade',
+                //        'outro' => 'Outro',
+                //        default => $state,
+                //    }),
                 
                 Tables\Columns\TextColumn::make('position')
                     ->label('Cargo')
@@ -322,7 +322,7 @@ class EmployeeResource extends Resource
                     ->label('Departamento')
                     ->sortable(),
                 
-                Tables\Columns\TextColumn::make('employment_type')
+                /*Tables\Columns\TextColumn::make('employment_type')
                     ->label('Tipo')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
@@ -338,7 +338,7 @@ class EmployeeResource extends Resource
                         'Temporary' => 'A Termo',
                         default => $state,
                     }),
-                
+                */
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
                     ->badge()
@@ -361,11 +361,11 @@ class EmployeeResource extends Resource
                     ->date('d/m/Y')
                     ->sortable(),
                 
-                Tables\Columns\TextColumn::make('salary')
+                /*Tables\Columns\TextColumn::make('salary')
                     ->label('Salário')
                     ->money('EUR')
-                    ->sortable(),
-            ])
+                    ->sortable(),*/
+                ])
             ->filters([
                 SelectFilter::make('status')
                     ->label('Status')
@@ -392,6 +392,7 @@ class EmployeeResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
