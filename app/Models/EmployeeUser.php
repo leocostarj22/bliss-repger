@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class EmployeeUser extends Authenticatable
 {
@@ -44,5 +45,30 @@ class EmployeeUser extends Authenticatable
     public function canAccessSystem(): bool
     {
         return $this->is_active && $this->employee && $this->employee->status === 'active';
+    }
+
+    public function tasks(): MorphMany
+    {
+        return $this->morphMany(Task::class, 'taskable');
+    }
+    
+    public function pendingTasks()
+    {
+        return $this->tasks()->pending();
+    }
+    
+    public function completedTasks()
+    {
+        return $this->tasks()->completed();
+    }
+    
+    public function overdueTasks()
+    {
+        return $this->tasks()->overdue();
+    }
+    
+    public function todayTasks()
+    {
+        return $this->tasks()->today();
     }
 }

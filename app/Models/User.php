@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class User extends Authenticatable
 {
@@ -145,4 +145,28 @@ class User extends Authenticatable
         return 'https://ui-avatars.com/api/?name=' . urlencode($this->name);
     }
 
+    public function tasks(): MorphMany
+    {
+        return $this->morphMany(Task::class, 'taskable');
+    }
+    
+    public function pendingTasks()
+    {
+        return $this->tasks()->pending();
+    }
+    
+    public function completedTasks()
+    {
+        return $this->tasks()->completed();
+    }
+    
+    public function overdueTasks()
+    {
+        return $this->tasks()->overdue();
+    }
+    
+    public function todayTasks()
+    {
+        return $this->tasks()->today();
+    }
 }

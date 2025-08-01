@@ -11,40 +11,19 @@ class StatsOverview extends BaseWidget
 {
     protected function getStats(): array
     {
+        // Usar uma única consulta com agregações
+        $stats = Ticket::selectRaw('
+            COUNT(*) as total,
+            SUM(CASE WHEN status IN ("open", "in_progress", "pending") THEN 1 ELSE 0 END) as open_count,
+            SUM(CASE WHEN status IN ("resolved", "closed") THEN 1 ELSE 0 END) as resolved_count,
+            SUM(CASE WHEN priority = "urgent" AND status NOT IN ("resolved", "closed") THEN 1 ELSE 0 END) as urgent_count
+        ')->first();
+        
         return [
-            // Total de Tickets
-            Stat::make('Total de Tickets', Ticket::count())
-                ->description('Total de tickets no sistema')
-                ->descriptionIcon('heroicon-m-ticket')
-                ->color('primary'),
-
-            // Tickets Abertos
-            Stat::make('Tickets Abertos', Ticket::whereIn('status', [
-                    Ticket::STATUS_OPEN,
-                    Ticket::STATUS_IN_PROGRESS,
-                    Ticket::STATUS_PENDING
-                ])->count())
-                ->description('Tickets que precisam de atenção')
-                ->descriptionIcon('heroicon-m-clock')
-                ->color('warning'),
-
-            // Tickets Resolvidos
-            Stat::make('Tickets Resolvidos', Ticket::whereIn('status', [
-                    Ticket::STATUS_RESOLVED,
-                    Ticket::STATUS_CLOSED
-                ])->count())
-                ->description('Tickets finalizados')
-                ->descriptionIcon('heroicon-m-check-circle')
-                ->color('success'),
-
-            // Tickets Urgentes
-            Stat::make('Tickets Urgentes', Ticket::where('priority', Ticket::PRIORITY_URGENT)
-                ->whereNotIn('status', [Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED])
-                ->count())
-                ->description('Tickets com prioridade urgente')
-                ->descriptionIcon('heroicon-m-exclamation-triangle')
-                ->color('danger'),
-
+            Stat::make('Total de Tickets', $stats->total),
+            Stat::make('Tickets Abertos', $stats->open_count),
+            Stat::make('Tickets Resolvidos', $stats->resolved_count),
+            Stat::make('Tickets Urgentes', $stats->urgent_count),
             // Taxa de Resolução (últimos 30 dias)
             Stat::make('Taxa de Resolução', function () {
                 $totalLastMonth = Ticket::where('created_at', '>=', now()->subDays(30))->count();
@@ -96,5 +75,9 @@ class StatsOverview extends BaseWidget
     }
 
     // Atualiza automaticamente a cada 30 segundos
-    protected static ?string $pollingInterval = '30s';
+    // Comentar ou remover esta linha:
+    // protected static ?string $pollingInterval = '30s';
+    
+    // OU aumentar o intervalo:
+    protected static ?string $pollingInterval = '5m'; // 5 minutos
 }

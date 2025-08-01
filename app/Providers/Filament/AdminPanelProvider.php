@@ -18,6 +18,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use pxlrbt\FilamentSpotlight\SpotlightPlugin;
+use Saade\FilamentFullCalendar\FilamentFullCalendarPlugin;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Event;
 
@@ -45,10 +46,11 @@ class AdminPanelProvider extends PanelProvider
                 Widgets\FilamentInfoWidget::class,
                 \App\Filament\Resources\TicketResource\Widgets\StatsOverview::class,
                 \App\Filament\Widgets\MessagesOverview::class,
-                \App\Filament\Widgets\AdminPostsWidget::class, // Novo widget de posts
+                \App\Filament\Widgets\AdminPostsWidget::class,
             ])
             ->plugins([
                 SpotlightPlugin::make(),
+                FilamentFullCalendarPlugin::make(),
             ])
             ->middleware([
                 EncryptCookies::class,

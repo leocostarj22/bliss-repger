@@ -15,7 +15,8 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             DepartmentSeeder::class,
             CategorySeeder::class,
-            EmployeeSeeder::class, // Adicionar esta linha
+            EmployeeSeeder::class,
+            TaskSeeder::class, // Adicionar esta linha
         ]);
     }
 }

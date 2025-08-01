@@ -388,7 +388,10 @@ class TicketResource extends Resource
                 ]),
             ])
             ->defaultSort('created_at', 'desc')
-            ->poll('30s') // Atualização automática a cada 30 segundos
+            // Comentar ou remover esta linha:
+            // ->poll('30s')
+            // OU aumentar o intervalo:
+            // ->poll('2m') // 2 minutos
             ->striped();
     }
 
