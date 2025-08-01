@@ -116,15 +116,15 @@
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-4">
                                 <button wire:click="likePost({{ $post->id }})" 
-                                        class="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300 hover:text-primary-600 transition-colors">
+                                        class="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
                                     <x-heroicon-o-heart class="h-4 w-4" />
                                     {{ $post->likes_count }}
                                 </button>
-                                <span class="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300">
+                                <span class="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-100">
                                     <x-heroicon-o-eye class="h-4 w-4" />
                                     {{ $post->views_count }}
                                 </span>
-                                <span class="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300">
+                                <span class="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-100">
                                     <x-heroicon-o-chat-bubble-left class="h-4 w-4" />
                                     0 {{-- Alterado de {{ $post->comments->count() }} --}}
                                 </span>

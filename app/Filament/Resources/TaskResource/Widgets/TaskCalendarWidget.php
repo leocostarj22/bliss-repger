@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Widgets;
+namespace App\Filament\Resources\TaskResource\Widgets;
 
 use App\Models\Task;
 use Filament\Widgets\Widget;

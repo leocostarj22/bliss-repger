@@ -121,6 +121,7 @@ class UserResource extends Resource
                 
                 Tables\Columns\TextColumn::make('roleModel.display_name')
                     ->label('Cargo')
+                    ->formatStateUsing(fn ($state, $record) => $record->roleModel?->display_name ?? 'Cargo não definido')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'Administrador' => 'danger',
@@ -133,11 +134,13 @@ class UserResource extends Resource
                 
                 Tables\Columns\TextColumn::make('company.name')
                     ->label('Empresa')
+                    ->formatStateUsing(fn ($state, $record) => $record->company?->name ?? 'Empresa não definida')
                     ->searchable()
                     ->sortable(),
                 
                 Tables\Columns\TextColumn::make('department.name')
                     ->label('Departamento')
+                    ->formatStateUsing(fn ($state, $record) => $record->department?->name ?? 'Departamento não definido')
                     ->searchable()
                     ->sortable(),
                 

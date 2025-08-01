@@ -53,6 +53,7 @@ class CommentsRelationManager extends RelationManager
                     ->limit(25),
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Usuário')
+                    ->formatStateUsing(fn ($state, $record) => $record->user?->name ?? 'Usuário desconhecido')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Data')

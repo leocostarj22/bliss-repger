@@ -78,6 +78,7 @@ class AttachmentsRelationManager extends RelationManager
                     
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Enviado por')
+                    ->formatStateUsing(fn ($state, $record) => $record->user?->name ?? 'Usuário desconhecido')
                     ->sortable(),
                     
                 Tables\Columns\TextColumn::make('created_at')

@@ -275,6 +275,27 @@ class EmployeeResource extends Resource
                                     ->label('Observações')
                                     ->rows(5),
                             ]),
+                        
+                        Tabs\Tab::make('Documentos')
+                            ->schema([
+                                Section::make('Documentos do Funcionário')
+                                    ->description('Faça upload dos documentos relacionados ao funcionário (CV, contratos, certificados, etc.)')
+                                    ->schema([
+                                        Forms\Components\FileUpload::make('documents')
+                                            ->label('Documentos')
+                                            ->multiple()
+                                            ->directory('employee-documents')
+                                            ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
+                                            ->maxSize(10240) // 10MB
+                                            ->downloadable()
+                                            ->previewable(false)
+                                            ->reorderable()
+                                            ->deletable()
+                                            ->helperText('Formatos aceitos: PDF, JPG, PNG, DOC, DOCX. Tamanho máximo: 10MB por arquivo.')
+                                            ->columnSpanFull(),
+                                    ])
+                                    ->columns(1),
+                            ]),
                     ])
                     ->columnSpanFull(),
             ]);
@@ -320,6 +341,7 @@ class EmployeeResource extends Resource
                 
                 Tables\Columns\TextColumn::make('department.name')
                     ->label('Departamento')
+                    ->formatStateUsing(fn ($state, $record) => $record->department?->name ?? 'Departamento não definido')
                     ->sortable(),
                 
                 /*Tables\Columns\TextColumn::make('employment_type')
@@ -361,7 +383,16 @@ class EmployeeResource extends Resource
                     ->date('d/m/Y')
                     ->sortable(),
                 
-                /*Tables\Columns\TextColumn::make('salary')
+               /* Tables\Columns\IconColumn::make('has_documents')
+                    ->label('Documentos')
+                    ->boolean()
+                    ->getStateUsing(fn ($record) => !empty($record->documents))
+                    ->trueIcon('heroicon-o-document-text')
+                    ->falseIcon('heroicon-o-document')
+                    ->trueColor('success')
+                    ->falseColor('gray'),
+                
+                Tables\Columns\TextColumn::make('salary')
                     ->label('Salário')
                     ->money('EUR')
                     ->sortable(),*/

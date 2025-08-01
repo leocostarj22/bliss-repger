@@ -226,6 +226,7 @@ class PostResource extends Resource
                     
                 Tables\Columns\TextColumn::make('author.name')
                     ->label('Autor')
+                    ->formatStateUsing(fn ($state, $record) => $record->author?->name ?? 'Autor desconhecido')
                     ->sortable(),
                     
                 Tables\Columns\BadgeColumn::make('type')

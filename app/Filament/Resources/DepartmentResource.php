@@ -69,6 +69,7 @@ class DepartmentResource extends Resource
                 Tables\Columns\TextColumn::make('email')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('company.name')
+                    ->formatStateUsing(fn ($state, $record) => $record->company?->name ?? 'Empresa não definida')
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\IconColumn::make('is_active')

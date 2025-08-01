@@ -7,7 +7,7 @@ use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use App\Filament\Resources\TaskResource\Widgets\TaskStatsWidget;
 use App\Filament\Resources\TaskResource\Widgets\UpcomingTasksWidget;
-use App\Filament\Widgets\TaskCalendarWidget;
+use App\Filament\Resources\TaskResource\Widgets\TaskCalendarWidget;
 
 class ListTasks extends ListRecords
 {
@@ -26,7 +26,7 @@ class ListTasks extends ListRecords
         return [
             TaskStatsWidget::class,
             UpcomingTasksWidget::class,
-            TaskCalendarWidget::class, // ✅ Mantém aqui
+            TaskCalendarWidget::class,
         ];
     }
 }

@@ -100,7 +100,8 @@ class InboxResource extends Resource
                         Section::make('Detalhes da Mensagem')
                             ->schema([
                                 TextEntry::make('message.sender.name')
-                                    ->label('De'),
+                                    ->label('De')
+                                    ->formatStateUsing(fn ($state, $record) => $record->message?->sender?->name ?? 'Remetente desconhecido'),
                                 TextEntry::make('message.priority')
                                     ->label('Prioridade')
                                     ->badge()

@@ -208,12 +208,14 @@ class TicketResource extends Resource
                     
                 TextColumn::make('company.name')
                     ->label('Empresa')
+                    ->formatStateUsing(fn ($state, $record) => $record->company?->name ?? 'Empresa não definida')
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
                     
                 TextColumn::make('category.name')
                     ->label('Categoria')
+                    ->formatStateUsing(fn ($state, $record) => $record->category?->name ?? 'Categoria não definida')
                     ->badge()
                     ->color(fn ($record) => $record->category?->color ?? 'gray')
                     ->sortable()
@@ -221,6 +223,7 @@ class TicketResource extends Resource
                     
                 TextColumn::make('department.name')
                     ->label('Departamento')
+                    ->formatStateUsing(fn ($state, $record) => $record->department?->name ?? 'Departamento não definido')
                     ->badge()
                     ->color(fn ($record) => $record->department?->color ?? 'gray')
                     ->sortable()
@@ -228,12 +231,14 @@ class TicketResource extends Resource
                     
                 TextColumn::make('user.name')
                     ->label('Criado por')
+                    ->formatStateUsing(fn ($state, $record) => $record->user?->name ?? 'Usuário desconhecido')
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
                     
                 TextColumn::make('assignedTo.name')
                     ->label('Atribuído para')
+                    ->formatStateUsing(fn ($state, $record) => $record->assignedTo?->name ?? 'Não atribuído')
                     ->searchable()
                     ->sortable()
                     ->placeholder('Não atribuído')

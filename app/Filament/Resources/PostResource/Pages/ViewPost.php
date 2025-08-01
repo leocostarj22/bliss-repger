@@ -66,7 +66,7 @@ class ViewPost extends ViewRecord
                                         'announcement' => 'Comunicado',
                                         default => $record->type,
                                     };
-                                    return $record->author->name . ' • ' . $publishedAt . ' • ' . $type;
+                                    return ($record->author?->name ?? 'Autor desconhecido') . ' • ' . $publishedAt . ' • ' . $type;
                                 }),
                             
                             // Título do post

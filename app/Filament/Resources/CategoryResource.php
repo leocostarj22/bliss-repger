@@ -63,6 +63,7 @@ class CategoryResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('company.name')
                     ->label('Empresa')
+                    ->formatStateUsing(fn ($state, $record) => $record->company?->name ?? 'Empresa não definida')
                     ->sortable()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('name')

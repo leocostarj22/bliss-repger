@@ -38,7 +38,8 @@ class BirthdayWidget extends BaseWidget
                     ->label('Cargo'),
                     
                 Tables\Columns\TextColumn::make('department.name')
-                    ->label('Departamento'),
+                    ->label('Departamento')
+                    ->formatStateUsing(fn ($state, $record) => $record->department?->name ?? 'Departamento não definido'),
                     
                 Tables\Columns\TextColumn::make('birth_date')
                     ->label('Data de Nascimento')
