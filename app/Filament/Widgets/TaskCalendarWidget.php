@@ -20,6 +20,8 @@ class TaskCalendarWidget extends FullCalendarWidget
 {
     public Model | string | null $model = Task::class;
 
+    protected static ?int $sort = 5; // Posicionar após os widgets existentes
+
     public function fetchEvents(array $fetchInfo): array
     {
         $user = Auth::user();
