@@ -41,7 +41,7 @@ class EmployeePanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Employee/Widgets'), for: 'App\\Filament\\Employee\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
+                //Widgets\AccountWidget::class,
                 \App\Filament\Employee\Widgets\TaskStatsWidget::class,
                 \App\Filament\Employee\Widgets\EmployeeInfoWidget::class,
             ])

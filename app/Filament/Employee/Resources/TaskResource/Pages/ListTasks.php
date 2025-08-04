@@ -25,8 +25,8 @@ class ListTasks extends ListRecords
     protected function getHeaderWidgets(): array
     {
         return [
-            TaskStatsWidget::class,
             EmployeeInfoWidget::class,
+            TaskStatsWidget::class,
             UpcomingTasksWidget::class,
             TaskCalendarWidget::class,
         ];

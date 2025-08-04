@@ -11,7 +11,7 @@ use App\Filament\Employee\Resources\TaskResource;
 
 class TaskStatsWidget extends BaseWidget
 {
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 2;
     
     // Definir columnSpan para ocupar a linha completa
     protected int | string | array $columnSpan = 'full';

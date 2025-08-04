@@ -9,10 +9,7 @@ use Carbon\Carbon;
 
 class EmployeeInfoWidget extends BaseWidget
 {
-    protected static ?int $sort = 2;
-    
-    // Ocupar 1 coluna para ficar ao lado do Welcome widget
-    protected int | string | array $columnSpan = 1;
+    protected static ?int $sort = 1;
     
     protected function getStats(): array
     {
@@ -23,40 +20,66 @@ class EmployeeInfoWidget extends BaseWidget
             return [];
         }
         
-        // Cards com títulos ainda menores
         $stats = [
-            Stat::make('', $employee->department->name ?? 'N/A')
-                ->description('Departamento')
+            Stat::make('Departamento', $employee->department->name ?? 'N/A')
+                ->description('Seu departamento atual')
                 ->descriptionIcon('heroicon-m-building-office-2')
-                ->color('primary')
-                ->extraAttributes([
-                    'class' => '[&_.fi-wi-stats-overview-stat-value]:!text-xs [&_.fi-wi-stats-overview-stat-value]:!font-normal [&_.fi-wi-stats-overview-stat-description]:!text-xs [&_.fi-wi-stats-overview-stat]:!py-2 [&_.fi-wi-stats-overview-stat]:!mt-0'
-                ]),
+                ->color('primary'),
                 
-            Stat::make('', $employee->position)
-                ->description('Cargo')
+            Stat::make('Cargo', $employee->position)
+                ->description('Sua função na empresa')
                 ->descriptionIcon('heroicon-m-briefcase')
-                ->color('success')
-                ->extraAttributes([
-                    'class' => '[&_.fi-wi-stats-overview-stat-value]:!text-xs [&_.fi-wi-stats-overview-stat-value]:!font-normal [&_.fi-wi-stats-overview-stat-description]:!text-xs [&_.fi-wi-stats-overview-stat]:!py-2 [&_.fi-wi-stats-overview-stat]:!mt-0'
-                ]),
+                ->color('success'),
+                
+            Stat::make('Tempo na Empresa', $this->getTimeInCompany($employee))
+                ->description('Desde a sua admissão')
+                ->descriptionIcon('heroicon-m-calendar-days')
+                ->color('info'),
         ];
+        
+        // Adicionar card de aniversário se estiver próximo (30 dias)
+        if ($employee->birth_date) {
+            $birthday = Carbon::parse($employee->birth_date);
+            $nextBirthday = $birthday->copy()->year(Carbon::now()->year);
+            
+            if ($nextBirthday->isPast()) {
+                $nextBirthday->addYear();
+            }
+            
+            $daysUntilBirthday = Carbon::now()->diffInDays($nextBirthday);
+            
+            if ($daysUntilBirthday <= 30) {
+                $stats[] = Stat::make('Aniversário', $daysUntilBirthday . ' dias')
+                    ->description($nextBirthday->format('d/m/Y'))
+                    ->descriptionIcon('heroicon-m-cake')
+                    ->color('warning');
+            }
+        }
         
         return $stats;
     }
     
-    // Sobrescrever o método para forçar 2 colunas
-    protected function getColumns(): int
+    private function getTimeInCompany($employee): string
     {
-        return 2;
-    }
-    
-    // CSS global com títulos menores
-    public function getExtraAttributes(): array
-    {
-        return [
-            'style' => '--cols-default: 2; --cols-sm: 2; --cols-md: 2; --cols-lg: 2; --cols-xl: 2; --cols-2xl: 2;',
-            'class' => '[&_.fi-wi-stats-overview-stat-value]:!text-xs [&_.fi-wi-stats-overview-stat-value]:!font-normal [&_.fi-wi-stats-overview-stat-description]:!text-xs [&_.fi-wi-stats-overview-stat]:!py-2 [&_.fi-wi-stats-overview-stat]:!min-h-0 [&_.fi-wi-stats-overview-stat]:!mt-0 !mt-0'
-        ];
+        if (!$employee->hire_date) {
+            return 'N/A';
+        }
+        
+        $hireDate = Carbon::parse($employee->hire_date);
+        $now = Carbon::now();
+        
+        $totalMonths = $hireDate->diffInMonths($now);
+        $years = intval($totalMonths / 12);
+        $months = $totalMonths % 12;
+        
+        if ($years > 0) {
+            $result = $years . ' ano' . ($years > 1 ? 's' : '');
+            if ($months > 0) {
+                $result .= ' e ' . $months . ' mês' . ($months > 1 ? 'es' : '');
+            }
+            return $result;
+        } else {
+            return $months . ' mês' . ($months > 1 ? 'es' : '');
+        }
     }
 }
