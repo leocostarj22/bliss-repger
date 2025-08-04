@@ -11,59 +11,115 @@ class StatsOverview extends BaseWidget
 {
     protected function getStats(): array
     {
-        // Usar uma única consulta com agregações
+        // Consulta otimizada com agregações
         $stats = Ticket::selectRaw('
             COUNT(*) as total,
-            SUM(CASE WHEN status IN ("open", "in_progress", "pending") THEN 1 ELSE 0 END) as open_count,
-            SUM(CASE WHEN status IN ("resolved", "closed") THEN 1 ELSE 0 END) as resolved_count,
-            SUM(CASE WHEN priority = "urgent" AND status NOT IN ("resolved", "closed") THEN 1 ELSE 0 END) as urgent_count
-        ')->first();
+            SUM(CASE WHEN status IN (?, ?, ?) THEN 1 ELSE 0 END) as open_count,
+            SUM(CASE WHEN status IN (?, ?) THEN 1 ELSE 0 END) as resolved_count,
+            SUM(CASE WHEN priority = ? AND status NOT IN (?, ?) THEN 1 ELSE 0 END) as urgent_count,
+            SUM(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) as new_this_week
+        ', [
+            Ticket::STATUS_OPEN, 
+            Ticket::STATUS_IN_PROGRESS, 
+            Ticket::STATUS_PENDING,
+            Ticket::STATUS_RESOLVED, 
+            Ticket::STATUS_CLOSED,
+            Ticket::PRIORITY_URGENT,
+            Ticket::STATUS_RESOLVED, 
+            Ticket::STATUS_CLOSED
+        ])->first();
         
-        return [
-            Stat::make('Total de Tickets', $stats->total),
-            Stat::make('Tickets Abertos', $stats->open_count),
-            Stat::make('Tickets Resolvidos', $stats->resolved_count),
-            Stat::make('Tickets Urgentes', $stats->urgent_count),
-            // Taxa de Resolução (últimos 30 dias)
-            Stat::make('Taxa de Resolução', function () {
-                $totalLastMonth = Ticket::where('created_at', '>=', now()->subDays(30))->count();
-                $resolvedLastMonth = Ticket::where('created_at', '>=', now()->subDays(30))
-                    ->whereIn('status', [Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED])
-                    ->count();
-                
-                if ($totalLastMonth === 0) {
-                    return '0%';
+        // Calcular taxa de resolução dos últimos 30 dias
+        $resolutionStats = Ticket::selectRaw('
+            COUNT(*) as total_last_month,
+            SUM(CASE WHEN status IN (?, ?) THEN 1 ELSE 0 END) as resolved_last_month
+        ', [Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED])
+        ->where('created_at', '>=', now()->subDays(30))
+        ->first();
+        
+        $resolutionRate = $resolutionStats->total_last_month > 0 
+            ? round(($resolutionStats->resolved_last_month / $resolutionStats->total_last_month) * 100, 1)
+            : 0;
+            
+        // Calcular tempo médio de resolução
+        $avgResolutionTime = Ticket::whereNotNull('resolved_at')
+            ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, resolved_at)) as avg_hours')
+            ->value('avg_hours');
+            
+        $avgTimeFormatted = 'N/A';
+        $avgTimeColor = 'gray';
+        $avgTimeIcon = 'heroicon-m-question-mark-circle';
+        $avgTimeDescription = 'Sem dados suficientes';
+        
+        if ($avgResolutionTime) {
+            $hours = round($avgResolutionTime, 1);
+            if ($hours < 24) {
+                $avgTimeFormatted = $hours . 'h';
+                $avgTimeColor = 'success';
+                $avgTimeIcon = 'heroicon-m-bolt';
+                $avgTimeDescription = 'Resolução rápida';
+            } else {
+                $days = round($hours / 24, 1);
+                $avgTimeFormatted = $days . 'd';
+                if ($days <= 3) {
+                    $avgTimeColor = 'warning';
+                    $avgTimeIcon = 'heroicon-m-clock';
+                    $avgTimeDescription = 'Dentro do prazo';
+                } else {
+                    $avgTimeColor = 'danger';
+                    $avgTimeIcon = 'heroicon-m-exclamation-triangle';
+                    $avgTimeDescription = 'Pode melhorar';
                 }
+            }
+        }
+        
+        // Calcular percentual de tickets resolvidos
+        $resolvedPercentage = $stats->total > 0 
+            ? round(($stats->resolved_count / $stats->total) * 100, 1) . '% do total'
+            : 'Nenhum ticket ainda';
+            
+        return [
+            // Total de Tickets
+            Stat::make('Total de Tickets', $stats->total)
+                ->description($stats->new_this_week . ' novos esta semana')
+                ->descriptionIcon('heroicon-m-plus-circle')
+                ->icon('heroicon-o-ticket')
+                ->color($stats->total > 100 ? 'warning' : 'primary'),
                 
-                $percentage = round(($resolvedLastMonth / $totalLastMonth) * 100, 1);
-                return $percentage . '%';
-            })
+            // Tickets Abertos
+            Stat::make('Tickets Abertos', $stats->open_count)
+                ->description('Aguardando resolução')
+                ->descriptionIcon('heroicon-m-clock')
+                ->icon('heroicon-o-folder-open')
+                ->color($stats->open_count > 20 ? 'danger' : ($stats->open_count > 10 ? 'warning' : 'success')),
+                
+            // Tickets Resolvidos
+            Stat::make('Tickets Resolvidos', $stats->resolved_count)
+                ->description($resolvedPercentage)
+                ->descriptionIcon('heroicon-m-check-circle')
+                ->icon('heroicon-o-check-badge')
+                ->color('success'),
+                
+            // Tickets Urgentes
+            Stat::make('Tickets Urgentes', $stats->urgent_count)
+                ->description($stats->urgent_count > 0 ? 'Requer atenção!' : 'Tudo sob controle')
+                ->descriptionIcon($stats->urgent_count > 0 ? 'heroicon-m-fire' : 'heroicon-m-shield-check')
+                ->icon('heroicon-o-exclamation-circle')
+                ->color($stats->urgent_count > 5 ? 'danger' : ($stats->urgent_count > 0 ? 'warning' : 'success')),
+                
+            // Taxa de Resolução
+            Stat::make('Taxa de Resolução', $resolutionRate . '%')
                 ->description('Últimos 30 dias')
-                ->descriptionIcon('heroicon-m-chart-bar')
-                ->color('info'),
+                ->descriptionIcon($resolutionRate >= 80 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down')
+                ->icon('heroicon-o-chart-bar-square')
+                ->color($resolutionRate >= 80 ? 'success' : ($resolutionRate >= 60 ? 'warning' : 'danger')),
 
             // Tempo Médio de Resolução
-            Stat::make('Tempo Médio', function () {
-                $avgResolutionTime = Ticket::whereNotNull('resolved_at')
-                    ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, resolved_at)) as avg_hours')
-                    ->value('avg_hours');
-                
-                if (!$avgResolutionTime) {
-                    return 'N/A';
-                }
-                
-                $hours = round($avgResolutionTime, 1);
-                
-                if ($hours < 24) {
-                    return $hours . 'h';
-                } else {
-                    $days = round($hours / 24, 1);
-                    return $days . 'd';
-                }
-            })
-                ->description('Tempo médio de resolução')
-                ->descriptionIcon('heroicon-m-clock')
-                ->color('gray'),
+            Stat::make('Tempo Médio', $avgTimeFormatted)
+                ->description($avgTimeDescription)
+                ->descriptionIcon($avgTimeIcon)
+                ->icon('heroicon-o-clock')
+                ->color($avgTimeColor),
         ];
     }
 
@@ -74,10 +130,9 @@ class StatsOverview extends BaseWidget
         return 3; // Exibe 3 estatísticas por linha
     }
 
-    // Atualiza automaticamente a cada 30 segundos
-    // Comentar ou remover esta linha:
-    // protected static ?string $pollingInterval = '30s';
+    // Atualização automática otimizada
+    protected static ?string $pollingInterval = '2m'; // 2 minutos
     
-    // OU aumentar o intervalo:
-    protected static ?string $pollingInterval = '5m'; // 5 minutos
+    // Performance otimizada
+    protected static bool $isLazy = false;
 }

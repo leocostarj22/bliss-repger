@@ -134,8 +134,12 @@ class TicketResource extends Resource
                                     ->label('Criado por')
                                     ->relationship('user', 'name')
                                     ->searchable()
-                                    ->preload()
-                                    ->required(),
+                                    ->required()
+                                    ->disabled(fn ($livewire) => $livewire instanceof \Filament\Resources\Pages\CreateRecord)
+                                    ->dehydrated()
+                                    ->disabled()
+                                    ->dehydrated()
+                                    ->visible(fn ($livewire) => $livewire instanceof \Filament\Resources\Pages\EditRecord),
                                     
                                 Select::make('assigned_to')
                                     ->label('Atribuído para')

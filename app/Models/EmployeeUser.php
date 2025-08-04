@@ -47,6 +47,28 @@ class EmployeeUser extends Authenticatable
         return $this->is_active && $this->employee && $this->employee->status === 'active';
     }
 
+    /**
+     * Método para retornar a URL da foto de perfil para o Filament
+     */
+    public function getAvatarUrlAttribute()
+    {
+        // Primeiro verifica se o funcionário tem uma foto
+        if ($this->employee && $this->employee->photo_path) {
+            return asset('storage/' . $this->employee->photo_path);
+        }
+        
+        // Fallback para avatar gerado com as iniciais do nome
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&background=random';
+    }
+
+    /**
+     * Método alternativo que o Filament também pode usar
+     */
+    public function getFilamentAvatarUrl(): ?string
+    {
+        return $this->avatar_url;
+    }
+
     public function tasks(): MorphMany
     {
         return $this->morphMany(Task::class, 'taskable');

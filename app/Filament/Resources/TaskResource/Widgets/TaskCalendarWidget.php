@@ -51,6 +51,20 @@ class TaskCalendarWidget extends FullCalendarWidget
             ->toArray();
     }
 
+    public function onSelect(array $selectInfo): void
+    {
+        $this->createRecord([
+            'due_date' => $selectInfo['start'], // preenche a data clicada
+        ]);
+    }
+
+    public function dateClick(array $clickInfo): void
+    {
+        $this->createRecord([
+            'due_date' => $clickInfo['date'],
+        ]);
+    }
+
     protected function getTaskColor(Task $task): string
     {
         // Cores baseadas no status
@@ -167,5 +181,34 @@ class TaskCalendarWidget extends FullCalendarWidget
             'dayMaxEvents' => true,
             'weekends' => true,
         ];
+    }
+
+    public function eventDidMount(): string
+    {
+        return <<<JS
+            function({ event, timeText, isStart, isEnd, isMirror, isPast, isFuture, isToday, el, view }){
+                // Create tooltip content with task details
+                let tooltipContent = event.title;
+                
+                if (event.extendedProps.description) {
+                    tooltipContent += '\\n' + event.extendedProps.description;
+                }
+                
+                if (event.extendedProps.priority) {
+                    tooltipContent += '\\nPrioridade: ' + event.extendedProps.priority;
+                }
+                
+                if (event.extendedProps.status) {
+                    tooltipContent += '\\nStatus: ' + event.extendedProps.status;
+                }
+                
+                if (event.extendedProps.location) {
+                    tooltipContent += '\\nLocal: ' + event.extendedProps.location;
+                }
+                
+                el.setAttribute("x-tooltip", "tooltip");
+                el.setAttribute("x-data", "{ tooltip: '" + tooltipContent + "' }");
+            }
+        JS;
     }
 }

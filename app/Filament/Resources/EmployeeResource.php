@@ -80,7 +80,7 @@ class EmployeeResource extends Resource
                                                     $set('system_password', null);
                                                 }
                                             }),
-
+                                
                                         Forms\Components\TextInput::make('system_email')
                                             ->label('Email de Acesso')
                                             ->email()
@@ -89,10 +89,63 @@ class EmployeeResource extends Resource
                                         Forms\Components\TextInput::make('system_password')
                                             ->label('Senha')
                                             ->password()
-                                            ->visible(fn (Get $get) => $get('create_system_access')),
+                                            ->revealable()
+                                            ->visible(fn (Get $get) => $get('create_system_access'))
+                                            ->suffixAction(
+                                                Forms\Components\Actions\Action::make('generate_password')
+                                                    ->icon('heroicon-m-arrow-path')
+                                                    ->action(function (Set $set) {
+                                                        $password = \Illuminate\Support\Str::random(12);
+                                                        $set('system_password', $password);
+                                                    })
+                                                    ->tooltip('Gerar Senha Aleatória')
+                                            ),
                                     ])
                                     ->visible(fn (string $operation) => $operation === 'create')
                                     ->columns(2),
+                                
+                                Section::make('Redefinir Acesso ao Sistema')
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('current_access_info')
+                                            ->label('Acesso Atual')
+                                            ->content(fn ($record) => $record && $record->employeeUser 
+                                                ? 'Email: ' . $record->employeeUser->email . ' | Status: ' . ($record->employeeUser->is_active ? 'Ativo' : 'Inativo')
+                                                : 'Sem acesso ao sistema'
+                                            ),
+                                        
+                                        Forms\Components\Toggle::make('reset_system_access')
+                                            ->label('Redefinir Senha do Sistema')
+                                            ->live()
+                                            ->visible(fn ($record) => $record && $record->employeeUser)
+                                            ->afterStateUpdated(function (Set $set, $state) {
+                                                if (!$state) {
+                                                    $set('new_system_password', null);
+                                                }
+                                            }),
+                                        
+                                        Forms\Components\TextInput::make('new_system_password')
+                                            ->label('Nova Senha')
+                                            ->password()
+                                            ->revealable()
+                                            ->visible(fn (Get $get, $record) => $get('reset_system_access') && $record && $record->employeeUser)
+                                            ->suffixAction(
+                                                Forms\Components\Actions\Action::make('generate_new_password')
+                                                    ->icon('heroicon-m-arrow-path')
+                                                    ->action(function (Set $set) {
+                                                        $password = \Illuminate\Support\Str::password(12);
+                                                        $set('new_system_password', $password);
+                                                    })
+                                                    ->tooltip('Gerar Nova Senha Aleatória')
+                                            ),
+                                        
+                                        Forms\Components\Toggle::make('toggle_system_status')
+                                            ->label('Ativar/Desativar Acesso')
+                                            ->visible(fn ($record) => $record && $record->employeeUser)
+                                            ->default(fn ($record) => $record && $record->employeeUser ? $record->employeeUser->is_active : false)
+                                            ->live(),
+                                    ])
+                                    ->visible(fn (string $operation) => $operation === 'edit')
+                                    ->columns(1),
                                 
                                 Section::make('Documentos')
                                     ->schema([
@@ -151,14 +204,16 @@ class EmployeeResource extends Resource
                                     ->schema([
                                         Forms\Components\TextInput::make('phone')
                                             ->label('Telefone')
-                                            ->mask('(99) 99999-9999'),
+                                            ->mask('999 999 999')
+                                            ->placeholder('912 345 678'),
                                         
                                         Forms\Components\TextInput::make('emergency_contact')
                                             ->label('Contato de Emergência'),
                                         
                                         Forms\Components\TextInput::make('emergency_phone')
                                             ->label('Telefone de Emergência')
-                                            ->mask('(99) 99999-9999'),
+                                            ->mask('999 999 999')
+                                            ->placeholder('912 345 678'),
                                     ])
                                     ->columns(3),
                             ]),
@@ -382,6 +437,79 @@ class EmployeeResource extends Resource
                     ->label('Admissão')
                     ->date('d/m/Y')
                     ->sortable(),
+                ])
+            ->filters([
+                SelectFilter::make('status')
+                    ->label('Status')
+                    ->options([
+                        'active' => 'Ativo',
+                        'inactive' => 'Inativo',
+                        'terminated' => 'Cessado',
+                        'on_leave' => 'Afastado',
+                    ]),
+                
+                SelectFilter::make('department_id')
+                    ->label('Departamento')
+                    ->relationship('department', 'name'),
+                
+                SelectFilter::make('employment_type')
+                    ->label('Tipo de Contrato')
+                    ->options([
+                        'CLT' => 'Sem Termo',
+                        'PJ' => 'Prestação de Serviços',
+                        'Intern' => 'Estagiário',
+                        'Temporary' => 'A Termo',
+                    ]),
+            ])
+            ->actions([
+                Tables\Actions\ViewAction::make(),
+                Tables\Actions\EditAction::make(),
+                
+                Tables\Actions\Action::make('reset_password')
+                    ->label('Redefinir Senha')
+                    ->icon('heroicon-m-key')
+                    ->color('warning')
+                    ->visible(fn ($record) => $record->employeeUser !== null)
+                    ->form([
+                        Forms\Components\TextInput::make('new_password')
+                            ->label('Nova Senha')
+                            ->password()
+                            ->revealable()
+                            ->required()
+                            ->suffixAction(
+                                Forms\Components\Actions\Action::make('generate')
+                                    ->icon('heroicon-m-arrow-path')
+                                    ->action(function (Set $set) {
+                                        $password = \Illuminate\Support\Str::password(12);
+                                        $set('new_password', $password);
+                                    })
+                                    ->tooltip('Gerar Senha Aleatória')
+                            ),
+                    ])
+                    ->action(function ($record, array $data) {
+                        // Verificar se o funcionário tem acesso ao sistema
+                        if (!$record->employeeUser) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Erro!')
+                                ->body('Este funcionário não possui acesso ao sistema.')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+                        
+                        // Atualizar a senha na tabela employee_users
+                        $record->employeeUser->update([
+                            'password' => bcrypt($data['new_password'])
+                        ]);
+                        
+                        \Filament\Notifications\Notification::make()
+                            ->title('Senha redefinida com sucesso!')
+                            ->body('Nova senha: ' . $data['new_password'])
+                            ->success()
+                            ->persistent()
+                            ->send();
+                    }),
+            ])
                 
                /* Tables\Columns\IconColumn::make('has_documents')
                     ->label('Documentos')
@@ -395,8 +523,8 @@ class EmployeeResource extends Resource
                 Tables\Columns\TextColumn::make('salary')
                     ->label('Salário')
                     ->money('EUR')
-                    ->sortable(),*/
-                ])
+                    ->sortable(),
+                */
             ->filters([
                 SelectFilter::make('status')
                     ->label('Status')
@@ -460,5 +588,49 @@ class EmployeeResource extends Resource
             'view' => Pages\ViewEmployee::route('/{record}'),
             'edit' => Pages\EditEmployee::route('/{record}/edit'),
         ];
+    }
+    
+    public static function mutateFormDataBeforeSave(array $data): array
+    {
+        // Processar redefinição de senha do sistema
+        if (isset($data['reset_system_access']) && $data['reset_system_access'] && !empty($data['new_system_password'])) {
+            // A senha será processada no hook afterSave
+            unset($data['reset_system_access']);
+        }
+        
+        // Remover campos que não pertencem à tabela employees
+        unset($data['new_system_password'], $data['toggle_system_status']);
+        
+        return $data;
+    }
+    
+    public static function afterSave($record, array $data): void
+    {
+        // Processar redefinição de senha
+        if (isset($data['new_system_password']) && !empty($data['new_system_password']) && $record->employeeUser) {
+            $record->employeeUser->update([
+                'password' => bcrypt($data['new_system_password'])
+            ]);
+            
+            \Filament\Notifications\Notification::make()
+                ->title('Senha redefinida com sucesso!')
+                ->body('Nova senha: ' . $data['new_system_password'])
+                ->success()
+                ->persistent()
+                ->send();
+        }
+        
+        // Processar ativação/desativação do acesso
+        if (isset($data['toggle_system_status']) && $record->employeeUser) {
+            $record->employeeUser->update([
+                'is_active' => $data['toggle_system_status']
+            ]);
+            
+            $status = $data['toggle_system_status'] ? 'ativado' : 'desativado';
+            \Filament\Notifications\Notification::make()
+                ->title('Acesso ao sistema ' . $status . '!')
+                ->success()
+                ->send();
+        }
     }
 }
