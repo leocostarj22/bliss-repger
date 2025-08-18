@@ -16,7 +16,8 @@ class DatabaseSeeder extends Seeder
             DepartmentSeeder::class,
             CategorySeeder::class,
             EmployeeSeeder::class,
-            TaskSeeder::class, // Adicionar esta linha
+            TaskSeeder::class,
+            AdminPostSeeder::class, // Adicionar esta linha
         ]);
     }
 }

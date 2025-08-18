@@ -57,6 +57,42 @@ class Employee extends Model
         'documents' => 'array',
     ];
 
+    /**
+     * Boot do modelo para gerar automaticamente o código do funcionário
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($employee) {
+            if (empty($employee->employee_code)) {
+                $employee->employee_code = static::generateEmployeeCode();
+            }
+        });
+    }
+
+    /**
+     * Gera automaticamente o próximo código de funcionário
+     */
+    public static function generateEmployeeCode(): string
+    {
+        // Buscar o último código de funcionário
+        $lastEmployee = static::orderBy('employee_code', 'desc')->first();
+        
+        if (!$lastEmployee || !$lastEmployee->employee_code) {
+            return 'EMP001';
+        }
+        
+        // Extrair o número do último código (ex: EMP003 -> 3)
+        $lastCode = $lastEmployee->employee_code;
+        $number = (int) substr($lastCode, 3); // Remove "EMP" e converte para int
+        
+        // Incrementar e formatar com zeros à esquerda
+        $nextNumber = $number + 1;
+        
+        return 'EMP' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+    }
+
     // Relacionamento opcional com utilizador do sistema
     public function employeeUser(): HasOne
     {

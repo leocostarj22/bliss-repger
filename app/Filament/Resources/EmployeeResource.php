@@ -58,8 +58,10 @@ class EmployeeResource extends Resource
                                         
                                         Forms\Components\TextInput::make('employee_code')
                                             ->label('Código do Funcionário')
-                                            ->required()
-                                            ->unique(ignoreRecord: true),
+                                            ->unique(ignoreRecord: true)
+                                            ->placeholder('Será gerado automaticamente se não preenchido')
+                                            ->helperText('Deixe em branco para gerar automaticamente (ex: EMP001, EMP002, etc.)')
+                                            ->maxLength(10),
                                         
                                         Forms\Components\FileUpload::make('photo_path')
                                             ->label('Foto')
