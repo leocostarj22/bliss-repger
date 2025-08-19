@@ -9,36 +9,29 @@ use Illuminate\Validation\ValidationException;
 
 class Login extends BaseLogin
 {
-    protected static string $view = 'filament.employee.auth.login';
-    
     public function form(Form $form): Form
     {
         return $form
             ->schema([
-                TextInput::make('email')
-                    ->label('Email')
-                    ->email()
-                    ->required()
-                    ->autocomplete()
-                    ->autofocus()
-                    ->extraInputAttributes(['tabindex' => 1]),
-                TextInput::make('password')
-                    ->label('Senha')
-                    ->password()
-                    ->required()
-                    ->extraInputAttributes(['tabindex' => 2]),
+                TextInput::make('email')->label('Email')->email()->required()->autocomplete()->autofocus(),
+                TextInput::make('password')->label('Senha')->password()->required(),
             ]);
     }
-    
+
+    protected function getGuardName(): ?string
+    {
+        return 'employee'; // ⚡ essencial para autenticar no guard correto
+    }
+
     protected function getCredentialsFromFormData(array $data): array
     {
         return [
             'email' => $data['email'],
             'password' => $data['password'],
-            'is_active' => true, // Apenas usuários ativos podem fazer login
+            'is_active' => true,
         ];
     }
-    
+
     protected function throwFailureValidationException(): never
     {
         throw ValidationException::withMessages([
