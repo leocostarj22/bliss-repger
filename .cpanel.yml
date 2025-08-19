@@ -1,0 +1,21 @@
+---
+version: 2
+backend:
+  tasks:
+    # Instala dependências do Laravel
+    - composer install --no-dev --optimize-autoloader
+
+    # Gera caches do Laravel
+    - php artisan config:cache
+    - php artisan route:cache
+    - php artisan view:cache
+
+    # Migra o banco de dados
+    - php artisan migrate --force
+
+    # Copia os arquivos da pasta do projeto para a pasta 'public_html' (ou raiz configurada)
+    - cp -r * /home/USERNAME/public_html/
+
+hooks:
+  after_deploy:
+    - echo "Deploy Laravel realizado com sucesso!"
