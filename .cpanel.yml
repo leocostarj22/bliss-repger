@@ -2,19 +2,19 @@
 version: 2
 backend:
   tasks:
-    # Instala dependências do Laravel
-    - composer install --no-dev --optimize-autoloader
+    # Instala dependências do Laravel na pasta do projeto
+    - cd laravel && composer install --no-dev --optimize-autoloader
 
     # Gera caches do Laravel
-    - php artisan config:cache
-    - php artisan route:cache
-    - php artisan view:cache
+    - cd laravel && php artisan config:cache
+    - cd laravel && php artisan route:cache
+    - cd laravel && php artisan view:cache
 
     # Migra o banco de dados
-    - php artisan migrate --force
+    - cd laravel && php artisan migrate --force
 
-    # Copia os arquivos da pasta do projeto para a pasta 'public_html' (ou raiz configurada)
-    - cp -r * /home/USERNAME/public_html/
+    # Copia apenas os arquivos públicos para a pasta public_html
+    - cp -r laravel/public/* /home/USERNAME/public_html/
 
 hooks:
   after_deploy:
