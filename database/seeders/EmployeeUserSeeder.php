@@ -11,7 +11,7 @@ class EmployeeUserSeeder extends Seeder
     public function run(): void
     {
         // Verificar se o funcionário com ID 04 existe
-        $employee = Employee::find(4);
+        $employee = Employee::find(1);
         
         if (!$employee) {
             $this->command->error('Funcionário com ID 04 não encontrado!');

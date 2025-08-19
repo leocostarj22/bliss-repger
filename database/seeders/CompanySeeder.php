@@ -11,6 +11,14 @@ class CompanySeeder extends Seeder
     {
         $companies = [
             [
+                'name' => 'MultiContact',
+                'slug' => 'multi-contact',
+                'email' => 'geral@grupomulticontact.pt',
+                'phone' => '+351 210 929 020',
+                'address' => 'Rua David Sousa, 27B 1000-106 Lisboa',
+                'is_active' => true,
+            ],
+            [
                 'name' => 'Myformula',
                 'slug' => 'myformula',
                 'email' => 'contato@myformula.pt',
@@ -24,6 +32,14 @@ class CompanySeeder extends Seeder
                 'email' => 'contato@mariahelena.pt',
                 'phone' => '+351 220 654 321',
                 'address' => 'Av. dos Aliados, 200, Porto, Portugal',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Bliss Natura',
+                'slug' => 'bliss-natura',
+                'email' => 'lojaonline@blissnatura.pt',
+                'phone' => '+351 210 935 935',
+                'address' => 'Rua David Sousa, 27B 1000-106 Lisboa',
                 'is_active' => true,
             ],
         ];

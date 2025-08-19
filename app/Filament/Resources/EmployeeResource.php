@@ -591,48 +591,4 @@ class EmployeeResource extends Resource
             'edit' => Pages\EditEmployee::route('/{record}/edit'),
         ];
     }
-    
-    public static function mutateFormDataBeforeSave(array $data): array
-    {
-        // Processar redefinição de senha do sistema
-        if (isset($data['reset_system_access']) && $data['reset_system_access'] && !empty($data['new_system_password'])) {
-            // A senha será processada no hook afterSave
-            unset($data['reset_system_access']);
-        }
-        
-        // Remover campos que não pertencem à tabela employees
-        unset($data['new_system_password'], $data['toggle_system_status']);
-        
-        return $data;
-    }
-    
-    public static function afterSave($record, array $data): void
-    {
-        // Processar redefinição de senha
-        if (isset($data['new_system_password']) && !empty($data['new_system_password']) && $record->employeeUser) {
-            $record->employeeUser->update([
-                'password' => bcrypt($data['new_system_password'])
-            ]);
-            
-            \Filament\Notifications\Notification::make()
-                ->title('Senha redefinida com sucesso!')
-                ->body('Nova senha: ' . $data['new_system_password'])
-                ->success()
-                ->persistent()
-                ->send();
-        }
-        
-        // Processar ativação/desativação do acesso
-        if (isset($data['toggle_system_status']) && $record->employeeUser) {
-            $record->employeeUser->update([
-                'is_active' => $data['toggle_system_status']
-            ]);
-            
-            $status = $data['toggle_system_status'] ? 'ativado' : 'desativado';
-            \Filament\Notifications\Notification::make()
-                ->title('Acesso ao sistema ' . $status . '!')
-                ->success()
-                ->send();
-        }
-    }
 }

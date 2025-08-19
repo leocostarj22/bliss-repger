@@ -27,7 +27,7 @@ class EmployeePanelProvider extends PanelProvider
         return $panel
             ->id('employee')
             ->path('/employee')
-            ->login()
+            ->login(\App\Filament\Employee\Pages\Login::class)
             ->authGuard('employee')
             ->topNavigation()
             ->brandLogo(asset('images/multicontact.png'))
