@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Carbon\Carbon;
 
 class TicketComment extends Model
@@ -15,6 +16,7 @@ class TicketComment extends Model
     protected $fillable = [
         'ticket_id',
         'user_id',
+        'user_type', // Adicionar este campo
         'comment',
         'is_internal',
         'is_solution',
@@ -33,9 +35,9 @@ class TicketComment extends Model
         return $this->belongsTo(Ticket::class);
     }
 
-    public function user(): BelongsTo
+    public function user(): MorphTo
     {
-        return $this->belongsTo(User::class);
+        return $this->morphTo('user', 'user_type', 'user_id');
     }
 
     public function attachments(): HasMany
