@@ -5,10 +5,10 @@ namespace App\Filament\Employee\Resources\TaskResource\Pages;
 use App\Filament\Employee\Resources\TaskResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use App\Filament\Employee\Widgets\EmployeeInfoWidget;
 use App\Filament\Employee\Widgets\TaskStatsWidget;
 use App\Filament\Employee\Widgets\UpcomingTasksWidget;
 use App\Filament\Employee\Widgets\TaskCalendarWidget;
-use App\Filament\Employee\Widgets\EmployeeInfoWidget;
 
 class ListTasks extends ListRecords
 {
@@ -17,8 +17,10 @@ class ListTasks extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()
-                ->label('Nova Tarefa'),
+            Actions\Action::make('create')
+                ->label('Nova Tarefa')
+                ->icon('heroicon-o-plus')
+                ->url(static::getResource()::getUrl('create'))
         ];
     }
     

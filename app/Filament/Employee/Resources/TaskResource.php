@@ -108,10 +108,10 @@ class TaskResource extends Resource
     {
         return $table
             ->modifyQueryUsing(function ($query) {
-                // Filtrar apenas tarefas do funcionário atual
-                $employeeUser = Auth::user();
-                return $query->where('taskable_type', get_class($employeeUser))
-                           ->where('taskable_id', $employeeUser->id);
+                // Filtrar apenas tarefas do utilizador atual
+                $user = Auth::user();
+                return $query->where('taskable_type', get_class($user))
+                           ->where('taskable_id', $user->id);
             })
             ->columns([
                 Tables\Columns\TextColumn::make('title')
