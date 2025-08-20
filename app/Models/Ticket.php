@@ -21,6 +21,7 @@ class Ticket extends Model
         'category_id',
         'department_id', // Novo campo para setor
         'user_id',
+        'user_type', // Adicionar este campo
         'assigned_to',
         'due_date',
         'resolved_at',
@@ -82,14 +83,21 @@ class Ticket extends Model
         return $this->belongsTo(Department::class);
     }
 
-    public function user(): BelongsTo
+    public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->morphTo('user', 'user_type', 'user_id');
     }
 
-    public function assignedTo(): BelongsTo
+    // Manter o relacionamento assignedTo como está
+    public function assignedTo()
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    // Adicionar atributo para obter o nome do criador
+    public function getCreatorNameAttribute()
+    {
+        return $this->user ? $this->user->name : 'Usuário não encontrado';
     }
 
     public function comments(): HasMany
@@ -157,6 +165,15 @@ class Ticket extends Model
     {
         return $query->where('due_date', '<', now())
                     ->whereNotIn('status', [self::STATUS_RESOLVED, self::STATUS_CLOSED]);
+    }
+
+    // Novo scope para funcionários
+    public function scopeAccessibleByEmployee($query, $employeeUserId)
+    {
+        return $query->where(function ($q) use ($employeeUserId) {
+            $q->where('user_id', $employeeUserId)
+              ->orWhere('assigned_to', $employeeUserId);
+        });
     }
 
     // Métodos auxiliares

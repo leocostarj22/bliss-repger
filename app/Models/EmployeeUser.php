@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
@@ -47,6 +47,30 @@ class EmployeeUser extends Authenticatable
         return $this->is_active && $this->employee && $this->employee->status === 'active';
     }
 
+    // Relacionamentos para tickets
+    public function createdTickets(): HasMany
+    {
+        // EmployeeUser não se relaciona diretamente com Ticket
+        // Tickets são relacionados ao User através do user_id
+        return $this->hasMany(Ticket::class, 'user_id', 'id');
+    }
+    
+    public function assignedTickets(): HasMany
+    {
+        // EmployeeUser não se relaciona diretamente com Ticket
+        // Tickets são relacionados ao User através do assigned_to
+        return $this->hasMany(Ticket::class, 'assigned_to', 'id');
+    }
+    
+    // Método para obter todos os tickets acessíveis (criados ou atribuídos)
+    public function accessibleTickets()
+    {
+        return Ticket::where(function ($query) {
+            $query->where('user_id', $this->id)
+                  ->orWhere('assigned_to', $this->id);
+        })->where('company_id', $this->employee->company_id);
+    }
+    
     /**
      * Método para retornar a URL da foto de perfil para o Filament
      */

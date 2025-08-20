@@ -32,7 +32,19 @@ class Department extends Model
         
         static::creating(function ($department) {
             if (empty($department->slug)) {
-                $department->slug = Str::slug($department->name);
+                $baseSlug = Str::slug($department->name);
+                $slug = $baseSlug;
+                $counter = 1;
+                
+                // Verifica se já existe um departamento com este slug na mesma empresa
+                while (static::where('company_id', $department->company_id)
+                                ->where('slug', $slug)
+                                ->exists()) {
+                    $slug = $baseSlug . '-' . $counter;
+                    $counter++;
+                }
+                
+                $department->slug = $slug;
             }
         });
     }
