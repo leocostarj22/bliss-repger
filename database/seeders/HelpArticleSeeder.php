@@ -12,7 +12,7 @@ class HelpArticleSeeder extends Seeder
         $articles = [
             // TICKETS
             [
-                'title' => 'Como criar um novo ticket',
+                'title' => 'Como criar um novo ticket:',
                 'category' => 'tickets',
                 'target_audience' => 'both',
                 'excerpt' => 'Aprenda a criar tickets para reportar problemas ou solicitar suporte.',
