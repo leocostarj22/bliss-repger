@@ -1,0 +1,32 @@
+---
+deployment:
+  tasks:
+    # Instalar dependências do Composer
+    - export COMPOSER_HOME=/home/$USER/.config/composer
+    - /usr/local/bin/ea-php82 /usr/local/bin/composer install --no-dev --optimize-autoloader
+    
+    # Instalar dependências do NPM e compilar assets
+    - npm install
+    - npm run build
+    
+    # Configurar permissões
+    - chmod -R 755 storage
+    - chmod -R 755 bootstrap/cache
+    
+    # Limpar e otimizar cache
+    - /usr/local/bin/ea-php82 artisan config:clear
+    - /usr/local/bin/ea-php82 artisan cache:clear
+    - /usr/local/bin/ea-php82 artisan route:clear
+    - /usr/local/bin/ea-php82 artisan view:clear
+    - /usr/local/bin/ea-php82 artisan config:cache
+    - /usr/local/bin/ea-php82 artisan route:cache
+    - /usr/local/bin/ea-php82 artisan view:cache
+    
+    # Executar migrações (apenas se necessário)
+    # - /usr/local/bin/ea-php82 artisan migrate --force
+    
+    # Otimizar autoloader
+    - /usr/local/bin/ea-php82 artisan optimize
+    
+    # Criar link simbólico para storage (se necessário)
+    - /usr/local/bin/ea-php82 artisan storage:link
