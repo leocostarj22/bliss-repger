@@ -95,6 +95,7 @@
                 transform: translateY(-2px);
                 box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
             }
+
             
             @keyframes fadeIn {
                 from {
@@ -124,7 +125,7 @@
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(0, 0, 0, 0.6);
+                background: rgba(0, 0, 0, 0.8);
                 z-index: 0;
             }
             
@@ -143,18 +144,18 @@
         </style>
     </head>
     <body>
-        <!-- Vídeo de Background -->
+        <!-- Video de Background -->
         <video class="video-background" autoplay muted loop>
-            <source src="{{ asset('videos/videotech.mp4') }}" type="video/mp4">
-            Seu navegador não suporta vídeos HTML5.
+            <source src="{{ asset('videos/videotech2.mp4') }}" type="video/mp4">
+            Seu navegador não suporta videos HTML5.
         </video>
         
         <!-- Overlay para melhorar a visibilidade da logo -->
         <div class="overlay"></div>
         
-        <!-- Container da Logo e Botões -->
+        <!-- Container da Logo e BotÃµes -->
         <div class="container">
-            <img src="{{ asset('images/multicontact.png') }}" alt="Multicontact Logo" class="logo">
+            <img src="{{ asset('images/logocolors.png') }}" alt="Multicontact Logo" class="logo">
             
             <div class="login-buttons">
                 <a href="/admin/login" class="login-btn admin-btn">
@@ -167,3 +168,4 @@
         </div>
     </body>
 </html>
+            
