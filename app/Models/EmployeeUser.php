@@ -47,6 +47,14 @@ class EmployeeUser extends Authenticatable
         return $this->is_active && $this->employee && $this->employee->status === 'active';
     }
 
+    /**
+     * Método para autorizar acesso ao painel do Filament
+     */
+    public function canAccessPanel(\Filament\Panel $panel): bool
+    {
+        return $this->is_active && $this->employee && $this->employee->status === 'active';
+    }
+
     // Relacionamentos para tickets
     public function createdTickets(): HasMany
     {
