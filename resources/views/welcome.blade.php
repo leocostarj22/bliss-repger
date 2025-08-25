@@ -75,23 +75,23 @@
             }
             
             .admin-btn {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                border: 2px solid rgba(255, 255, 255, 0.2);
+    background: linear-gradient(95deg, #1B4E95 0%, #1885C5 100%);
+    /* border: 2px solid rgba(27, 78, 149, 0.8); */
             }
             
             .admin-btn:hover {
-                background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+                background: linear-gradient(135deg, #3A84EB 0%, #46BBFF 100%);
                 transform: translateY(-2px);
                 box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
             }
             
             .employee-btn {
-                background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-                border: 2px solid rgba(255, 255, 255, 0.2);
+    background: linear-gradient(135deg, #812C8E 0%, #CA1B8C 100%);
+    /* border: 2px solid rgba(255, 255, 255, 0.2); */
             }
             
             .employee-btn:hover {
-                background: linear-gradient(135deg, #e881f9 0%, #f3455a 100%);
+                background: linear-gradient(135deg, #B148C1 0%, #EB2FA9 100%);
                 transform: translateY(-2px);
                 box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
             }

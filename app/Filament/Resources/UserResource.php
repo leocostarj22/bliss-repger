@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
 use Filament\Forms;
+use Filament\Forms\Get;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -90,14 +91,30 @@ class UserResource extends Resource
                         
                         Forms\Components\Select::make('department_id')
                             ->label('Departamento')
-                            ->relationship('department', 'name')
+                            ->options(function (Forms\Get $get) {
+                                $companyId = $get('company_id');
+                                if (!$companyId) {
+                                    return [];
+                                }
+                                return \App\Models\Department::where('company_id', $companyId)
+                                    ->where('is_active', true)
+                                    ->pluck('name', 'id');
+                            })
                             ->searchable()
-                            ->preload(),
-                        
+                            ->reactive()
+                            ->preload()
+                            ->afterStateHydrated(function (Forms\Components\Select $component, $state, $record) {
+                                // Limpa o departamento se não pertencer à empresa selecionada
+                                if ($record && $record->department && $record->company_id !== $record->department->company_id) {
+                                    $component->state(null);
+                                }
+                            }),
+
                         Forms\Components\Toggle::make('is_active')
                             ->label('Ativo')
                             ->default(true),
-                    ])->columns(2),
+                        ])->columns(2),
+
             ]);
     }
 
