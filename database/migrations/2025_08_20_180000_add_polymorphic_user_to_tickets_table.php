@@ -13,14 +13,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('tickets', function (Blueprint $table) {
-            // Adicionar campo user_type para relacionamento polimórfico
-            $table->string('user_type')->nullable()->after('user_id');
+            // Verificar se a coluna user_type já existe antes de adicioná-la
+            if (!Schema::hasColumn('tickets', 'user_type')) {
+                $table->string('user_type')->nullable()->after('user_id');
+            }
         });
         
         // Atualizar registros existentes para usar User como padrão
         // (assumindo que tickets existentes foram criados por usuários da tabela users)
         DB::table('tickets')
             ->whereNotNull('user_id')
+            ->whereNull('user_type')
             ->update(['user_type' => 'App\\Models\\User']);
     }
 
@@ -30,7 +33,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('tickets', function (Blueprint $table) {
-            $table->dropColumn('user_type');
+            if (Schema::hasColumn('tickets', 'user_type')) {
+                $table->dropColumn('user_type');
+            }
         });
     }
 };

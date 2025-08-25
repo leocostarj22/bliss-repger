@@ -13,13 +13,14 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RoleSeeder::class,
-            CompanySeeder::class, // Adicionar se não existir
+            CompanySeeder::class,
             DepartmentSeeder::class,
             CategorySeeder::class,
-            AdminUserSeeder::class, // Adicionar esta linha
+            AdminUserSeeder::class,
             EmployeeSeeder::class,
             TaskSeeder::class,
             AdminPostSeeder::class,
+            HelpArticleSeeder::class, // Adicionar esta linha
         ]);
     }
 }

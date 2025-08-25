@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TicketAttachmentController;
 use App\Http\Controllers\SystemLogController;
+use App\Filament\Pages\HelpArticleView;
 
 Route::get('/', function () {
     return view('welcome');
@@ -16,5 +17,9 @@ Route::get('/tickets/attachments/{attachment}/download', [TicketAttachmentContro
 Route::get('/system-log/{systemLog}/download', [SystemLogController::class, 'downloadJson'])
     ->name('system-log.download')
     ->middleware('auth');
+
+Route::get('/admin/help-articles/{slug}', [HelpArticleView::class, 'mount'])
+    ->name('filament.admin.pages.help-article')
+    ->middleware(['web', 'auth']);
 
 
