@@ -30,7 +30,7 @@ class EmployeePanelProvider extends PanelProvider
             ->login(\App\Filament\Employee\Pages\Login::class)
             ->authGuard('employee')
             ->topNavigation()
-            ->brandLogo(asset('images/multicontact.png'))
+            ->brandLogo(asset('images/logocolors.png'))
             ->colors([
                 'primary' => Color::Purple,
             ])
