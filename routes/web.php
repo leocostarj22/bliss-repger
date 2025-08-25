@@ -16,3 +16,5 @@ Route::get('/tickets/attachments/{attachment}/download', [TicketAttachmentContro
 Route::get('/system-log/{systemLog}/download', [SystemLogController::class, 'downloadJson'])
     ->name('system-log.download')
     ->middleware('auth');
+
+

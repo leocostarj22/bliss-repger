@@ -44,7 +44,7 @@ class EmployeePanelProvider extends PanelProvider
                 //Widgets\AccountWidget::class,
                 \App\Filament\Employee\Widgets\TaskStatsWidget::class,
                 \App\Filament\Employee\Widgets\EmployeeInfoWidget::class,
-                
+
             ])
             ->plugins([
                 SpotlightPlugin::make(),

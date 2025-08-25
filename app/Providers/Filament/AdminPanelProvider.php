@@ -47,7 +47,6 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Resources\TicketResource\Widgets\StatsOverview::class,
                 \App\Filament\Widgets\MessagesOverview::class,
                 \App\Filament\Widgets\AdminPostsWidget::class,
-                // Removidos: LogsStatsWidget e RecentActivityWidget
             ])
 
             
