@@ -29,14 +29,19 @@ class TaskCalendarWidget extends FullCalendarWidget
         return Task::query()
             ->where('taskable_type', get_class($user))
             ->where('taskable_id', $user->id)
-            ->whereNotNull('due_date')
+            ->where(function ($query) {
+                $query->whereNotNull('due_date')
+                      ->orWhereNotNull('start_date');
+            })
             ->get()
             ->map(function (Task $task) {
-                return [
+                // Use start_date if available, otherwise use due_date
+                $startTime = $task->start_date ?? $task->due_date;
+                $endTime = $task->due_date ?? $task->start_date;
+                
+                $eventData = [
                     'id' => $task->id,
                     'title' => $task->title,
-                    'start' => $task->due_date,
-                    'end' => $task->due_date,
                     'backgroundColor' => $this->getTaskColor($task),
                     'borderColor' => $this->getTaskColor($task),
                     'textColor' => '#ffffff',
@@ -47,6 +52,19 @@ class TaskCalendarWidget extends FullCalendarWidget
                         'location' => $task->location,
                     ],
                 ];
+                
+                // Handle all-day events vs timed events
+                if ($task->is_all_day) {
+                    $eventData['start'] = $startTime->format('Y-m-d');
+                    $eventData['end'] = $endTime->format('Y-m-d');
+                    $eventData['allDay'] = true;
+                } else {
+                    $eventData['start'] = $startTime->format('Y-m-d\TH:i:s');
+                    $eventData['end'] = $endTime->format('Y-m-d\TH:i:s');
+                    $eventData['allDay'] = false;
+                }
+                
+                return $eventData;
             })
             ->toArray();
     }
@@ -118,9 +136,25 @@ class TaskCalendarWidget extends FullCalendarWidget
                 ->default('pending')
                 ->required(),
                 
+            DateTimePicker::make('start_date')
+                ->label('Data de Início')
+                ->required(),
+                
             DateTimePicker::make('due_date')
                 ->label('Data de Vencimento')
                 ->required(),
+                
+            Toggle::make('is_all_day')
+                ->label('Evento de Dia Inteiro')
+                ->default(false)
+                ->reactive()
+                ->afterStateUpdated(function ($state, callable $set) {
+                    if ($state) {
+                        // Se for dia inteiro, remove os horários
+                        $set('start_date', now()->format('Y-m-d'));
+                        $set('due_date', now()->format('Y-m-d'));
+                    }
+                }),
                 
             TextInput::make('location')
                 ->label('Local')
@@ -180,6 +214,10 @@ class TaskCalendarWidget extends FullCalendarWidget
             'selectMirror' => true,
             'dayMaxEvents' => true,
             'weekends' => true,
+            'slotMinTime' => '06:00:00',
+            'slotMaxTime' => '22:00:00',
+            'displayEventTime' => true,
+            'displayEventEnd' => true,
         ];
     }
 
