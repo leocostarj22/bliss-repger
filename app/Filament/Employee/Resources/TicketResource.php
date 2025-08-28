@@ -275,6 +275,45 @@ class TicketResource extends Resource
         ];
     }
 
+    public static function getNavigationBadge(): ?string
+{
+    $user = auth()->user();
+    
+    return static::getModel()::where('status', \App\Models\Ticket::STATUS_OPEN)
+        ->where(function ($query) use ($user) {
+            $query->where('user_id', $user->id)
+                  ->orWhere('assigned_to', $user->id);
+        })
+        ->when($user->employee && $user->employee->company_id, function ($query) use ($user) {
+            $query->where('company_id', $user->employee->company_id);
+        })
+        ->count();
+}
+
+public static function getNavigationBadgeColor(): string|array|null
+{
+    $user = auth()->user();
+    
+    $openTickets = static::getModel()::where('status', \App\Models\Ticket::STATUS_OPEN)
+        ->where(function ($query) use ($user) {
+            $query->where('user_id', $user->id)
+                  ->orWhere('assigned_to', $user->id);
+        })
+        ->when($user->employee && $user->employee->company_id, function ($query) use ($user) {
+            $query->where('company_id', $user->employee->company_id);
+        })
+        ->count();
+    
+    if ($openTickets > 10) {
+        return 'danger';
+    } elseif ($openTickets > 5) {
+        return 'warning';
+    }
+    
+    return 'success';
+}
+
+
     public static function infolist(Infolist $infolist): Infolist
     {
         return $infolist
@@ -359,3 +398,4 @@ class TicketResource extends Resource
             ]);
     }
 }
+

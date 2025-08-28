@@ -45,17 +45,28 @@ class TicketResource extends Resource
     
     // Preload de relacionamentos para melhor performance
     protected static ?string $recordTitleAttribute = 'title';
-    
+
+    // Adicionar filtragem baseada na policy
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->with([
-                'company:id,name',
-                'category:id,name,color',
-                'department:id,name,color',
-                'user:id,name,email',
-                'assignedTo:id,name,email'
-            ]);
+        $user = auth()->user();
+        $query = parent::getEloquentQuery()->with(['company', 'category', 'department', 'user', 'assignedTo']);
+        
+        // Se não for admin, aplicar filtros de acesso
+        if (!$user->isAdmin()) {
+            if ($user->isManager() && $user->employee && $user->employee->company_id) {
+                // Managers veem apenas tickets da sua empresa
+                $query->where('company_id', $user->employee->company_id);
+            } else {
+                // Outros usuários veem apenas tickets que criaram ou foram atribuídos a eles
+                $query->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                      ->orWhere('assigned_to', $user->id);
+                });
+            }
+        }
+        
+        return $query;
     }
 
     public static function form(Form $form): Form
@@ -424,12 +435,46 @@ class TicketResource extends Resource
     
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::where('status', Ticket::STATUS_OPEN)->count();
+        $user = auth()->user();
+        $query = static::getModel()::where('status', Ticket::STATUS_OPEN);
+        
+        // Aplicar a mesma filtragem do getEloquentQuery
+        if (!$user->isAdmin()) {
+            if ($user->isManager() && $user->employee && $user->employee->company_id) {
+                // Managers veem apenas tickets da sua empresa
+                $query->where('company_id', $user->employee->company_id);
+            } else {
+                // Outros usuários veem apenas tickets que criaram ou foram atribuídos a eles
+                $query->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                      ->orWhere('assigned_to', $user->id);
+                });
+            }
+        }
+        
+        return $query->count();
     }
     
     public static function getNavigationBadgeColor(): string|array|null
     {
-        $openTickets = static::getModel()::where('status', Ticket::STATUS_OPEN)->count();
+        $user = auth()->user();
+        $query = static::getModel()::where('status', Ticket::STATUS_OPEN);
+        
+        // Aplicar a mesma filtragem do getEloquentQuery
+        if (!$user->isAdmin()) {
+            if ($user->isManager() && $user->employee && $user->employee->company_id) {
+                // Managers veem apenas tickets da sua empresa
+                $query->where('company_id', $user->employee->company_id);
+            } else {
+                // Outros usuários veem apenas tickets que criaram ou foram atribuídos a eles
+                $query->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                      ->orWhere('assigned_to', $user->id);
+                });
+            }
+        }
+        
+        $openTickets = $query->count();
         
         if ($openTickets > 10) {
             return 'danger';
