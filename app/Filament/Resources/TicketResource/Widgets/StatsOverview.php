@@ -11,8 +11,26 @@ class StatsOverview extends BaseWidget
 {
     protected function getStats(): array
     {
-        // Consulta otimizada com agregações
-        $stats = Ticket::selectRaw('
+        $user = auth()->user();
+        
+        // Aplicar a mesma filtragem do TicketResource
+        $baseQuery = Ticket::query();
+        
+        if (!$user->isAdmin()) {
+            if ($user->isManager() && $user->employee && $user->employee->company_id) {
+                // Managers veem apenas tickets da sua empresa
+                $baseQuery->where('company_id', $user->employee->company_id);
+            } else {
+                // Outros usuários veem apenas tickets que criaram ou foram atribuídos a eles
+                $baseQuery->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                      ->orWhere('assigned_to', $user->id);
+                });
+            }
+        }
+        
+        // Consulta otimizada com agregações aplicando os filtros
+        $stats = (clone $baseQuery)->selectRaw('
             COUNT(*) as total,
             SUM(CASE WHEN status IN (?, ?, ?) THEN 1 ELSE 0 END) as open_count,
             SUM(CASE WHEN status IN (?, ?) THEN 1 ELSE 0 END) as resolved_count,
@@ -29,8 +47,8 @@ class StatsOverview extends BaseWidget
             Ticket::STATUS_CLOSED
         ])->first();
         
-        // Calcular taxa de resolução dos últimos 30 dias
-        $resolutionStats = Ticket::selectRaw('
+        // Calcular taxa de resolução dos últimos 30 dias com filtros
+        $resolutionStats = (clone $baseQuery)->selectRaw('
             COUNT(*) as total_last_month,
             SUM(CASE WHEN status IN (?, ?) THEN 1 ELSE 0 END) as resolved_last_month
         ', [Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED])
@@ -41,8 +59,8 @@ class StatsOverview extends BaseWidget
             ? round(($resolutionStats->resolved_last_month / $resolutionStats->total_last_month) * 100, 1)
             : 0;
             
-        // Calcular tempo médio de resolução
-        $avgResolutionTime = Ticket::whereNotNull('resolved_at')
+        // Calcular tempo médio de resolução com filtros
+        $avgResolutionTime = (clone $baseQuery)->whereNotNull('resolved_at')
             ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, resolved_at)) as avg_hours')
             ->value('avg_hours');
             
