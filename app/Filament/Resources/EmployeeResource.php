@@ -38,6 +38,29 @@ class EmployeeResource extends Resource
     
    protected static ?string $navigationGroup = 'Recursos Humanos';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        $user = auth()->user();
+        
+        if (!$user) {
+            return false;
+        }
+        
+        // Administradores podem ver todos os recursos
+        if ($user->isAdmin()) {
+            return true;
+        }
+        
+        // Gestores de RH podem ver recursos de RH
+        if ($user->isManager() && 
+            $user->department && 
+            strtolower($user->department->name) === 'recursos humanos') {
+            return true;
+        }
+        
+        return false;
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -623,4 +646,5 @@ class EmployeeResource extends Resource
     {
         return auth()->user()->can('viewAny', Employee::class);
     }
+
 }
