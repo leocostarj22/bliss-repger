@@ -6,6 +6,7 @@ use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -58,6 +59,29 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class, 'role_id');
     }
 
+    // Relacionamentos para aprovações de RH
+    public function approvedVacations(): HasMany
+    {
+        return $this->hasMany(Vacation::class, 'approved_by');
+    }
+
+    public function rejectedVacations(): HasMany
+    {
+        return $this->hasMany(Vacation::class, 'rejected_by');
+    }
+
+    public function approvedTimesheets(): HasMany
+    {
+        return $this->hasMany(Timesheet::class, 'approved_by');
+    }
+
+    // Relacionamento com holerites criados
+    public function createdPayrolls(): HasMany
+    {
+        return $this->hasMany(Payroll::class, 'created_by');
+    }
+
+    // Relacionamento com tickets
     public function createdTickets(): HasMany
     {
         return $this->hasMany(Ticket::class, 'user_id');
@@ -71,6 +95,12 @@ class User extends Authenticatable
     public function comments(): HasMany
     {
         return $this->hasMany(TicketComment::class);
+    }
+
+    // Relacionamento com EmployeeUser
+    public function employeeUser(): HasOne
+    {
+        return $this->hasOne(EmployeeUser::class, 'email', 'email');
     }
 
     // Scopes

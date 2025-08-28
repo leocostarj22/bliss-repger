@@ -35,7 +35,7 @@ class EmployeeResource extends Resource
     
     protected static ?string $pluralModelLabel = 'Funcionários';
     
-    protected static ?string $navigationGroup = 'RH';
+   protected static ?string $navigationGroup = 'Recursos Humanos';
 
     public static function form(Form $form): Form
     {
@@ -276,9 +276,10 @@ class EmployeeResource extends Resource
                                             ->label('Data de Demissão'),
                                         
                                         Forms\Components\TextInput::make('salary')
-                                            ->label('Salário')
+                                            ->label('Salário Base')
                                             ->numeric()
-                                            ->prefix('€'),
+                                            ->prefix('€')
+                                            ->step(0.01),
                                         
                                         Forms\Components\Select::make('employment_type')
                                             ->label('Tipo de Contrato')
@@ -523,7 +524,7 @@ class EmployeeResource extends Resource
                     ->falseColor('gray'),
                 
                 Tables\Columns\TextColumn::make('salary')
-                    ->label('Salário')
+                    ->label('Salário Base')
                     ->money('EUR')
                     ->sortable(),
                 */

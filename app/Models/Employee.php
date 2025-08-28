@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Employee extends Model
 {
@@ -38,6 +39,9 @@ class Employee extends Model
         'hire_date',
         'termination_date',
         'salary',
+        'hourly_rate', // Novo campo da migration
+        'vacation_days_balance', // Novo campo da migration
+        'last_vacation_calculation', // Novo campo da migration
         'employment_type',
         'status',
         'bank_name',
@@ -53,7 +57,10 @@ class Employee extends Model
         'birth_date' => 'date',
         'hire_date' => 'date',
         'termination_date' => 'date',
+        'last_vacation_calculation' => 'date', // Novo cast
         'salary' => 'decimal:2',
+        'hourly_rate' => 'decimal:2', // Novo cast
+        'vacation_days_balance' => 'integer', // Novo cast
         'documents' => 'array',
     ];
 
@@ -109,6 +116,22 @@ class Employee extends Model
         return $this->belongsTo(Company::class);
     }
 
+    // Novos relacionamentos para RH
+    public function payrolls(): HasMany
+    {
+        return $this->hasMany(Payroll::class);
+    }
+
+    public function vacations(): HasMany
+    {
+        return $this->hasMany(Vacation::class);
+    }
+
+    public function timesheets(): HasMany
+    {
+        return $this->hasMany(Timesheet::class);
+    }
+
     // Verifica se o funcionário tem acesso ao sistema
     public function hasSystemAccess(): bool
     {
@@ -120,6 +143,11 @@ class Employee extends Model
         return $this->salary ? '€ ' . number_format($this->salary, 2, ',', '.') : '';
     }
 
+    public function getFormattedHourlyRateAttribute(): string
+    {
+        return $this->hourly_rate ? '€ ' . number_format($this->hourly_rate, 2, ',', '.') : '';
+    }
+
     public function getStatusLabelAttribute(): string
     {
         return match ($this->status) {
@@ -129,5 +157,29 @@ class Employee extends Model
             'on_leave' => 'Afastado',
             default => $this->status,
         };
+    }
+
+    // Método para calcular saldo de férias
+    public function updateVacationBalance(): void
+    {
+        $company = $this->company;
+        $annualDays = $company->annual_vacation_days ?? 22; // Padrão Portugal: 22 dias
+        
+        // Calcular dias proporcionais baseado na data de contratação
+        $hireYear = $this->hire_date->year;
+        $currentYear = now()->year;
+        
+        if ($hireYear === $currentYear) {
+            // Primeiro ano: proporcional aos meses trabalhados
+            $monthsWorked = 12 - $this->hire_date->month + 1;
+            $proportionalDays = ($annualDays / 12) * $monthsWorked;
+            $this->vacation_days_balance = floor($proportionalDays);
+        } else {
+            // Anos seguintes: direito completo
+            $this->vacation_days_balance = $annualDays;
+        }
+        
+        $this->last_vacation_calculation = now();
+        $this->save();
     }
 }

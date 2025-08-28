@@ -11,6 +11,11 @@ use Illuminate\Support\Facades\Auth;
 class CreateTicket extends CreateRecord
 {
     protected static string $resource = TicketResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return static::getResource()::getUrl('index');
+    }
     
     protected function mutateFormDataBeforeCreate(array $data): array
     {
