@@ -144,8 +144,29 @@ class InternalMessageResource extends Resource
                         'archived' => 'Arquivada',
                     }),
                 
-                TextColumn::make('recipients_count')
+                TextColumn::make('recipients.recipient.name')
                     ->label('Destinatários')
+                    ->formatStateUsing(function ($record) {
+                        $recipients = $record->recipients()->with('recipient')->get();
+                        $names = $recipients->pluck('recipient.name')->filter()->toArray();
+                        
+                        if (count($names) === 0) {
+                            return 'Nenhum destinatário';
+                        }
+                        
+                        if (count($names) === 1) {
+                            return $names[0];
+                        }
+                        
+                        if (count($names) <= 3) {
+                            return implode(', ', $names);
+                        }
+                        
+                        return implode(', ', array_slice($names, 0, 2)) . ' e mais ' . (count($names) - 2) . ' outros';
+                    })
+                    ->searchable()
+                    ->sortable(false)
+                    ->wrap(),
                     ->counts('recipients')
                     ->sortable(),
                 
@@ -205,7 +226,9 @@ class InternalMessageResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('sender_id', Auth::id());
+        return parent::getEloquentQuery()
+            ->where('sender_id', Auth::id())
+            ->with(['recipients.recipient']);
     }
 
     public static function getRelations(): array

@@ -5,6 +5,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{{ config('app.name', 'Laravel') }}</title>
         
+        <!-- Favicon -->
+        <link rel="icon" type="image/x-icon" href="{{ asset('images/gmfavicon.png') }}">
+        
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
@@ -153,7 +156,7 @@
         <!-- Overlay para melhorar a visibilidade da logo -->
         <div class="overlay"></div>
         
-        <!-- Container da Logo e BotÃµes -->
+        <!-- Container da Logo e BotÃões -->
         <div class="container">
             <img src="{{ asset('images/logocolors.png') }}" alt="Multicontact Logo" class="logo">
             
