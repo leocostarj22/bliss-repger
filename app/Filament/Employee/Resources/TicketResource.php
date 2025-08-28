@@ -31,6 +31,27 @@ class TicketResource extends Resource
     
     protected static ?string $pluralModelLabel = 'Tickets';
 
+    // Adicionar métodos de autorização
+    public static function canAccess(): bool
+    {
+        return auth()->user()->can('viewAny', Ticket::class);
+    }
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->can('viewAny', Ticket::class);
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()->can('create', Ticket::class);
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canAccess();
+    }
+
     // Adicionar este método para filtrar tickets acessíveis ao funcionário
     public static function getEloquentQuery(): Builder
     {

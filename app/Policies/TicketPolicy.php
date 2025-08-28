@@ -3,7 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Ticket;
-use App\Models\User;
+use App\Contracts\UserInterface;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class TicketPolicy
@@ -13,16 +13,16 @@ class TicketPolicy
     /**
      * Determine whether the user can view any tickets.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(UserInterface $user): bool
     {
-        // Admins e managers podem ver todos os tickets
-        return $user->isAdmin() || $user->isManager();
+        // Todos os usuários autenticados podem ver tickets (com filtros aplicados no getEloquentQuery)
+        return true;
     }
 
     /**
      * Determine whether the user can view the ticket.
      */
-    public function view(User $user, Ticket $ticket): bool
+    public function view(UserInterface $user, Ticket $ticket): bool
     {
         // Admins podem ver todos os tickets
         if ($user->isAdmin()) {
@@ -30,18 +30,18 @@ class TicketPolicy
         }
 
         // Managers podem ver tickets da sua empresa
-        if ($user->isManager() && $user->employee && $user->employee->company_id === $ticket->company_id) {
+        if ($user->isManager() && $user->getEmployee() && $user->getEmployee()->company_id === $ticket->company_id) {
             return true;
         }
 
         // Usuários podem ver apenas tickets que criaram ou que foram atribuídos a eles
-        return $ticket->user_id === $user->id || $ticket->assigned_to === $user->id;
+        return $ticket->user_id === $user->getId() || $ticket->assigned_to === $user->getId();
     }
 
     /**
      * Determine whether the user can create tickets.
      */
-    public function create(User $user): bool
+    public function create(UserInterface $user): bool
     {
         // Todos os usuários autenticados podem criar tickets
         return true;
@@ -50,7 +50,7 @@ class TicketPolicy
     /**
      * Determine whether the user can update the ticket.
      */
-    public function update(User $user, Ticket $ticket): bool
+    public function update(UserInterface $user, Ticket $ticket): bool
     {
         // Admins podem editar todos os tickets
         if ($user->isAdmin()) {
@@ -58,18 +58,18 @@ class TicketPolicy
         }
 
         // Managers podem editar tickets da sua empresa
-        if ($user->isManager() && $user->employee && $user->employee->company_id === $ticket->company_id) {
+        if ($user->isManager() && $user->getEmployee() && $user->getEmployee()->company_id === $ticket->company_id) {
             return true;
         }
 
         // Usuários podem editar apenas tickets que criaram ou que foram atribuídos a eles
-        return $ticket->user_id === $user->id || $ticket->assigned_to === $user->id;
+        return $ticket->user_id === $user->getId() || $ticket->assigned_to === $user->getId();
     }
 
     /**
      * Determine whether the user can delete the ticket.
      */
-    public function delete(User $user, Ticket $ticket): bool
+    public function delete(UserInterface $user, Ticket $ticket): bool
     {
         // Apenas admins podem deletar tickets
         if ($user->isAdmin()) {
@@ -77,18 +77,18 @@ class TicketPolicy
         }
 
         // Managers podem deletar tickets da sua empresa
-        if ($user->isManager() && $user->employee && $user->employee->company_id === $ticket->company_id) {
+        if ($user->isManager() && $user->getEmployee() && $user->getEmployee()->company_id === $ticket->company_id) {
             return true;
         }
 
         // Usuários podem deletar apenas tickets que criaram (e que ainda não foram atribuídos)
-        return $ticket->user_id === $user->id && !$ticket->assigned_to;
+        return $ticket->user_id === $user->getId() && !$ticket->assigned_to;
     }
 
     /**
      * Determine whether the user can assign tickets.
      */
-    public function assign(User $user, Ticket $ticket): bool
+    public function assign(UserInterface $user, Ticket $ticket): bool
     {
         // Admins e managers podem atribuir tickets
         if ($user->isAdmin() || $user->isManager()) {
@@ -96,6 +96,6 @@ class TicketPolicy
         }
 
         // Agentes podem atribuir tickets que foram atribuídos a eles
-        return $ticket->assigned_to === $user->id;
+        return $ticket->assigned_to === $user->getId();
     }
 }

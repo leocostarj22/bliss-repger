@@ -10,8 +10,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use App\Contracts\UserInterface;
 
-class User extends Authenticatable
+class User extends Authenticatable implements UserInterface
 {
     use LogsActivity;
     use HasFactory, Notifiable;
@@ -200,5 +201,15 @@ class User extends Authenticatable
     public function todayTasks()
     {
         return $this->tasks()->today();
+    }
+    
+    public function getId()
+    {
+        return $this->id;
+    }
+    
+    public function getEmployee()
+    {
+        return $this->employee;
     }
 }

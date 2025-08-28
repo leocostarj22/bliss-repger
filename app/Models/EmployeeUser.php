@@ -8,8 +8,9 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use App\Contracts\UserInterface;
 
-class EmployeeUser extends Authenticatable
+class EmployeeUser extends Authenticatable implements UserInterface
 {
     use HasFactory, Notifiable;
 
@@ -124,5 +125,30 @@ class EmployeeUser extends Authenticatable
     public function todayTasks()
     {
         return $this->tasks()->today();
+    }
+    
+    public function isAdmin(): bool
+    {
+        return $this->employee && $this->employee->position === 'admin';
+    }
+
+    public function isManager(): bool
+    {
+        return $this->employee && $this->employee->position === 'manager';
+    }
+
+    public function isAgent(): bool
+    {
+        return $this->employee && $this->employee->position === 'agent';
+    }
+    
+    public function getId()
+    {
+        return $this->id;
+    }
+    
+    public function getEmployee()
+    {
+        return $this->employee;
     }
 }
