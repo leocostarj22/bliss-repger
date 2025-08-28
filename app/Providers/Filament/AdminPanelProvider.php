@@ -11,6 +11,7 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Widgets;
+use Filament\Navigation\NavigationGroup;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -49,7 +50,9 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Widgets\AdminPostsWidget::class,
                 // \App\Filament\Widgets\ChatBotWidget::class, // REMOVIDO
             ])
-
+            ->navigationGroups([
+                NavigationGroup::make('Recursos Humanos'),
+            ])
             
             ->plugins([
                 SpotlightPlugin::make(),
@@ -77,6 +80,32 @@ class AdminPanelProvider extends PanelProvider
                     }
                 });
             });
+    }
+
+    /**
+     * Verifica se o usuário pode acessar recursos de RH
+     */
+    private function canAccessHR(): bool
+    {
+        $user = auth()->user();
+        
+        if (!$user) {
+            return false;
+        }
+
+        // Admin sempre tem acesso
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        // Gestor de RH tem acesso
+        if ($user->isManager() && 
+            $user->department && 
+            strtolower($user->department->name) === 'recursos humanos') {
+            return true;
+        }
+
+        return false;
     }
 }
 

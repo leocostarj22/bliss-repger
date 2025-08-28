@@ -16,6 +16,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Database\Eloquent\Model;
 
 class TimesheetResource extends Resource
 {
@@ -397,5 +398,35 @@ class TimesheetResource extends Resource
             'view' => Pages\ViewTimesheet::route('/{record}'),
             'edit' => Pages\EditTimesheet::route('/{record}/edit'),
         ];
+    }
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()->can('viewAny', Timesheet::class);
+    }
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->can('viewAny', Timesheet::class);
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()->can('create', Timesheet::class);
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return auth()->user()->can('update', $record);
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return auth()->user()->can('delete', $record);
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return auth()->user()->can('viewAny', Timesheet::class);
     }
 }

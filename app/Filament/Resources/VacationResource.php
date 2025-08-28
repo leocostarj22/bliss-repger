@@ -4,8 +4,6 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\VacationResource\Pages;
 use App\Models\Vacation;
-use App\Models\Employee;
-use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -14,8 +12,8 @@ use Filament\Tables\Table;
 use Filament\Infolists\Infolist;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Database\Eloquent\Model;
+
 
 class VacationResource extends Resource
 {
@@ -56,9 +54,17 @@ class VacationResource extends Resource
                         Forms\Components\Select::make('vacation_type')
                             ->label('Tipo de Férias')
                             ->options([
-                                'annual' => 'Férias Anuais',
-                                'compensatory' => 'Férias Compensatórias',
-                                'advance' => 'Adiantamento de Férias',
+                                'annual_leave' => 'Férias Anuais',
+                                'maternity_leave' => 'Licença de Maternidade',
+                                'paternity_leave' => 'Licença de Paternidade',
+                                'sick_leave' => 'Baixa Médica',
+                                'marriage_leave' => 'Licença de Casamento',
+                                'bereavement_leave' => 'Licença por Luto',
+                                'study_leave' => 'Licença para Estudos',
+                                'unpaid_leave' => 'Licença Sem Vencimento',
+                                'compensatory_leave' => 'Férias Compensatórias',
+                                'advance_leave' => 'Adiantamento de Férias',
+                                'other' => 'Outro',
                             ])
                             ->required(),
                     ])->columns(3),
@@ -156,6 +162,18 @@ class VacationResource extends Resource
                 Tables\Columns\TextColumn::make('vacation_type')
                     ->label('Tipo')
                     ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'annual_leave' => 'Férias Anuais',
+                        'maternity_leave' => 'Licença de Maternidade',
+                        'paternity_leave' => 'Licença de Paternidade',
+                        'sick_leave' => 'Baixa Médica',
+                        'marriage_leave' => 'Licença de Casamento',
+                        'bereavement_leave' => 'Licença por Luto',
+                        'study_leave' => 'Licença para Estudos',
+                        'unpaid_leave' => 'Licença Sem Vencimento',
+                        'compensatory_leave' => 'Férias Compensatórias',
+                        'advance_leave' => 'Adiantamento de Férias',
+                        'other' => 'Outro',
+                        // Manter compatibilidade com valores antigos
                         'annual' => 'Férias Anuais',
                         'compensatory' => 'Férias Compensatórias',
                         'advance' => 'Adiantamento de Férias',
@@ -216,9 +234,17 @@ class VacationResource extends Resource
                 Tables\Filters\SelectFilter::make('vacation_type')
                     ->label('Tipo de Férias')
                     ->options([
-                        'annual' => 'Férias Anuais',
-                        'compensatory' => 'Férias Compensatórias',
-                        'advance' => 'Adiantamento de Férias',
+                        'annual_leave' => 'Férias Anuais',
+                        'maternity_leave' => 'Licença de Maternidade',
+                        'paternity_leave' => 'Licença de Paternidade',
+                        'sick_leave' => 'Baixa Médica',
+                        'marriage_leave' => 'Licença de Casamento',
+                        'bereavement_leave' => 'Licença por Luto',
+                        'study_leave' => 'Licença para Estudos',
+                        'unpaid_leave' => 'Licença Sem Vencimento',
+                        'compensatory_leave' => 'Férias Compensatórias',
+                        'advance_leave' => 'Adiantamento de Férias',
+                        'other' => 'Outro',
                     ]),
                 
                 Tables\Filters\SelectFilter::make('status')
@@ -290,6 +316,18 @@ class VacationResource extends Resource
                         TextEntry::make('vacation_type')
                             ->label('Tipo de Férias')
                             ->formatStateUsing(fn (string $state): string => match ($state) {
+                                'annual_leave' => 'Férias Anuais',
+                                'maternity_leave' => 'Licença de Maternidade',
+                                'paternity_leave' => 'Licença de Paternidade',
+                                'sick_leave' => 'Baixa Médica',
+                                'marriage_leave' => 'Licença de Casamento',
+                                'bereavement_leave' => 'Licença por Luto',
+                                'study_leave' => 'Licença para Estudos',
+                                'unpaid_leave' => 'Licença Sem Vencimento',
+                                'compensatory_leave' => 'Férias Compensatórias',
+                                'advance_leave' => 'Adiantamento de Férias',
+                                'other' => 'Outro',
+                                // Manter compatibilidade com valores antigos
                                 'annual' => 'Férias Anuais',
                                 'compensatory' => 'Férias Compensatórias',
                                 'advance' => 'Adiantamento de Férias',
@@ -381,5 +419,35 @@ class VacationResource extends Resource
             'view' => Pages\ViewVacation::route('/{record}'),
             'edit' => Pages\EditVacation::route('/{record}/edit'),
         ];
+    }
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()->can('viewAny', Vacation::class);
+    }
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->can('viewAny', Vacation::class);
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()->can('create', Vacation::class);
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return auth()->user()->can('update', $record);
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return auth()->user()->can('delete', $record);
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return auth()->user()->can('viewAny', Vacation::class);
     }
 }

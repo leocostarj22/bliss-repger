@@ -21,6 +21,7 @@ use App\Filament\Resources\EmployeeResource\Widgets\NewHiresWidget;
 use App\Filament\Resources\EmployeeResource\Widgets\EmployeesByDepartmentChart;
 use App\Filament\Resources\EmployeeResource\Widgets\EmploymentTypeChart;
 use Filament\Forms\Components\FileUpload;
+use Illuminate\Database\Eloquent\Model;
 
 
 class EmployeeResource extends Resource
@@ -591,5 +592,35 @@ class EmployeeResource extends Resource
             'view' => Pages\ViewEmployee::route('/{record}'),
             'edit' => Pages\EditEmployee::route('/{record}/edit'),
         ];
+    }
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()->can('viewAny', Employee::class);
+    }
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->can('viewAny', Employee::class);
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()->can('create', Employee::class);
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return auth()->user()->can('update', $record);
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return auth()->user()->can('delete', $record);
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return auth()->user()->can('viewAny', Employee::class);
     }
 }

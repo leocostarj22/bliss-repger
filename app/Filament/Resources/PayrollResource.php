@@ -18,6 +18,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Database\Eloquent\Model;
 
 class PayrollResource extends Resource
 {
@@ -523,5 +524,34 @@ class PayrollResource extends Resource
         $set('gross_total', number_format($grossTotal, 2, '.', ''));
         $set('total_deductions', number_format($totalDeductions, 2, '.', ''));
         $set('net_total', number_format($netTotal, 2, '.', ''));
+    }
+    public static function canAccess(): bool
+    {
+        return auth()->user()->can('viewAny', Payroll::class);
+    }
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->can('viewAny', Payroll::class);
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()->can('create', Payroll::class);
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return auth()->user()->can('update', $record);
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return auth()->user()->can('delete', $record);
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return auth()->user()->can('viewAny', Payroll::class);
     }
 }
