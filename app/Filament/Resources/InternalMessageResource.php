@@ -167,8 +167,6 @@ class InternalMessageResource extends Resource
                     ->searchable()
                     ->sortable(false)
                     ->wrap(),
-                    ->counts('recipients')
-                    ->sortable(),
                 
                 TextColumn::make('sent_at')
                     ->label('Enviada em')
