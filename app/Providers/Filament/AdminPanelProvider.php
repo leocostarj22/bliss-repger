@@ -32,6 +32,9 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->databaseNotifications()
+            ->broadcasting()
+            ->databaseNotificationsPolling('2s')
             ->colors([
                 'primary' => Color::Purple,
             ])
@@ -56,7 +59,13 @@ class AdminPanelProvider extends PanelProvider
             
             ->plugins([
                 SpotlightPlugin::make(),
-                FilamentFullCalendarPlugin::make(),
+                FilamentFullCalendarPlugin::make()
+                    ->selectable()
+                    ->editable()
+                    ->schedulerLicenseKey('GPL-My-Project-Is-Open-Source')
+                    ->config([
+                        'locale' => 'pt-pt',
+                    ]),
             ])
             ->middleware([
                 EncryptCookies::class,

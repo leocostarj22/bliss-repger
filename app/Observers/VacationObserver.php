@@ -3,9 +3,7 @@
 namespace App\Observers;
 
 use App\Models\Vacation;
-use App\Events\VacationRequested;
-use App\Events\VacationStatusChanged;
-use App\Jobs\ProcessHRBroadcast;
+use Filament\Notifications\Notification;
 
 class VacationObserver
 {
@@ -14,7 +12,11 @@ class VacationObserver
      */
     public function created(Vacation $vacation): void
     {
-        ProcessHRBroadcast::dispatch(new VacationRequested($vacation));
+            Notification::make()
+                ->title('Salvo com sucesso!')
+                ->success()
+                ->body('Sua marcação depende de aprovação.')
+                ->sendToDatabase(auth()->user());
     }
 
     /**
@@ -22,9 +24,30 @@ class VacationObserver
      */
     public function updated(Vacation $vacation): void
     {
-        // Se o status foi alterado
-        if ($vacation->wasChanged('status')) {
-            ProcessHRBroadcast::dispatch(new VacationStatusChanged($vacation, $vacation->getOriginal('status')));
-        }
+        //
+    }
+
+    /**
+     * Handle the Vacation "deleted" event.
+     */
+    public function deleted(Vacation $vacation): void
+    {
+        //
+    }
+
+    /**
+     * Handle the Vacation "restored" event.
+     */
+    public function restored(Vacation $vacation): void
+    {
+        //
+    }
+
+    /**
+     * Handle the Vacation "force deleted" event.
+     */
+    public function forceDeleted(Vacation $vacation): void
+    {
+        //
     }
 }

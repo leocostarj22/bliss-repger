@@ -30,6 +30,9 @@ class EmployeePanelProvider extends PanelProvider
             ->login(\App\Filament\Employee\Pages\Login::class)
             ->authGuard('employee')
             ->topNavigation()
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('2s')
+            ->broadcasting()
             ->brandLogo(asset('images/logocolors.png'))
             ->colors([
                 'primary' => Color::Purple,
@@ -48,7 +51,13 @@ class EmployeePanelProvider extends PanelProvider
             ])
             ->plugins([
                 SpotlightPlugin::make(),
-                FilamentFullCalendarPlugin::make(),
+                FilamentFullCalendarPlugin::make()
+                    ->selectable()
+                    ->editable()
+                    ->schedulerLicenseKey('GPL-My-Project-Is-Open-Source')
+                    ->config([
+                        'locale' => 'pt-pt',
+                    ]),
             ])
             ->middleware([
                 EncryptCookies::class,

@@ -3,7 +3,7 @@
 namespace App\Observers;
 
 use App\Models\Ticket;
-use App\Jobs\ProcessTicketBroadcast;
+use Filament\Notifications\Notification;
 
 class TicketObserver
 {
@@ -12,8 +12,11 @@ class TicketObserver
      */
     public function created(Ticket $ticket): void
     {
-        // Disparar evento quando ticket é criado usando Job assíncrono
-        ProcessTicketBroadcast::dispatch($ticket, 'created');
+            Notification::make()
+                ->title('Saved successfully')
+                ->success()
+                ->body('Novo Ticket criado.')
+                ->sendToDatabase(auth()->user());
     }
 
     /**
@@ -21,17 +24,11 @@ class TicketObserver
      */
     public function updated(Ticket $ticket): void
     {
-        // Verificar se o status foi alterado
-        if ($ticket->wasChanged('status')) {
-            ProcessTicketBroadcast::dispatch(
-                $ticket, 
-                'status_changed', 
-                $ticket->getOriginal('status')
-            );
-        }
-        
-        // Disparar evento geral de atualização
-        ProcessTicketBroadcast::dispatch($ticket, 'updated', null, $ticket->getChanges());
+            Notification::make()        
+                ->title('Ticket Alterado com Sucesso!')
+                ->success()
+                ->body('Ticket Alterado.')
+                ->sendToDatabase(auth()->user());
     }
 
     /**
@@ -39,7 +36,26 @@ class TicketObserver
      */
     public function deleted(Ticket $ticket): void
     {
-        // Opcional: criar evento TicketDeleted se necessário
-        // ProcessTicketBroadcast::dispatch($ticket, 'deleted');
+                Notification::make()
+                ->title('Ticket Apagado com Sucesso!')
+                ->success()
+                ->body('Ticket Apagado.')
+                ->sendToDatabase(auth()->user());
+    }
+
+    /**
+     * Handle the Ticket "restored" event.
+     */
+    public function restored(Ticket $ticket): void
+    {
+        //
+    }
+
+    /**
+     * Handle the Ticket "force deleted" event.
+     */
+    public function forceDeleted(Ticket $ticket): void
+    {
+        //
     }
 }

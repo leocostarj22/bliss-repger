@@ -3,28 +3,59 @@
 namespace App\Observers;
 
 use App\Models\InternalMessage;
-use App\Events\MessageSent;
-use App\Jobs\ProcessMessageBroadcast;
+use Filament\Notifications\Notification;
 
 class InternalMessageObserver
 {
     /**
      * Handle the InternalMessage "created" event.
      */
-    public function created(InternalMessage $message): void
+    public function created(InternalMessage $internalMessage): void
     {
-        // Usar job para processar o broadcasting de forma assíncrona
-        ProcessMessageBroadcast::dispatch($message, 'sent');
+            Notification::make()        
+                ->title('Mensagem Criada!')
+                ->success()
+                ->body('Mensagem Criada com Sucesso')
+                ->sendToDatabase(auth()->user());
     }
 
     /**
      * Handle the InternalMessage "updated" event.
      */
-    public function updated(InternalMessage $message): void
+    public function updated(InternalMessage $internalMessage): void
     {
-        // Se a mensagem foi marcada como lida (status changed)
-        if ($message->wasChanged('status') && $message->status === 'read') {
-            ProcessMessageBroadcast::dispatch($message, 'read');
-        }
+            Notification::make()        
+                ->title('Mensagem Alterado!')
+                ->success()
+                ->body('Mensagem Alterado com Sucesso!')
+                ->sendToDatabase(auth()->user());
+    }
+
+    /**
+     * Handle the InternalMessage "deleted" event.
+     */
+    public function deleted(InternalMessage $internalMessage): void
+    {
+            Notification::make()        
+                ->title('Mensagem Apagada!')
+                ->success()
+                ->body('Mensagem Apagada com Sucesso!')
+                ->sendToDatabase(auth()->user());
+    }
+
+    /**
+     * Handle the InternalMessage "restored" event.
+     */
+    public function restored(InternalMessage $internalMessage): void
+    {
+        //
+    }
+
+    /**
+     * Handle the InternalMessage "force deleted" event.
+     */
+    public function forceDeleted(InternalMessage $internalMessage): void
+    {
+        //
     }
 }
