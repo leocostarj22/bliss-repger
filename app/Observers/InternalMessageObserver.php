@@ -12,11 +12,24 @@ class InternalMessageObserver
      */
     public function created(InternalMessage $internalMessage): void
     {
-            Notification::make()        
-                ->title('Mensagem Criada!')
+        // Notificar o remetente
+        if ($internalMessage->sender) {
+            Notification::make()
+                ->title('Mensagem Enviada!')
                 ->success()
-                ->body('Mensagem Criada com Sucesso')
-                ->sendToDatabase(auth()->user());
+                ->body('Sua mensagem foi enviada com sucesso')
+                ->sendToDatabase($internalMessage->sender);
+        }
+
+        // Notificar todos os destinatários
+        $recipients = $internalMessage->recipientUsers;
+        foreach ($recipients as $recipient) {
+            Notification::make()
+                ->title('Nova Mensagem!')
+                ->info()
+                ->body('Você recebeu uma nova mensagem interna')
+                ->sendToDatabase($recipient);
+        }
     }
 
     /**
@@ -24,11 +37,24 @@ class InternalMessageObserver
      */
     public function updated(InternalMessage $internalMessage): void
     {
-            Notification::make()        
-                ->title('Mensagem Alterado!')
+        // Notificar o remetente
+        if ($internalMessage->sender) {
+            Notification::make()
+                ->title('Mensagem Atualizada!')
                 ->success()
-                ->body('Mensagem Alterado com Sucesso!')
-                ->sendToDatabase(auth()->user());
+                ->body('Sua mensagem foi atualizada com sucesso')
+                ->sendToDatabase($internalMessage->sender);
+        }
+
+        // Notificar todos os destinatários
+        $recipients = $internalMessage->recipientUsers;
+        foreach ($recipients as $recipient) {
+            Notification::make()
+                ->title('Mensagem Atualizada!')
+                ->info()
+                ->body('Uma mensagem que você recebeu foi atualizada')
+                ->sendToDatabase($recipient);
+        }
     }
 
     /**
@@ -36,11 +62,14 @@ class InternalMessageObserver
      */
     public function deleted(InternalMessage $internalMessage): void
     {
-            Notification::make()        
+        // Notificar apenas o remetente sobre a exclusão
+        if ($internalMessage->sender) {
+            Notification::make()
                 ->title('Mensagem Apagada!')
                 ->success()
-                ->body('Mensagem Apagada com Sucesso!')
-                ->sendToDatabase(auth()->user());
+                ->body('Mensagem apagada com sucesso!')
+                ->sendToDatabase($internalMessage->sender);
+        }
     }
 
     /**

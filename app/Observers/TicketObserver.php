@@ -12,11 +12,37 @@ class TicketObserver
      */
     public function created(Ticket $ticket): void
     {
+        // Notificar o criador do ticket
+        if ($ticket->user) {
             Notification::make()
-                ->title('Saved successfully')
+                ->title('Ticket Criado!')
                 ->success()
-                ->body('Novo Ticket criado.')
-                ->sendToDatabase(auth()->user());
+                ->body('Seu ticket foi criado com sucesso')
+                ->sendToDatabase($ticket->user);
+        }
+
+        // Notificar o usuário atribuído (se houver)
+        if ($ticket->assignedTo && $ticket->assignedTo->id !== $ticket->user?->id) {
+            Notification::make()
+                ->title('Novo Ticket Atribuído!')
+                ->info()
+                ->body("Um novo ticket foi atribuído a você: {$ticket->title}")
+                ->sendToDatabase($ticket->assignedTo);
+        }
+
+        // Notificar administradores/agentes da empresa
+        $adminsAndAgents = \App\Models\User::where('company_id', $ticket->company_id)
+            ->whereIn('role', ['admin', 'agent', 'manager'])
+            ->where('id', '!=', $ticket->user?->id)
+            ->get();
+
+        foreach ($adminsAndAgents as $user) {
+            Notification::make()
+                ->title('Novo Ticket Criado!')
+                ->info()
+                ->body("Novo ticket criado: {$ticket->title}")
+                ->sendToDatabase($user);
+        }
     }
 
     /**
@@ -24,11 +50,23 @@ class TicketObserver
      */
     public function updated(Ticket $ticket): void
     {
-            Notification::make()        
-                ->title('Ticket Alterado com Sucesso!')
-                ->success()
-                ->body('Ticket Alterado.')
-                ->sendToDatabase(auth()->user());
+        // Notificar o criador do ticket
+        if ($ticket->user) {
+            Notification::make()
+                ->title('Ticket Atualizado!')
+                ->warning()
+                ->body('Seu ticket foi atualizado')
+                ->sendToDatabase($ticket->user);
+        }
+
+        // Notificar o usuário atribuído (se houver e for diferente do criador)
+        if ($ticket->assignedTo && $ticket->assignedTo->id !== $ticket->user?->id) {
+            Notification::make()
+                ->title('Ticket Atualizado!')
+                ->warning()
+                ->body("O ticket atribuído a você foi atualizado: {$ticket->title}")
+                ->sendToDatabase($ticket->assignedTo);
+        }
     }
 
     /**
@@ -36,11 +74,23 @@ class TicketObserver
      */
     public function deleted(Ticket $ticket): void
     {
-                Notification::make()
-                ->title('Ticket Apagado com Sucesso!')
-                ->success()
-                ->body('Ticket Apagado.')
-                ->sendToDatabase(auth()->user());
+        // Notificar o criador do ticket
+        if ($ticket->user) {
+            Notification::make()
+                ->title('Ticket Removido!')
+                ->danger()
+                ->body('Seu ticket foi removido')
+                ->sendToDatabase($ticket->user);
+        }
+
+        // Notificar o usuário atribuído (se houver)
+        if ($ticket->assignedTo && $ticket->assignedTo->id !== $ticket->user?->id) {
+            Notification::make()
+                ->title('Ticket Removido!')
+                ->danger()
+                ->body("O ticket atribuído a você foi removido: {$ticket->title}")
+                ->sendToDatabase($ticket->assignedTo);
+        }
     }
 
     /**
