@@ -130,7 +130,12 @@ class TicketResource extends Resource
                                     
                                 Select::make('category_id')
                                     ->label('Categoria')
-                                    ->relationship('category', 'name')
+                                    ->relationship(
+                                        name: 'category',
+                                        titleAttribute: 'name',
+                                        modifyQueryUsing: fn (Builder $query) => 
+                                            $query->where('company_id', auth()->user()->company_id)
+                                    )
                                     ->searchable()
                                     ->preload()
                                     ->nullable(),
