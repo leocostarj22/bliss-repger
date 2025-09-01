@@ -16,7 +16,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\BadgeColumn;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Forms\Components\RichEditor;
 use Illuminate\Support\Facades\Auth;
 
 class TicketResource extends Resource
@@ -101,13 +101,11 @@ class TicketResource extends Resource
                             ->maxLength(255)
                             ->columnSpanFull(),
                         
-                        Forms\Components\Textarea::make('description')
-                            ->label('Descrição')
+                        RichEditor::make('description')
+                            ->label('Mensagem')
                             ->required()
-                            ->rows(4)
                             ->columnSpanFull(),
-                    ])
-                    ->columns(2),
+                    ]),
                 
                 Forms\Components\Section::make('Classificação')
                     ->schema([

@@ -5,11 +5,6 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\TicketResource\Pages;
 use App\Filament\Resources\TicketResource\RelationManagers;
 use App\Models\Ticket;
-use App\Models\Company;
-use App\Models\Category;
-use App\Models\Department;
-use App\Models\User;
-use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -17,20 +12,16 @@ use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Grid;
-use Filament\Infolists\Infolist;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Components\BadgeEntry;
-use Filament\Infolists\Components\Section as InfoSection;
+
 
 class TicketResource extends Resource
 {
@@ -105,12 +96,11 @@ class TicketResource extends Resource
                             ->maxLength(255)
                             ->columnSpanFull(),
                             
-                        Textarea::make('description')
-                            ->label('Descrição')
+                        RichEditor::make('description')
+                            ->label('Mensagem')
                             ->required()
-                            ->rows(4)
                             ->columnSpanFull(),
-                    ]),
+                        ]),
                     
                 Section::make('Classificação')
                     ->schema([
