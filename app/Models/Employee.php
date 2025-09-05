@@ -48,9 +48,9 @@ class Employee extends Model
         'bank_agency',
         'bank_account',
         'account_type',
-        'photo_path',
-        'documents',
         'notes',
+        'photo_path',
+        'documents', // Adicionar se não estiver presente
     ];
 
     protected $casts = [

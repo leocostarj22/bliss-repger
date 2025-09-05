@@ -14,12 +14,12 @@ class VacationObserver
     public function created(Vacation $vacation): void
     {
         // Notificar o funcionário que criou a solicitação
-        if ($vacation->employee && $vacation->employee->user) {
+        if ($vacation->employee && $vacation->employee->employeeUser) {
             Notification::make()
                 ->title('Solicitação de Férias Criada!')
                 ->success()
                 ->body('Sua solicitação de férias foi criada e aguarda aprovação.')
-                ->sendToDatabase($vacation->employee->user);
+                ->sendToDatabase($vacation->employee->employeeUser);
         }
 
         // Notificar supervisores e administradores da empresa
@@ -49,7 +49,7 @@ class VacationObserver
     public function updated(Vacation $vacation): void
     {
         // Notificar o funcionário sobre mudanças no status
-        if ($vacation->employee && $vacation->employee->user) {
+        if ($vacation->employee && $vacation->employee->employeeUser) {
             $statusMessage = match($vacation->status) {
                 'approved' => 'Sua solicitação de férias foi aprovada!',
                 'rejected' => 'Sua solicitação de férias foi rejeitada.',
@@ -58,13 +58,13 @@ class VacationObserver
             };
 
             $notificationType = $vacation->status === 'approved' ? 'success' : 
-                              ($vacation->status === 'rejected' ? 'danger' : 'info');
+                          ($vacation->status === 'rejected' ? 'danger' : 'info');
 
             Notification::make()
                 ->title('Solicitação de Férias Atualizada!')
                 ->{$notificationType}()
                 ->body($statusMessage)
-                ->sendToDatabase($vacation->employee->user);
+                ->sendToDatabase($vacation->employee->employeeUser);
         }
 
         // Se foi aprovada/rejeitada, notificar também os supervisores
@@ -96,12 +96,12 @@ class VacationObserver
     public function deleted(Vacation $vacation): void
     {
         // Notificar o funcionário sobre a exclusão
-        if ($vacation->employee && $vacation->employee->user) {
+        if ($vacation->employee && $vacation->employee->employeeUser) {
             Notification::make()
                 ->title('Solicitação de Férias Removida!')
                 ->warning()
                 ->body('Sua solicitação de férias foi removida.')
-                ->sendToDatabase($vacation->employee->user);
+                ->sendToDatabase($vacation->employee->employeeUser);
         }
     }
 

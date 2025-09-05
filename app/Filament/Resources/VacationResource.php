@@ -102,7 +102,7 @@ class VacationResource extends Resource
                                 $endDate = $get('end_date');
                                 if ($state && $endDate) {
                                     $days = \Carbon\Carbon::parse($state)->diffInDays(\Carbon\Carbon::parse($endDate)) + 1;
-                                    $set('days_requested', $days);
+                                    $set('requested_days', $days);
                                 }
                             }),
                         
@@ -114,11 +114,11 @@ class VacationResource extends Resource
                                 $startDate = $get('start_date');
                                 if ($startDate && $state) {
                                     $days = \Carbon\Carbon::parse($startDate)->diffInDays(\Carbon\Carbon::parse($state)) + 1;
-                                    $set('days_requested', $days);
+                                    $set('requested_days', $days);
                                 }
                             }),
                         
-                        Forms\Components\TextInput::make('days_requested')
+                        Forms\Components\TextInput::make('requested_days')
                             ->label('Dias Solicitados')
                             ->numeric()
                             ->required()
@@ -152,17 +152,16 @@ class VacationResource extends Resource
                 
                 Forms\Components\Section::make('Observações')
                     ->schema([
-                        Forms\Components\Textarea::make('reason')
-                            ->label('Motivo da Solicitação')
+                        Forms\Components\Textarea::make('employee_notes')
+                            ->label('Observações do Funcionário')
+                            ->disabled()
                             ->rows(3),
-                        
                         Forms\Components\Textarea::make('rejection_reason')
                             ->label('Motivo da Rejeição')
-                            ->rows(3)
-                            ->visible(fn (callable $get) => $get('status') === 'rejected'),
-                        
-                        Forms\Components\Textarea::make('notes')
-                            ->label('Observações Gerais')
+                            ->visible(fn (callable $get) => $get('status') === 'rejected')
+                            ->rows(3),
+                        Forms\Components\Textarea::make('manager_notes')
+                            ->label('Observações do Gestor')
                             ->rows(3),
                     ]),
             ]);
@@ -213,7 +212,7 @@ class VacationResource extends Resource
                     )
                     ->sortable(),
                 
-                Tables\Columns\TextColumn::make('days_requested')
+                Tables\Columns\TextColumn::make('requested_days')
                     ->label('Dias')
                     ->suffix(' dias')
                     ->sortable(),
@@ -366,7 +365,7 @@ class VacationResource extends Resource
                         TextEntry::make('end_date')
                             ->label('Data de Fim')
                             ->date('d/m/Y'),
-                        TextEntry::make('days_requested')
+                        TextEntry::make('requested_days')
                             ->label('Dias Solicitados')
                             ->suffix(' dias'),
                     ])->columns(3),
@@ -401,21 +400,21 @@ class VacationResource extends Resource
                 
                 Section::make('Observações')
                     ->schema([
-                        TextEntry::make('reason')
-                            ->label('Motivo da Solicitação')
-                            ->placeholder('Nenhum motivo informado'),
+                        TextEntry::make('employee_notes')
+                            ->label('Observações do Funcionário')
+                            ->placeholder('Nenhuma observação do funcionário'),
                         TextEntry::make('rejection_reason')
                             ->label('Motivo da Rejeição')
                             ->visible(fn ($record) => $record->status === 'rejected')
                             ->placeholder('Nenhum motivo informado'),
-                        TextEntry::make('notes')
-                            ->label('Observações Gerais')
-                            ->placeholder('Nenhuma observação'),
+                        TextEntry::make('manager_notes')
+                            ->label('Observações do Gestor')
+                            ->placeholder('Nenhuma observação do gestor'),
                     ]),
                 
                 Section::make('Auditoria')
                     ->schema([
-                        TextEntry::make('requestedBy.name')
+                        TextEntry::make('employee.name')
                             ->label('Solicitado por'),
                         TextEntry::make('created_at')
                             ->label('Solicitado em')

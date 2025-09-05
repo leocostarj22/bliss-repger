@@ -19,16 +19,17 @@ class Vacation extends Model
         'requested_days',
         'approved_days',
         'vacation_year',
-        'vacation_type', // Novo campo
+        'vacation_type',
         'status',
         'requested_at',
         'approved_at',
         'rejected_at',
-        'employee_notes', // Renomeado de notes
-        'manager_notes', // Novo campo
+        'employee_notes',
+        'manager_notes',
         'rejection_reason',
         'approved_by',
         'rejected_by',
+        'created_by',
     ];
 
     protected $casts = [
@@ -56,6 +57,11 @@ class Vacation extends Model
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function requestedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function rejectedBy(): BelongsTo

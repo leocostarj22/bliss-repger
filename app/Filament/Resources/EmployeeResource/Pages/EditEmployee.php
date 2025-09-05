@@ -25,13 +25,14 @@ class EditEmployee extends EditRecord
     
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        
         // Remover campos que não pertencem à tabela employees
-        $fieldsToRemove = ['reset_system_access', 'new_system_password', 'toggle_system_status'];
+        $fieldsToRemove = ['reset_system_access', 'new_system_password', 'toggle_system_status', 'create_system_access', 'system_email', 'system_password'];
         
         foreach ($fieldsToRemove as $field) {
             unset($data[$field]);
         }
-        
+                
         return $data;
     }
     

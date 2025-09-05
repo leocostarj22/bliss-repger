@@ -4,6 +4,8 @@ namespace App\Observers;
 
 use App\Models\Payroll;
 use App\Models\User;
+use App\Notifications\PayrollCreatedNotification;
+use App\Notifications\PayrollUpdatedNotification;
 use Filament\Notifications\Notification;
 
 class PayrollObserver
@@ -15,11 +17,15 @@ class PayrollObserver
     {
         // Notificar o funcionário sobre a geração da folha de pagamento
         if ($payroll->employee && $payroll->employee->user) {
+            // Notificação via banco de dados (Filament)
             Notification::make()
                 ->title('Folha de Pagamento Gerada!')
                 ->info()
-                ->body("Sua folha de pagamento de {$payroll->period} foi gerada.")
+                ->body("Sua folha de pagamento de {$payroll->reference_period} foi gerada.")
                 ->sendToDatabase($payroll->employee->user);
+                
+            // Notificação por e-mail
+            $payroll->employee->user->notify(new PayrollCreatedNotification($payroll, 'employee'));
         }
 
         // Notificar gestores de RH e administradores
@@ -38,11 +44,15 @@ class PayrollObserver
                 ->get();
 
             foreach ($managers as $manager) {
+                // Notificação via banco de dados (Filament)
                 Notification::make()
                     ->title('Nova Folha de Pagamento!')
                     ->success()
-                    ->body("Folha de pagamento de {$payroll->employee->name} para {$payroll->period} foi gerada.")
+                    ->body("Folha de pagamento de {$payroll->employee->name} para {$payroll->reference_period} foi gerada.")
                     ->sendToDatabase($manager);
+                    
+                // Notificação por e-mail
+                $manager->notify(new PayrollCreatedNotification($payroll, 'manager'));
             }
         }
     }
@@ -52,24 +62,50 @@ class PayrollObserver
      */
     public function updated(Payroll $payroll): void
     {
-        // Notificar o funcionário sobre atualizações na folha
-        if ($payroll->employee && $payroll->employee->user) {
-            Notification::make()
-                ->title('Folha de Pagamento Atualizada!')
-                ->info()
-                ->body("Sua folha de pagamento de {$payroll->period} foi atualizada.")
-                ->sendToDatabase($payroll->employee->user);
+        // Verificar se houve mudanças significativas
+        $significantFields = [
+            'base_salary', 'overtime_hours', 'overtime_amount', 'holiday_allowance',
+            'christmas_allowance', 'meal_allowance', 'transport_allowance', 'other_allowances',
+            'social_security_employee', 'irs_withholding', 'union_fee', 'other_deductions',
+            'gross_total', 'net_total', 'status', 'notes'
+        ];
+        
+        $changes = [];
+        $hasSignificantChanges = false;
+        
+        foreach ($significantFields as $field) {
+            if ($payroll->wasChanged($field)) {
+                $hasSignificantChanges = true;
+                $changes[$field] = [
+                    'old' => $this->formatFieldValue($field, $payroll->getOriginal($field)),
+                    'new' => $this->formatFieldValue($field, $payroll->getAttribute($field))
+                ];
+            }
+        }
+        
+        if (!$hasSignificantChanges) {
+            return;
         }
 
-        // Se o status mudou para aprovado, notificar especialmente
-        if ($payroll->wasChanged('status') && $payroll->status === 'approved') {
-            if ($payroll->employee && $payroll->employee->user) {
-                Notification::make()
-                    ->title('Folha de Pagamento Aprovada!')
-                    ->success()
-                    ->body("Sua folha de pagamento de {$payroll->period} foi aprovada.")
-                    ->sendToDatabase($payroll->employee->user);
-            }
+        // Notificar o funcionário sobre atualizações na folha
+        if ($payroll->employee && $payroll->employee->user) {
+            $isApproval = $payroll->wasChanged('status') && $payroll->status === 'approved';
+            
+            $title = $isApproval ? 'Folha de Pagamento Aprovada!' : 'Folha de Pagamento Atualizada!';
+            $body = $isApproval 
+                ? "Sua folha de pagamento de {$payroll->reference_period} foi aprovada."
+                : "Sua folha de pagamento de {$payroll->reference_period} foi atualizada.";
+            $type = $isApproval ? 'success' : 'info';
+            
+            // Notificação via banco de dados (Filament)
+            Notification::make()
+                ->title($title)
+                ->{$type}()
+                ->body($body)
+                ->sendToDatabase($payroll->employee->user);
+                
+            // Notificação por e-mail
+            $payroll->employee->user->notify(new PayrollUpdatedNotification($payroll, $changes, 'employee'));
         }
     }
 
@@ -92,7 +128,7 @@ class PayrollObserver
                 Notification::make()
                     ->title('Folha de Pagamento Removida!')
                     ->warning()
-                    ->body("Folha de pagamento de {$payroll->employee->name} para {$payroll->period} foi removida.")
+                    ->body("Folha de pagamento de {$payroll->employee->name} para {$payroll->reference_period} foi removida.")
                     ->sendToDatabase($manager);
             }
         }
@@ -112,5 +148,26 @@ class PayrollObserver
     public function forceDeleted(Payroll $payroll): void
     {
         //
+    }
+    
+    private function formatFieldValue(string $field, mixed $value): string
+    {
+        if (in_array($field, ['base_salary', 'overtime_amount', 'holiday_allowance', 'christmas_allowance', 
+                             'meal_allowance', 'transport_allowance', 'other_allowances', 'social_security_employee',
+                             'irs_withholding', 'union_fee', 'other_deductions', 'gross_total', 'net_total'])) {
+            return '€ ' . number_format((float)$value, 2, ',', '.');
+        }
+        
+        if ($field === 'status') {
+            return match ($value) {
+                'draft' => 'Rascunho',
+                'approved' => 'Aprovado', 
+                'paid' => 'Pago',
+                'cancelled' => 'Cancelado',
+                default => $value
+            };
+        }
+        
+        return (string)$value;
     }
 }

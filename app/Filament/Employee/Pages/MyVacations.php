@@ -149,6 +149,7 @@ class MyVacations extends Page implements HasTable
                         $data['requested_at'] = now();
                         $data['vacation_year'] = \Carbon\Carbon::parse($data['start_date'])->year;
                         $data['status'] = 'pending';
+                        $data['created_by'] = auth()->id();
                         
                         return $data;
                     })
@@ -230,6 +231,9 @@ class MyVacations extends Page implements HasTable
                                     ->visible(fn ($record) => $record && ($record->status ?? '') === 'rejected')
                                     ->placeholder('Nenhum motivo informado')
                                     ->color('danger'),
+                                TextEntry::make('manager_notes')
+                                    ->label('Observações do Gestor')
+                                    ->placeholder('Nenhuma observação do gestor'),
                                 TextEntry::make('admin_notes')
                                     ->label('Observações do RH')
                                     ->placeholder('Nenhuma observação do RH'),

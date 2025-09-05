@@ -33,12 +33,12 @@ class EmployeeObserver
         }
 
         // Notificar o próprio funcionário se ele tiver acesso ao sistema
-        if ($employee->user) {
+        if ($employee->employeeUser) {
             Notification::make()
                 ->title('Bem-vindo!')
                 ->success()
                 ->body('Seu cadastro foi realizado com sucesso. Bem-vindo à equipe!')
-                ->sendToDatabase($employee->user);
+                ->sendToDatabase($employee->employeeUser);
         }
     }
 
@@ -47,13 +47,20 @@ class EmployeeObserver
      */
     public function updated(Employee $employee): void
     {
+        // Sincronizar nome com employee_users se existir
+        if ($employee->employeeUser && $employee->wasChanged('name')) {
+            $employee->employeeUser->update([
+                'name' => $employee->name
+            ]);
+        }
+
         // Notificar o funcionário sobre atualizações em seus dados
-        if ($employee->user) {
+        if ($employee->employeeUser) {
             Notification::make()
                 ->title('Dados Atualizados!')
                 ->info()
                 ->body('Seus dados foram atualizados no sistema.')
-                ->sendToDatabase($employee->user);
+                ->sendToDatabase($employee->employeeUser);
         }
 
         // Notificar gestores de RH sobre mudanças importantes

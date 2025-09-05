@@ -34,17 +34,17 @@ class TicketResource extends Resource
     // Adicionar métodos de autorização
     public static function canAccess(): bool
     {
-        return auth()->user()->can('viewAny', Ticket::class);
+        return filament()->auth()->check();
     }
 
     public static function canViewAny(): bool
     {
-        return auth()->user()->can('viewAny', Ticket::class);
+        return filament()->auth()->check();
     }
 
     public static function canCreate(): bool
     {
-        return auth()->user()->can('create', Ticket::class);
+        return filament()->auth()->check();
     }
 
     public static function shouldRegisterNavigation(): bool
@@ -55,16 +55,18 @@ class TicketResource extends Resource
     // Adicionar este método para filtrar tickets acessíveis ao funcionário
     public static function getEloquentQuery(): Builder
     {
-        $user = auth()->user();
+        $user = auth('employee')->user();
+        
+        // Verificar se o usuário está autenticado
+        if (!$user) {
+            return parent::getEloquentQuery()->whereRaw('1 = 0');
+        }
         
         return parent::getEloquentQuery()
             ->with(['company', 'category', 'department', 'user', 'assignedTo'])
-            ->where(function ($query) use ($user) {
-                $query->where('user_id', $user->id) // Tickets criados pelo funcionário (apenas user_id)
-                      ->orWhere('assigned_to', $user->id); // Tickets atribuídos ao funcionário
-            })
+            ->where('user_id', $user->id)
+            ->where('user_type', \App\Models\EmployeeUser::class)
             ->when($user->employee && $user->employee->company_id, function ($query) use ($user) {
-                // Filtrar apenas tickets da empresa do funcionário
                 $query->where('company_id', $user->employee->company_id);
             });
     }
@@ -295,42 +297,51 @@ class TicketResource extends Resource
     }
 
     public static function getNavigationBadge(): ?string
-{
-    $user = auth()->user();
-    
-    return static::getModel()::where('status', \App\Models\Ticket::STATUS_OPEN)
-        ->where(function ($query) use ($user) {
-            $query->where('user_id', $user->id)
-                  ->orWhere('assigned_to', $user->id);
-        })
-        ->when($user->employee && $user->employee->company_id, function ($query) use ($user) {
-            $query->where('company_id', $user->employee->company_id);
-        })
-        ->count();
-}
-
-public static function getNavigationBadgeColor(): string|array|null
-{
-    $user = auth()->user();
-    
-    $openTickets = static::getModel()::where('status', \App\Models\Ticket::STATUS_OPEN)
-        ->where(function ($query) use ($user) {
-            $query->where('user_id', $user->id)
-                  ->orWhere('assigned_to', $user->id);
-        })
-        ->when($user->employee && $user->employee->company_id, function ($query) use ($user) {
-            $query->where('company_id', $user->employee->company_id);
-        })
-        ->count();
-    
-    if ($openTickets > 10) {
-        return 'danger';
-    } elseif ($openTickets > 5) {
-        return 'warning';
+    {
+        $user = auth('employee')->user();
+        
+        if (!$user) {
+            return '0';
+        }
+        
+        $count = static::getModel()::where('status', \App\Models\Ticket::STATUS_OPEN)
+            ->where('user_id', $user->id)
+            ->where('user_type', \App\Models\EmployeeUser::class)
+            ->when($user->employee && $user->employee->company_id, function ($query) use ($user) {
+                $query->where('company_id', $user->employee->company_id);
+            })
+            ->count();
+        
+        return $count > 0 ? (string) $count : null;
     }
+
+    public static function getNavigationBadgeColor(): string|array|null
+    {
+        $user = auth()->user();
+        
+        // Verificar se o usuário está autenticado
+        if (!$user) {
+            return null;
+        }
+        
+        $openTickets = static::getModel()::where('status', \App\Models\Ticket::STATUS_OPEN)
+            ->where(function ($query) use ($user) {
+                $query->where('user_id', $user->id)
+                      ->orWhere('assigned_to', $user->id);
+            })
+            ->when($user->employee && $user->employee->company_id, function ($query) use ($user) {
+                $query->where('company_id', $user->employee->company_id);
+            })
+            ->count();
     
-    return 'success';
-}
+        if ($openTickets > 10) {
+            return 'danger';
+        } elseif ($openTickets > 5) {
+            return 'warning';
+        }
+        
+        return 'success';
+    }
 
 
     public static function infolist(Infolist $infolist): Infolist

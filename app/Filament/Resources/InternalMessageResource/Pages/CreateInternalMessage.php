@@ -36,29 +36,38 @@ class CreateInternalMessage extends CreateRecord
         // Criar a mensagem
         $record = static::getModel()::create($data);
         
-        // Criar registros de destinatários
+        // Definir prioridade dos tipos (to > cc > bcc)
+        $typePriority = ['to' => 3, 'cc' => 2, 'bcc' => 1];
+        $allRecipients = [];
+        
+        // Coletar todos os destinatários com prioridade
         foreach ($recipients as $recipientId) {
-            MessageRecipient::create([
-                'message_id' => $record->id,
-                'recipient_id' => $recipientId,
-                'type' => 'to',
-            ]);
+            $allRecipients[$recipientId] = 'to';
         }
         
         foreach ($ccRecipients as $recipientId) {
-            MessageRecipient::create([
-                'message_id' => $record->id,
-                'recipient_id' => $recipientId,
-                'type' => 'cc',
-            ]);
+            if (!isset($allRecipients[$recipientId]) || $typePriority['cc'] > $typePriority[$allRecipients[$recipientId]]) {
+                $allRecipients[$recipientId] = 'cc';
+            }
         }
         
         foreach ($bccRecipients as $recipientId) {
-            MessageRecipient::create([
-                'message_id' => $record->id,
-                'recipient_id' => $recipientId,
-                'type' => 'bcc',
-            ]);
+            if (!isset($allRecipients[$recipientId])) {
+                $allRecipients[$recipientId] = 'bcc';
+            }
+        }
+        
+        // Criar registros usando updateOrCreate para evitar duplicatas
+        foreach ($allRecipients as $recipientId => $type) {
+            MessageRecipient::updateOrCreate(
+                [
+                    'message_id' => $record->id,
+                    'recipient_id' => $recipientId,
+                ],
+                [
+                    'type' => $type,
+                ]
+            );
         }
         
         return $record;
