@@ -2,10 +2,12 @@
 
 namespace App\Observers;
 
+use App\Jobs\ProcessMessageBroadcast;
 use App\Models\InternalMessage;
 use App\Notifications\MessageSentNotification;
 use App\Notifications\MessageUpdatedNotification;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Auth;
 
 class InternalMessageObserver
 {
@@ -14,6 +16,9 @@ class InternalMessageObserver
      */
     public function created(InternalMessage $internalMessage): void
     {
+        // Disparar broadcasting via Job assíncrono
+        ProcessMessageBroadcast::dispatch($internalMessage);
+
         // Notificar o remetente via Filament (banco de dados)
         if ($internalMessage->sender) {
             Notification::make()
@@ -64,6 +69,9 @@ class InternalMessageObserver
         if (!$hasSignificantChanges) {
             return;
         }
+
+        // Disparar broadcasting para atualizações significativas
+        ProcessMessageBroadcast::dispatch($internalMessage);
 
         // Construir array de mudanças
         $changes = $this->buildChangesArray($internalMessage);

@@ -5,7 +5,6 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Filament\Support\Facades\FilamentView;
 use Illuminate\Support\Facades\Auth;
-use Spatie\Permission\Traits\HasRoles;
 
 class FilamentBroadcastingServiceProvider extends ServiceProvider
 {
@@ -31,12 +30,7 @@ class FilamentBroadcastingServiceProvider extends ServiceProvider
         $companyId = $user->company_id ?? null;
         
         // Verificar se o usuário tem acesso ao RH baseado no role
-        $canAccessHR = false;
-        if (method_exists($user, 'hasRole')) {
-            $canAccessHR = $user->hasRole('admin') || $user->hasRole('hr');
-        } elseif (isset($user->role)) {
-            $canAccessHR = in_array($user->role, ['admin', 'hr']);
-        }
+        $canAccessHR = $user->hasRole('admin') || $user->hasRole('hr');
         
         $departmentIdJs = $departmentId ? $departmentId : 'null';
         $companyIdJs = $companyId ? $companyId : 'null';

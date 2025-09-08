@@ -150,6 +150,19 @@ class User extends Authenticatable implements UserInterface
     {
         return $this->role === $role || $this->roleModel?->name === $role;
     }
+    
+    /**
+     * Verifica se o usuário possui qualquer um dos roles especificados
+     */
+    public function hasAnyRole(array $roles): bool
+    {
+        foreach ($roles as $role) {
+            if ($this->hasRole($role)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     public function hasPermission(string $permission): bool
     {

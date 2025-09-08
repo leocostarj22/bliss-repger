@@ -9,13 +9,13 @@ if (window.Echo) {
                 audio.src = '/sounds/message.mp3';
                 break;
             case 'ticket':
-                audio.src = '/sounds/ticket.mp3';
+                audio.src = '/sounds/message.mp3';
                 break;
             case 'urgent':
-                audio.src = '/sounds/urgent.mp3';
+                audio.src = '/sounds/message.mp3';
                 break;
             default:
-                audio.src = '/sounds/notification.mp3';
+                audio.src = '/sounds/message.mp3';
         }
         audio.volume = 0.5;
         console.log('Arquivo de som:', audio.src); // DEBUG
@@ -54,7 +54,7 @@ if (window.Echo) {
                 6000
             );
             
-            playNotificationSound('message');
+            playNotificationSound('message'); // 🔊 Som reproduzido aqui!
             updateCounters();
             
             // Atualizar lista de mensagens se estiver na página de inbox
@@ -82,7 +82,7 @@ if (window.Echo) {
                     7000
                 );
                 
-                playNotificationSound('ticket');
+                playNotificationSound('ticket'); // 🔊 Som reproduzido aqui!
                 updateCounters();
                 
                 // Atualizar tabela de tickets se estiver na página
@@ -244,7 +244,7 @@ if (window.Echo) {
                         8000
                     );
                     
-                    playNotificationSound('urgent');
+                    playNotificationSound('urgent'); // 🔊 Som reproduzido aqui!
                 }
             })
             .listen('PostUpdated', (e) => {

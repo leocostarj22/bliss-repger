@@ -217,14 +217,26 @@ class TicketObserver
                 return ucfirst($value);
             case 'assigned_to':
                 if ($value) {
-                    $user = User::find($value);
-                    return $user ? $user->name : 'Usuário #' . $value;
+                    try {
+                        $user = User::find($value);
+                        return $user ? $user->name : 'Usuário #' . $value;
+                    } catch (\Exception $e) {
+                        return 'Usuário #' . $value;
+                    }
                 }
                 return 'Não atribuído';
             case 'category_id':
                 if ($value) {
-                    // Assumindo que existe um modelo Category
-                    return 'Categoria #' . $value;
+                    try {
+                        // Verificar se o modelo Category existe
+                        if (class_exists('App\\Models\\Category')) {
+                            $category = \App\Models\Category::find($value);
+                            return $category ? $category->name : 'Categoria #' . $value;
+                        }
+                        return 'Categoria #' . $value;
+                    } catch (\Exception $e) {
+                        return 'Categoria #' . $value;
+                    }
                 }
                 return 'Sem categoria';
             default:
