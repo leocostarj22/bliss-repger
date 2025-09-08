@@ -55,6 +55,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->navigationGroups([
                 NavigationGroup::make('Recursos Humanos'),
+                NavigationGroup::make('Comunicação'),
             ])
             
             ->plugins([

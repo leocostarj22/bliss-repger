@@ -1,11 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
+use App\Models\User;
 use App\Http\Controllers\TicketAttachmentController;
 use App\Http\Controllers\SystemLogController;
-use App\Http\Controllers\VideoCallController;
 use App\Filament\Pages\HelpArticleView;
-use Illuminate\Support\Str;
+use App\Http\Controllers\VideoCallController;
+
 Route::get('/', function () {
     return view('welcome');
 });
@@ -23,9 +26,6 @@ Route::get('/admin/help-articles/{slug}', [HelpArticleView::class, 'mount'])
     ->name('filament.admin.pages.help-article')
     ->middleware(['web', 'auth']);
 
-Route::get('/video-call/{room?}', function ($room = null) {
-    $roomId = $room ?? 'sala-' . Str::random(8); // gera ID único se não passar nenhum
-    return view('video-call', compact('roomId'));
-})->name('video-call');
+
 
 
