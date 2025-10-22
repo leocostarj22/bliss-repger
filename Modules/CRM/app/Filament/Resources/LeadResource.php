@@ -99,7 +99,20 @@ class LeadResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => 
-                $query->with('assignedTo')->select(['id', 'name', 'email', 'company', 'status', 'source', 'assigned_to', 'value', 'expected_close_date', 'created_at', 'deleted_at'])
+                $query->with('assignedTo')->select([
+                    'id',
+                    'name',
+                    'email',
+                    'phone',            // <- Adicionado
+                    'company',
+                    'status',
+                    'source',
+                    'assigned_to',
+                    'value',
+                    'expected_close_date',
+                    'created_at',
+                    'deleted_at',
+                ])
             )
             ->paginationPageOptions([10, 25, 50, 100])
             ->defaultPaginationPageOption(25)
@@ -114,14 +127,12 @@ class LeadResource extends Resource
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('phone')
-                    ->label('Telefone')
-                    ->searchable()
-                    ->sortable(),
-                    
-                Tables\Columns\TextColumn::make('company')
-                    ->label('Empresa')
-                    ->searchable()
-                    ->sortable(),
+                    ->label('Telefone'),
+
+               // Tables\Columns\TextColumn::make('company')
+               //     ->label('Empresa')
+               //     ->searchable()
+               //     ->sortable(),
 
                 Tables\Columns\BadgeColumn::make('status')
                     ->label('Status')
