@@ -51,11 +51,27 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Resources\TicketResource\Widgets\StatsOverview::class,
                 \App\Filament\Widgets\MessagesOverview::class,
                 \App\Filament\Widgets\AdminPostsWidget::class,
-                // \App\Filament\Widgets\ChatBotWidget::class, // REMOVIDO
             ])
             ->navigationGroups([
                 NavigationGroup::make('Recursos Humanos'),
                 NavigationGroup::make('Comunicação'),
+                NavigationGroup::make('CRM'),
+            ])
+            // Descobrir recursos do módulo CRM
+            ->discoverResources(in: base_path('Modules/CRM/app/Filament/Resources'), for: 'Modules\\CRM\\Filament\\Resources')
+            ->discoverPages(in: base_path('Modules/CRM/app/Filament/Pages'), for: 'Modules\\CRM\\Filament\\Pages')
+            ->discoverWidgets(in: base_path('Modules/CRM/app/Filament/Widgets'), for: 'Modules\\CRM\\Filament\\Widgets')
+            ->widgets([
+                Widgets\AccountWidget::class,
+                Widgets\FilamentInfoWidget::class,
+                \App\Filament\Resources\TicketResource\Widgets\StatsOverview::class,
+                \App\Filament\Widgets\MessagesOverview::class,
+                \App\Filament\Widgets\AdminPostsWidget::class,
+            ])
+            ->navigationGroups([
+                NavigationGroup::make('Recursos Humanos'),
+                NavigationGroup::make('Comunicação'),
+                NavigationGroup::make('CRM'),
             ])
             
             ->plugins([
