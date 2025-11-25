@@ -13,6 +13,11 @@ class CRMDatabaseSeeder extends Seeder
     {
         $this->call([
             \Modules\CRM\Database\Seeders\LeadSeeder::class,
+            \Modules\CRM\Database\Seeders\ContactSeeder::class,
+            \Modules\CRM\Database\Seeders\SegmentSeeder::class,
+            \Modules\CRM\Database\Seeders\TemplateSeeder::class,
+            \Modules\CRM\Database\Seeders\CampaignSeeder::class,
+            \Modules\CRM\Database\Seeders\DeliverySeeder::class,
         ]);
     }
 }
