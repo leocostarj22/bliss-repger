@@ -62,7 +62,7 @@ class EmployeeInfoWidget extends BaseWidget
     private function getTimeInCompany($employee): string
     {
         if (!$employee->hire_date) {
-            return 'N/A';
+            return 'Nada encontrado';
         }
         
         $hireDate = Carbon::parse($employee->hire_date);
