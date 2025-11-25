@@ -33,6 +33,7 @@ class MyTimesheet extends Page implements HasTable
     {
         return $table
             ->query($this->getTableQuery())
+            ->defaultPaginationPageSize(25)
             ->columns([
                 TextColumn::make('work_date')
                     ->label('Data')

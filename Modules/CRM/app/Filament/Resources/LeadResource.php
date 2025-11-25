@@ -114,7 +114,7 @@ class LeadResource extends Resource
                     'deleted_at',
                 ])
             )
-            ->paginationPageOptions([10, 25, 50, 100])
+            ->paginationPageOptions([10, 25, 50, 100, 250])
             ->defaultPaginationPageOption(25)
             ->columns([
                 Tables\Columns\TextColumn::make('name')
@@ -145,17 +145,20 @@ class LeadResource extends Resource
 
                 Tables\Columns\TextColumn::make('assignedTo.name')
                     ->label('Responsável')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('value')
                     ->label('Valor')
                     ->money('EUR')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('expected_close_date')
                     ->label('Data Prevista')
                     ->date('d/m/Y')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Criado em')

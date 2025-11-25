@@ -106,6 +106,7 @@ class InternalMessageResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultPaginationPageSize(25)
             ->columns([
                 TextColumn::make('subject')
                     ->label('Assunto')
@@ -147,21 +148,16 @@ class InternalMessageResource extends Resource
                 TextColumn::make('recipients.recipient.name')
                     ->label('Destinatários')
                     ->formatStateUsing(function ($record) {
-                        $recipients = $record->recipients()->with('recipient')->get();
-                        $names = $recipients->pluck('recipient.name')->filter()->toArray();
-                        
+                        $names = $record->recipients->pluck('recipient.name')->filter()->toArray();
                         if (count($names) === 0) {
                             return 'Nenhum destinatário';
                         }
-                        
                         if (count($names) === 1) {
                             return $names[0];
                         }
-                        
                         if (count($names) <= 3) {
                             return implode(', ', $names);
                         }
-                        
                         return implode(', ', array_slice($names, 0, 2)) . ' e mais ' . (count($names) - 2) . ' outros';
                     })
                     ->searchable()

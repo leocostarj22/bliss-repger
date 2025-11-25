@@ -38,6 +38,8 @@ class SystemLogResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with(['user']))
+            ->defaultPaginationPageSize(25)
             ->columns([
                 TextColumn::make('created_at')
                     ->label('Data/Hora')
@@ -122,6 +124,8 @@ class SystemLogResource extends Resource
                     }),
             ])
             ->actions([
+                // As ações geram muitos componentes; manter apenas o essencial
+
                 Action::make('download_json')
                     ->label('Download JSON')
                     ->icon('heroicon-o-arrow-down-tray')

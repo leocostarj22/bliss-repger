@@ -27,6 +27,7 @@ class MyPayrolls extends Page implements HasTable
     {
         return $table
             ->query($this->getTableQuery())
+            ->defaultPaginationPageSize(25)
             ->columns([
                 TextColumn::make('reference_period')
                     ->label('Mês/Ano')

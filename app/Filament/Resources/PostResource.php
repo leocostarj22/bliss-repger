@@ -209,6 +209,8 @@ class PostResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with(['author']))
+            ->defaultPaginationPageSize(25)
             ->columns([
                 // Na seção de tabela (linha ~200):
                 Tables\Columns\ImageColumn::make('featured_image_url') // Alterado de 'featured_image'

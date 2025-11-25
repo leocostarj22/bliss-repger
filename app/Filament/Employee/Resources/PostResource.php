@@ -122,13 +122,14 @@ class PostResource extends Resource
                 $employeeUser = Auth::user();
                 $employee = $employeeUser->employee;
                 
-                return $query->published()
+                return $query->with(['author'])->published()
                     ->when($employee && $employee->department_id, function ($q) use ($employee) {
                         $q->forDepartment($employee->department_id);
                     })
                     ->orderByDesc('is_pinned')
                     ->orderByDesc('published_at');
             })
+            ->defaultPaginationPageSize(25)
             ->columns([
                 Tables\Columns\ImageColumn::make('featured_image_url')
                     ->label('Imagem')

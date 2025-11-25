@@ -60,6 +60,8 @@ class CategoryResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with(['company']))
+            ->defaultPaginationPageSize(25)
             ->columns([
                 Tables\Columns\TextColumn::make('company.name')
                     ->label('Empresa')

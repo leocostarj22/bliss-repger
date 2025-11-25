@@ -75,11 +75,11 @@ class EmployeeInfoWidget extends BaseWidget
         if ($years > 0) {
             $result = $years . ' ano' . ($years > 1 ? 's' : '');
             if ($months > 0) {
-                $result .= ' e ' . $months . ' mês' . ($months > 1 ? 'es' : '');
+                $result .= ' e ' . $months . ' ' . ($months > 1 ? 'meses' : 'mês');
             }
             return $result;
         } else {
-            return $months . ' mês' . ($months > 1 ? 'es' : '');
+            return $months . ' ' . ($months > 1 ? 'meses' : 'mês');
         }
     }
 }

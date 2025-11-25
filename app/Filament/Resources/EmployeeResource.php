@@ -386,6 +386,8 @@ class EmployeeResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with(['department']))
+            ->defaultPaginationPageSize(25)
             ->columns([
                 Tables\Columns\ImageColumn::make('photo_path')
                     ->label('Foto')
