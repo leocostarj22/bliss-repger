@@ -32,7 +32,32 @@ class SegmentResource extends Resource
     {
         return $form->schema([
             Forms\Components\TextInput::make('name')->label('Nome')->required()->maxLength(255),
-            Forms\Components\Textarea::make('definition')->label('Definição')->rows(6),
+            Forms\Components\Repeater::make('definition')
+                ->label('Definição')
+                ->schema([
+                    Forms\Components\Select::make('field')->label('Campo')->options([
+                        'name' => 'Nome',
+                        'email' => 'Email',
+                        'phone' => 'Telefone',
+                        'source' => 'Origem',
+                        'status' => 'Status',
+                        'utm_source' => 'utm_source',
+                        'utm_medium' => 'utm_medium',
+                        'utm_campaign' => 'utm_campaign',
+                        'utm_content' => 'utm_content',
+                        'utm_term' => 'utm_term',
+                    ])->required()->searchable(),
+                    Forms\Components\Select::make('op')->label('Operador')->options([
+                        'eq' => 'Igual',
+                        'in' => 'Em lista',
+                        'contains' => 'Contém',
+                        'starts_with' => 'Começa com',
+                        'ends_with' => 'Termina com',
+                        'not_null' => 'Não vazio',
+                    ])->required(),
+                    Forms\Components\TextInput::make('value')->label('Valor'),
+                ])
+                ->columns(3),
         ]);
     }
 

@@ -32,4 +32,9 @@ class Campaign extends Model
     {
         return $this->belongsTo(\Modules\CRM\Models\Template::class);
     }
+
+    public function deliveries()
+    {
+        return $this->hasMany(\Modules\CRM\Models\Delivery::class);
+    }
 }

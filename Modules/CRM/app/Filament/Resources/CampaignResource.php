@@ -88,6 +88,13 @@ class CampaignResource extends Resource
             ->defaultSort('created_at', 'desc');
     }
 
+    public static function getRelations(): array
+    {
+        return [
+            \Modules\CRM\Filament\Resources\CampaignResource\RelationManagers\DeliveriesRelationManager::class,
+        ];
+    }
+
     public static function getPages(): array
     {
         return [
