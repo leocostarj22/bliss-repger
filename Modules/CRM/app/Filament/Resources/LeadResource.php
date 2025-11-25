@@ -114,8 +114,6 @@ class LeadResource extends Resource
                     'deleted_at',
                 ])
             )
-            ->paginationPageOptions([10, 25, 50, 100, 250])
-            ->defaultPaginationPageOption(25)
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nome')
@@ -150,7 +148,7 @@ class LeadResource extends Resource
 
                 Tables\Columns\TextColumn::make('value')
                     ->label('Valor')
-                    ->money('EUR')
+                    ->formatStateUsing(fn ($state) => is_null($state) ? null : number_format((float) $state, 2, ',', '.') . ' €')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
@@ -281,7 +279,7 @@ class LeadResource extends Resource
                             ->label('Responsável'),
                         Components\TextEntry::make('value')
                             ->label('Valor Estimado')
-                            ->money('BRL'),
+                            ->formatStateUsing(fn ($state) => is_null($state) ? '-' : number_format((float) $state, 2, ',', '.') . ' €'),
                         Components\TextEntry::make('expected_close_date')
                             ->label('Data Prevista de Fechamento')
                             ->date('d/m/Y'),
