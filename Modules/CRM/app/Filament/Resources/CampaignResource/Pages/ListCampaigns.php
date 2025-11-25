@@ -6,7 +6,7 @@ use Modules\CRM\Filament\Resources\CampaignResource;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Actions;
 
-class ListCampaigns extends ListRecords
+class ListCampaign extends ListRecords
 {
     protected static string $resource = CampaignResource::class;
 
