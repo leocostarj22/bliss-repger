@@ -25,14 +25,35 @@ class DeliveriesRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('created_at')->label('Criado em')->dateTime('d/m/Y H:i')->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')->label('Status')->options([
-                    'queued' => 'Em fila',
-                    'sent' => 'Enviado',
-                    'opened' => 'Aberto',
-                    'clicked' => 'Clicado',
-                    'bounced' => 'Falhou',
-                    'unsubscribed' => 'Descadastrado',
-                ]),
+                Tables\Filters\SelectFilter::make('status')
+                    ->label('Status')
+                    ->options([
+                        'queued' => 'Em fila',
+                        'sending' => 'Enviando',
+                        'sent' => 'Enviado',
+                        'bounced' => 'Falhou',
+                        'unsubscribed' => 'Descadastrado',
+                    ]),
+                Tables\Filters\TernaryFilter::make('opened')
+                    ->label('Aberto')
+                    ->placeholder('Ignorar')
+                    ->trueLabel('Sim')
+                    ->falseLabel('Não')
+                    ->queries(
+                        true: fn ($query) => $query->whereNotNull('opened_at'),
+                        false: fn ($query) => $query->whereNull('opened_at'),
+                        blank: fn ($query) => $query,
+                    ),
+                Tables\Filters\TernaryFilter::make('clicked')
+                    ->label('Clicado')
+                    ->placeholder('Ignorar')
+                    ->trueLabel('Sim')
+                    ->falseLabel('Não')
+                    ->queries(
+                        true: fn ($query) => $query->whereNotNull('clicked_at'),
+                        false: fn ($query) => $query->whereNull('clicked_at'),
+                        blank: fn ($query) => $query,
+                    ),
             ])
             ->actions([
                 Tables\Actions\Action::make('send_email')
