@@ -8,4 +8,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateSegment extends CreateRecord
 {
     protected static string $resource = SegmentResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

@@ -8,4 +8,9 @@ use Filament\Resources\Pages\EditRecord;
 class EditSegment extends EditRecord
 {
     protected static string $resource = SegmentResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

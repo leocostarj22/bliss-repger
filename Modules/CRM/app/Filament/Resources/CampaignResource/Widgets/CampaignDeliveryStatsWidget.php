@@ -10,7 +10,7 @@ class CampaignDeliveryStatsWidget extends BaseWidget
 {
     protected function getStats(): array
     {
-        $campaignId = request()->route('record');
+        $campaignId = (int) (request()->route('record') ?? 0);
         if (! $campaignId) {
             return [
                 Stat::make('Entregas', 0)->color('primary'),
@@ -38,8 +38,6 @@ class CampaignDeliveryStatsWidget extends BaseWidget
         ];
     }
 
-    protected function getPollingInterval(): ?string
-    {
-        return '5s';
-    }
+    protected static ?string $pollingInterval = '5s';
+    protected static bool $isLazy = false;
 }
