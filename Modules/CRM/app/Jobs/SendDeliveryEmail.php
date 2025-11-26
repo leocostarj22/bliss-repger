@@ -37,6 +37,7 @@ class SendDeliveryEmail implements ShouldQueue
         $content = $template?->content ?? '<p>Olá {{ name }},</p><p>Mensagem da campanha: {{ campaign }}</p>';
 
         $content = $this->renderContent($content, $contact, $campaign);
+        $content = $this->injectTracking($content, $delivery);
 
         Mail::html($content, function ($message) use ($contact, $subject) {
             $message->to($contact->email)->subject($subject);
@@ -58,5 +59,20 @@ class SendDeliveryEmail implements ShouldQueue
             $value = $contact->getAttribute($key);
             return is_scalar($value) ? (string) $value : '';
         }, $content);
+    }
+
+    private function injectTracking(string $html, Delivery $delivery): string
+    {
+        $pixelUrl = route('crm.track.pixel', ['delivery' => $delivery->id]);
+        $html = $html . '<img src="' . $pixelUrl . '" width="1" height="1" style="display:none" alt="" />';
+
+        $clickBase = route('crm.track.click', ['delivery' => $delivery->id]);
+        $html = preg_replace_callback('/href="([^"]+)"/i', function ($m) use ($clickBase) {
+            $target = $m[1];
+            $tracked = $clickBase . '?url=' . urlencode($target);
+            return 'href="' . $tracked . '"';
+        }, $html);
+
+        return $html;
     }
 }
