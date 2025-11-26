@@ -33,7 +33,32 @@ class DeliveriesRelationManager extends RelationManager
                     'unsubscribed' => 'Descadastrado',
                 ]),
             ])
-            ->actions([])
+            ->actions([
+                Tables\Actions\Action::make('mark_sent')
+                    ->label('Marcar como enviado')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+                        $record->update([
+                            'status' => 'sent',
+                            'sent_at' => now(),
+                        ]);
+                    }),
+                Tables\Actions\Action::make('requeue')
+                    ->label('Re-enfileirar')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+                        $record->update([
+                            'status' => 'queued',
+                            'sent_at' => null,
+                            'opened_at' => null,
+                            'clicked_at' => null,
+                            'bounced_at' => null,
+                            'unsubscribed_at' => null,
+                        ]);
+                    }),
+            ])
             ->bulkActions([]);
     }
 }

@@ -10,6 +10,9 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\TextEntry;
 use Modules\CRM\Filament\Resources\CampaignResource\Pages;
 
 class CampaignResource extends Resource
@@ -52,13 +55,14 @@ class CampaignResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with(['segment','template']))
+            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with(['segment','template'])->withCount('deliveries'))
             ->columns([
                 Tables\Columns\TextColumn::make('name')->label('Nome')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('channel')->label('Canal')->sortable(),
                 Tables\Columns\TextColumn::make('status')->label('Status')->sortable(),
                 Tables\Columns\TextColumn::make('segment.name')->label('Segmento')->sortable(),
                 Tables\Columns\TextColumn::make('template.name')->label('Template')->sortable(),
+                Tables\Columns\TextColumn::make('deliveries_count')->label('Entregas')->sortable(),
                 Tables\Columns\TextColumn::make('scheduled_at')->label('Agendada')->dateTime('d/m/Y H:i')->sortable(),
                 Tables\Columns\TextColumn::make('created_at')->label('Criada em')->dateTime('d/m/Y H:i')->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -86,6 +90,40 @@ class CampaignResource extends Resource
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                Section::make('Resumo')
+                    ->schema([
+                        TextEntry::make('name')->label('Nome'),
+                        TextEntry::make('channel')->label('Canal'),
+                        TextEntry::make('status')->label('Status'),
+                        TextEntry::make('deliveries_total')
+                            ->label('Total de Entregas')
+                            ->state(fn ($record) => $record->deliveries()->count()),
+                        TextEntry::make('deliveries_queued')
+                            ->label('Em fila')
+                            ->state(fn ($record) => $record->deliveries()->where('status', 'queued')->count()),
+                        TextEntry::make('deliveries_sent')
+                            ->label('Enviadas')
+                            ->state(fn ($record) => $record->deliveries()->where('status', 'sent')->count()),
+                        TextEntry::make('deliveries_opened')
+                            ->label('Abertas')
+                            ->state(fn ($record) => $record->deliveries()->whereNotNull('opened_at')->count()),
+                        TextEntry::make('deliveries_clicked')
+                            ->label('Clicadas')
+                            ->state(fn ($record) => $record->deliveries()->whereNotNull('clicked_at')->count()),
+                        TextEntry::make('deliveries_bounced')
+                            ->label('Falhas')
+                            ->state(fn ($record) => $record->deliveries()->whereNotNull('bounced_at')->count()),
+                        TextEntry::make('deliveries_unsubscribed')
+                            ->label('Descadastrados')
+                            ->state(fn ($record) => $record->deliveries()->whereNotNull('unsubscribed_at')->count()),
+                    ])->columns(3),
+            ]);
     }
 
     public static function getRelations(): array

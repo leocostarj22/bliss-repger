@@ -56,6 +56,13 @@ class ViewCampaign extends ViewRecord
                         }
                     }
 
+                    if ($created > 0) {
+                        $campaign->update([
+                            'status' => 'scheduled',
+                            'scheduled_at' => $campaign->scheduled_at ?? now(),
+                        ]);
+                    }
+
                     Notification::make()
                         ->title('Entregas geradas')
                         ->body("{$created} novas entregas enfileiradas para a campanha.")
