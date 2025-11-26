@@ -5,6 +5,7 @@ namespace Modules\CRM\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 use Modules\CRM\Models\Delivery;
 
 class EmailTrackingController extends Controller
@@ -31,6 +32,10 @@ class EmailTrackingController extends Controller
         $url = $request->query('url');
         if (! $url) {
             return redirect()->to('/');
+        }
+
+        if (parse_url($url, PHP_URL_SCHEME) === null) {
+            $url = url($url);
         }
 
         if (is_null($delivery->clicked_at)) {
