@@ -54,6 +54,36 @@ class DeliveriesRelationManager extends RelationManager
                         false: fn ($query) => $query->whereNull('clicked_at'),
                         blank: fn ($query) => $query,
                     ),
+                Tables\Filters\Filter::make('activity')
+                    ->label('Com atividade')
+                    ->toggle()
+                    ->query(fn ($query) => $query->whereNotNull('opened_at')->orWhereNotNull('clicked_at')),
+            ])
+            ->headerActions([
+                Tables\Actions\Action::make('stats_total')
+                    ->label(fn () => 'Total: ' . $this->getOwnerRecord()->deliveries()->count())
+                    ->disabled()
+                    ->color('gray'),
+                Tables\Actions\Action::make('stats_queued')
+                    ->label(fn () => 'Em fila: ' . $this->getOwnerRecord()->deliveries()->where('status', 'queued')->count())
+                    ->disabled()
+                    ->color('warning'),
+                Tables\Actions\Action::make('stats_sending')
+                    ->label(fn () => 'Enviando: ' . $this->getOwnerRecord()->deliveries()->where('status', 'sending')->count())
+                    ->disabled()
+                    ->color('info'),
+                Tables\Actions\Action::make('stats_sent')
+                    ->label(fn () => 'Enviadas: ' . $this->getOwnerRecord()->deliveries()->where('status', 'sent')->count())
+                    ->disabled()
+                    ->color('success'),
+                Tables\Actions\Action::make('stats_opened')
+                    ->label(fn () => 'Abertas: ' . $this->getOwnerRecord()->deliveries()->whereNotNull('opened_at')->count())
+                    ->disabled()
+                    ->color('success'),
+                Tables\Actions\Action::make('stats_clicked')
+                    ->label(fn () => 'Clicadas: ' . $this->getOwnerRecord()->deliveries()->whereNotNull('clicked_at')->count())
+                    ->disabled()
+                    ->color('success'),
             ])
             ->actions([
                 Tables\Actions\Action::make('send_email')
