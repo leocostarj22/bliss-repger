@@ -41,7 +41,7 @@ class DeliveriesRelationManager extends RelationManager
                     ->visible(fn ($record) => $record->status === 'queued')
                     ->requiresConfirmation()
                     ->action(function ($record) {
-                        SendDeliveryEmail::dispatchSync($record->id);
+                        SendDeliveryEmail::dispatch($record->id);
                     }),
                 Tables\Actions\Action::make('mark_sent')
                     ->label('Marcar como enviado')

@@ -87,7 +87,7 @@ class ViewCampaign extends ViewRecord
 
                     $sent = 0;
                     foreach ($deliveries as $delivery) {
-                        SendDeliveryEmail::dispatchSync($delivery->id);
+                        SendDeliveryEmail::dispatch($delivery->id);
                         $sent++;
                     }
 
