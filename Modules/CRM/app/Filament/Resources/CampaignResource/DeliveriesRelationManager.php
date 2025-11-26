@@ -38,9 +38,12 @@ class DeliveriesRelationManager extends RelationManager
                 Tables\Actions\Action::make('send_email')
                     ->label('Enviar email')
                     ->color('primary')
-                    ->visible(fn ($record) => $record->status === 'queued')
+                    ->visible(fn () => true)
+                    ->disabled(fn ($record) => $record->status !== 'queued')
+                    ->tooltip(fn ($record) => $record->status === 'queued' ? 'Enviar entrega em fila' : 'Disponível apenas para entregas em fila')
                     ->requiresConfirmation()
                     ->action(function ($record) {
+                        $record->update(['status' => 'sending']);
                         SendDeliveryEmail::dispatch($record->id);
                     }),
                 Tables\Actions\Action::make('mark_sent')

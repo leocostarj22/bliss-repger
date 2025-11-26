@@ -9,6 +9,7 @@ use Filament\Notifications\Notification;
 use Modules\CRM\Models\Delivery;
 use Modules\CRM\Services\SegmentResolver;
 use Modules\CRM\Jobs\SendDeliveryEmail;
+use Modules\CRM\Filament\Resources\CampaignResource\Widgets\CampaignDeliveryStatsWidget;
 
 class ViewCampaign extends ViewRecord
 {
@@ -87,6 +88,7 @@ class ViewCampaign extends ViewRecord
 
                     $sent = 0;
                     foreach ($deliveries as $delivery) {
+                        $delivery->update(['status' => 'sending']);
                         SendDeliveryEmail::dispatch($delivery->id);
                         $sent++;
                     }
@@ -97,6 +99,13 @@ class ViewCampaign extends ViewRecord
                         ->success()
                         ->send();
                 }),
+        ];
+    }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            CampaignDeliveryStatsWidget::class,
         ];
     }
 }
