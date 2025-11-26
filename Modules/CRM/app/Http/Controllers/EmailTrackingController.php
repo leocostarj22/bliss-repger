@@ -12,7 +12,10 @@ class EmailTrackingController extends Controller
     public function pixel(Delivery $delivery)
     {
         if (is_null($delivery->opened_at)) {
-            $delivery->update(['opened_at' => now()]);
+            $delivery->update([
+                'opened_at' => now(),
+                'status' => 'opened',
+            ]);
         }
 
         $pixel = base64_decode(
@@ -31,7 +34,10 @@ class EmailTrackingController extends Controller
         }
 
         if (is_null($delivery->clicked_at)) {
-            $delivery->update(['clicked_at' => now()]);
+            $delivery->update([
+                'clicked_at' => now(),
+                'status' => 'clicked',
+            ]);
         }
 
         return redirect()->away($url);
