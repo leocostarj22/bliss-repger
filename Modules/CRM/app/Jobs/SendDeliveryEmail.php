@@ -82,13 +82,19 @@ class SendDeliveryEmail implements ShouldQueue
 
         $rewrite = function (string $target) use ($clickBase) {
             if ($target === ''
-                || stripos($target, 'crm/track/click') !== false
                 || $target[0] === '#'
                 || stripos($target, 'mailto:') === 0
                 || stripos($target, 'tel:') === 0
                 || stripos($target, 'javascript:') === 0
                 || stripos($target, 'data:') === 0) {
                 return $target;
+            }
+            if (stripos($target, 'crm/track/click') !== false) {
+                $parsed = parse_url($target);
+                $q = $parsed['query'] ?? '';
+                parse_str($q, $params);
+                $original = $params['url'] ?? $target;
+                return $clickBase . '?url=' . urlencode($original);
             }
             return $clickBase . '?url=' . urlencode($target);
         };
