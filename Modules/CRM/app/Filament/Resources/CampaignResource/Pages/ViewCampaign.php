@@ -8,6 +8,7 @@ use Filament\Actions;
 use Filament\Notifications\Notification;
 use Modules\CRM\Models\Delivery;
 use Modules\CRM\Services\SegmentResolver;
+use Modules\CRM\Jobs\SendDeliveryEmail;
 
 class ViewCampaign extends ViewRecord
 {
@@ -66,6 +67,33 @@ class ViewCampaign extends ViewRecord
                     Notification::make()
                         ->title('Entregas geradas')
                         ->body("{$created} novas entregas enfileiradas para a campanha.")
+                        ->success()
+                        ->send();
+                }),
+            Actions\Action::make('send_emails')
+                ->label('Enviar Emails')
+                ->color('success')
+                ->visible(fn () => $this->record && $this->record->channel === 'email')
+                ->requiresConfirmation()
+                ->action(function () {
+                    $campaign = $this->record;
+                    if (! $campaign) {
+                        return;
+                    }
+
+                    $deliveries = Delivery::where('campaign_id', $campaign->id)
+                        ->where('status', 'queued')
+                        ->get();
+
+                    $sent = 0;
+                    foreach ($deliveries as $delivery) {
+                        SendDeliveryEmail::dispatchSync($delivery->id);
+                        $sent++;
+                    }
+
+                    Notification::make()
+                        ->title('Envios de email')
+                        ->body("{$sent} entregas processadas para envio de email.")
                         ->success()
                         ->send();
                 }),

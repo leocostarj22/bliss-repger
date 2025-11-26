@@ -6,6 +6,7 @@ use Filament\Forms;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Resources\RelationManagers\RelationManager;
+use Modules\CRM\Jobs\SendDeliveryEmail;
 
 class DeliveriesRelationManager extends RelationManager
 {
@@ -34,6 +35,14 @@ class DeliveriesRelationManager extends RelationManager
                 ]),
             ])
             ->actions([
+                Tables\Actions\Action::make('send_email')
+                    ->label('Enviar email')
+                    ->color('primary')
+                    ->visible(fn ($record) => $record->status === 'queued')
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+                        SendDeliveryEmail::dispatchSync($record->id);
+                    }),
                 Tables\Actions\Action::make('mark_sent')
                     ->label('Marcar como enviado')
                     ->color('success')
