@@ -8,9 +8,16 @@ use Modules\CRM\Models\Delivery;
 
 class CampaignDeliveryStatsWidget extends BaseWidget
 {
+    public int $campaignId = 0;
+
+    public function mount(): void
+    {
+        $this->campaignId = (int) (request()->route('record') ?? 0);
+    }
+
     protected function getStats(): array
     {
-        $campaignId = (int) (request()->route('record') ?? 0);
+        $campaignId = $this->campaignId;
         if (! $campaignId) {
             return [
                 Stat::make('Entregas', 0)->color('primary'),
