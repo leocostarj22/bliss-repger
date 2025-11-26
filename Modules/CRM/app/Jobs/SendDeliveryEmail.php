@@ -8,6 +8,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Modules\CRM\Models\Delivery;
 use Modules\CRM\Models\Campaign;
 use Modules\CRM\Models\Contact;
@@ -39,6 +40,15 @@ class SendDeliveryEmail implements ShouldQueue
         $content = $this->renderContent($content, $contact, $campaign);
         $content = $this->injectTracking($content, $delivery);
 
+        Log::info('crm.mail.composed', [
+            'delivery_id' => $delivery->id,
+            'campaign_id' => $campaign->id,
+            'template_id' => $template?->id,
+            'has_pixel' => stripos($content, 'crm/track/pixel') !== false,
+            'has_click' => stripos($content, 'crm/track/click') !== false,
+            'href_count' => preg_match_all('/<a\\b[^>]*href\\s*=\\s*([\'\"])(.*?)\\1/i', $content),
+        ]);
+
         Mail::html($content, function ($message) use ($contact, $subject) {
             $message->to($contact->email)->subject($subject);
         });
@@ -69,14 +79,33 @@ class SendDeliveryEmail implements ShouldQueue
         }
 
         $clickBase = route('crm.track.click', ['delivery' => $delivery->id]);
-        $html = preg_replace_callback('/href\s*=\s*([\'\"])(.*?)\1/i', function ($m) use ($clickBase) {
+
+        $rewrite = function (string $target) use ($clickBase) {
+            if ($target === ''
+                || stripos($target, 'crm/track/click') !== false
+                || $target[0] === '#'
+                || stripos($target, 'mailto:') === 0
+                || stripos($target, 'tel:') === 0
+                || stripos($target, 'javascript:') === 0
+                || stripos($target, 'data:') === 0) {
+                return $target;
+            }
+            return $clickBase . '?url=' . urlencode($target);
+        };
+
+        // Quoted href ("..." or '...')
+        $html = preg_replace_callback('/href\s*=\s*([\'\"])(.*?)\1/i', function ($m) use ($rewrite) {
             $quote = $m[1];
             $target = $m[2];
-            if (stripos($target, 'crm/track/click') !== false || stripos($target, 'mailto:') === 0 || stripos($target, '#') === 0) {
-                return 'href=' . $quote . $target . $quote;
-            }
-            $tracked = $clickBase . '?url=' . urlencode($target);
-            return 'href=' . $quote . $tracked . $quote;
+            $new = $rewrite($target);
+            return 'href=' . $quote . $new . $quote;
+        }, $html);
+
+        // Unquoted href (href=/path or href=https://...)
+        $html = preg_replace_callback('/href\s*=\s*([^\s\"\'>]+)/i', function ($m) use ($rewrite) {
+            $target = $m[1];
+            $new = $rewrite($target);
+            return 'href="' . $new . '"';
         }, $html);
 
         return $html;
