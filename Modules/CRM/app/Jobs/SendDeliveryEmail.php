@@ -64,13 +64,19 @@ class SendDeliveryEmail implements ShouldQueue
     private function injectTracking(string $html, Delivery $delivery): string
     {
         $pixelUrl = route('crm.track.pixel', ['delivery' => $delivery->id]);
-        $html = $html . '<img src="' . $pixelUrl . '" width="1" height="1" style="display:none" alt="" />';
+        if (stripos($html, 'crm/track/pixel') === false) {
+            $html .= '<img src="' . $pixelUrl . '" width="1" height="1" style="display:none" alt="" />';
+        }
 
         $clickBase = route('crm.track.click', ['delivery' => $delivery->id]);
-        $html = preg_replace_callback('/href="([^"]+)"/i', function ($m) use ($clickBase) {
-            $target = $m[1];
+        $html = preg_replace_callback('/href\s*=\s*([\'\"])(.*?)\1/i', function ($m) use ($clickBase) {
+            $quote = $m[1];
+            $target = $m[2];
+            if (stripos($target, 'crm/track/click') !== false || stripos($target, 'mailto:') === 0 || stripos($target, '#') === 0) {
+                return 'href=' . $quote . $target . $quote;
+            }
             $tracked = $clickBase . '?url=' . urlencode($target);
-            return 'href="' . $tracked . '"';
+            return 'href=' . $quote . $tracked . $quote;
         }, $html);
 
         return $html;
