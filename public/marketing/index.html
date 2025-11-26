@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <title>BlissRepGer — Plataforma de Gestão Empresarial</title>
+  <meta name="description" content="Sistema modular de gestão empresarial com CRM e RH, desenvolvido em Laravel e Filament. Segmente, comunique e gerencie equipes com eficiência.">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="style.css" rel="stylesheet">
+</head>
+<body>
+  <header class="header">
+    <div class="container header-inner">
+      <div class="brand">
+        <img src="/images/logocolors.png" alt="BlissRepGer" class="brand-logo">
+      </div>
+      <nav class="nav">
+        <a href="#modules">Módulos</a>
+        <a href="#crm">CRM</a>
+        <a href="#rh">RH</a>
+        <a href="#modules-advanced">Mais Módulos</a>
+        <a href="#pricing">Planos</a>
+        <a href="#tech">Tecnologia</a>
+        <a href="#theme">Tema</a>
+        <a href="#contact">Contacto</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container hero-inner">
+      <h1>Plataforma modular para gerir o seu negócio</h1>
+      <p class="hero-sub">Automatize comunicação, centralize operações e tome decisões com dados confiáveis. Módulos integrados de CRM e RH, construídos com Laravel + Filament.</p>
+      <div class="hero-cta">
+        <a href="#pricing" class="btn btn-primary">Ver opções por módulo</a>
+        <a href="#modules" class="btn btn-secondary">Explorar funcionalidades</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="modules" class="section">
+    <div class="container">
+      <h2>Módulos Disponíveis</h2>
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="card-header">
+            <span class="badge badge-blue">CRM</span>
+            <h3>Gestão de Relacionamento com Clientes</h3>
+          </div>
+          <p>Campanhas, segmentos, templates e envios por email com métricas em tempo real.</p>
+          <ul class="list">
+            <li>Segmentação com filtros e aliases (ex.: source → utm_source)</li>
+            <li>Geração de entregas por campanha</li>
+            <li>Envio assíncrono via fila com atualização de status</li>
+            <li>Templates com placeholders ({{ name }}, {{ campaign }})</li>
+            <li>Widget de métricas com polling (total, fila, enviando, enviadas, abertas, clicadas, falhas, descadastrados)</li>
+            <li>Ações por entrega: Enviar, Marcar como enviado, Re-enfileirar</li>
+            <li>Redireciono pós-ação: criação/edição retorna à listagem atualizada</li>
+          </ul>
+          <a href="#crm" class="link">Detalhes do CRM →</a>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="badge badge-green">RH</span>
+            <h3>Gestão de Recursos Humanos</h3>
+          </div>
+          <p>Cadastros, departamentos, timesheets, férias e holerites com painel administrativo intuitivo.</p>
+          <ul class="list">
+            <li>Gestão de funcionários e departamentos</li>
+            <li>Timesheets e controlo de ponto</li>
+            <li>Gestão de férias e ausências</li>
+            <li>Holerites e relatórios financeiros</li>
+            <li>Permissões e papéis de acesso</li>
+            <li>Widgets e dashboards operacionais</li>
+          </ul>
+          <a href="#rh" class="link">Detalhes do RH →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="crm" class="section section-alt">
+    <div class="container">
+      <h2>CRM — Comunicação e Segmentação</h2>
+
+      <div class="grid grid-3">
+        <div class="card">
+          <h3>Segmentos</h3>
+          <ul class="list">
+            <li>Definição de filtros com operadores: igual, contém</li>
+            <li>Aliases automáticos (source → utm_source)</li>
+            <li>Resolver contatos por segmento</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>Campanhas</h3>
+          <ul class="list">
+            <li>Canal: email</li>
+            <li>Status: draft, scheduled, sending, sent</li>
+            <li>Associação de `segment_id` e `template_id`</li>
+            <li>Agendamento por `scheduled_at`</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>Templates</h3>
+          <ul class="list">
+            <li>Assunto e conteúdo HTML</li>
+            <li>Placeholders de contacto e campanha</li>
+            <li>Fallbacks quando template ausente</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>Entregas</h3>
+          <ul class="list">
+            <li>Criação em fila (`queued`) por campanha</li>
+            <li>Envio assíncrono (`sending` → `sent`)</li>
+            <li>Tratamento de falhas (`bounced`)</li>
+            <li>Timestamps: `sent_at`, `opened_at`, `clicked_at`, `bounced_at`, `unsubscribed_at`</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>Envio de Email</h3>
+          <ul class="list">
+            <li>Job dedicado: `SendDeliveryEmail`</li>
+            <li>Validação de email e logging de erros</li>
+            <li>Mailer de desenvolvimento (`log`) e produção (`smtp`)</li>
+            <li>Configuração recomendada: `QUEUE_CONNECTION=database`</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>Interface e Métricas</h3>
+          <ul class="list">
+            <li>Relação de entregas com ações por linha</li>
+            <li>Widget de métricas em tempo real (polling 5s)</li>
+            <li>Notificações no painel após operações</li>
+            <li>Redirecionamento pós-ação (Create/Edit → Index)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="crm-grid crm-grid--single">
+        <div class="crm-card">
+          <img src="/images/leads.png" alt="Leads — modo claro" class="crm-img">
+          <div class="crm-caption">Leads — modo claro</div>
+        </div>
+      </div>
+
+      <div class="note">
+        Para produção: configurar SMTP (ex.: 587/tls ou 465/ssl), fila de jobs com worker ativo e supervisão de falhas.
+      </div>
+    </div>
+  </section>
+
+  <section id="rh" class="section">
+    <div class="container">
+      <h2>RH — Operações de Pessoas</h2>
+      <div class="grid grid-3">
+        <div class="card">
+          <h3>Cadastros</h3>
+          <ul class="list">
+            <li>Funcionários e departamentos</li>
+            <li>Perfis e permissões</li>
+            <li>Documentos e anexos</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Operações</h3>
+          <ul class="list">
+            <li>Timesheets e controlo de ponto</li>
+            <li>Gestão de férias e ausências</li>
+            <li>Holerites e relatórios</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Dashboards</h3>
+          <ul class="list">
+            <li>Métricas de equipe e status</li>
+            <li>Widgets de distribuição e eventos</li>
+            <li>Exportação e filtros avançados</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="modules-advanced" class="section">
+    <div class="container">
+      <h2>Detalhamento de Módulos</h2>
+      <div class="grid grid-3">
+        <div class="card">
+          <h3>Suporte Técnico (Tickets)</h3>
+          <ul class="list">
+            <li>Estados: aberto, em progresso, pendente, resolvido, fechado</li>
+            <li>Prioridades: baixa, média, alta, urgente</li>
+            <li>Comentários e anexos (RelationManagers)</li>
+            <li>Widgets: estatísticas e listagens com filtros</li>
+            <li>Broadcasting em tempo real (Echo/Pusher) e notificações</li>
+            <li>Recursos Filament: `TicketResource` com páginas List/Create/Edit/View</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Administração (Cargos e Departamentos)</h3>
+          <ul class="list">
+            <li>Gestão de funções/papéis (`RoleResource`) e permissões</li>
+            <li>Departamentos e empresas (`DepartmentResource`, `CompanyResource`)</li>
+            <li>Policies e acesso por perfil (ex.: `TicketPolicy`, `PayrollPolicy`)</li>
+            <li>Painel administrativo Filament com navegação por grupos</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Multi-tenancy (Organizações)</h3>
+          <ul class="list">
+            <li>Escopo por empresa e departamento (`company_id`, `department_id`)</li>
+            <li>Painéis separados (Admin/Employee) com conteúdos filtrados</li>
+            <li>Sessões em base de dados (`SESSION_DRIVER=database`) e filas por `QUEUE_CONNECTION=database`</li>
+            <li>Estrutura preparada para isolamento por organização</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>RH — Gestão de Pessoas</h3>
+          <ul class="list">
+            <li>Funcionários, contratos e perfis (`EmployeeResource`)</li>
+            <li>Timesheets e marcação de ponto (`TimesheetResource`)</li>
+            <li>Férias e ausências (`VacationResource`)</li>
+            <li>Holerites e notificações de pagamento (`PayrollResource`)</li>
+            <li>Widgets: aniversários, status, distribuição por departamento</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Relatórios e Logs</h3>
+          <ul class="list">
+            <li>Logs de sistema com widgets (RecentActivity/Stats)</li>
+            <li>Página de relatórios e exports (CSV em recursos como Leads)</li>
+            <li>Auditoria de ações críticas e eventos do sistema</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Intranet e Comunicação</h3>
+          <ul class="list">
+            <li>Mensagens internas (`InternalMessageResource`) e Inbox</li>
+            <li>Posts administrativos com likes e destaque</li>
+            <li>Broadcasting para eventos (tickets, mensagens, posts)</li>
+            <li>Notificações por email e base de dados</li>
+          </ul>
+        </div>
+      </div>
+      <div class="note">Todos os módulos integram-se no painel Filament com navegação consistente, filtros avançados e redirecionamento pós-ação para manter a listagem atualizada.</div>
+    </div>
+  </section>
+
+  <section id="pricing" class="section section-alt">
+    <div class="container">
+      <h2>Planos e Módulos</h2>
+      <div class="pricing">
+        <div class="price-card">
+          <h3>Módulo CRM</h3>
+          <p class="price">Sob consulta</p>
+          <ul class="list">
+            <li>Campanhas, segmentos e templates</li>
+            <li>Fila de entregas e envio por email</li>
+            <li>Métricas em tempo real</li>
+          </ul>
+          <a href="#contact" class="btn btn-primary">Solicitar proposta</a>
+        </div>
+        <div class="price-card">
+          <h3>Módulo RH</h3>
+          <p class="price">Sob consulta</p>
+          <ul class="list">
+            <li>Funcionários, departamentos e timesheets</li>
+            <li>Férias e holerites</li>
+            <li>Dashboards e permissões</li>
+          </ul>
+          <a href="#contact" class="btn btn-primary">Solicitar proposta</a>
+        </div>
+        <div class="price-card">
+          <h3>Suite Completa</h3>
+          <p class="price">Sob consulta</p>
+          <ul class="list">
+            <li>Integração total CRM + RH</li>
+            <li>Relatórios unificados</li>
+            <li>Onboarding assistido</li>
+          </ul>
+          <a href="#contact" class="btn btn-primary">Solicitar proposta</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="compare" class="section section-alt">
+    <div class="container">
+      <h2>Comparativo de Módulos</h2>
+      <div class="grid grid-3">
+        <div class="card">
+          <div class="card-header"><span class="badge badge-crm">CRM</span><h3>Campanhas e Entregas</h3></div>
+          <ul class="list">
+            <li>Segmentação (aliases, filtros)</li>
+            <li>Envio por email (fila assíncrona)</li>
+            <li>Métricas em tempo real</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="badge badge-rh">RH</span><h3>Pessoas e Operações</h3></div>
+          <ul class="list">
+            <li>Funcionários, departamentos e permissões</li>
+            <li>Timesheets, férias, holerites</li>
+            <li>Dashboards e relatórios</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="badge badge-tickets">Tickets</span><h3>Suporte técnico</h3></div>
+          <ul class="list">
+            <li>Estados, prioridades, comentários e anexos</li>
+            <li>Broadcasting e notificações</li>
+            <li>Widgets e filtros avançados</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tech" class="section">
+    <div class="container">
+      <h2>Tecnologia</h2>
+      <div class="tech-grid">
+        <div class="tech-item">
+          <img src="/images/logos/laravel.png" alt="Laravel" class="logo">
+          <div class="logo-caption">Laravel 12.x</div>
+        </div>
+        <div class="tech-item">
+          <img src="/images/logos/filament.png" alt="Filament" class="logo">
+          <div class="logo-caption">Filament 3.3</div>
+        </div>
+        <div class="tech-item">
+          <img src="/images/logos/php.png" alt="PHP" class="logo">
+          <div class="logo-caption">PHP 8.2+</div>
+        </div>
+        <div class="tech-item">
+          <img src="/images/logos/mysql.png" alt="MySQL" class="logo">
+          <div class="logo-caption">MySQL</div>
+        </div>
+        <div class="tech-item">
+          <img src="/images/logos/livewire.png" alt="Livewire" class="logo">
+          <div class="logo-caption">Livewire</div>
+        </div>
+        <div class="tech-item">
+          <img src="/images/logos/nwidart.png" alt="Nwidart Modules" class="logo">
+          <div class="logo-caption">Nwidart Modules</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="theme" class="section section-alt">
+    <div class="container">
+      <h2>Modo Claro e Escuro</h2>
+      <div class="theme-grid">
+        <div class="theme-card">
+          <img src="/images/modoescuro.png" alt="Dashboard modo escuro" class="theme-img">
+          <div class="theme-caption">Modo Escuro</div>
+        </div>
+        <div class="theme-card">
+          <img src="/images/modoclaro.png" alt="Dashboard modo claro" class="theme-img">
+          <div class="theme-caption">Modo Claro</div>
+        </div>
+      </div>
+      <p class="theme-note">O painel suporta alternância entre temas com contraste e legibilidade consistentes.</p>
+    </div>
+  </section>
+
+  <section id="faq" class="section">
+    <div class="container">
+      <h2>FAQ — Perguntas Frequentes</h2>
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>Como funcionam os envios de email?</h3>
+          <p>Os envios são feitos via fila: as entregas passam para <strong>sending</strong> e o worker processa o envio SMTP, atualizando para <strong>sent</strong>. Em falha, o status vai para <strong>bounced</strong>.</p>
+        </div>
+        <div class="card">
+          <h3>Preciso de um worker em produção?</h3>
+          <p>Sim. Configure <code>QUEUE_CONNECTION=database</code>, migre a tabela de <code>jobs</code> e execute <code>php artisan queue:work</code> com um supervisor.</p>
+        </div>
+        <div class="card">
+          <h3>E o multi-tenancy?</h3>
+          <p>O sistema isola dados por empresa/departamento e oferece painéis separados (Admin/Employee), com policies a controlar o acesso.</p>
+        </div>
+        <div class="card">
+          <h3>Relatórios e Logs</h3>
+          <p>Há recursos dedicados para logs de sistema e relatórios, com widgets de actividade e estatísticas, além de exportações CSV em diversas listas.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="contact" class="section section-alt">
+    <div class="container">
+      <h2>Fale connosco</h2>
+      <p>Quer uma demonstração ou proposta detalhada por módulo? Entre em contacto.</p>
+      <div class="contact-actions">
+        <a href="mailto:comercial@blissrepger.local" class="btn btn-primary">Enviar email</a>
+        <a href="#pricing" class="btn btn-secondary">Ver planos</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div>© BlissRepGer. Todos os direitos reservados.</div>
+      <div class="footer-links">
+        <a href="#modules">Módulos</a>
+        <a href="#crm">CRM</a>
+        <a href="#rh">RH</a>
+        <a href="#pricing">Planos</a>
+        <a href="#tech">Tecnologia</a>
+      </div>
+    </div>
+  </footer>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const navLinks = Array.from(document.querySelectorAll('.nav a[href^="#"]'));
+    const sections = navLinks
+      .map(link => document.querySelector(link.getAttribute('href')))
+      .filter(Boolean);
+
+    const setActive = (sectionId) => {
+      navLinks.forEach(l => {
+        const isActive = l.getAttribute('href') === `#${sectionId}`;
+        l.classList.toggle('active', isActive);
+        if (isActive) l.setAttribute('aria-current', 'page'); else l.removeAttribute('aria-current');
+      });
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => { if (entry.isIntersecting) setActive(entry.target.id); });
+    }, { rootMargin: '0px 0px -60% 0px', threshold: 0.2 });
+
+    sections.forEach(sec => observer.observe(sec));
+
+    window.addEventListener('hashchange', () => {
+      const id = location.hash.replace('#', '');
+      if (id) setActive(id);
+    });
+
+    const initial = location.hash.replace('#', '') || sections[0]?.id;
+    if (initial) setActive(initial);
+  });
+</script>
+</body>
+</html>

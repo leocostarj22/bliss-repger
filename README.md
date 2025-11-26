@@ -143,6 +143,48 @@ MAIL_FROM_ADDRESS=noreply@blissrepger.com
 MAIL_FROM_NAME="BlissRepGer"
 ```
 
+## 🧩 Módulo CRM
+
+- Visão geral
+  - Arquitetura modular com `nwidart/laravel-modules`; código em `Modules\CRM\...`
+  - Painel admin via Filament (Resources e Pages) para Leads, Contatos, Segmentos, Templates e Campanhas
+
+- Recursos e Páginas
+  - `LeadResource`: listar/criar/editar/visualizar leads; importação CSV/XLSX; exportação; deduplicação por email/telefone
+  - `ContactResource`: criar/editar/visualizar contatos com `email`, `utm_source` e dados básicos
+  - `SegmentResource`: definir filtros de segmentação; usado para resolver contatos
+  - `TemplateResource`: templates de email com `subject` e `content` (placeholders `{{ name }}` e `{{ campaign }}`)
+  - `CampaignResource`: campanhas com `channel=email`, `status`, `segment_id`, `template_id`, `scheduled_at`
+
+- Segmentação
+  - `SegmentResolver` mapeia aliases (`source → utm_source`) e suporta operadores `eq` e `contains`
+  - Ex.: filtro `{"field":"source","op":"contains","value":"google"}` resolve contatos com `utm_source` contendo "google"
+
+- Entregas e Envio de Email
+  - Gerar entregas: na página da campanha (`ViewCampaign`), ação “Gerar Entregas” cria `deliveries` com `status=queued` e atualiza campanha para `scheduled`
+  - Enviar emails: ação “Enviar Emails” (campanha) e “Enviar email” (por entrega)
+    - Marca imediatamente `status=sending` e despacha `Modules\CRM\app\Jobs\SendDeliveryEmail`
+    - O job renderiza HTML do template, envia com `Mail::html(...)`; em caso de sucesso: `status=sent` + `sent_at`
+    - Valida `contact.email`; em erro ou email inválido: `status=bounced` + `bounced_at`, com log
+
+- Fila e Processamento
+  - Assíncrono por padrão: `dispatch()` usa `QUEUE_CONNECTION`
+  - Requisitos:
+    - `.env`: `QUEUE_CONNECTION=database`
+    - Migrar filas: `php artisan queue:table && php artisan migrate`
+    - Worker: `php artisan queue:work --queue=default --tries=3` (use Supervisor em produção)
+
+- SMTP (produção) e teste
+  - Teste seguro: `MAIL_MAILER=log` (emails no `storage/logs/laravel.log`)
+  - Produção típico: `MAIL_PORT=587`, `MAIL_ENCRYPTION=tls` (ou `465/ssl` conforme provedor)
+
+- UI e Métricas
+  - `DeliveriesRelationManager`: ações “Enviar email”, “Marcar como enviado”, “Re-enfileirar”
+  - `CampaignDeliveryStatsWidget`: métricas em tempo real (Total, Em fila, Enviando, Enviadas, Abertas, Clicadas, Falhas, Descadastrados) com polling de 5s
+
+- Navegação pós-ação
+  - Páginas de Create/Edit em CRM redirecionam para o índice após concluir (Leads, Contatos, Segmentos, Templates, Campanhas)
+
 ## 📁 Estrutura do Projeto
 
 ### 🧪 Testes
