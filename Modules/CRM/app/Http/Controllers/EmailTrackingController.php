@@ -57,6 +57,11 @@ class EmailTrackingController extends Controller
             $url = url($url);
         }
 
+        $hostNorm = parse_url($url, PHP_URL_HOST);
+        if ($hostNorm && in_array($hostNorm, ['www.gmcentral.pt','gmcentral.pt'], true)) {
+            $url = preg_replace('#/index\.html(?=/|$)#', '/', $url);
+        }
+
         $host = parse_url($url, PHP_URL_HOST);
         $appHost = parse_url(config('app.url'), PHP_URL_HOST);
         $allowedHosts = array_values(array_filter([$appHost, 'www.gmcentral.pt', 'gmcentral.pt']));
