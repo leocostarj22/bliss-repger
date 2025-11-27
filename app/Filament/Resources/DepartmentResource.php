@@ -60,7 +60,6 @@ class DepartmentResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with(['company']))
-            ->defaultPaginationPageSize(25)
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),
@@ -72,7 +71,6 @@ class DepartmentResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('company.name')
                     ->formatStateUsing(fn ($state, $record) => $record->company?->name ?? 'Empresa não definida')
-                    ->numeric()
                     ->sortable(),
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean(),

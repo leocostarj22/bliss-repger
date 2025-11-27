@@ -171,7 +171,6 @@ class VacationResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with(['employee','company']))
-            ->defaultPaginationPageSize(25)
             ->columns([
                 Tables\Columns\TextColumn::make('employee.name')
                     ->label('Funcionário')

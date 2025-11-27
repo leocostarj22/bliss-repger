@@ -39,7 +39,6 @@ class SystemLogResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with(['user']))
-            ->defaultPaginationPageSize(25)
             ->columns([
                 TextColumn::make('created_at')
                     ->label('Data/Hora')

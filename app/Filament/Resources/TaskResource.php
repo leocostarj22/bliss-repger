@@ -113,7 +113,6 @@ class TaskResource extends Resource
                 return $query->where('taskable_type', get_class($user))
                            ->where('taskable_id', $user->id);
             })
-            ->defaultPaginationPageSize(25)
             ->columns([
                 Tables\Columns\TextColumn::make('title')
                     ->label('Título')

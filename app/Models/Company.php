@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class Company extends Model
 {
@@ -64,25 +65,67 @@ class Company extends Model
     // Método auxiliar atualizado
     public function getLogoUrlAttribute()
     {
-        if ($this->logo) {
-            return Storage::disk('public')->url($this->logo);
+        $logo = $this->logo;
+        if (empty($logo)) {
+            return asset('images/default-company-logo.png');
         }
-        
-        // Retorna um logo padrão se não houver logo
-        return asset('images/default-company-logo.png');
+        if (Str::startsWith($logo, ['http://', 'https://'])) {
+            return $logo;
+        }
+        $path = ltrim($logo, '/');
+        try {
+            if (Storage::disk('public')->exists($path)) {
+                return Storage::disk('public')->url($path);
+            }
+        } catch (\Throwable $e) {
+        }
+        if (file_exists(public_path($path))) {
+            return asset($path);
+        }
+        $maybe = 'storage/' . ltrim($path, 'storage/');
+        return asset($maybe);
     }
     
     // Método para verificar se tem logo
     public function hasLogo(): bool
     {
-        return !empty($this->logo) && Storage::disk('public')->exists($this->logo);
+        $logo = $this->logo;
+        if (empty($logo)) {
+            return false;
+        }
+        $path = ltrim($logo, '/');
+        try {
+            if (Storage::disk('public')->exists($path)) {
+                return true;
+            }
+        } catch (\Throwable $e) {
+        }
+        return file_exists(public_path($path)) || file_exists(public_path('storage/' . ltrim($path, 'storage/')));
     }
     
     // Método para deletar logo antigo
     public function deleteLogo(): void
     {
-        if ($this->logo && Storage::disk('public')->exists($this->logo)) {
-            Storage::disk('public')->delete($this->logo);
+        $logo = $this->logo;
+        if (empty($logo)) {
+            return;
+        }
+        $path = ltrim($logo, '/');
+        try {
+            if (Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+                return;
+            }
+        } catch (\Throwable $e) {
+        }
+        $abs1 = public_path($path);
+        if (file_exists($abs1)) {
+            @unlink($abs1);
+            return;
+        }
+        $abs2 = public_path('storage/' . ltrim($path, 'storage/'));
+        if (file_exists($abs2)) {
+            @unlink($abs2);
         }
     }
 }

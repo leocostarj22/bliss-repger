@@ -41,7 +41,6 @@ class InboxResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with(['message','message.sender']))
-            ->defaultPaginationPageSize(25)
             ->columns([
                 TextColumn::make('message.sender.name')
                     ->label('Remetente')

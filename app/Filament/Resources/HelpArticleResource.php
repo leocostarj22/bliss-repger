@@ -105,7 +105,6 @@ class HelpArticleResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultPaginationPageSize(25)
             ->columns([
                 Tables\Columns\TextColumn::make('title')
                     ->label('Título')
