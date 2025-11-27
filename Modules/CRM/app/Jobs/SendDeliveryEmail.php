@@ -23,13 +23,20 @@ class SendDeliveryEmail implements ShouldQueue
     {
         $delivery = Delivery::find($this->deliveryId);
         if (! $delivery) {
+            Log::warning('crm.mail.abort', ['delivery_id' => $this->deliveryId, 'reason' => 'delivery_not_found']);
             return;
         }
+        Log::info('crm.mail.start', ['delivery_id' => $delivery->id]);
 
         $campaign = Campaign::find($delivery->campaign_id);
         $contact = Contact::find($delivery->contact_id);
 
-        if (! $campaign || ! $contact || $campaign->channel !== 'email') {
+        if (! $campaign || ! $contact) {
+            Log::warning('crm.mail.abort', ['delivery_id' => $delivery->id, 'reason' => 'missing_campaign_or_contact']);
+            return;
+        }
+        if ($campaign->channel !== 'email') {
+            Log::info('crm.mail.abort', ['delivery_id' => $delivery->id, 'reason' => 'channel_not_email', 'channel' => $campaign->channel]);
             return;
         }
 
@@ -47,13 +54,11 @@ class SendDeliveryEmail implements ShouldQueue
                 'template_id' => $template?->id,
                 'has_pixel' => stripos($content, 'crm/track/pixel') !== false,
                 'has_click' => stripos($content, 'crm/track/click') !== false,
-                'href_count' => preg_match_all('/<a\\b[^>]*href\\s*=\\s*([\'\"])(.*?)\\1/i', $content),
+                'href_count' => preg_match_all('/<a\b[^>]*href\s*=\s*([\'\"])(.*?)\1/i', $content),
             ]);
 
-            Mail::send([], [], function ($message) use ($contact, $subject, $content) {
-                $message->to($contact->email)
-                    ->subject($subject)
-                    ->setBody($content, 'text/html');
+            Mail::html($content, function ($message) use ($contact, $subject) {
+                $message->to($contact->email)->subject($subject);
             });
         } catch (\Throwable $e) {
             Log::error('crm.mail.failed', [
