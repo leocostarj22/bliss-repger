@@ -112,7 +112,8 @@ class SendDeliveryEmail implements ShouldQueue
                 || stripos($target, 'mailto:') === 0
                 || stripos($target, 'tel:') === 0
                 || stripos($target, 'javascript:') === 0
-                || stripos($target, 'data:') === 0) {
+                || stripos($target, 'data:') === 0
+                || stripos($target, 'crm/track/unsubscribe') !== false) {
                 return $target;
             }
             if (stripos($target, 'crm/track/click') !== false) {
@@ -139,6 +140,19 @@ class SendDeliveryEmail implements ShouldQueue
             $new = $rewrite($target);
             return 'href="' . $new . '"';
         }, $html);
+
+        // Append unsubscribe link if missing
+        try {
+            $unsubscribeUrl = route('crm.track.unsubscribe', ['delivery' => $delivery->id]);
+        } catch (\Throwable $e) {
+            Log::warning('crm.route.missing', ['route' => 'crm.track.unsubscribe', 'error' => $e->getMessage()]);
+            $unsubscribeUrl = url('crm/track/unsubscribe/' . $delivery->id);
+        }
+        if (stripos($html, 'crm/track/unsubscribe') === false) {
+            $html .= '<p style="margin-top:16px;font-size:12px;color:#666">' .
+                     'Para deixar de receber estes emails, <a href="' . $unsubscribeUrl . '">clique aqui</a>.' .
+                     '</p>';
+        }
 
         return $html;
     }

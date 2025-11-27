@@ -16,6 +16,7 @@ class Delivery extends Model
         'sent_at',
         'opened_at',
         'clicked_at',
+        'clicked_url',
         'bounced_at',
         'unsubscribed_at',
     ];

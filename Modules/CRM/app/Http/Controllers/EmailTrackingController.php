@@ -44,9 +44,18 @@ class EmailTrackingController extends Controller
             $url = url($url);
         }
 
+        $host = parse_url($url, PHP_URL_HOST);
+        $appHost = parse_url(config('app.url'), PHP_URL_HOST);
+        $allowedHosts = array_values(array_filter([$appHost, 'www.gmcentral.pt', 'gmcentral.pt']));
+        if ($host && ! in_array($host, $allowedHosts, true)) {
+            Log::warning('crm.track.blocked', ['delivery_id' => $delivery->id, 'url' => $url, 'host' => $host]);
+            return redirect()->to('/');
+        }
+
         if (is_null($delivery->clicked_at)) {
             $delivery->clicked_at = now();
             $delivery->status = 'clicked';
+            $delivery->clicked_url = $url;
             $delivery->save();
             Log::info('crm.track.clicked', ['delivery_id' => $delivery->id, 'url' => $url]);
         } else {
@@ -54,5 +63,19 @@ class EmailTrackingController extends Controller
         }
 
         return redirect()->away($url);
+    }
+
+    public function unsubscribe(Delivery $delivery)
+    {
+        if (is_null($delivery->unsubscribed_at)) {
+            $delivery->unsubscribed_at = now();
+            $delivery->status = 'unsubscribed';
+            $delivery->save();
+            Log::info('crm.track.unsubscribed', ['delivery_id' => $delivery->id]);
+        } else {
+            Log::info('crm.track.unsubscribed.already', ['delivery_id' => $delivery->id]);
+        }
+
+        return response('You have been unsubscribed.', 200);
     }
 }

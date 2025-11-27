@@ -22,6 +22,8 @@ class DeliveriesRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('sent_at')->label('Enviado em')->dateTime('d/m/Y H:i'),
                 Tables\Columns\TextColumn::make('opened_at')->label('Aberto em')->dateTime('d/m/Y H:i'),
                 Tables\Columns\TextColumn::make('clicked_at')->label('Clique em')->dateTime('d/m/Y H:i'),
+                Tables\Columns\TextColumn::make('clicked_url')->label('Último link')->limit(50)->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('unsubscribed_at')->label('Descadastrado em')->dateTime('d/m/Y H:i')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('created_at')->label('Criado em')->dateTime('d/m/Y H:i')->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
