@@ -88,12 +88,22 @@ class SendDeliveryEmail implements ShouldQueue
 
     private function injectTracking(string $html, Delivery $delivery): string
     {
-        $pixelUrl = route('crm.track.pixel', ['delivery' => $delivery->id]);
+        try {
+            $pixelUrl = route('crm.track.pixel', ['delivery' => $delivery->id]);
+        } catch (\Throwable $e) {
+            Log::warning('crm.route.missing', ['route' => 'crm.track.pixel', 'error' => $e->getMessage()]);
+            $pixelUrl = url('crm/track/pixel/' . $delivery->id);
+        }
         if (stripos($html, 'crm/track/pixel') === false) {
             $html .= '<img src="' . $pixelUrl . '" width="1" height="1" style="display:none" alt="" />';
         }
 
-        $clickBase = route('crm.track.click', ['delivery' => $delivery->id]);
+        try {
+            $clickBase = route('crm.track.click', ['delivery' => $delivery->id]);
+        } catch (\Throwable $e) {
+            Log::warning('crm.route.missing', ['route' => 'crm.track.click', 'error' => $e->getMessage()]);
+            $clickBase = url('crm/track/click/' . $delivery->id);
+        }
 
         $rewrite = function (string $target) use ($clickBase) {
             if ($target === ''
