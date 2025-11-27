@@ -26,7 +26,11 @@ class EmailTrackingController extends Controller
             'JzQnTwAAAABJRU5ErkJggg=='
         );
 
-        return response($pixel, 200)->header('Content-Type', 'image/png');
+        return response($pixel, 200)
+            ->header('Content-Type', 'image/png')
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     public function click(Delivery $delivery, Request $request)
