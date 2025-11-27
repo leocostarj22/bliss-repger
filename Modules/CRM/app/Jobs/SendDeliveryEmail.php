@@ -92,7 +92,8 @@ class SendDeliveryEmail implements ShouldQueue
             $pixelUrl = route('crm.track.pixel', ['delivery' => $delivery->id]);
         } catch (\Throwable $e) {
             Log::warning('crm.route.missing', ['route' => 'crm.track.pixel', 'error' => $e->getMessage()]);
-            $pixelUrl = route('crm.track.pixel', ['delivery' => $delivery->id]);
+            $pixelUrl = url('crm/track/pixel/' . $delivery->id);
+        }
         $pixelUrl = $pixelUrl . (strpos($pixelUrl, '?') !== false ? '&' : '?') . 'v=' . time();
         if (stripos($html, 'crm/track/pixel') === false) {
             $html .= '<img src="' . $pixelUrl . '" width="1" height="1" style="display:none" alt="" />';
