@@ -54,7 +54,7 @@ class EmailTrackingController extends Controller
         $parts = parse_url($url);
         if ($parts !== false && isset($parts['query'])) {
             parse_str($parts['query'], $q);
-            $parts['query'] = http_build_query($q);
+            $parts['query'] = http_build_query($q, '', '&', PHP_QUERY_RFC3986);
             $url = (isset($parts['scheme']) ? $parts['scheme'] . '://' : '') .
                    ($parts['host'] ?? '') .
                    ($parts['path'] ?? '') .
@@ -96,10 +96,16 @@ class EmailTrackingController extends Controller
             Log::info('crm.track.clicked.already', ['delivery_id' => $model?->id ?? $delivery, 'url' => $url]);
         }
 
+        $clean = preg_replace('/[\x00-\x1F\x7F]/', '', $url);
+        $targetHost = parse_url($clean, PHP_URL_HOST);
+        $appHost = parse_url(config('app.url'), PHP_URL_HOST);
+        $useInternal = $targetHost && $appHost && strcasecmp($targetHost, $appHost) === 0;
+
         try {
-            return redirect()->away($url);
+            Log::info('crm.track.redirect.type', ['delivery_id' => $model?->id ?? $delivery, 'internal' => $useInternal]);
+            return $useInternal ? redirect()->to($clean) : redirect()->away($clean);
         } catch (\Throwable $e) {
-            Log::error('crm.track.redirect_failed', ['delivery_id' => $model?->id ?? $delivery, 'url' => $url, 'error' => $e->getMessage()]);
+            Log::error('crm.track.redirect_failed', ['delivery_id' => $model?->id ?? $delivery, 'url' => $clean, 'error' => $e->getMessage()]);
             return redirect()->to('/');
         }
     }
