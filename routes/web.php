@@ -8,6 +8,7 @@ use App\Http\Controllers\TicketAttachmentController;
 use App\Http\Controllers\SystemLogController;
 use App\Filament\Pages\HelpArticleView;
 use App\Http\Controllers\VideoCallController;
+use Modules\CRM\Http\Controllers\EmailTrackingController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -26,6 +27,8 @@ Route::get('/admin/help-articles/{slug}', [HelpArticleView::class, 'mount'])
     ->name('filament.admin.pages.help-article')
     ->middleware(['web', 'auth']);
 
-
+// CRM tracking routes fallback (ensure available regardless of module provider state)
+Route::get('crm/track/pixel/{delivery}', [EmailTrackingController::class, 'pixel'])->name('crm.track.pixel');
+Route::get('crm/track/click/{delivery}', [EmailTrackingController::class, 'click'])->name('crm.track.click');
 
 
