@@ -46,6 +46,8 @@ class EmailTrackingController extends Controller
             return redirect()->to('/');
         }
 
+        Log::info('crm.track.click.incoming', ['delivery_id' => $delivery->id, 'raw' => $raw, 'decoded' => $url]);
+
         if (parse_url($url, PHP_URL_SCHEME) === null) {
             $url = url($url);
         }
