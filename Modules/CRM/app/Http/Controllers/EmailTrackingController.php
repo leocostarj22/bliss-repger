@@ -35,8 +35,14 @@ class EmailTrackingController extends Controller
 
     public function click(Delivery $delivery, Request $request)
     {
-        $url = $request->query('url');
-        if (! $url) {
+        $raw = $request->query('url');
+        if (! $raw) {
+            return redirect()->to('/');
+        }
+
+        $url = is_string($raw) ? urldecode($raw) : $raw;
+        $url = trim($url);
+        if ($url === '') {
             return redirect()->to('/');
         }
 
