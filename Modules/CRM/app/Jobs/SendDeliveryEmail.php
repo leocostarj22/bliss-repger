@@ -37,21 +37,31 @@ class SendDeliveryEmail implements ShouldQueue
         $subject = $template?->subject ?? $campaign->name;
         $content = $template?->content ?? '<p>Olá {{ name }},</p><p>Mensagem da campanha: {{ campaign }}</p>';
 
-        $content = $this->renderContent($content, $contact, $campaign);
-        $content = $this->injectTracking($content, $delivery);
+        try {
+            $content = $this->renderContent($content, $contact, $campaign);
+            $content = $this->injectTracking($content, $delivery);
 
-        Log::info('crm.mail.composed', [
-            'delivery_id' => $delivery->id,
-            'campaign_id' => $campaign->id,
-            'template_id' => $template?->id,
-            'has_pixel' => stripos($content, 'crm/track/pixel') !== false,
-            'has_click' => stripos($content, 'crm/track/click') !== false,
-            'href_count' => preg_match_all('/<a\\b[^>]*href\\s*=\\s*([\'\"])(.*?)\\1/i', $content),
-        ]);
+            Log::info('crm.mail.composed', [
+                'delivery_id' => $delivery->id,
+                'campaign_id' => $campaign->id,
+                'template_id' => $template?->id,
+                'has_pixel' => stripos($content, 'crm/track/pixel') !== false,
+                'has_click' => stripos($content, 'crm/track/click') !== false,
+                'href_count' => preg_match_all('/<a\\b[^>]*href\\s*=\\s*([\'\"])(.*?)\\1/i', $content),
+            ]);
 
-        Mail::html($content, function ($message) use ($contact, $subject) {
-            $message->to($contact->email)->subject($subject);
-        });
+            Mail::send([], [], function ($message) use ($contact, $subject, $content) {
+                $message->to($contact->email)
+                    ->subject($subject)
+                    ->setBody($content, 'text/html');
+            });
+        } catch (\Throwable $e) {
+            Log::error('crm.mail.failed', [
+                'delivery_id' => $delivery->id,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
 
         $delivery->update([
             'status' => 'sent',
