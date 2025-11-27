@@ -65,8 +65,15 @@ class EmailTrackingController extends Controller
         Log::info('crm.track.click.incoming', ['delivery_id' => $model?->id ?? $delivery, 'raw' => $raw, 'decoded' => $url]);
 
         if (parse_url($url, PHP_URL_SCHEME) === null) {
-            $url = url($url);
+            $base = rtrim(config('app.url'), '/');
+            if (strlen($url) && $url[0] === '/') {
+                $url = $base . $url;
+            } else {
+                $url = $base . '/' . ltrim($url, '/');
+            }
         }
+
+        Log::info('crm.track.click.target', ['delivery_id' => $model?->id ?? $delivery, 'url' => $url]);
 
         $hostNorm = parse_url($url, PHP_URL_HOST);
         if ($hostNorm && in_array($hostNorm, ['www.gmcentral.pt','gmcentral.pt'], true)) {
