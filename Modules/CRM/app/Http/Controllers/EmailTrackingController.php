@@ -110,13 +110,13 @@ class EmailTrackingController extends Controller
 
         try {
             Log::info('crm.track.redirect.type', ['delivery_id' => $model?->id ?? $delivery, 'internal' => $useInternal, 'target' => $clean]);
-            return $useInternal ? redirect()->to($clean) : redirect()->away($clean);
+            return response()->redirectTo($clean);
         } catch (\Throwable $e) {
             Log::warning('crm.track.redirect_failed', ['delivery_id' => $model?->id ?? $delivery, 'url' => $clean, 'error' => $e->getMessage()]);
             $alt = preg_replace('#/index\.html#', '/', $clean);
             try {
                 Log::info('crm.track.redirect.retry', ['delivery_id' => $model?->id ?? $delivery, 'target' => $alt]);
-                return $useInternal ? redirect()->to($alt) : redirect()->away($alt);
+                return response()->redirectTo($alt);
             } catch (\Throwable $e2) {
                 Log::error('crm.track.redirect_failed_final', ['delivery_id' => $model?->id ?? $delivery, 'url' => $alt, 'error' => $e2->getMessage()]);
                 return redirect()->to('/');
