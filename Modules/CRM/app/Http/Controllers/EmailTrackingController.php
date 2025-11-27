@@ -10,15 +10,18 @@ use Modules\CRM\Models\Delivery;
 
 class EmailTrackingController extends Controller
 {
-    public function pixel(Delivery $delivery)
+    public function pixel($delivery)
     {
-        if (is_null($delivery->opened_at)) {
-            $delivery->opened_at = now();
-            $delivery->status = 'opened';
-            $delivery->save();
-            Log::info('crm.track.opened', ['delivery_id' => $delivery->id]);
-        } else {
-            Log::info('crm.track.opened.already', ['delivery_id' => $delivery->id]);
+        $model = Delivery::find($delivery);
+        if ($model) {
+            if (is_null($model->opened_at)) {
+                $model->opened_at = now();
+                $model->status = 'opened';
+                $model->save();
+                Log::info('crm.track.opened', ['delivery_id' => $model->id]);
+            } else {
+                Log::info('crm.track.opened.already', ['delivery_id' => $model->id]);
+            }
         }
 
         $pixel = base64_decode(
@@ -33,8 +36,10 @@ class EmailTrackingController extends Controller
             ->header('Expires', '0');
     }
 
-    public function click(Delivery $delivery, Request $request)
+    public function click($delivery, Request $request)
     {
+        $model = Delivery::find($delivery);
+
         $raw = $request->query('url');
         if (! $raw) {
             return redirect()->to('/');
@@ -46,7 +51,7 @@ class EmailTrackingController extends Controller
             return redirect()->to('/');
         }
 
-        Log::info('crm.track.click.incoming', ['delivery_id' => $delivery->id, 'raw' => $raw, 'decoded' => $url]);
+        Log::info('crm.track.click.incoming', ['delivery_id' => $model?->id ?? $delivery, 'raw' => $raw, 'decoded' => $url]);
 
         if (parse_url($url, PHP_URL_SCHEME) === null) {
             $url = url($url);
@@ -56,18 +61,18 @@ class EmailTrackingController extends Controller
         $appHost = parse_url(config('app.url'), PHP_URL_HOST);
         $allowedHosts = array_values(array_filter([$appHost, 'www.gmcentral.pt', 'gmcentral.pt']));
         if ($host && ! in_array($host, $allowedHosts, true)) {
-            Log::warning('crm.track.blocked', ['delivery_id' => $delivery->id, 'url' => $url, 'host' => $host]);
+            Log::warning('crm.track.blocked', ['delivery_id' => $model?->id ?? $delivery, 'url' => $url, 'host' => $host]);
             return redirect()->to('/');
         }
 
-        if (is_null($delivery->clicked_at)) {
-            $delivery->clicked_at = now();
-            $delivery->status = 'clicked';
-            $delivery->clicked_url = $url;
-            $delivery->save();
-            Log::info('crm.track.clicked', ['delivery_id' => $delivery->id, 'url' => $url]);
+        if ($model && is_null($model->clicked_at)) {
+            $model->clicked_at = now();
+            $model->status = 'clicked';
+            $model->clicked_url = $url;
+            $model->save();
+            Log::info('crm.track.clicked', ['delivery_id' => $model->id, 'url' => $url]);
         } else {
-            Log::info('crm.track.clicked.already', ['delivery_id' => $delivery->id, 'url' => $url]);
+            Log::info('crm.track.clicked.already', ['delivery_id' => $model?->id ?? $delivery, 'url' => $url]);
         }
 
         return redirect()->away($url);
