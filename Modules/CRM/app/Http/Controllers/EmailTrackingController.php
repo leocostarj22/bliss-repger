@@ -73,6 +73,11 @@ class EmailTrackingController extends Controller
             $url = preg_replace('#/index\.html(?=/|$)#', '/', $url);
         }
 
+        if (! filter_var($url, FILTER_VALIDATE_URL)) {
+            Log::warning('crm.track.invalid_url', ['delivery_id' => $model?->id ?? $delivery, 'url' => $url]);
+            return redirect()->to('/');
+        }
+
         $host = parse_url($url, PHP_URL_HOST);
         $appHost = parse_url(config('app.url'), PHP_URL_HOST);
         $allowedHosts = array_values(array_filter([$appHost, 'www.gmcentral.pt', 'gmcentral.pt']));
@@ -91,7 +96,12 @@ class EmailTrackingController extends Controller
             Log::info('crm.track.clicked.already', ['delivery_id' => $model?->id ?? $delivery, 'url' => $url]);
         }
 
-        return redirect()->away($url);
+        try {
+            return redirect()->away($url);
+        } catch (\Throwable $e) {
+            Log::error('crm.track.redirect_failed', ['delivery_id' => $model?->id ?? $delivery, 'url' => $url, 'error' => $e->getMessage()]);
+            return redirect()->to('/');
+        }
     }
 
     public function unsubscribe(Delivery $delivery)
