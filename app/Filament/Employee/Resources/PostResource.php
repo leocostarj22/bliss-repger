@@ -129,7 +129,6 @@ class PostResource extends Resource
                     ->orderByDesc('is_pinned')
                     ->orderByDesc('published_at');
             })
-            ->defaultPaginationPageSize(25)
             ->columns([
                 Tables\Columns\ImageColumn::make('featured_image_url')
                     ->label('Imagem')

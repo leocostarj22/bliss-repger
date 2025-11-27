@@ -37,7 +37,6 @@ class MyVacations extends Page implements HasTable
     {
         return $table
             ->query($this->getTableQuery())
-            ->defaultPaginationPageSize(25)
             ->columns([
                 TextColumn::make('vacation_type')
                     ->label('Tipo')

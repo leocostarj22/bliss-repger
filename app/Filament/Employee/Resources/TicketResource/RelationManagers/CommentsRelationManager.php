@@ -49,7 +49,6 @@ class CommentsRelationManager extends RelationManager
     {
         return $table
             ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with(['user']))
-            ->defaultPaginationPageSize(10)
             ->recordTitleAttribute('comment')
             ->columns([
                 Tables\Columns\TextColumn::make('comment')
