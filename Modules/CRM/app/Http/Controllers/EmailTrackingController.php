@@ -51,6 +51,17 @@ class EmailTrackingController extends Controller
             return redirect()->to('/');
         }
 
+        $parts = parse_url($url);
+        if ($parts !== false && isset($parts['query'])) {
+            parse_str($parts['query'], $q);
+            $parts['query'] = http_build_query($q);
+            $url = (isset($parts['scheme']) ? $parts['scheme'] . '://' : '') .
+                   ($parts['host'] ?? '') .
+                   ($parts['path'] ?? '') .
+                   (!empty($parts['query']) ? '?' . $parts['query'] : '') .
+                   (isset($parts['fragment']) ? '#' . $parts['fragment'] : '');
+        }
+
         Log::info('crm.track.click.incoming', ['delivery_id' => $model?->id ?? $delivery, 'raw' => $raw, 'decoded' => $url]);
 
         if (parse_url($url, PHP_URL_SCHEME) === null) {
