@@ -153,7 +153,7 @@ return [
         /*
          * Package Service Providers...
          */
-        Nwidart\Modules\LaravelModulesServiceProvider::class,
+        Modules\CRM\Providers\CRMServiceProvider::class,
 
         /*
          * Application Service Providers...
