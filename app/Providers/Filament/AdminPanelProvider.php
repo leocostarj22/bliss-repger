@@ -61,21 +61,8 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: base_path('Modules/CRM/app/Filament/Resources'), for: 'Modules\\CRM\\Filament\\Resources')
             ->discoverPages(in: base_path('Modules/CRM/app/Filament/Pages'), for: 'Modules\\CRM\\Filament\\Pages')
             ->discoverWidgets(in: base_path('Modules/CRM/app/Filament/Widgets'), for: 'Modules\\CRM\\Filament\\Widgets')
-            ->resources(array_filter([
-                class_exists(\Modules\CRM\Filament\Resources\LeadResource::class) ? \Modules\CRM\Filament\Resources\LeadResource::class : null,
-            ]))
-            ->widgets([
-                Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
-                \App\Filament\Resources\TicketResource\Widgets\StatsOverview::class,
-                \App\Filament\Widgets\MessagesOverview::class,
-                \App\Filament\Widgets\AdminPostsWidget::class,
-            ])
-            ->navigationGroups([
-                NavigationGroup::make('Recursos Humanos'),
-                NavigationGroup::make('Comunicação'),
-                NavigationGroup::make('CRM'),
-            ])
+
+
             
             ->plugins([
                 SpotlightPlugin::make(),
