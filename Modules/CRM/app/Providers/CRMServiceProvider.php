@@ -62,7 +62,7 @@ class CRMServiceProvider extends ServiceProvider
 
     protected function registerConfig(): void
     {
-        $configPath = module_path($this->name, 'config');
+        $configPath = base_path('Modules/' . $this->name . '/config');
         if (is_dir($configPath)) {
             $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($configPath));
             foreach ($iterator as $file) {
