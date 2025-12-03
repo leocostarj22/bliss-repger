@@ -30,7 +30,7 @@ class AdminPanelProvider extends PanelProvider
         return $panel
             ->default()
             ->id('admin')
-            ->path('adm')
+            ->path('admin')
             ->login()
             ->databaseNotifications()
             ->broadcasting()

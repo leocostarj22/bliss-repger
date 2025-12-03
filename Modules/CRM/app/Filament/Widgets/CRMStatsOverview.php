@@ -55,6 +55,6 @@ class CRMStatsOverview extends BaseWidget
     public static function canView(): bool
     {
         $path = request()->path();
-        return str_contains($path, 'crm/reports');
+        return str_contains($path, 'admin/crm/reports');
     }
 }
