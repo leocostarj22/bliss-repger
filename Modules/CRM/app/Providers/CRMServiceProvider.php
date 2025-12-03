@@ -4,11 +4,9 @@ namespace Modules\CRM\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
-use Nwidart\Modules\Traits\PathNamespace;
 
 class CRMServiceProvider extends ServiceProvider
 {
-    use PathNamespace;
 
     protected string $name = 'CRM';
     protected string $nameLower = 'crm';
@@ -20,7 +18,7 @@ class CRMServiceProvider extends ServiceProvider
         $this->registerTranslations();
         $this->registerConfig();
         $this->registerViews();
-        $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
+        $this->loadMigrationsFrom(base_path('Modules/' . $this->name . '/database/migrations'));
         $this->registerFilamentResources();
     }
 
@@ -57,8 +55,8 @@ class CRMServiceProvider extends ServiceProvider
             $this->loadTranslationsFrom($langPath, $this->nameLower);
             $this->loadJsonTranslationsFrom($langPath);
         } else {
-            $this->loadTranslationsFrom(module_path($this->name, 'lang'), $this->nameLower);
-            $this->loadJsonTranslationsFrom(module_path($this->name, 'lang'));
+            $this->loadTranslationsFrom(base_path('Modules/' . $this->name . '/lang'), $this->nameLower);
+            $this->loadJsonTranslationsFrom(base_path('Modules/' . $this->name . '/lang'));
         }
     }
 
@@ -90,7 +88,7 @@ class CRMServiceProvider extends ServiceProvider
     public function registerViews(): void
     {
         $viewPath = resource_path('views/modules/' . $this->nameLower);
-        $sourcePath = module_path($this->name, 'resources/views');
+        $sourcePath = base_path('Modules/' . $this->name . '/resources/views');
 
         $this->publishes([$sourcePath => $viewPath], ['views', $this->nameLower . '-module-views']);
 
