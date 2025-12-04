@@ -1,20 +1,17 @@
 <?php
 
-namespace Modules\CRM\Providers;
+namespace Modules\Products\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 
-class CRMServiceProvider extends ServiceProvider
+class ProductsServiceProvider extends ServiceProvider
 {
-
-    protected string $name = 'CRM';
-    protected string $nameLower = 'crm';
+    protected string $name = 'Products';
+    protected string $nameLower = 'products';
 
     public function boot(): void
     {
-        $this->registerCommands();
-        $this->registerCommandSchedules();
         $this->registerTranslations();
         $this->registerConfig();
         $this->registerViews();
@@ -24,10 +21,7 @@ class CRMServiceProvider extends ServiceProvider
 
     protected function registerFilamentResources(): void
     {
-        // Filament resources are automatically discovered through PSR-4 autoloading
-        // This method can be used for additional Filament-specific configurations
         if (class_exists(\Filament\Facades\Filament::class)) {
-            // Any additional Filament configuration can go here
         }
     }
 
@@ -35,16 +29,6 @@ class CRMServiceProvider extends ServiceProvider
     {
         $this->app->register(EventServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
-    }
-
-    protected function registerCommands(): void
-    {
-        // ... existing code ...
-    }
-
-    protected function registerCommandSchedules(): void
-    {
-        // ... existing code ...
     }
 
     protected function registerTranslations(): void
@@ -95,11 +79,6 @@ class CRMServiceProvider extends ServiceProvider
         $this->loadViewsFrom(array_merge($this->getPublishableViewPaths(), [$sourcePath]), $this->nameLower);
 
         Blade::componentNamespace(config('modules.namespace') . '\\' . $this->name . '\\View\\Components', $this->nameLower);
-    }
-
-    public function provides(): array
-    {
-        return [];
     }
 
     private function getPublishableViewPaths(): array

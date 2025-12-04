@@ -56,13 +56,16 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Recursos Humanos'),
                 NavigationGroup::make('Comunicação'),
                 NavigationGroup::make('CRM'),
+                NavigationGroup::make('Catálogo'),
             ])
             // Descobrir recursos do módulo CRM
             ->discoverResources(in: base_path('Modules/CRM/app/Filament/Resources'), for: 'Modules\\CRM\\Filament\\Resources')
             ->discoverPages(in: base_path('Modules/CRM/app/Filament/Pages'), for: 'Modules\\CRM\\Filament\\Pages')
             ->discoverWidgets(in: base_path('Modules/CRM/app/Filament/Widgets'), for: 'Modules\\CRM\\Filament\\Widgets')
-
-
+            // Descobrir recursos do módulo Products
+            ->discoverResources(in: base_path('Modules/Products/app/Filament/Resources'), for: 'Modules\\Products\\Filament\\Resources')
+            ->discoverPages(in: base_path('Modules/Products/app/Filament/Pages'), for: 'Modules\\Products\\Filament\\Pages')
+            ->discoverWidgets(in: base_path('Modules/Products/app/Filament/Widgets'), for: 'Modules\\Products\\Filament\\Widgets')
             
             ->plugins([
                 SpotlightPlugin::make(),

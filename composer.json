@@ -34,7 +34,10 @@
             "Database\\Seeders\\": "database/seeders/",
             "Modules\\CRM\\": "Modules/CRM/app/",
             "Modules\\CRM\\Database\\Seeders\\": "Modules/CRM/database/seeders/",
-            "Modules\\CRM\\Database\\Factories\\": "Modules/CRM/database/factories/"
+            "Modules\\CRM\\Database\\Factories\\": "Modules/CRM/database/factories/",
+            "Modules\\Products\\": "Modules/Products/app/",
+            "Modules\\Products\\Database\\Seeders\\": "Modules/Products/database/seeders/",
+            "Modules\\Products\\Database\\Factories\\": "Modules/Products/database/factories/"
         }
     },
     "autoload-dev": {
