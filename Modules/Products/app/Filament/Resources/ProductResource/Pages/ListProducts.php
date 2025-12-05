@@ -20,4 +20,9 @@ class ListProducts extends ListRecords
     {
         return [ProductStatsOverview::class];
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

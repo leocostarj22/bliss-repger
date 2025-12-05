@@ -14,4 +14,9 @@ class CreateProductBrand extends CreateRecord
         $data['company_id'] = auth()->user()?->company_id;
         return $data;
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

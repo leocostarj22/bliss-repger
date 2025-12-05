@@ -8,4 +8,9 @@ use Filament\Resources\Pages\EditRecord;
 class EditProductBrand extends EditRecord
 {
     protected static string $resource = ProductBrandResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }
