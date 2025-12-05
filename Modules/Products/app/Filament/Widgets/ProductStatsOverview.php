@@ -41,4 +41,12 @@ class ProductStatsOverview extends StatsOverviewWidget
             Stat::make('Categorias', (string) $counts['categories']),
         ];
     }
+
+   
+
+    public static function canView(): bool
+    {
+        $path = request()->path();
+        return str_contains($path, 'admin/products');
+    }
 }
