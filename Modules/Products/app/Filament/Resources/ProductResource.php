@@ -25,6 +25,11 @@ class ProductResource extends Resource
                 ->label('Código')->required()->maxLength(255)
                 ->unique(table: 'products', column: 'code', ignoreRecord: true, modifyRuleUsing: fn (\Illuminate\Validation\Rules\Unique $rule) => $rule->where('company_id', auth()->user()?->company_id)),
             Forms\Components\TextInput::make('name')->label('Nome')->required()->maxLength(255),
+            Forms\Components\FileUpload::make('image')
+                ->label('Imagem')
+                ->image()
+                ->directory('products')
+                ->columnSpanFull(),
             Forms\Components\Textarea::make('description')->label('Descrição')->rows(4),
             Forms\Components\Select::make('brand_id')
                 ->label('Marca')
@@ -48,6 +53,7 @@ class ProductResource extends Resource
     public static function table(Table $table): Table
     {
         return $table->columns([
+            Tables\Columns\ImageColumn::make('image')->label('Imagem'),
             Tables\Columns\TextColumn::make('code')->label('Código')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('name')->label('Nome')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('brand.name')->label('Marca')->sortable()->toggleable(),

@@ -53,22 +53,7 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Widgets\AdminPostsWidget::class,
             ])
             ->navigationGroups([
-                NavigationGroup::make('Suporte')
-                    ->collapsible()
-                    ->collapsed(),
-                NavigationGroup::make('Administração')
-                    ->collapsible()
-                    ->collapsed(),
                 NavigationGroup::make('Recursos Humanos')
-                    ->collapsible()
-                    ->collapsed(),
-                NavigationGroup::make('Relatórios e Logs')
-                    ->collapsible()
-                    ->collapsed(),
-                NavigationGroup::make('Pessoal')
-                    ->collapsible()
-                    ->collapsed(),
-                NavigationGroup::make('Sistema')
                     ->collapsible()
                     ->collapsed(),
                 NavigationGroup::make('Comunicação')
@@ -78,6 +63,9 @@ class AdminPanelProvider extends PanelProvider
                     ->collapsible()
                     ->collapsed(),
                 NavigationGroup::make('Catálogo')
+                    ->collapsible()
+                    ->collapsed(),
+                NavigationGroup::make('Suporte')
                     ->collapsible()
                     ->collapsed(),
             ])
