@@ -53,10 +53,33 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Widgets\AdminPostsWidget::class,
             ])
             ->navigationGroups([
-                NavigationGroup::make('Recursos Humanos'),
-                NavigationGroup::make('Comunicação'),
-                NavigationGroup::make('CRM'),
-                NavigationGroup::make('Catálogo'),
+                NavigationGroup::make('Suporte')
+                    ->collapsible()
+                    ->collapsed(),
+                NavigationGroup::make('Administração')
+                    ->collapsible()
+                    ->collapsed(),
+                NavigationGroup::make('Recursos Humanos')
+                    ->collapsible()
+                    ->collapsed(),
+                NavigationGroup::make('Relatórios e Logs')
+                    ->collapsible()
+                    ->collapsed(),
+                NavigationGroup::make('Pessoal')
+                    ->collapsible()
+                    ->collapsed(),
+                NavigationGroup::make('Sistema')
+                    ->collapsible()
+                    ->collapsed(),
+                NavigationGroup::make('Comunicação')
+                    ->collapsible()
+                    ->collapsed(),
+                NavigationGroup::make('CRM')
+                    ->collapsible()
+                    ->collapsed(),
+                NavigationGroup::make('Catálogo')
+                    ->collapsible()
+                    ->collapsed(),
             ])
             // Descobrir recursos do módulo CRM
             ->discoverResources(in: base_path('Modules/CRM/app/Filament/Resources'), for: 'Modules\\CRM\\Filament\\Resources')
