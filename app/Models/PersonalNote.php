@@ -14,6 +14,7 @@ class PersonalNote extends Model
         'content',
         'color',
         'is_favorite',
+        'last_modified_by',
     ];
 
     protected static function booted()
@@ -21,6 +22,12 @@ class PersonalNote extends Model
         static::creating(function ($note) {
             if (!$note->user_id && auth()->check()) {
                 $note->user_id = auth()->id();
+            }
+        });
+
+        static::updating(function ($note) {
+            if (auth()->check()) {
+                $note->last_modified_by = auth()->id();
             }
         });
     }
@@ -33,5 +40,10 @@ class PersonalNote extends Model
     public function sharedWith(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'personal_note_shares', 'personal_note_id', 'user_id');
+    }
+
+    public function lastModifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'last_modified_by');
     }
 }
