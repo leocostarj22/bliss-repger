@@ -94,11 +94,11 @@ class PersonalNoteResource extends Resource
                     ->dateTime('d/m/Y H:i')
                     ->sortable(),
                     
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Última Modificação')
-                    ->dateTime('d/m/Y H:i')
+                Tables\Columns\TextColumn::make('lastModifiedBy.name')
+                    ->label('Modificado por')
                     ->sortable()
-                    ->description(fn (PersonalNote $record) => $record->lastModifiedBy ? 'por ' . $record->lastModifiedBy->name : null),
+                    ->placeholder('Ninguém')
+                    ->toggleable(),
             ])
             ->filters([
                 Tables\Filters\Filter::make('is_favorite')
