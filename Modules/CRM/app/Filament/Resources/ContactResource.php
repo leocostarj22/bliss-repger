@@ -33,6 +33,7 @@ class ContactResource extends Resource
                         ->searchable()
                         ->preload(),
                     Forms\Components\Select::make('source')->label('Origem')->options([
+                        'gocontact' => 'GoContact',
                         'website' => 'Website',
                         'referral' => 'Indicação',
                         'social_media' => 'Redes Sociais',
@@ -74,6 +75,7 @@ class ContactResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('company_id')->label('Empresa')->options(Company::pluck('name', 'id')),
                 Tables\Filters\SelectFilter::make('source')->label('Origem')->options([
+                    'gocontact' => 'GoContact',
                     'website' => 'Website',
                     'referral' => 'Indicação',
                     'social_media' => 'Redes Sociais',
