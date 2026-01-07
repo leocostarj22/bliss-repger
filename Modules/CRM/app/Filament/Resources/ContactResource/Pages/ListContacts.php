@@ -26,7 +26,7 @@ class ListContacts extends ListRecords
                     try {
                         $service = new GoContactService();
                         $synced = 0;
-                        $limit = 100; // Aumentado para 100 por página
+                        $limit = 200; // Aumentado para 200 por página
                         $offset = 0;
                         $maxSync = 1000; // Limite de segurança para evitar timeout (executar várias vezes se necessário)
                         $hasMore = true;
