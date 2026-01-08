@@ -31,7 +31,8 @@ class CampaignResource extends Resource
                 'email' => 'Email',
                 'sms' => 'SMS',
                 'whatsapp' => 'WhatsApp',
-            ])->required()->default('email'),
+                'gocontact' => 'GoContact (Database)',
+            ])->required()->default('email')->live(),
             Forms\Components\Select::make('status')->label('Status')->options([
                 'draft' => 'Rascunho',
                 'scheduled' => 'Agendada',
@@ -71,6 +72,7 @@ class CampaignResource extends Resource
                     'email' => 'Email',
                     'sms' => 'SMS',
                     'whatsapp' => 'WhatsApp',
+                    'gocontact' => 'GoContact',
                 ]),
                 Tables\Filters\SelectFilter::make('status')->label('Status')->options([
                     'draft' => 'Rascunho',
