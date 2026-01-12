@@ -9,6 +9,7 @@ use Modules\CRM\Services\GoContactService;
 use Modules\CRM\Models\Campaign;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 use Illuminate\Support\HtmlString;
 
@@ -282,63 +283,69 @@ class ListCampaigns extends ListRecords
                         ->key(fn (Get $get) => 'campaigns-list-' . ($get('page_number') ?? 1) . '-' . ($get('search_term') ?? ''))
                         ->label(fn (Get $get) => 'Campanhas (Página ' . ($get('page_number') ?? 1) . ')')
                         ->options(function (Get $get) {
-                            $page = $get('page_number') ?? 1;
+                            $page = (int) ($get('page_number') ?? 1);
                             $search = $get('search_term');
+                            $limit = 100;
+                            $service = new GoContactService();
 
-                            try {
-                                $service = new GoContactService();
-                                // Reduzido para 100 no modal para evitar Erro 500 (Timeout/Memória) na renderização
-                                $limit = 100;
-                                $offset = ($page - 1) * $limit;
-                                
-                                $params = [
-                                    'limit' => $limit, 
-                                    'offset' => $offset,
-                                    'start' => $offset,
-                                    'skip' => $offset,
-                                    // Tenta forçar ordenação por ID decrescente (novos primeiro)
-                                    'order_by' => 'id', 
-                                    'order' => 'desc',
-                                    'direction' => 'DESC',
-                                    'sort' => 'id',
-                                    'orderBy' => 'id', // camelCase variation
-                                    'sortOrder' => 'desc',
-                                ];
-
-                                // Aplica filtro de busca se houver
-                                if (!empty($search)) {
-                                    $params['name'] = $search; // Tenta filtrar por nome
-                                    if (is_numeric($search)) {
-                                        $params['id'] = $search; // Tenta filtrar por ID se for numérico
+                            // 1. Busca única e cacheada (Solução 3 - v6)
+                            $rawItems = Cache::remember('gocontact_campaigns_v6', 300, function () use ($service) {
+                                Log::info('GoContact: Iniciando busca de campanhas para cache (Limit: 500)');
+                                try {
+                                    $data = $service->getDatabases(['limit' => 500]);
+                                    $items = $data['data'] ?? ($data['result'] ?? $data);
+                                    
+                                    if (is_array($items)) {
+                                        Log::info('GoContact: Busca concluída. Itens encontrados: ' . count($items));
+                                        return $items;
                                     }
+                                    
+                                    Log::warning('GoContact: Resposta inválida', ['response' => $data]);
+                                    return [];
+                                } catch (\Exception $e) {
+                                    Log::error('GoContact: Erro ao buscar: ' . $e->getMessage());
+                                    return [];
                                 }
+                            });
 
-                                $data = $service->getDatabases($params);
-                                
-                                $items = $data['data'] ?? ($data['result'] ?? $data);
-                                
-                                if (!is_array($items)) return [];
-                                
-                                // Ordenação manual em PHP para garantir que vemos as mais recentes primeiro
-                                // caso a API ignore o parametro order/direction.
-                                // Nota: Isso só ordena DENTRO da página retornada. 
-                                // Se a API retornar a página 1 com os items 1-50 (antigos), isso inverterá para 50-1.
-                                usort($items, function ($a, $b) {
-                                    return ($b['id'] ?? 0) <=> ($a['id'] ?? 0);
-                                });
-                                
-                                $options = [];
-                                foreach ($items as $item) {
-                                    if (isset($item['id'], $item['name'])) {
-                                        $status = isset($item['active']) && $item['active'] ? '(Ativa)' : '(Inativa)';
-                                        $options[$item['id']] = "{$item['id']} - {$item['name']} $status";
-                                    }
-                                }
-                                return $options;
-                            } catch (\Exception $e) {
-                                Notification::make()->title('Erro ao carregar campanhas: ' . $e->getMessage())->danger()->send();
-                                return [];
+                            if (empty($rawItems)) {
+                                Cache::forget('gocontact_campaigns_v6');
                             }
+
+                            // 2. Processamento Local
+                            $collection = collect($rawItems);
+
+                            if (!empty($search)) {
+                                $collection = $collection->filter(function ($item) use ($search) {
+                                    return (isset($item['name']) && stripos($item['name'], $search) !== false) ||
+                                           (isset($item['id']) && stripos((string)$item['id'], $search) !== false);
+                                });
+
+                                // Fallback: Busca direta por ID se não encontrar no cache
+                                if ($collection->isEmpty() && is_numeric($search)) {
+                                    try {
+                                        $directResponse = $service->getDatabase($search);
+                                        $directItem = $directResponse['data'] ?? ($directResponse['result'] ?? $directResponse);
+                                        if (isset($directItem['id'])) {
+                                            $collection->push($directItem);
+                                        }
+                                    } catch (\Exception $e) {
+                                        // Silencioso no fallback
+                                    }
+                                }
+                            }
+
+                            // 3. Ordenação e Paginação Local
+                            $pagedItems = $collection
+                                ->sortByDesc('id')
+                                ->values()
+                                ->slice(($page - 1) * $limit, $limit);
+
+                            return $pagedItems->mapWithKeys(function ($item) {
+                                if (!isset($item['id'], $item['name'])) return [];
+                                $status = !empty($item['active']) ? '(Ativa)' : '(Inativa)';
+                                return [$item['id'] => "{$item['id']} - {$item['name']} $status"];
+                            })->toArray();
                         })
                         ->searchable()
                         ->noSearchResultsMessage('Nenhuma campanha encontrada nesta página.')
