@@ -15,18 +15,26 @@ class Campaign extends Model
         'gocontact_id',
         'channel',
         'status',
+        'active',
         'segment_id',
         'template_id',
         'scheduled_at',
+        'created_at',
     ];
 
     protected $casts = [
         'scheduled_at' => 'datetime',
+        'active' => 'boolean',
     ];
 
     public function segment()
     {
         return $this->belongsTo(\Modules\CRM\Models\Segment::class);
+    }
+
+    public function campaignContacts()
+    {
+        return $this->hasMany(\Modules\CRM\Models\CampaignContact::class);
     }
 
     public function template()

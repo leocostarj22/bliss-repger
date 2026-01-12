@@ -74,21 +74,34 @@ class GoContactService
         }
     }
     /**
-     * Obter lista de databases
+     * Obter lista de databases (com suporte a paginação recursiva se necessário)
      */
     public function getDatabases(array $filters = [])
     {
+        // Tenta endpoints diferentes pois a API pode variar
         $endpoints = ['/api/databases', '/poll/api/databases', '/api/v1/databases'];
         
         foreach ($endpoints as $endpoint) {
              try {
                 $response = $this->get($endpoint, $filters);
                 if ($response->successful()) {
-                    Log::info("GoContact Databases Endpoint Found: $endpoint");
-                    return $response->json();
+                    $data = $response->json();
+                    
+                    // Log para diagnóstico de loop e paginação
+                    $count = 0;
+                    if (isset($data['data']) && is_array($data['data'])) $count = count($data['data']);
+                    elseif (isset($data['result']) && is_array($data['result'])) $count = count($data['result']);
+                    elseif (is_array($data)) $count = count($data);
+
+                    Log::info("GoContact Databases Endpoint Found: $endpoint | Count: $count | Params: " . json_encode($filters));
+                    
+                    return $data;
+                } else {
+                    Log::warning("GoContact Endpoint Failed: $endpoint | Status: " . $response->status());
                 }
              } catch (\Exception $e) {
-                 Log::warning("GoContact Database check failed for $endpoint: " . $e->getMessage());
+                // Continua para o próximo endpoint
+                Log::warning("GoContact Database check failed for $endpoint: " . $e->getMessage());
              }
         }
         
@@ -212,6 +225,54 @@ class GoContactService
     }
 
     /**
+     * Obter contatos de uma database específica
+     */
+    public function getDatabaseContacts(string $databaseId, int $limit = 100, int $offset = 0)
+    {
+        $endpoints = [
+            "/poll/api/databases/{$databaseId}/contacts/",
+            "/api/databases/{$databaseId}/contacts/"
+        ];
+
+        foreach ($endpoints as $endpoint) {
+            try {
+                $response = $this->get($endpoint, ['limit' => $limit, 'offset' => $offset]);
+                if ($response->successful()) {
+                    Log::info("GoContact Database Contacts found: $endpoint");
+                    return $response->json();
+                }
+            } catch (\Exception $e) {
+                Log::warning("GoContact Database Contacts check failed for $endpoint: " . $e->getMessage());
+            }
+        }
+        
+        throw new \Exception("Não foi possível obter contatos da database $databaseId.");
+    }
+
+    /**
+     * Atualizar contato específico em uma database
+     */
+    public function updateDatabaseContact(string $databaseId, string $contactId, array $data)
+    {
+        // Endpoint provável: /api/databases/{dbId}/contacts/{contactId}
+        $endpoint = "/api/databases/{$databaseId}/contacts/{$contactId}";
+        
+        // Mapeamento reverso (Do CRM para GoContact)
+        // Precisamos garantir que os campos correspondam ao que a API espera
+        $apiData = [];
+        if (isset($data['name'])) $apiData['contact'] = $data['name'];
+        if (isset($data['email'])) $apiData['email'] = $data['email'];
+        if (isset($data['phone_1'])) $apiData['phone_number'] = $data['phone_1'];
+        if (isset($data['postal_code'])) $apiData['zip_code'] = $data['postal_code'];
+        if (isset($data['address'])) $apiData['address'] = $data['address'];
+        if (isset($data['city'])) $apiData['city'] = $data['city'];
+        
+        // Adicione outros campos conforme necessário e suportado pela API
+        
+        return $this->patch($endpoint, $apiData)->json();
+    }
+
+    /**
      * Fazer requisição GET autenticada
      */
     protected function get(string $endpoint, array $params = [])
@@ -224,10 +285,16 @@ class GoContactService
 
         // Garante que o endpoint comece com /
         $endpoint = '/' . ltrim($endpoint, '/');
+        $fullUrl = "{$this->baseUrl}{$endpoint}";
+        
+        // Log da URL completa para debug de paginação e ordenação
+        if (!empty($params)) {
+            Log::info("GoContact GET Request: $fullUrl?" . http_build_query($params));
+        }
 
         return Http::withoutVerifying()
             ->withToken($token)
-            ->get("{$this->baseUrl}{$endpoint}", $params);
+            ->get($fullUrl, $params);
     }
 
     /**

@@ -50,20 +50,32 @@ class CampaignResource extends Resource
                 ->searchable()
                 ->preload(),
             Forms\Components\DateTimePicker::make('scheduled_at')->label('Agendar para'),
+            Forms\Components\Toggle::make('active')
+                ->label('Ativa (GoContact)')
+                ->disabled()
+                ->dehydrated(false)
+                ->visible(fn ($record) => $record && $record->channel === 'gocontact'),
+            Forms\Components\TextInput::make('contacts_count')
+                ->label('Total de Contatos')
+                ->disabled()
+                ->dehydrated(false)
+                ->visible(fn ($record) => $record !== null)
+                ->formatStateUsing(fn ($record) => $record ? $record->campaignContacts()->count() : 0),
         ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with(['segment','template'])->withCount('deliveries'))
+            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with(['segment','template']))
             ->columns([
                 Tables\Columns\TextColumn::make('name')->label('Nome')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('channel')->label('Canal')->sortable(),
                 Tables\Columns\TextColumn::make('status')->label('Status')->sortable(),
+                Tables\Columns\ToggleColumn::make('active')->label('Ativa (GoContact)')->sortable(),
                 Tables\Columns\TextColumn::make('segment.name')->label('Segmento')->sortable(),
                 Tables\Columns\TextColumn::make('template.name')->label('Template')->sortable(),
-                Tables\Columns\TextColumn::make('deliveries_count')->label('Entregas')->sortable(),
+                // Tables\Columns\TextColumn::make('campaign_contacts_count')->label('Contatos')->sortable(),
                 Tables\Columns\TextColumn::make('scheduled_at')->label('Agendada')->dateTime('d/m/Y H:i')->sortable(),
                 Tables\Columns\TextColumn::make('created_at')->label('Criada em')->dateTime('d/m/Y H:i')->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -80,6 +92,7 @@ class CampaignResource extends Resource
                     'sending' => 'Enviando',
                     'sent' => 'Enviada',
                 ]),
+                Tables\Filters\TernaryFilter::make('active')->label('Ativa (GoContact)'),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
@@ -132,6 +145,7 @@ class CampaignResource extends Resource
     {
         return [
             \Modules\CRM\Filament\Resources\CampaignResource\RelationManagers\DeliveriesRelationManager::class,
+            \Modules\CRM\Filament\Resources\CampaignResource\RelationManagers\CampaignContactsRelationManager::class,
         ];
     }
 
