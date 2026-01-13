@@ -450,7 +450,7 @@ class EmployeeResource extends Resource
                                     ->schema([
                                         Forms\Components\TextInput::make('zip_code')
                                             ->label('CEP')
-                                            ->mask('99999-999'),
+                                            ->mask('9999-999'),
                                         
                                         Forms\Components\TextInput::make('address')
                                             ->label('Endereço'),
