@@ -37,11 +37,13 @@ class TaskResource extends Resource
         $user = Auth::user();
         return parent::getEloquentQuery()
             ->where(function ($query) use ($user) {
-                $query->where('taskable_type', get_class($user))
-                      ->where('taskable_id', $user->id);
-            })
-            ->orWhereHas('sharedWith', function ($q) use ($user) {
-                $q->where('users.id', $user->id);
+                $query->where(function ($q) use ($user) {
+                    $q->where('taskable_type', get_class($user))
+                          ->where('taskable_id', $user->id);
+                })
+                ->orWhereHas('sharedWith', function ($q) use ($user) {
+                    $q->where('users.id', $user->id);
+                });
             });
     }
 
@@ -129,16 +131,6 @@ class TaskResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(function ($query) {
-                // Filtrar apenas tarefas do utilizador atual ou partilhadas com ele
-                $user = Auth::user();
-                return $query->where(function($q) use ($user) {
-                    $q->where('taskable_type', get_class($user))
-                      ->where('taskable_id', $user->id);
-                })->orWhereHas('sharedWith', function ($q) use ($user) {
-                    $q->where('users.id', $user->id);
-                });
-            })
             ->columns([
                 Tables\Columns\TextColumn::make('title')
                     ->label('Título')
@@ -232,7 +224,15 @@ class TaskResource extends Resource
                     ->color('success')
                     ->action(fn (Task $record) => $record->markAsCompleted())
                     ->visible(fn (Task $record) => $record->status !== 'completed'),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn (Task $record) => $record->taskable_id === auth()->id() && $record->taskable_type === get_class(auth()->user())),
+                Tables\Actions\Action::make('leave')
+                    ->label('Remover')
+                    ->icon('heroicon-o-x-mark')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->action(fn (Task $record) => $record->sharedWith()->detach(auth()->id()))
+                    ->visible(fn (Task $record) => !($record->taskable_id === auth()->id() && $record->taskable_type === get_class(auth()->user()))),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

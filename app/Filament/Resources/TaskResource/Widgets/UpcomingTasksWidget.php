@@ -22,11 +22,13 @@ class UpcomingTasksWidget extends BaseWidget
             ->query(
                 Task::query()
                     ->where(function ($query) use ($user) {
-                        $query->where('taskable_type', get_class($user))
-                              ->where('taskable_id', $user->id);
-                    })
-                    ->orWhereHas('sharedWith', function ($q) use ($user) {
-                        $q->where('users.id', $user->id);
+                        $query->where(function ($q) use ($user) {
+                            $q->where('taskable_type', get_class($user))
+                                  ->where('taskable_id', $user->id);
+                        })
+                        ->orWhereHas('sharedWith', function ($q) use ($user) {
+                            $q->where('users.id', $user->id);
+                        });
                     })
                     ->whereNotIn('status', ['completed', 'cancelled'])
                     // Remover esta linha: ->whereNotNull('due_date')
@@ -68,6 +70,17 @@ class UpcomingTasksWidget extends BaseWidget
                     ->color('success')
                     ->action(fn (Task $record) => $record->markAsCompleted())
                     ->visible(fn (Task $record) => $record->status !== 'completed'),
+                
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn (Task $record) => $record->taskable_id === auth()->id() && $record->taskable_type === get_class(auth()->user())),
+                    
+                Tables\Actions\Action::make('leave')
+                    ->label('Remover')
+                    ->icon('heroicon-o-x-mark')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->action(fn (Task $record) => $record->sharedWith()->detach(auth()->id()))
+                    ->visible(fn (Task $record) => !($record->taskable_id === auth()->id() && $record->taskable_type === get_class(auth()->user()))),
             ]);
     }
 }

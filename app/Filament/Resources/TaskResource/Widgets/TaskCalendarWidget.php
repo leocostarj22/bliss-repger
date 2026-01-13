@@ -28,11 +28,13 @@ class TaskCalendarWidget extends FullCalendarWidget
         
         return Task::query()
             ->where(function ($query) use ($user) {
-                $query->where('taskable_type', get_class($user))
-                      ->where('taskable_id', $user->id);
-            })
-            ->orWhereHas('sharedWith', function ($q) use ($user) {
-                $q->where('users.id', $user->id);
+                $query->where(function ($q) use ($user) {
+                    $q->where('taskable_type', get_class($user))
+                          ->where('taskable_id', $user->id);
+                })
+                ->orWhereHas('sharedWith', function ($q) use ($user) {
+                    $q->where('users.id', $user->id);
+                });
             })
             ->where(function ($query) {
                 $query->whereNotNull('due_date')
