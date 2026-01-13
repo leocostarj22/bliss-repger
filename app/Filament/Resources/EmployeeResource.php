@@ -349,7 +349,7 @@ class EmployeeResource extends Resource
                                         
                                         Forms\Components\TextInput::make('bank_account')
                                             ->label('IBAN')
-                                            ->placeholder('PT50003300004580688191305')
+                                            ->placeholder('PT50000000000000000000000')
                                             ->minLength(25)
                                             ->maxLength(25),
                                         
