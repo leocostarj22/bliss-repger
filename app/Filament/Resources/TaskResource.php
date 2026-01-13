@@ -14,6 +14,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Actions\BulkAction;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Builder;
 
 class TaskResource extends Resource
 {
@@ -30,6 +31,19 @@ class TaskResource extends Resource
     protected static ?string $navigationGroup = 'Pessoal';
     
     protected static ?int $navigationSort = 1;
+
+    public static function getEloquentQuery(): Builder
+    {
+        $user = Auth::user();
+        return parent::getEloquentQuery()
+            ->where(function ($query) use ($user) {
+                $query->where('taskable_type', get_class($user))
+                      ->where('taskable_id', $user->id);
+            })
+            ->orWhereHas('sharedWith', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            });
+    }
 
     public static function form(Form $form): Form
     {
@@ -100,6 +114,14 @@ class TaskResource extends Resource
                             ->label('Tarefa Privada')
                             ->default(true)
                             ->helperText('Tarefas privadas são visíveis apenas para você'),
+
+                        Forms\Components\Select::make('sharedWith')
+                            ->label('Partilhar com')
+                            ->relationship('sharedWith', 'name')
+                            ->multiple()
+                            ->preload()
+                            ->searchable()
+                            ->columnSpanFull(),
                     ]),
             ]);
     }
@@ -108,17 +130,22 @@ class TaskResource extends Resource
     {
         return $table
             ->modifyQueryUsing(function ($query) {
-                // Filtrar apenas tarefas do utilizador atual
+                // Filtrar apenas tarefas do utilizador atual ou partilhadas com ele
                 $user = Auth::user();
-                return $query->where('taskable_type', get_class($user))
-                           ->where('taskable_id', $user->id);
+                return $query->where(function($q) use ($user) {
+                    $q->where('taskable_type', get_class($user))
+                      ->where('taskable_id', $user->id);
+                })->orWhereHas('sharedWith', function ($q) use ($user) {
+                    $q->where('users.id', $user->id);
+                });
             })
             ->columns([
                 Tables\Columns\TextColumn::make('title')
                     ->label('Título')
                     ->searchable()
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->description(fn (Task $record) => ($record->taskable_id !== auth()->id() || $record->taskable_type !== get_class(auth()->user())) && $record->taskable ? 'Partilhado por ' . $record->taskable->name : null),
                 
                 Tables\Columns\BadgeColumn::make('priority')
                     ->label('Prioridade')

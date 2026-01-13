@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Carbon\Carbon;
 
 class Task extends Model
@@ -42,6 +43,11 @@ class Task extends Model
     public function taskable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function sharedWith(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'task_shares', 'task_id', 'user_id');
     }
 
     // Scopes
