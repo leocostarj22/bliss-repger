@@ -206,7 +206,8 @@ class EmployeeResource extends Resource
                                             ->unique(ignoreRecord: true),
                                         
                                         Forms\Components\DatePicker::make('birth_date')
-                                            ->label('Data de Nascimento'),
+                                            ->label('Data de Nascimento')
+                                            ->live(),
                                         
                                         Forms\Components\Select::make('gender')
                                             ->label('Género')
@@ -370,6 +371,49 @@ class EmployeeResource extends Resource
                                     ->rows(5),
                             ]),
                         
+                        Tabs\Tab::make('Medicina do Trabalho')
+                            ->schema([
+                                Section::make('Informações Médicas')
+                                    ->schema([
+                                        Forms\Components\DatePicker::make('medical_aptitude_date')
+                                            ->label('Data de Aptidão')
+                                            ->live(),
+                                        
+                                        Forms\Components\Select::make('medical_status')
+                                            ->label('Estado')
+                                            ->options([
+                                                'active' => 'Ativo',
+                                                'inactive' => 'Inativo',
+                                            ])
+                                            ->default('active')
+                                            ->required(),
+                                            
+                                        Forms\Components\Placeholder::make('medical_renewal_period')
+                                            ->label('Renovação')
+                                            ->content(function (Get $get) {
+                                                $aptitudeDate = $get('medical_aptitude_date');
+                                                $birthDate = $get('birth_date');
+                                                
+                                                if (!$aptitudeDate || !$birthDate) {
+                                                    return 'Aguardando dados (Data de Nascimento e Aptidão)...';
+                                                }
+                                                
+                                                try {
+                                                    $age = \Carbon\Carbon::parse($birthDate)->age;
+                                                    $aptitude = \Carbon\Carbon::parse($aptitudeDate);
+                                                    
+                                                    $years = ($age > 50) ? 1 : 2;
+                                                    $nextRenewal = $aptitude->copy()->addYears($years);
+                                                    
+                                                    return "Renovação em {$years} ano(s) ({$nextRenewal->format('d/m/Y')})";
+                                                } catch (\Exception $e) {
+                                                    return 'Erro ao calcular data';
+                                                }
+                                            }),
+                                    ])
+                                    ->columns(3),
+                            ]),
+
                         Tabs\Tab::make('Documentos')
                             ->schema([
                                 Section::make('Documentos do Funcionário')

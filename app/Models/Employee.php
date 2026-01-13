@@ -51,6 +51,8 @@ class Employee extends Model
         'notes',
         'photo_path',
         'documents', // Adicionar se não estiver presente
+        'medical_aptitude_date',
+        'medical_status',
     ];
 
     protected $casts = [
@@ -58,6 +60,7 @@ class Employee extends Model
         'hire_date' => 'date',
         'termination_date' => 'date',
         'last_vacation_calculation' => 'date', // Novo cast
+        'medical_aptitude_date' => 'date',
         'salary' => 'decimal:2',
         'hourly_rate' => 'decimal:2', // Novo cast
         'vacation_days_balance' => 'integer', // Novo cast
