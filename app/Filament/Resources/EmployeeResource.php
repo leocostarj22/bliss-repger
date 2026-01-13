@@ -256,7 +256,8 @@ class EmployeeResource extends Resource
                                             ->label('Endereço'),
                                         
                                         Forms\Components\TextInput::make('address_number')
-                                            ->label('Número'),
+                                            ->label('Número')
+                                            ->maxLength(50),
                                         
                                         Forms\Components\TextInput::make('complement')
                                             ->label('Complemento'),
