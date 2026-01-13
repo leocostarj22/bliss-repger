@@ -22,6 +22,7 @@ use App\Filament\Resources\EmployeeResource\Widgets\EmployeesByDepartmentChart;
 use App\Filament\Resources\EmployeeResource\Widgets\EmploymentTypeChart;
 use Filament\Forms\Components\FileUpload;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 
 
 class EmployeeResource extends Resource
@@ -283,15 +284,22 @@ class EmployeeResource extends Resource
                                             ->label('Cargo')
                                             ->required(),
                                         
-                                        Forms\Components\Select::make('department_id')
-                                            ->label('Departamento')
-                                            ->relationship('department', 'name')
-                                            ->required(),
-                                        
                                         Forms\Components\Select::make('company_id')
                                             ->label('Empresa')
                                             ->relationship('company', 'name')
-                                            ->required(),
+                                            ->required()
+                                            ->live()
+                                            ->afterStateUpdated(fn (Set $set) => $set('department_id', null)),
+
+                                        Forms\Components\Select::make('department_id')
+                                            ->label('Departamento')
+                                            ->relationship(
+                                                name: 'department',
+                                                titleAttribute: 'name',
+                                                modifyQueryUsing: fn (Builder $query, Get $get) => $query->where('company_id', $get('company_id'))
+                                            )
+                                            ->required()
+                                            ->disabled(fn (Get $get) => ! $get('company_id')),
                                         
                                         Forms\Components\DatePicker::make('hire_date')
                                             ->label('Data de Admissão')
