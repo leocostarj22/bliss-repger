@@ -93,6 +93,33 @@ class EmployeeResource extends Resource
                                             ->image()
                                             ->directory('employees/photos')
                                             ->visibility('private'),
+                                            
+                                        Forms\Components\Group::make()
+                                            ->schema([
+                                                Forms\Components\Toggle::make('has_disability')
+                                                    ->label('Deficiente')
+                                                    ->helperText('Elementos do agregado familiar com grau de deficiência igual ou superior a 60%')
+                                                    ->live()
+                                                    ->inline(false),
+                                                    
+                                                Forms\Components\Group::make()
+                                                    ->schema([
+                                                        Forms\Components\Checkbox::make('disability_declarant')
+                                                            ->label('Declarante'),
+                                                            
+                                                        Forms\Components\Checkbox::make('disability_spouse')
+                                                            ->label('Cônjuge'),
+                                                            
+                                                        Forms\Components\TextInput::make('disability_dependents')
+                                                            ->label('Dependentes')
+                                                            ->numeric()
+                                                            ->default(0)
+                                                            ->minValue(0),
+                                                    ])
+                                                    ->visible(fn (Get $get) => $get('has_disability'))
+                                                    ->columns(3),
+                                            ])
+                                            ->columnSpanFull(),
                                     ])
                                     ->columns(2),
                                 

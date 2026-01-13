@@ -59,6 +59,10 @@ class Employee extends Model
         'account_type',
         'notes',
         'photo_path',
+        'has_disability', // Novo campo
+        'disability_declarant', // Novo campo
+        'disability_spouse', // Novo campo
+        'disability_dependents', // Novo campo
         'documents', // Adicionar se não estiver presente
         'medical_aptitude_date',
         'medical_status',
@@ -80,6 +84,10 @@ class Employee extends Model
         'document_expiration_date' => 'date', // Novo cast
         'contract_duration' => 'integer', // Novo cast
         'auto_renew' => 'boolean', // Novo cast
+        'has_disability' => 'boolean', // Novo cast
+        'disability_declarant' => 'boolean', // Novo cast
+        'disability_spouse' => 'boolean', // Novo cast
+        'disability_dependents' => 'integer', // Novo cast
     ];
 
     /**
