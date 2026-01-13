@@ -566,6 +566,21 @@ class EmployeeResource extends Resource
                                                 'Temporary' => 'Contrato a Termo',
                                             ])
                                             ->required(),
+
+                                        Forms\Components\Select::make('contract_duration')
+                                            ->label('Duração do Contrato (Meses)')
+                                            ->options([
+                                                6 => '6 Meses',
+                                                7 => '7 Meses',
+                                                12 => '12 Meses',
+                                            ])
+                                            ->visible(fn (Get $get) => $get('employment_type') === 'Temporary'),
+
+                                        Forms\Components\Toggle::make('auto_renew')
+                                            ->label('Renovação Automática')
+                                            ->visible(fn (Get $get) => $get('employment_type') === 'Temporary')
+                                            ->inline(false)
+                                            ->helperText('Se marcado, o contrato será renovado pelo mesmo período.'),
                                         
                                         Forms\Components\Select::make('status')
                                             ->label('Status')

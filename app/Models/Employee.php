@@ -50,6 +50,8 @@ class Employee extends Model
         'vacation_days_balance', // Novo campo da migration
         'last_vacation_calculation', // Novo campo da migration
         'employment_type',
+        'contract_duration', // Novo campo
+        'auto_renew', // Novo campo
         'status',
         'bank_name',
         'bank_agency',
@@ -76,6 +78,8 @@ class Employee extends Model
         'spouse_joint_irs' => 'boolean', // Novo cast
         'has_children' => 'boolean', // Novo cast
         'document_expiration_date' => 'date', // Novo cast
+        'contract_duration' => 'integer', // Novo cast
+        'auto_renew' => 'boolean', // Novo cast
     ];
 
     /**
