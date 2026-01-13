@@ -58,9 +58,15 @@ class TaskResource extends Resource
                             ->required()
                             ->maxLength(255),
                         
-                        Forms\Components\Textarea::make('description')
-                            ->label('Descrição')
-                            ->rows(3),
+                        Forms\Components\RichEditor::make('description')
+                            ->label('Descrição'),
+                        
+                        Forms\Components\FileUpload::make('attachments')
+                            ->label('Anexos (PDF)')
+                            ->acceptedFileTypes(['application/pdf'])
+                            ->directory('tasks/attachments')
+                            ->multiple()
+                            ->preserveFilenames(),
                         
                         Forms\Components\Select::make('priority')
                             ->label('Prioridade')

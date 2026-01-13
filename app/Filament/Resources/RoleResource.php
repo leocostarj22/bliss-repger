@@ -19,6 +19,11 @@ class RoleResource extends Resource
     protected static ?string $modelLabel = 'Cargo';
     protected static ?string $pluralModelLabel = 'Cargos';
     protected static ?string $navigationGroup = 'Administração';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->user()->isAdmin();
+    }
     protected static ?int $navigationSort = 2;
 
     public static function form(Form $form): Form
