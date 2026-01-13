@@ -27,8 +27,13 @@ class TaskCalendarWidget extends FullCalendarWidget
         $user = Auth::user();
         
         return Task::query()
-            ->where('taskable_type', get_class($user))
-            ->where('taskable_id', $user->id)
+            ->where(function ($query) use ($user) {
+                $query->where('taskable_type', get_class($user))
+                      ->where('taskable_id', $user->id);
+            })
+            ->orWhereHas('sharedWith', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            })
             ->where(function ($query) {
                 $query->whereNotNull('due_date')
                       ->orWhereNotNull('start_date');
@@ -184,13 +189,7 @@ class TaskCalendarWidget extends FullCalendarWidget
     {
         return [
             EditAction::make()
-                ->label('Editar')
-                ->mutateFormDataUsing(function (Task $record, array $data): array {
-                    $user = Auth::user();
-                    $data['taskable_type'] = get_class($user);
-                    $data['taskable_id'] = $user->id;
-                    return $data;
-                }),
+                ->label('Editar'),
                 
             DeleteAction::make()
                 ->label('Excluir'),

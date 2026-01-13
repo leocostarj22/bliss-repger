@@ -16,11 +16,18 @@ class UpcomingTasksWidget extends BaseWidget
     
     public function table(Table $table): Table
     {
+        $user = Auth::user();
+
         return $table
             ->query(
                 Task::query()
-                    ->where('taskable_type', get_class(Auth::user()))
-                    ->where('taskable_id', Auth::user()->id)
+                    ->where(function ($query) use ($user) {
+                        $query->where('taskable_type', get_class($user))
+                              ->where('taskable_id', $user->id);
+                    })
+                    ->orWhereHas('sharedWith', function ($q) use ($user) {
+                        $q->where('users.id', $user->id);
+                    })
                     ->whereNotIn('status', ['completed', 'cancelled'])
                     // Remover esta linha: ->whereNotNull('due_date')
                     ->orderByRaw('due_date IS NULL, due_date ASC') // Tarefas com due_date primeiro

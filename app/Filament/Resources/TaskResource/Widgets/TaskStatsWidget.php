@@ -16,23 +16,28 @@ class TaskStatsWidget extends BaseWidget
         $userClass = get_class($user);
         $userId = $user->id;
         
+        // Base query for user access
+        $baseQuery = function ($query) use ($userClass, $userId) {
+            $query->where(function ($q) use ($userClass, $userId) {
+                $q->where('taskable_type', $userClass)
+                  ->where('taskable_id', $userId);
+            })->orWhereHas('sharedWith', function ($q) use ($userId) {
+                $q->where('users.id', $userId);
+            });
+        };
+
         // Consultas diretas ao modelo Task
-        $totalTasks = Task::where('taskable_type', $userClass)
-            ->where('taskable_id', $userId)
-            ->count();
+        $totalTasks = Task::where($baseQuery)->count();
             
-        $pendingTasks = Task::where('taskable_type', $userClass)
-            ->where('taskable_id', $userId)
+        $pendingTasks = Task::where($baseQuery)
             ->whereIn('status', ['pending', 'in_progress'])
             ->count();
             
-        $completedTasks = Task::where('taskable_type', $userClass)
-            ->where('taskable_id', $userId)
+        $completedTasks = Task::where($baseQuery)
             ->where('status', 'completed')
             ->count();
             
-        $overdueTasks = Task::where('taskable_type', $userClass)
-            ->where('taskable_id', $userId)
+        $overdueTasks = Task::where($baseQuery)
             ->whereNotIn('status', ['completed', 'cancelled'])
             ->where('due_date', '<', Carbon::now())
             ->count();
