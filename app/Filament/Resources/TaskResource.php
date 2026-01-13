@@ -108,9 +108,18 @@ class TaskResource extends Resource
                 
                 Section::make('Detalhes Adicionais')
                     ->schema([
-                        Forms\Components\Textarea::make('notes')
+                        Forms\Components\RichEditor::make('notes')
                             ->label('Notas')
-                            ->rows(3),
+                            ->columnSpanFull(),
+
+                        Forms\Components\FileUpload::make('attachments')
+                            ->label('Anexos (PDF)')
+                            ->acceptedFileTypes(['application/pdf'])
+                            ->multiple()
+                            ->directory('tasks/attachments')
+                            ->downloadable()
+                            ->openable()
+                            ->columnSpanFull(),
                         
                         Forms\Components\Toggle::make('is_private')
                             ->label('Tarefa Privada')

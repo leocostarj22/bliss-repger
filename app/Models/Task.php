@@ -23,6 +23,7 @@ class Task extends Model
         'is_all_day',
         'location',
         'notes',
+        'attachments', // Novo campo
         'taskable_type',
         'taskable_id',
         'calendar_event_id',
@@ -37,6 +38,7 @@ class Task extends Model
         'is_all_day' => 'boolean',
         'is_private' => 'boolean',
         'recurrence_rule' => 'array',
+        'attachments' => 'array', // Novo cast
     ];
 
     // Relacionamento polimórfico
