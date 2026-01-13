@@ -348,7 +348,10 @@ class EmployeeResource extends Resource
                                             ->label('Agência'),
                                         
                                         Forms\Components\TextInput::make('bank_account')
-                                            ->label('Conta'),
+                                            ->label('IBAN')
+                                            ->placeholder('PT50003300004580688191305')
+                                            ->minLength(25)
+                                            ->maxLength(25),
                                         
                                         Forms\Components\Select::make('account_type')
                                             ->label('Tipo de Conta')
