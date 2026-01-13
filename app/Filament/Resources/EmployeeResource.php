@@ -217,6 +217,11 @@ class EmployeeResource extends Resource
                                                 'Other' => 'Outro',
                                             ]),
                                         
+                                        Forms\Components\TextInput::make('nationality')
+                                            ->label('Nacionalidade')
+                                            ->placeholder('Portuguesa, Brasileira, etc.')
+                                            ->maxLength(100),
+                                        
                                         Forms\Components\Select::make('marital_status')
                                             ->label('Estado Civil')
                                             ->options([

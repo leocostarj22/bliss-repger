@@ -22,6 +22,7 @@ class Employee extends Model
         'nis',
         'birth_date',
         'gender',
+        'nationality',
         'marital_status',
         'phone',
         'emergency_contact',
