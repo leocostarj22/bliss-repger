@@ -19,11 +19,17 @@ class Employee extends Model
         'nif',
         'document_type',
         'document_number',
+        'document_expiration_date', // Novo campo
         'nis',
         'birth_date',
         'gender',
         'nationality',
         'marital_status',
+        'spouse_name', // Novo campo
+        'spouse_nif', // Novo campo
+        'spouse_joint_irs', // Novo campo
+        'has_children', // Novo campo
+        'children_data', // Novo campo
         'phone',
         'emergency_contact',
         'emergency_phone',
@@ -66,6 +72,10 @@ class Employee extends Model
         'hourly_rate' => 'decimal:2', // Novo cast
         'vacation_days_balance' => 'integer', // Novo cast
         'documents' => 'array',
+        'children_data' => 'array', // Novo cast
+        'spouse_joint_irs' => 'boolean', // Novo cast
+        'has_children' => 'boolean', // Novo cast
+        'document_expiration_date' => 'date', // Novo cast
     ];
 
     /**

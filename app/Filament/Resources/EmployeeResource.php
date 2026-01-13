@@ -197,6 +197,9 @@ class EmployeeResource extends Resource
                                         Forms\Components\TextInput::make('document_number')
                                             ->label('Número do Documento')
                                             ->required(),
+
+                                        Forms\Components\DatePicker::make('document_expiration_date')
+                                            ->label('Validade do Documento'),
                                         
                                         Forms\Components\TextInput::make('nis')
                                             ->label('NIS (Número de Identificação da Segurança Social)')
@@ -422,7 +425,48 @@ class EmployeeResource extends Resource
                                                 'married' => 'Casado(a)',
                                                 'divorced' => 'Divorciado(a)',
                                                 'widowed' => 'Viúvo(a)',
-                                            ]),
+                                            ])
+                                            ->live(),
+
+                                        Forms\Components\TextInput::make('spouse_name')
+                                            ->label('Nome do Cônjuge')
+                                            ->visible(fn (Get $get) => $get('marital_status') === 'married')
+                                            ->required(fn (Get $get) => $get('marital_status') === 'married')
+                                            ->columnSpan(2),
+
+                                        Forms\Components\TextInput::make('spouse_nif')
+                                            ->label('NIF do Cônjuge')
+                                            ->mask('999999999')
+                                            ->visible(fn (Get $get) => $get('marital_status') === 'married')
+                                            ->maxLength(9),
+
+                                        Forms\Components\Toggle::make('spouse_joint_irs')
+                                            ->label('IRS em Conjunto?')
+                                            ->visible(fn (Get $get) => $get('marital_status') === 'married')
+                                            ->inline(false),
+
+                                        Forms\Components\Toggle::make('has_children')
+                                            ->label('Tem Filhos?')
+                                            ->live()
+                                            ->inline(false),
+
+                                        Forms\Components\Repeater::make('children_data')
+                                            ->label('Dados dos Filhos')
+                                            ->schema([
+                                                Forms\Components\TextInput::make('name')
+                                                    ->label('Nome')
+                                                    ->required(),
+                                                Forms\Components\DatePicker::make('birth_date')
+                                                    ->label('Data de Nascimento')
+                                                    ->required(),
+                                                Forms\Components\TextInput::make('nif')
+                                                    ->label('NIF')
+                                                    ->mask('999999999')
+                                                    ->maxLength(9),
+                                            ])
+                                            ->visible(fn (Get $get) => $get('has_children'))
+                                            ->columnSpanFull()
+                                            ->columns(3),
                                     ])
                                     ->columns(3),
                                 
