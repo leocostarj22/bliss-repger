@@ -5,16 +5,23 @@ namespace Modules\CRM\Filament\Resources\QuizResource\Widgets;
 use Modules\CRM\Models\Quiz;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Filament\Widgets\Concerns\InteractsWithPageTable;
 
 class QuizStatsOverview extends BaseWidget
 {
+    use InteractsWithPageTable;
+
     protected function getStats(): array
     {
-        // Usa a conexão myformula automaticamente via Model
-        $total = Quiz::count();
+        // Obtém a query filtrada da tabela da página
+        $query = $this->getPageTableQuery();
+        
+        // Clona a query para não afetar as próximas contagens
+        $total = (clone $query)->count();
 
         // Concluído: step == 'plans'
-        $completed = Quiz::where('post->step', 'plans')->count();
+        // Aplica filtro adicional na query já filtrada
+        $completed = (clone $query)->where('post->step', 'plans')->count();
 
         $notCompleted = $total - $completed;
         $rate = $total > 0 ? round(($completed / $total) * 100) : 0;
