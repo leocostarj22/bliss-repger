@@ -36,10 +36,10 @@ class LogsStatsWidget extends BaseWidget
                 ->color('primary'),
                 
             Stat::make('Usuários Ativos', SystemLog::whereDate('created_at', $today)
-                ->where('action', 'login')
+                ->whereNotNull('user_id')
                 ->distinct('user_id')
                 ->count('user_id'))
-                ->description('Logins únicos hoje')
+                ->description('Utilizadores com atividade hoje')
                 ->descriptionIcon('heroicon-m-users')
                 ->color('warning'),
         ];

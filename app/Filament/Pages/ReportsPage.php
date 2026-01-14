@@ -64,7 +64,7 @@ class ReportsPage extends Page
                 'errors_today' => SystemLog::whereDate('created_at', $today)
                     ->whereIn('level', ['error', 'critical'])->count(),
                 'active_users' => SystemLog::whereDate('created_at', $today)
-                    ->where('action', 'login')
+                    ->whereNotNull('user_id')
                     ->distinct('user_id')
                     ->count('user_id'),
                 'total_tickets' => Ticket::count(),
