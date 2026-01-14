@@ -112,6 +112,25 @@ return [
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
+        'myformula' => [
+            'driver' => 'mysql',
+            'host' => env('MYFORMULA_DB_HOST', '185.90.58.122'),
+            'port' => env('MYFORMULA_DB_PORT', '3306'),
+            'database' => env('MYFORMULA_DB_DATABASE', 'myformula_db'),
+            'username' => env('MYFORMULA_DB_USERNAME', 'myformula_gmcentral'),
+            'password' => env('MYFORMULA_DB_PASSWORD', 'Ljgm18070620@'),
+            'unix_socket' => env('MYFORMULA_DB_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => 'oc_',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYFORMULA_DB_SSL_CA'),
+            ]) : [],
+        ],
+
     ],
 
     /*
