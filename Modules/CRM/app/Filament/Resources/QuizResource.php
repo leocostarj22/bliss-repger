@@ -72,88 +72,20 @@ class QuizResource extends Resource
             ])
             ->defaultSort('date_added', 'desc')
             ->filters([
-                Tables\Filters\Filter::make('name_filter')
-                    ->label('Nome')
+                Tables\Filters\Filter::make('date_range')
+                    ->label('Período')
                     ->form([
-                        Forms\Components\TextInput::make('name')->label('Nome'),
+                        Forms\Components\DatePicker::make('from')->label('De'),
+                        Forms\Components\DatePicker::make('to')->label('Até'),
                     ])
                     ->query(function ($query, array $data) {
-                        if (!empty($data['name'])) {
-                            $query->where('post->name', 'like', '%' . $data['name'] . '%');
-                        }
-                    }),
-
-                Tables\Filters\Filter::make('email_filter')
-                    ->label('Email')
-                    ->form([
-                        Forms\Components\TextInput::make('email')->label('Email'),
-                    ])
-                    ->query(function ($query, array $data) {
-                        if (!empty($data['email'])) {
-                            $query->where('post->email', 'like', '%' . $data['email'] . '%');
-                        }
-                    }),
-
-                Tables\Filters\SelectFilter::make('gender')
-                    ->label('Género')
-                    ->options([
-                        'male'   => 'Masculino',
-                        'female' => 'Feminino',
-                        'other'  => 'Outro',
-                    ])
-                    ->query(function ($query, array $data) {
-                        if (!empty($data['value'])) {
-                            $query->where('post->gender', $data['value']);
-                        }
-                    }),
-
-                Tables\Filters\SelectFilter::make('age_range')
-                    ->label('Idade')
-                    ->options([
-                        '18-29' => '18-29',
-                        '30-39' => '30-39',
-                        '40-49' => '40-49',
-                        '50+'   => '50+',
-                    ])
-                    ->query(function ($query, array $data) {
-                        $value = $data['value'] ?? null;
-                        if (!$value) {
-                            return;
-                        }
-
-                        $now = \Carbon\Carbon::now();
-
-                        if ($value === '18-29') {
-                            $start = $now->copy()->subYears(30)->addDay()->format('Y-m-d');
-                            $end   = $now->copy()->subYears(18)->format('Y-m-d');
-                            $query->whereBetween('post->birthdate', [$start, $end]);
-                        } elseif ($value === '30-39') {
-                            $start = $now->copy()->subYears(40)->addDay()->format('Y-m-d');
-                            $end   = $now->copy()->subYears(30)->format('Y-m-d');
-                            $query->whereBetween('post->birthdate', [$start, $end]);
-                        } elseif ($value === '40-49') {
-                            $start = $now->copy()->subYears(50)->addDay()->format('Y-m-d');
-                            $end   = $now->copy()->subYears(40)->format('Y-m-d');
-                            $query->whereBetween('post->birthdate', [$start, $end]);
-                        } elseif ($value === '50+') {
-                            $end = $now->copy()->subYears(50)->format('Y-m-d');
-                            $query->where('post->birthdate', '<=', $end);
-                        }
-                    }),
-
-                Tables\Filters\SelectFilter::make('plan')
-                    ->label('Plano')
-                    ->options(Quiz::IMPROVE_HEALTH_LABELS)
-                    ->query(function ($query, array $data) {
-                        if (!empty($data['value'])) {
-                            $query->where('post->improve_health', 'like', '%' . $data['value'] . '%');
-                        }
+                        return $query->betweenDates($data['from'] ?? null, $data['to'] ?? null);
                     }),
 
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Status')
                     ->options([
-                        'completed'  => 'Concluído',
+                        'completed' => 'Concluído',
                         'incomplete' => 'Não finalizado',
                     ])
                     ->query(function ($query, array $data) {
@@ -168,16 +100,6 @@ class QuizResource extends Resource
                             $query->where('post->step', '!=', 'plans')
                                   ->whereNotNull('post->step');
                         }
-                    }),
-
-                Tables\Filters\Filter::make('date_range')
-                    ->label('Período')
-                    ->form([
-                        Forms\Components\DatePicker::make('from')->label('De'),
-                        Forms\Components\DatePicker::make('to')->label('Até'),
-                    ])
-                    ->query(function ($query, array $data) {
-                        return $query->betweenDates($data['from'] ?? null, $data['to'] ?? null);
                     }),
             ])
             ->actions([
