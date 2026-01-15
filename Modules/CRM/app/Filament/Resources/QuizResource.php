@@ -146,8 +146,7 @@ class QuizResource extends Resource
                     ->options(Quiz::IMPROVE_HEALTH_LABELS)
                     ->query(function ($query, array $data) {
                         if (!empty($data['value'])) {
-                            // filtra pelo primeiro código de plano (início da string), para alinhar com firstPlanLabel
-                            $query->where('post->improve_health', 'like', $data['value'] . '%');
+                            $query->where('post->improve_health', 'like', '%' . $data['value'] . '%');
                         }
                     }),
 
