@@ -99,6 +99,35 @@ class ViewCampaign extends ViewRecord
                         ->success()
                         ->send();
                 }),
+            Actions\Action::make('clear_queued_deliveries')
+                ->label('Limpar entregas em fila')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->modalHeading('Limpar entregas em fila')
+                ->modalDescription('Isto vai remover todas as entregas em fila (ou em envio) desta campanha. Entregas já enviadas e métricas serão mantidas.')
+                ->action(function () {
+                    $campaign = $this->record;
+                    if (! $campaign) {
+                        return;
+                    }
+
+                    $deleted = Delivery::where('campaign_id', $campaign->id)
+                        ->whereIn('status', ['queued', 'sending'])
+                        ->delete();
+
+                    if ($deleted > 0) {
+                        $campaign->update([
+                            'status' => 'draft',
+                            'scheduled_at' => null,
+                        ]);
+                    }
+
+                    Notification::make()
+                        ->title('Entregas em fila limpas')
+                        ->body("{$deleted} entregas removidas da fila da campanha.")
+                        ->success()
+                        ->send();
+                }),
         ];
     }
 
