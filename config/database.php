@@ -114,11 +114,11 @@ return [
 
         'myformula' => [
             'driver' => 'mysql',
-            'host' => env('MYFORMULA_DB_HOST', '185.90.58.122'),
+            'host' => env('MYFORMULA_DB_HOST', '127.0.0.1'),
             'port' => env('MYFORMULA_DB_PORT', '3306'),
-            'database' => env('MYFORMULA_DB_DATABASE', 'myformula_db'),
-            'username' => env('MYFORMULA_DB_USERNAME', 'myformula_gmcentral'),
-            'password' => env('MYFORMULA_DB_PASSWORD', 'Ljgm18070620@'),
+            'database' => env('MYFORMULA_DB_DATABASE', 'forge'),
+            'username' => env('MYFORMULA_DB_USERNAME', 'forge'),
+            'password' => env('MYFORMULA_DB_PASSWORD', ''),
             'unix_socket' => env('MYFORMULA_DB_SOCKET', ''),
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
