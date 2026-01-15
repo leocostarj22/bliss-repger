@@ -68,10 +68,14 @@ class UpcomingTasksWidget extends BaseWidget
                     ->label('Concluir')
                     ->icon('heroicon-o-check')
                     ->color('success')
-                    ->action(fn (Task $record) => $record->markAsCompleted())
+                    ->action(function (Task $record) {
+                        $record->markAsCompleted();
+                        $this->dispatch('task-updated');
+                    })
                     ->visible(fn (Task $record) => $record->status !== 'completed'),
                 
                 Tables\Actions\DeleteAction::make()
+                    ->after(fn () => $this->dispatch('task-updated'))
                     ->visible(fn (Task $record) => $record->taskable_id === auth()->id() && $record->taskable_type === get_class(auth()->user())),
                     
                 Tables\Actions\Action::make('leave')
@@ -87,6 +91,7 @@ class UpcomingTasksWidget extends BaseWidget
                             ->title('Tarefa removida da sua lista')
                             ->success()
                             ->send();
+                        $this->dispatch('task-updated');
                     })
                     ->visible(fn (Task $record) => !($record->taskable_id === auth()->id() && $record->taskable_type === get_class(auth()->user()))),
             ]);

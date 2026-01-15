@@ -237,9 +237,13 @@ class TaskResource extends Resource
                     ->label('Concluir')
                     ->icon('heroicon-o-check')
                     ->color('success')
-                    ->action(fn (Task $record) => $record->markAsCompleted())
+                    ->action(function (Task $record) {
+                        $record->markAsCompleted();
+                        $this->dispatch('task-updated');
+                    })
                     ->visible(fn (Task $record) => $record->status !== 'completed'),
                 Tables\Actions\DeleteAction::make()
+                    ->after(fn () => $this->dispatch('task-updated'))
                     ->visible(fn (Task $record) => $record->taskable_id === auth()->id() && $record->taskable_type === get_class(auth()->user())),
                 Tables\Actions\Action::make('leave')
                     ->label('Remover')
@@ -254,6 +258,7 @@ class TaskResource extends Resource
                             ->title('Tarefa removida da sua lista')
                             ->success()
                             ->send();
+                        $this->dispatch('task-updated');
                     })
                     ->visible(fn (Task $record) => !($record->taskable_id === auth()->id() && $record->taskable_type === get_class(auth()->user()))),
             ])
@@ -265,8 +270,10 @@ class TaskResource extends Resource
                         ->color('success')
                         ->action(function (Collection $records) {
                             $records->each(fn (Task $record) => $record->markAsCompleted());
+                            $this->dispatch('task-updated');
                         }),
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->after(fn () => $this->dispatch('task-updated')),
                 ]),
             ])
             ->defaultSort('due_date', 'asc');

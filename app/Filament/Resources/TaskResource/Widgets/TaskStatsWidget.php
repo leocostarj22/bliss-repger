@@ -10,6 +10,12 @@ use Carbon\Carbon;
 
 class TaskStatsWidget extends BaseWidget
 {
+    // Atualiza automaticamente a cada 15 segundos
+    protected static ?string $pollingInterval = '15s';
+
+    // Ouve o evento 'task-updated' para atualização imediata
+    protected $listeners = ['task-updated' => '$refresh'];
+
     protected function getStats(): array
     {
         $user = Auth::user();

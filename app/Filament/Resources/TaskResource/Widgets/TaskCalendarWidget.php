@@ -184,7 +184,8 @@ class TaskCalendarWidget extends FullCalendarWidget
                     $data['taskable_type'] = get_class($user);
                     $data['taskable_id'] = $user->id;
                     return $data;
-                }),
+                })
+                ->after(fn () => $this->dispatch('task-updated')),
         ];
     }
 
@@ -192,11 +193,13 @@ class TaskCalendarWidget extends FullCalendarWidget
     {
         return [
             EditAction::make()
-                ->label('Editar'),
+                ->label('Editar')
+                ->after(fn () => $this->dispatch('task-updated')),
                 
             DeleteAction::make()
                 ->label('Excluir')
-                ->visible(fn (Task $record) => $record->taskable_id === auth()->id() && $record->taskable_type === get_class(auth()->user())),
+                ->visible(fn (Task $record) => $record->taskable_id === auth()->id() && $record->taskable_type === get_class(auth()->user()))
+                ->after(fn () => $this->dispatch('task-updated')),
 
             Action::make('leave')
                 ->label('Remover')
@@ -210,6 +213,7 @@ class TaskCalendarWidget extends FullCalendarWidget
                         ->title('Tarefa removida da sua lista')
                         ->success()
                         ->send();
+                    $this->dispatch('task-updated');
                 })
                 ->visible(fn (Task $record) => !($record->taskable_id === auth()->id() && $record->taskable_type === get_class(auth()->user()))),
         ];
