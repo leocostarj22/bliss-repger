@@ -15,6 +15,29 @@ class FinanceCostCenterResource extends Resource
     protected static ?string $navigationGroup = 'Financeiro';
     protected static ?string $navigationLabel = 'Centros de Custo';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        // Administradores podem ver todos os recursos
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        // Gestores Financeiros podem ver recursos Financeiros
+        if ($user->isManager() &&
+            $user->department &&
+            strtolower($user->department->name) === 'financeiro') {
+            return true;
+        }
+
+        return false;
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([
