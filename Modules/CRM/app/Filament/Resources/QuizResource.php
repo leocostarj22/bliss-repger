@@ -4,7 +4,7 @@ namespace Modules\CRM\Filament\Resources;
 
 use Modules\CRM\Models\Lead;
 use Filament\Notifications\Notification;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 use Modules\CRM\Filament\Resources\QuizResource\Pages;
 use Modules\CRM\Filament\Resources\QuizResource\Widgets\QuizStatsOverview;
 use Modules\CRM\Models\Quiz;
@@ -194,6 +194,7 @@ class QuizResource extends Resource
                     ->label('Converter em Leads')
                     ->icon('heroicon-o-user-plus')
                     ->requiresConfirmation()
+                    ->deselectRecordsAfterCompletion()
                     ->action(function (Collection $records) {
                         $count = 0;
                         foreach ($records as $record) {
