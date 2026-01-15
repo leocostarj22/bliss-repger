@@ -16,7 +16,7 @@ class ListQuizzes extends ListRecords
     protected function getHeaderWidgets(): array
     {
         return [
-            //QuizStatsOverview::class,
+            QuizStatsOverview::class,
         ];
     }
 }
