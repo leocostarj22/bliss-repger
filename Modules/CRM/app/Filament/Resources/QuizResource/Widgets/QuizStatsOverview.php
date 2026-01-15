@@ -14,12 +14,19 @@ class QuizStatsOverview extends BaseWidget
     protected function getStats(): array
     {
         $query = null;
+        $usingTableQuery = false;
 
         try {
             // Tenta obter a query da tabela para respeitar os filtros
-            $query = $this->getPageTableQuery();
+            $tableQuery = $this->getPageTableQuery();
+            
+            if ($tableQuery) {
+                $query = $tableQuery;
+                $usingTableQuery = true;
+            }
         } catch (\Throwable $e) {
-            // Ignora falha na integração com tabela
+            // Loga o erro para debug, mas não quebra a página
+            \Illuminate\Support\Facades\Log::warning('QuizStatsOverview: Falha ao obter query da tabela: ' . $e->getMessage());
         }
 
         // Se falhou ou retornou null, usa query base (fallback seguro)
@@ -40,7 +47,7 @@ class QuizStatsOverview extends BaseWidget
 
             return [
                 Stat::make('Total de Quizzes', $total)
-                    ->description('Registos filtrados')
+                    ->description($usingTableQuery ? 'Registos filtrados' : 'Total Geral (Filtro indisponível)')
                     ->color('primary'),
                 
                 Stat::make('Concluídos', $completed)
