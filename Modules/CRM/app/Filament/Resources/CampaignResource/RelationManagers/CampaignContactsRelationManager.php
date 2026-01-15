@@ -132,6 +132,27 @@ class CampaignContactsRelationManager extends RelationManager
                             Notification::make()->title('Erro')->body($e->getMessage())->danger()->send();
                         }
                     }),
+                Action::make('clear_campaign_contacts')
+                    ->label('Limpar contatos da campanha (CRM)')
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Limpar contatos da campanha')
+                    ->modalDescription('Isto vai remover todos os contatos desta campanha no CRM. Os dados no GoContact não serão alterados.')
+                    ->action(function ($livewire) {
+                        $campaign = $livewire->getOwnerRecord();
+                        if (! $campaign) {
+                            return;
+                        }
+
+                        $deleted = $campaign->campaignContacts()->delete();
+
+                        Notification::make()
+                            ->title('Contatos limpos')
+                            ->body("{$deleted} contatos removidos desta campanha no CRM.")
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
