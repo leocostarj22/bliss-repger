@@ -3,6 +3,7 @@
 namespace Modules\CRM\Filament\Resources;
 
 use Modules\CRM\Models\Lead;
+use Modules\CRM\Models\Contact;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Collection;
 use Modules\CRM\Filament\Resources\QuizResource\Pages;
@@ -214,6 +215,19 @@ class QuizResource extends Resource
                                            "Plano: " . ($record->firstPlanLabel ?? 'N/A') . "\n" .
                                            "Status: " . ($record->statusLabel ?? 'N/A'),
                             ]);
+
+                            // Sincroniza com Contact para Campanhas
+                            Contact::updateOrCreate(
+                                ['email' => $email],
+                                [
+                                    'name' => $record->post['name'] ?? 'Sem nome',
+                                    'source' => 'quiz',
+                                    'utm_source' => 'quiz',
+                                    'utm_medium' => 'crm_import',
+                                    'utm_campaign' => $record->firstPlanLabel ?? 'Geral',
+                                    'utm_content' => $record->statusLabel ?? 'N/A',
+                                ]
+                            );
                             $count++;
                         }
 
