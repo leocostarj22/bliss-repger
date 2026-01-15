@@ -77,6 +77,10 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: base_path('Modules/Products/app/Filament/Resources'), for: 'Modules\\Products\\Filament\\Resources')
             ->discoverPages(in: base_path('Modules/Products/app/Filament/Pages'), for: 'Modules\\Products\\Filament\\Pages')
             ->discoverWidgets(in: base_path('Modules/Products/app/Filament/Widgets'), for: 'Modules\\Products\\Filament\\Widgets')
+            // Descobrir recursos do módulo Finance
+            ->discoverResources(in: base_path('Modules/Finance/app/Filament/Resources'), for: 'Modules\\Finance\\Filament\\Resources')
+            ->discoverPages(in: base_path('Modules/Finance/app/Filament/Pages'), for: 'Modules\\Finance\\Filament\\Pages')
+            ->discoverWidgets(in: base_path('Modules/Finance/app/Filament/Widgets'), for: 'Modules\\Finance\\Filament\\Widgets')
             
             ->plugins([
                 SpotlightPlugin::make(),
