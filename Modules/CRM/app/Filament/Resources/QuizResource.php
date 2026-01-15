@@ -169,7 +169,11 @@ class QuizResource extends Resource
                                   ->orWhereNull('post->step');
                             });
                         } elseif ($value === 'incomplete') {
-                            $query->where('post->step', 'NOT LIKE', 'plans');
+                            $query->where(function ($q) {
+                                $q->where('post->step', '!=', 'plans')
+                                    ->whereNotNull('post->step')
+                                    ->where('post->step', '!=', '');
+                            });
                         }
                     }),
 
@@ -189,6 +193,7 @@ class QuizResource extends Resource
                     ->modalHeading('Resumo do Quiz')
                     ->icon('heroicon-o-eye'),
             ])
+            /*
             ->bulkActions([
                 Tables\Actions\BulkAction::make('convertToLead')
                     ->label('Converter em Leads')
@@ -223,7 +228,8 @@ class QuizResource extends Resource
                             ->success()
                             ->send();
                     }),
-            ]);
+            ])
+            */;
     }
 
     public static function infolist(Infolist $infolist): Infolist
