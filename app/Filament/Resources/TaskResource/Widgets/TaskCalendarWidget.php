@@ -7,6 +7,7 @@ use Filament\Widgets\Widget;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
 use Saade\FilamentFullCalendar\Widgets\FullCalendarWidget;
+use Filament\Actions\Action;
 use Saade\FilamentFullCalendar\Actions\CreateAction;
 use Saade\FilamentFullCalendar\Actions\EditAction;
 use Saade\FilamentFullCalendar\Actions\DeleteAction;
@@ -194,7 +195,23 @@ class TaskCalendarWidget extends FullCalendarWidget
                 ->label('Editar'),
                 
             DeleteAction::make()
-                ->label('Excluir'),
+                ->label('Excluir')
+                ->visible(fn (Task $record) => $record->taskable_id === auth()->id() && $record->taskable_type === get_class(auth()->user())),
+
+            Action::make('leave')
+                ->label('Remover')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->modalHeading('Remover tarefa compartilhada')
+                ->modalDescription('Tem certeza que deseja remover esta tarefa da sua lista?')
+                ->action(function (Task $record) {
+                    $record->sharedWith()->detach(auth()->id());
+                    \Filament\Notifications\Notification::make()
+                        ->title('Tarefa removida da sua lista')
+                        ->success()
+                        ->send();
+                })
+                ->visible(fn (Task $record) => !($record->taskable_id === auth()->id() && $record->taskable_type === get_class(auth()->user()))),
         ];
     }
 

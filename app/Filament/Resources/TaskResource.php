@@ -246,7 +246,15 @@ class TaskResource extends Resource
                     ->icon('heroicon-o-x-mark')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->action(fn (Task $record) => $record->sharedWith()->detach(auth()->id()))
+                    ->modalHeading('Remover tarefa compartilhada')
+                    ->modalDescription('Tem certeza que deseja remover esta tarefa da sua lista? Você perderá o acesso a ela.')
+                    ->action(function (Task $record) {
+                        $record->sharedWith()->detach(auth()->id());
+                        \Filament\Notifications\Notification::make()
+                            ->title('Tarefa removida da sua lista')
+                            ->success()
+                            ->send();
+                    })
                     ->visible(fn (Task $record) => !($record->taskable_id === auth()->id() && $record->taskable_type === get_class(auth()->user()))),
             ])
             ->bulkActions([
