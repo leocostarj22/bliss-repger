@@ -63,13 +63,14 @@ class Lead extends Model
     public static function getSources()
     {
         return [
-            'website' => 'Website',
-            'referral' => 'Indicação',
-            'social_media' => 'Redes Sociais',
+            'website'       => 'Website',
+            'referral'      => 'Indicação',
+            'social_media'  => 'Redes Sociais',
             'email_marketing' => 'Email Marketing',
-            'cold_call' => 'Cold Call',
-            'event' => 'Evento',
-            'other' => 'Outro',
+            'cold_call'     => 'Cold Call',
+            'event'         => 'Evento',
+            'quiz'          => 'Quiz MyFormula',
+            'other'         => 'Outro',
         ];
     }
 
