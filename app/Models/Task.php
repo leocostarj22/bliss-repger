@@ -12,6 +12,16 @@ class Task extends Model
 {
     use HasFactory;
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($task) {
+            // Remove todos os relacionamentos na tabela pivô antes de excluir a tarefa
+            $task->sharedWith()->detach();
+        });
+    }
+
     protected $fillable = [
         'title',
         'description',
