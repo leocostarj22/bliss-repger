@@ -3,6 +3,7 @@
 namespace Modules\CRM\Filament\Resources\QuizResource\Widgets;
 
 use Modules\CRM\Models\Quiz;
+use Modules\CRM\Filament\Resources\QuizResource\Pages\ListQuizzes;
 use Filament\Widgets\Concerns\InteractsWithPageTable;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -11,11 +12,15 @@ class QuizStatsOverview extends BaseWidget
 {
     use InteractsWithPageTable;
 
+    protected function getTablePage(): string
+    {
+        return ListQuizzes::class;
+    }
+
     protected function getStats(): array
     {
         $query = null;
         $usingTableQuery = false;
-        $debugMessage = null;
 
         try {
             // Tenta obter a query da tabela para respeitar os filtros
@@ -24,12 +29,9 @@ class QuizStatsOverview extends BaseWidget
             if ($tableQuery) {
                 $query = $tableQuery;
                 $usingTableQuery = true;
-            } else {
-                $debugMessage = "Query nula";
             }
         } catch (\Throwable $e) {
-            $debugMessage = $e->getMessage();
-            \Illuminate\Support\Facades\Log::warning('QuizStatsOverview Error: ' . $e->getMessage());
+            // Falha silenciosa na integração, usa fallback
         }
 
         // Se falhou ou retornou null, usa query base (fallback seguro)
@@ -50,8 +52,8 @@ class QuizStatsOverview extends BaseWidget
 
             return [
                 Stat::make('Total de Quizzes', $total)
-                    ->description($usingTableQuery ? 'Registos filtrados' : 'Sem filtro: ' . substr($debugMessage, 0, 30))
-                    ->color($usingTableQuery ? 'primary' : 'warning'),
+                    ->description($usingTableQuery ? 'Registos filtrados' : 'Total Geral')
+                    ->color('primary'),
                 
                 Stat::make('Concluídos', $completed)
                     ->description('Chegaram ao fim')
