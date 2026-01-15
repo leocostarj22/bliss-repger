@@ -237,13 +237,13 @@ class TaskResource extends Resource
                     ->label('Concluir')
                     ->icon('heroicon-o-check')
                     ->color('success')
-                    ->action(function (Task $record) {
+                    ->action(function (Task $record, \Livewire\Component $livewire) {
                         $record->markAsCompleted();
-                        $this->dispatch('task-updated');
+                        $livewire->dispatch('task-updated');
                     })
                     ->visible(fn (Task $record) => $record->status !== 'completed'),
                 Tables\Actions\DeleteAction::make()
-                    ->after(fn () => $this->dispatch('task-updated'))
+                    ->after(fn (\Livewire\Component $livewire) => $livewire->dispatch('task-updated'))
                     ->visible(fn (Task $record) => $record->taskable_id === auth()->id() && $record->taskable_type === get_class(auth()->user())),
                 Tables\Actions\Action::make('leave')
                     ->label('Remover')
@@ -252,13 +252,13 @@ class TaskResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Remover tarefa compartilhada')
                     ->modalDescription('Tem certeza que deseja remover esta tarefa da sua lista? Você perderá o acesso a ela.')
-                    ->action(function (Task $record) {
+                    ->action(function (Task $record, \Livewire\Component $livewire) {
                         $record->sharedWith()->detach(auth()->id());
                         \Filament\Notifications\Notification::make()
                             ->title('Tarefa removida da sua lista')
                             ->success()
                             ->send();
-                        $this->dispatch('task-updated');
+                        $livewire->dispatch('task-updated');
                     })
                     ->visible(fn (Task $record) => !($record->taskable_id === auth()->id() && $record->taskable_type === get_class(auth()->user()))),
             ])
@@ -268,12 +268,12 @@ class TaskResource extends Resource
                         ->label('Marcar como Concluídas')
                         ->icon('heroicon-o-check')
                         ->color('success')
-                        ->action(function (Collection $records) {
+                        ->action(function (Collection $records, \Livewire\Component $livewire) {
                             $records->each(fn (Task $record) => $record->markAsCompleted());
-                            $this->dispatch('task-updated');
+                            $livewire->dispatch('task-updated');
                         }),
                     Tables\Actions\DeleteBulkAction::make()
-                        ->after(fn () => $this->dispatch('task-updated')),
+                        ->after(fn (\Livewire\Component $livewire) => $livewire->dispatch('task-updated')),
                 ]),
             ])
             ->defaultSort('due_date', 'asc');
