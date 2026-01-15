@@ -208,7 +208,7 @@ class QuizResource extends Resource
                             Lead::create([
                                 'name' => $record->post['name'] ?? 'Sem nome',
                                 'email' => $email,
-                                'source' => 'QuizMyFormula', // Identificador da origem
+                                'source' => 'quiz', // Identificador da origem
                                 'status' => 'new',
                                 'notes' => "Importado do Quiz #{$record->quiz_id}\n" .
                                            "Plano: " . ($record->firstPlanLabel ?? 'N/A') . "\n" .
