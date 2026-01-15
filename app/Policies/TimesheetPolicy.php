@@ -15,7 +15,7 @@ class TimesheetPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin() || $this->isHRManager($user) || $user->isSupervisor();
+        return $user->isAdmin() || $this->isHRManager($user);
     }
 
     /**
@@ -23,7 +23,7 @@ class TimesheetPolicy
      */
     public function view(User $user, Timesheet $timesheet): bool
     {
-        return $user->isAdmin() || $this->isHRManager($user) || $user->isSupervisor();
+        return $user->isAdmin() || $this->isHRManager($user);
     }
 
     /**
@@ -55,7 +55,7 @@ class TimesheetPolicy
      */
     public function approve(User $user, Timesheet $timesheet): bool
     {
-        return $user->isAdmin() || $this->isHRManager($user) || $user->isSupervisor();
+        return $user->isAdmin() || $this->isHRManager($user);
     }
 
     /**
