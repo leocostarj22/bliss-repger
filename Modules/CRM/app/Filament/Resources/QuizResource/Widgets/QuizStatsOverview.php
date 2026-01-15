@@ -13,19 +13,23 @@ class QuizStatsOverview extends BaseWidget
 
     protected function getStats(): array
     {
-        try {
-            // Tenta obter a query da tabela
-            $query = $this->getPageTableQuery();
-            
-            // Se a query não estiver disponível, retorna vazio para não quebrar a página
-            if (!$query) {
-                return [];
-            }
+        $query = null;
 
-            // Clona para não afetar a query original da tabela
+        try {
+            // Tenta obter a query da tabela para respeitar os filtros
+            $query = $this->getPageTableQuery();
+        } catch (\Throwable $e) {
+            // Ignora falha na integração com tabela
+        }
+
+        // Se falhou ou retornou null, usa query base (fallback seguro)
+        if (!$query) {
+            $query = Quiz::query();
+        }
+
+        try {
             $total = (clone $query)->count();
             
-            // Lógica de concluído: step == 'plans' ou step é null (conforme filtro da tabela)
             $completed = (clone $query)->where(function ($q) {
                 $q->where('post->step', 'plans')
                   ->orWhereNull('post->step');
@@ -53,7 +57,6 @@ class QuizStatsOverview extends BaseWidget
                     ->color($rate > 50 ? 'success' : 'danger'),
             ];
         } catch (\Throwable $e) {
-            // Em caso de erro, loga e retorna stats de erro/vazios para não dar 500 na página
             \Illuminate\Support\Facades\Log::error('Erro no QuizStatsOverview: ' . $e->getMessage());
             
             return [
