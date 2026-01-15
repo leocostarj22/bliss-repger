@@ -2,9 +2,6 @@
 
 namespace Modules\CRM\Filament\Resources;
 
-use Modules\CRM\Models\Lead;
-use Filament\Notifications\Notification;
-use Illuminate\Support\Collection;
 use Modules\CRM\Filament\Resources\QuizResource\Pages;
 use Modules\CRM\Filament\Resources\QuizResource\Widgets\QuizStatsOverview;
 use Modules\CRM\Models\Quiz;
@@ -169,11 +166,8 @@ class QuizResource extends Resource
                                   ->orWhereNull('post->step');
                             });
                         } elseif ($value === 'incomplete') {
-                            $query->where(function ($q) {
-                                $q->where('post->step', '!=', 'plans')
-                                    ->whereNotNull('post->step')
-                                    ->where('post->step', '!=', '');
-                            });
+                            $query->where('post->step', '!=', 'plans')
+                                  ->whereNotNull('post->step');
                         }
                     }),
 
@@ -192,44 +186,7 @@ class QuizResource extends Resource
                     ->label('Resumo')
                     ->modalHeading('Resumo do Quiz')
                     ->icon('heroicon-o-eye'),
-            ])
-            /*
-            ->bulkActions([
-                Tables\Actions\BulkAction::make('convertToLead')
-                    ->label('Converter em Leads')
-                    ->icon('heroicon-o-user-plus')
-                    ->requiresConfirmation()
-                    ->deselectRecordsAfterCompletion()
-                    ->action(function (Collection $records) {
-                        $count = 0;
-                        foreach ($records as $record) {
-                            $email = $record->post['email'] ?? null;
-                            if (!$email) continue;
-
-                            // Evita duplicidade
-                            if (Lead::where('email', $email)->exists()) {
-                                continue;
-                            }
-
-                            Lead::create([
-                                'name' => $record->post['name'] ?? 'Sem nome',
-                                'email' => $email,
-                                'source' => 'QuizMyFormula', // Identificador da origem
-                                'status' => 'new',
-                                'notes' => "Importado do Quiz #{$record->quiz_id}\n" .
-                                           "Plano: " . ($record->firstPlanLabel ?? 'N/A') . "\n" .
-                                           "Status: " . ($record->statusLabel ?? 'N/A'),
-                            ]);
-                            $count++;
-                        }
-
-                        Notification::make()
-                            ->title("$count Leads gerados com sucesso")
-                            ->success()
-                            ->send();
-                    }),
-            ])
-            */;
+            ]);
     }
 
     public static function infolist(Infolist $infolist): Infolist
