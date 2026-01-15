@@ -22,9 +22,12 @@ class QuizStatsOverview extends BaseWidget
 
         $total = (clone $query)->count();
         
-        // Lógica de concluído: step == 'plans'
+        // Lógica de concluído: step == 'plans' ou step é null (conforme filtro da tabela)
         // Nota: A query já vem filtrada da tabela, então aplicamos condições adicionais sobre o resultado filtrado
-        $completed = (clone $query)->where('post->step', 'plans')->count();
+        $completed = (clone $query)->where(function ($q) {
+            $q->where('post->step', 'plans')
+              ->orWhereNull('post->step');
+        })->count();
         
         $notCompleted = $total - $completed;
         $rate = $total > 0 ? round(($completed / $total) * 100) : 0;
