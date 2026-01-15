@@ -2,7 +2,7 @@
 
 namespace Modules\CRM\Filament\Resources\QuizResource\Widgets;
 
-use Modules\CRM\Models\Quiz;
+use Modules\CRM\app\Models\Quiz;
 use Filament\Widgets\Concerns\InteractsWithPageTable;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
