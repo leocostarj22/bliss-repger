@@ -22,12 +22,13 @@ use pxlrbt\FilamentSpotlight\SpotlightPlugin;
 use Saade\FilamentFullCalendar\FilamentFullCalendarPlugin;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\File;
 
 class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
-        return $panel
+        $panel = $panel
             ->default()
             ->id('admin')
             ->path('admin')
@@ -53,6 +54,9 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Widgets\AdminPostsWidget::class,
             ])
             ->navigationGroups([
+                NavigationGroup::make('Administração')
+                    ->collapsible()
+                    ->collapsed(),
                 NavigationGroup::make('Recursos Humanos')
                     ->collapsible()
                     ->collapsed(),
@@ -68,22 +72,37 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Suporte')
                     ->collapsible()
                     ->collapsed(),
-            ])
-            // Descobrir recursos do módulo CRM
-            ->discoverResources(in: base_path('Modules/CRM/app/Filament/Resources'), for: 'Modules\\CRM\\Filament\\Resources')
-            ->discoverPages(in: base_path('Modules/CRM/app/Filament/Pages'), for: 'Modules\\CRM\\Filament\\Pages')
-            ->discoverWidgets(in: base_path('Modules/CRM/app/Filament/Widgets'), for: 'Modules\\CRM\\Filament\\Widgets')
-            // Descobrir recursos do módulo Products
-            ->discoverResources(in: base_path('Modules/Products/app/Filament/Resources'), for: 'Modules\\Products\\Filament\\Resources')
-            ->discoverPages(in: base_path('Modules/Products/app/Filament/Pages'), for: 'Modules\\Products\\Filament\\Pages')
-            ->discoverWidgets(in: base_path('Modules/Products/app/Filament/Widgets'), for: 'Modules\\Products\\Filament\\Widgets')
-            // Descobrir recursos do módulo Finance
-            ->discoverResources(in: base_path('Modules/Finance/app/Filament/Resources'), for: 'Modules\\Finance\\Filament\\Resources')
-            ->discoverPages(in: base_path('Modules/Finance/app/Filament/Pages'), for: 'Modules\\Finance\\Filament\\Pages')
-            ->discoverWidgets(in: base_path('Modules/Finance/app/Filament/Widgets'), for: 'Modules\\Finance\\Filament\\Widgets')
-            // Descobrir recursos do módulo HumanResources
-            ->discoverResources(in: base_path('Modules/HumanResources/app/Filament/Resources'), for: 'Modules\\HumanResources\\Filament\\Resources')
-            
+            ]);
+
+        $moduleStatuses = $this->getModuleStatuses();
+
+        if ($this->isModuleEnabled($moduleStatuses, 'CRM')) {
+            $panel
+                ->discoverResources(in: base_path('Modules/CRM/app/Filament/Resources'), for: 'Modules\\CRM\\Filament\\Resources')
+                ->discoverPages(in: base_path('Modules/CRM/app/Filament/Pages'), for: 'Modules\\CRM\\Filament\\Pages')
+                ->discoverWidgets(in: base_path('Modules/CRM/app/Filament/Widgets'), for: 'Modules\\CRM\\Filament\\Widgets');
+        }
+
+        if ($this->isModuleEnabled($moduleStatuses, 'Products')) {
+            $panel
+                ->discoverResources(in: base_path('Modules/Products/app/Filament/Resources'), for: 'Modules\\Products\\Filament\\Resources')
+                ->discoverPages(in: base_path('Modules/Products/app/Filament/Pages'), for: 'Modules\\Products\\Filament\\Pages')
+                ->discoverWidgets(in: base_path('Modules/Products/app/Filament/Widgets'), for: 'Modules\\Products\\Filament\\Widgets');
+        }
+
+        if ($this->isModuleEnabled($moduleStatuses, 'Finance')) {
+            $panel
+                ->discoverResources(in: base_path('Modules/Finance/app/Filament/Resources'), for: 'Modules\\Finance\\Filament\\Resources')
+                ->discoverPages(in: base_path('Modules/Finance/app/Filament/Pages'), for: 'Modules\\Finance\\Filament\\Pages')
+                ->discoverWidgets(in: base_path('Modules/Finance/app/Filament/Widgets'), for: 'Modules\\Finance\\Filament\\Widgets');
+        }
+
+        if ($this->isModuleEnabled($moduleStatuses, 'HumanResources')) {
+            $panel
+                ->discoverResources(in: base_path('Modules/HumanResources/app/Filament/Resources'), for: 'Modules\\HumanResources\\Filament\\Resources');
+        }
+
+        return $panel
             ->plugins([
                 SpotlightPlugin::make(),
                 FilamentFullCalendarPlugin::make()
@@ -116,6 +135,24 @@ class AdminPanelProvider extends PanelProvider
                     }
                 });
             });
+    }
+
+    private function getModuleStatuses(): array
+    {
+        $path = base_path('modules_statuses.json');
+
+        if (! File::exists($path)) {
+            return [];
+        }
+
+        $data = json_decode(File::get($path), true);
+
+        return is_array($data) ? $data : [];
+    }
+
+    private function isModuleEnabled(array $statuses, string $moduleName): bool
+    {
+        return $statuses[$moduleName] ?? true;
     }
 
     /**

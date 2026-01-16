@@ -1,6 +1,6 @@
 {
     "CRM": true,
-    "Products": true,
     "Finance": true,
-    "HumanResources": true
+    "HumanResources": true,
+    "Products": true
 }
