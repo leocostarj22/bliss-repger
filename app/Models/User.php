@@ -44,6 +44,29 @@ class User extends Authenticatable implements UserInterface
         'last_login_at' => 'datetime',
     ];
 
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (User $user) {
+            // Se o role_id foi alterado, sincroniza o campo role (string)
+            if ($user->isDirty('role_id') && $user->role_id) {
+                $role = Role::find($user->role_id);
+                if ($role) {
+                    $user->role = $role->name;
+                }
+            } 
+            // Fallback: Se role_id for nulo mas role estiver preenchido, tenta encontrar o ID
+            elseif ($user->isDirty('role') && !$user->role_id && $user->role) {
+                $role = Role::where('name', $user->role)->first();
+                if ($role) {
+                    $user->role_id = $role->id;
+                }
+            }
+        });
+    }
+
     // Relacionamentos
     public function company(): BelongsTo
     {

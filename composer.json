@@ -40,7 +40,10 @@
             "Modules\\Products\\Database\\Factories\\": "Modules/Products/database/factories/",
             "Modules\\Finance\\": "Modules/Finance/app/",
             "Modules\\Finance\\Database\\Seeders\\": "Modules/Finance/database/seeders/",
-            "Modules\\Finance\\Database\\Factories\\": "Modules/Finance/database/factories/"
+            "Modules\\Finance\\Database\\Factories\\": "Modules/Finance/database/factories/",
+            "Modules\\HumanResources\\": "Modules/HumanResources/app/",
+            "Modules\\HumanResources\\Database\\Seeders\\": "Modules/HumanResources/database/seeders/",
+            "Modules\\HumanResources\\Database\\Factories\\": "Modules/HumanResources/database/factories/"
         }
     },
     "autoload-dev": {
