@@ -22,6 +22,7 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use pxlrbt\FilamentSpotlight\SpotlightPlugin;
 use Saade\FilamentFullCalendar\FilamentFullCalendarPlugin;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
@@ -47,6 +48,10 @@ class AdminPanelProvider extends PanelProvider
                     ->url(fn (): string => UserProfile::getUrl())
                     ->icon('heroicon-o-user-circle'),
             ])
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn (): string => '<script src="https://www.nextgo.pt/widget.js" data-id="fb60f57a-a3ca-4748-b843-967e12465c76"></script>'
+            )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
