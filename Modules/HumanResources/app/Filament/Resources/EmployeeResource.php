@@ -154,7 +154,7 @@ class EmployeeResource extends Resource
                                                     ->tooltip('Gerar Senha Aleatória')
                                             ),
                                     ])
-                                    ->visible(fn (string $operation) => $operation === 'create')
+                                    ->visible(fn (string $operation, $record) => $operation === 'create' || ($operation === 'edit' && (!$record || !$record->employeeUser)))
                                     ->columns(2),
                                 
                                 Section::make('Redefinir Acesso ao Sistema')
