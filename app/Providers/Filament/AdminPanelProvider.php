@@ -12,6 +12,8 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Widgets;
 use Filament\Navigation\NavigationGroup;
+use Filament\Navigation\MenuItem;
+use App\Filament\Pages\UserProfile;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -38,6 +40,12 @@ class AdminPanelProvider extends PanelProvider
             ->databaseNotificationsPolling('2s')
             ->colors([
                 'primary' => Color::Purple,
+            ])
+            ->userMenuItems([
+                MenuItem::make()
+                    ->label('Meu Perfil')
+                    ->url(fn (): string => UserProfile::getUrl())
+                    ->icon('heroicon-o-user-circle'),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
