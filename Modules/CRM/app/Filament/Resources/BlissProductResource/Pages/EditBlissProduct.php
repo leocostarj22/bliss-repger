@@ -13,4 +13,9 @@ class EditBlissProduct extends EditRecord
     {
         return 'full';
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }
