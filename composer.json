@@ -43,7 +43,10 @@
             "Modules\\Finance\\Database\\Factories\\": "Modules/Finance/database/factories/",
             "Modules\\HumanResources\\": "Modules/HumanResources/app/",
             "Modules\\HumanResources\\Database\\Seeders\\": "Modules/HumanResources/database/seeders/",
-            "Modules\\HumanResources\\Database\\Factories\\": "Modules/HumanResources/database/factories/"
+            "Modules\\HumanResources\\Database\\Factories\\": "Modules/HumanResources/database/factories/",
+            "Modules\\BlissNatura\\": "Modules/BlissNatura/app/",
+            "Modules\\BlissNatura\\Database\\Seeders\\": "Modules/BlissNatura/database/seeders/",
+            "Modules\\BlissNatura\\Database\\Factories\\": "Modules/BlissNatura/database/factories/"
         }
     },
     "autoload-dev": {

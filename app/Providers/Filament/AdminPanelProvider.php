@@ -14,6 +14,7 @@ use Filament\Widgets;
 use Filament\Navigation\NavigationGroup;
 use Filament\Navigation\MenuItem;
 use App\Filament\Pages\UserProfile;
+use App\Filament\Pages\Dashboard;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -55,7 +56,7 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
-                Pages\Dashboard::class,
+                Dashboard::class,
             ])
             ->brandLogo(asset('images/logocolors.png'))
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
@@ -79,6 +80,9 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('CRM')
                     ->collapsible()
                     ->collapsed(),
+                NavigationGroup::make('Bliss Natura')
+                    ->collapsible()
+                    ->collapsed(),
                 NavigationGroup::make('Catálogo')
                     ->collapsible()
                     ->collapsed(),
@@ -93,7 +97,8 @@ class AdminPanelProvider extends PanelProvider
             $panel
                 ->discoverResources(in: base_path('Modules/CRM/app/Filament/Resources'), for: 'Modules\\CRM\\Filament\\Resources')
                 ->discoverPages(in: base_path('Modules/CRM/app/Filament/Pages'), for: 'Modules\\CRM\\Filament\\Pages')
-                ->discoverWidgets(in: base_path('Modules/CRM/app/Filament/Widgets'), for: 'Modules\\CRM\\Filament\\Widgets');
+                ->discoverWidgets(in: base_path('Modules/CRM/app/Filament/Widgets'), for: 'Modules\\CRM\\Filament\\Widgets')
+                ->discoverClusters(in: base_path('Modules/CRM/app/Filament/Clusters'), for: 'Modules\\CRM\\Filament\\Clusters');
         }
 
         if ($this->isModuleEnabled($moduleStatuses, 'Products')) {
@@ -113,6 +118,11 @@ class AdminPanelProvider extends PanelProvider
         if ($this->isModuleEnabled($moduleStatuses, 'HumanResources')) {
             $panel
                 ->discoverResources(in: base_path('Modules/HumanResources/app/Filament/Resources'), for: 'Modules\\HumanResources\\Filament\\Resources');
+        }
+
+        if ($this->isModuleEnabled($moduleStatuses, 'BlissNatura')) {
+            $panel
+                ->discoverResources(in: base_path('Modules/BlissNatura/app/Filament/Resources'), for: 'Modules\\BlissNatura\\Filament\\Resources');
         }
 
         return $panel
