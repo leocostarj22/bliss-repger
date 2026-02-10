@@ -41,7 +41,27 @@ class EspacoAbsolutoCustomerResource extends Resource
                 Forms\Components\DateTimePicker::make('data_added')
                     ->label('Cadastro')
                     ->disabled(),
+                Forms\Components\Section::make('Primeira Interação')
+                    ->schema([
+                        Forms\Components\TextInput::make('first_message_subject')
+                            ->label('Assunto')
+                            ->disabled()
+                            ->formatStateUsing(fn ($record) => $record->messages()->orderBy('data_added', 'asc')->first()?->subject),
+                        Forms\Components\Textarea::make('first_message_content')
+                            ->label('Mensagem')
+                            ->disabled()
+                            ->columnSpanFull()
+                            ->formatStateUsing(fn ($record) => $record->messages()->orderBy('data_added', 'asc')->first()?->message),
+                    ])
+                    ->collapsed(),
             ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            EspacoAbsolutoCustomerResource\RelationManagers\MessagesRelationManager::class,
+        ];
     }
 
     public static function table(Table $table): Table

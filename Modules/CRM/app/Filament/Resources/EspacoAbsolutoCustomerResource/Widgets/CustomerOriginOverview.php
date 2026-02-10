@@ -56,7 +56,53 @@ class CustomerOriginOverview extends BaseWidget
 
         foreach ($categories as $label => $value) {
             if ($value > 0) {
-                $stats[] = Stat::make($label, $value);
+                $stat = Stat::make($label, $value);
+                
+                // Add styling based on label
+                switch ($label) {
+                    case 'Pergunta Grátis':
+                        $stat->description('Pedidos de consulta')
+                             ->descriptionIcon('heroicon-m-gift')
+                             ->color('success')
+                             ->chart([7, 3, 4, 5, 6, 3, 5, 8]);
+                        break;
+                    case 'CTA Orações':
+                        $stat->description('Pedidos de oração')
+                             ->descriptionIcon('heroicon-m-sparkles')
+                             ->color('primary') // Blue
+                             ->chart([2, 10, 3, 12, 1, 10, 3, 10]);
+                        break;
+                    case 'CTA E-book':
+                        $stat->description('Downloads de material')
+                             ->descriptionIcon('heroicon-m-book-open')
+                             ->color('info') // Light blue
+                             ->chart([3, 5, 3, 5, 3, 5, 3, 5]);
+                        break;
+                    case 'Tarot do Dia':
+                        $stat->description('Consultas de cartas')
+                             ->descriptionIcon('heroicon-m-sun')
+                             ->color('warning') // Yellow
+                             ->chart([4, 4, 4, 4, 5, 5, 5, 6]);
+                        break;
+                    case 'Nós Ligamos':
+                        $stat->description('Pedidos de contacto')
+                             ->descriptionIcon('heroicon-m-phone-arrow-up-right')
+                             ->color('danger') // Red
+                             ->chart([1, 2, 1, 3, 1, 2, 1, 4]);
+                        break;
+                    case 'Newsletters':
+                    case 'Notícias':
+                        $stat->description('Subscritores')
+                             ->descriptionIcon('heroicon-m-newspaper')
+                             ->color('gray');
+                        break;
+                    default: // Mensagens e outros
+                        $stat->description('Interações gerais')
+                             ->descriptionIcon('heroicon-m-chat-bubble-left-right')
+                             ->color('gray');
+                }
+                
+                $stats[] = $stat;
             }
         }
 
