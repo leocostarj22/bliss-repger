@@ -14,4 +14,9 @@ class MyFormulaOrderProduct extends Model
     protected $fillable = [
         'order_id', 'product_id', 'name', 'model', 'quantity', 'price', 'total', 'tax'
     ];
+
+    public function options()
+    {
+        return $this->hasMany(MyFormulaOrderOption::class, 'order_product_id', 'order_product_id');
+    }
 }

@@ -81,6 +81,22 @@ class MyFormulaOrderResource extends Resource
                                     ->label('Total')
                                     ->prefix('€')
                                     ->disabled(),
+                                
+                                Forms\Components\Repeater::make('options')
+                                    ->relationship('options')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('name')
+                                            ->label('Opção')
+                                            ->disabled(),
+                                        Forms\Components\TextInput::make('value')
+                                            ->label('Valor')
+                                            ->disabled(),
+                                    ])
+                                    ->columns(2)
+                                    ->addable(false)
+                                    ->deletable(false)
+                                    ->reorderable(false)
+                                    ->columnSpanFull(),
                             ])
                             ->columns(5)
                             ->addable(false)
