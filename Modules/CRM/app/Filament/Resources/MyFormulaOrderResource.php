@@ -90,6 +90,10 @@ class MyFormulaOrderResource extends Resource
 
                 Forms\Components\Section::make('Detalhes Adicionais (Quiz/Suplementação)')
                     ->schema([
+                        Forms\Components\Placeholder::make('debug_options')
+                            ->label('Debug Dados do Banco')
+                            ->content(fn ($record) => json_encode($record->options()->get()->toArray(), JSON_PRETTY_PRINT)),
+                        
                         Forms\Components\Repeater::make('options')
                             ->relationship('options')
                             ->schema([
