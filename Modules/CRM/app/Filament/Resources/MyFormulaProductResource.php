@@ -44,6 +44,9 @@ class MyFormulaProductResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('description.name')
+                    ->label('Produto')
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('model')
                     ->label('Modelo')
                     ->searchable(),

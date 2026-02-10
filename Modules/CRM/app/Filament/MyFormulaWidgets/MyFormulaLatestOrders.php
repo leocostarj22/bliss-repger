@@ -23,7 +23,7 @@ class MyFormulaLatestOrders extends BaseWidget
                 Tables\Columns\TextColumn::make('firstname')->label('Cliente')
                     ->formatStateUsing(fn ($record) => $record->firstname . ' ' . $record->lastname),
                 Tables\Columns\TextColumn::make('total')->label('Total')->money('EUR'),
-                Tables\Columns\TextColumn::make('date_added')->label('Data')->dateTime(),
+                Tables\Columns\TextColumn::make('date_added')->label('Data')->dateTime('d/m/Y H:i'),
             ])
             ->actions([
                 Tables\Actions\Action::make('edit')

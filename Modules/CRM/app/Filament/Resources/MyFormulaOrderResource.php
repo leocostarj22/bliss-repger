@@ -107,7 +107,7 @@ class MyFormulaOrderResource extends Resource
                     ->money('eur')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('date_added')
-                    ->dateTime()
+                    ->dateTime('d/m/Y H:i')
                     ->sortable(),
             ])
             ->defaultSort('order_id', 'desc')

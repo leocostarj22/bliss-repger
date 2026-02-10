@@ -35,6 +35,7 @@ class MyFormulaOrder extends Model
 
     public function status()
     {
-        return $this->belongsTo(MyFormulaOrderStatus::class, 'order_status_id', 'order_status_id');
+        return $this->belongsTo(MyFormulaOrderStatus::class, 'order_status_id', 'order_status_id')
+            ->where('language_id', 2);
     }
 }

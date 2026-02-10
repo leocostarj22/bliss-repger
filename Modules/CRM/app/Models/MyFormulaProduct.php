@@ -20,4 +20,9 @@ class MyFormulaProduct extends Model
         'status' => 'boolean',
         'price' => 'float',
     ];
+public function description()
+    {
+        return $this->hasOne(MyFormulaProductDescription::class, 'product_id', 'product_id')
+            ->where('language_id', 2);
+    }
 }
