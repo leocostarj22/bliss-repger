@@ -86,6 +86,9 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('MyFormula')
                     ->collapsible()
                     ->collapsed(),
+                NavigationGroup::make('Espaço Absoluto')
+                    ->collapsible()
+                    ->collapsed(),
                 NavigationGroup::make('Catálogo')
                     ->collapsible()
                     ->collapsed(),

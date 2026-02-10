@@ -145,6 +145,22 @@ return [
             ]) : [],
         ],
 
+        'espacoabsoluto' => [
+            'driver' => 'mysql',
+            'host' => env('ESPACOABSOLUTO_DB_HOST', '127.0.0.1'),
+            'port' => env('ESPACOABSOLUTO_DB_PORT', '3306'),
+            'database' => env('ESPACOABSOLUTO_DB_DATABASE', 'espacoabsoluto_db'),
+            'username' => env('ESPACOABSOLUTO_DB_USERNAME', 'root'),
+            'password' => env('ESPACOABSOLUTO_DB_PASSWORD', ''),
+            'unix_socket' => env('ESPACOABSOLUTO_DB_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => false,
+            'engine' => null,
+        ],
+
     ],
 
     /*
