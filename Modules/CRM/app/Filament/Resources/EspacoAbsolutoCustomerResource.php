@@ -54,9 +54,38 @@ class EspacoAbsolutoCustomerResource extends Resource
                 Tables\Columns\TextColumn::make('email')
                     ->searchable()
                     ->icon('heroicon-m-envelope')
-                    ->copyable(),
+                    ->copyable()
+                    ->url(fn ($record) => "mailto:{$record->email}"),
                 Tables\Columns\TextColumn::make('telefone')
-                    ->searchable(),
+                    ->searchable()
+                    ->icon('heroicon-m-phone')
+                    ->url(fn ($record) => "tel:{$record->telefone}"),
+                Tables\Columns\TextColumn::make('origin')
+                    ->label('Origem')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'Pergunta Grátis' => 'success',
+                        'CTA Orações' => 'warning',
+                        'CTA E-book' => 'info',
+                        'Tarot do Dia' => 'primary',
+                        'Nós Ligamos' => 'danger',
+                        'Newsletters' => 'gray',
+                        'Notícias' => 'gray',
+                        default => 'gray',
+                    }),
+                Tables\Columns\TextColumn::make('data_added')
+                    ->label('Origem')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'Pergunta Grátis' => 'success',
+                        'CTA Orações' => 'warning',
+                        'CTA E-book' => 'info',
+                        'Tarot do Dia' => 'primary',
+                        'Nós Ligamos' => 'danger',
+                        'Newsletters' => 'gray',
+                        'Notícias' => 'gray',
+                        default => 'gray',
+                    }),
                 Tables\Columns\TextColumn::make('data_added')
                     ->dateTime()
                     ->sortable()

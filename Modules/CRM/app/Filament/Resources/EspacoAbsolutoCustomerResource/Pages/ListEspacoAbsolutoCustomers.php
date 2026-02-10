@@ -16,4 +16,17 @@ class ListEspacoAbsolutoCustomers extends ListRecords
             // Actions\CreateAction::make(), // Desativado até criarmos a página de criação
         ];
     }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            EspacoAbsolutoCustomerResource\Widgets\CustomerOriginOverview::class,
+        ];
+    }
+
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
+
 }
