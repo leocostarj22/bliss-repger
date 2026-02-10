@@ -33,6 +33,11 @@ class MyFormulaOrder extends Model
         return $this->hasMany(MyFormulaOrderProduct::class, 'order_id', 'order_id');
     }
 
+    public function options()
+    {
+        return $this->hasMany(MyFormulaOrderOption::class, 'order_id', 'order_id');
+    }
+
     public function status()
     {
         return $this->belongsTo(MyFormulaOrderStatus::class, 'order_status_id', 'order_status_id')
