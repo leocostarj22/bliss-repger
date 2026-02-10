@@ -9,8 +9,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use App\Contracts\UserInterface;
+use Filament\Models\Contracts\FilamentUser;
 
-class EmployeeUser extends Authenticatable implements UserInterface
+class EmployeeUser extends Authenticatable implements UserInterface, FilamentUser
 {
     use HasFactory, Notifiable;
 

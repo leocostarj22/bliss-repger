@@ -11,8 +11,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use App\Contracts\UserInterface;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 
-class User extends Authenticatable implements UserInterface
+class User extends Authenticatable implements UserInterface, FilamentUser
 {
     use LogsActivity;
     use HasFactory, Notifiable;
@@ -195,6 +197,11 @@ class User extends Authenticatable implements UserInterface
     public function getRoleDisplayName(): string
     {
         return $this->roleModel?->display_name ?? ucfirst($this->role ?? 'Utilizador');
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return (bool) $this->is_active;
     }
 
     public function updateLastLogin(): void
