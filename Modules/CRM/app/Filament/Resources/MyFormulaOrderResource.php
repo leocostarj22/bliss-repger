@@ -31,8 +31,10 @@ class MyFormulaOrderResource extends Resource
                         Forms\Components\TextInput::make('date_added')
                             ->label('Data do Pedido')
                             ->disabled(),
-                        Forms\Components\TextInput::make('status.name')
-                            ->label('Situação'),
+                        Forms\Components\Select::make('order_status_id')
+                            ->label('Situação')
+                            ->relationship('status', 'name')
+                            ->disabled(),
                         Forms\Components\TextInput::make('payment_method')
                             ->label('Forma de Pagamento'),
                         Forms\Components\TextInput::make('total')
@@ -60,7 +62,7 @@ class MyFormulaOrderResource extends Resource
                 Forms\Components\Section::make('Itens do Pedido')
                     ->schema([
                         Forms\Components\Repeater::make('products')
-                            ->relationship()
+                            ->relationship('products')
                             ->schema([
                                 Forms\Components\TextInput::make('name')
                                     ->label('Produto')
@@ -102,7 +104,17 @@ class MyFormulaOrderResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('status.name')
                     ->label('Situação')
-                    ->badge(),
+                    ->badge()
+                    ->color(fn (string $state): string => match (true) {
+                        str_contains(strtolower($state), 'pend') => 'gray',
+                        str_contains(strtolower($state), 'process') => 'warning',
+                        str_contains(strtolower($state), 'envi') => 'info',
+                        str_contains(strtolower($state), 'ship') => 'info',
+                        str_contains(strtolower($state), 'complet') => 'success',
+                        str_contains(strtolower($state), 'cancel') => 'danger',
+                        str_contains(strtolower($state), 'refund') => 'danger',
+                        default => 'primary',
+                    }),
                 Tables\Columns\TextColumn::make('total')
                     ->money('eur')
                     ->sortable(),
