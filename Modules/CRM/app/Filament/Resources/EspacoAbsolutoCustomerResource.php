@@ -65,25 +65,11 @@ class EspacoAbsolutoCustomerResource extends Resource
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'Pergunta Grátis' => 'success',
-                        'CTA Orações' => 'warning',
+                        'CTA Orações' => 'primary',
                         'CTA E-book' => 'info',
-                        'Tarot do Dia' => 'primary',
+                        'Tarot do Dia' => 'warning',
                         'Nós Ligamos' => 'danger',
-                        'Newsletters' => 'gray',
-                        'Notícias' => 'gray',
-                        default => 'gray',
-                    }),
-                Tables\Columns\TextColumn::make('data_added')
-                    ->label('Origem')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'Pergunta Grátis' => 'success',
-                        'CTA Orações' => 'warning',
-                        'CTA E-book' => 'info',
-                        'Tarot do Dia' => 'primary',
-                        'Nós Ligamos' => 'danger',
-                        'Newsletters' => 'gray',
-                        'Notícias' => 'gray',
+                        'Newsletters', 'Notícias' => 'gray',
                         default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('data_added')
