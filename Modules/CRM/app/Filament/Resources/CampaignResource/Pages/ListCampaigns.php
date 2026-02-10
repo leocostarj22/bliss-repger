@@ -22,6 +22,11 @@ class ListCampaigns extends ListRecords
 {
     protected static string $resource = CampaignResource::class;
 
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
+
     public function importSelectedCampaigns(array $selectedIds): void
     {
         $service = new GoContactService();

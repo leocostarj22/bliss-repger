@@ -15,6 +15,11 @@ class ListContacts extends ListRecords
 {
     protected static string $resource = ContactResource::class;
 
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
+
     protected function getHeaderActions(): array
     {
         return [

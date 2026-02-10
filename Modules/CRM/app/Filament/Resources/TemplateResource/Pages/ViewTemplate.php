@@ -8,4 +8,9 @@ use Filament\Resources\Pages\ViewRecord;
 class ViewTemplate extends ViewRecord
 {
     protected static string $resource = TemplateResource::class;
+
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
 }

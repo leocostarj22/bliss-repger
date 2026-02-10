@@ -10,6 +10,11 @@ class ViewLead extends ViewRecord
 {
     protected static string $resource = LeadResource::class;
 
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
+
     protected function getHeaderActions(): array
     {
         return [

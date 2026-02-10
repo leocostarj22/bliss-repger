@@ -8,4 +8,9 @@ use Filament\Resources\Pages\ViewRecord;
 class ViewContact extends ViewRecord
 {
     protected static string $resource = ContactResource::class;
+
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
 }

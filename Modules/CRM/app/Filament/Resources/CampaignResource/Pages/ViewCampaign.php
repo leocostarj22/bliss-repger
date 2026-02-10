@@ -15,6 +15,11 @@ class ViewCampaign extends ViewRecord
 {
     protected static string $resource = CampaignResource::class;
 
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
+
     protected function getHeaderActions(): array
     {
         return [

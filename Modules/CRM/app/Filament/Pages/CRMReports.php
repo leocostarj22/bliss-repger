@@ -23,4 +23,9 @@ class CRMReports extends Page
 
         return array_values(array_filter($widgets, fn (string $w) => class_exists($w)));
     }
+
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
 }
