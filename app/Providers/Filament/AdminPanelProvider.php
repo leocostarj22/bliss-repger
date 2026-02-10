@@ -83,6 +83,9 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Bliss Natura')
                     ->collapsible()
                     ->collapsed(),
+                NavigationGroup::make('MyFormula')
+                    ->collapsible()
+                    ->collapsed(),
                 NavigationGroup::make('Catálogo')
                     ->collapsible()
                     ->collapsed(),

@@ -8,4 +8,9 @@ use Filament\Resources\Pages\EditRecord;
 class EditMyFormulaCustomer extends EditRecord
 {
     protected static string $resource = MyFormulaCustomerResource::class;
+
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
 }

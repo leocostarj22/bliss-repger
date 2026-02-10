@@ -55,6 +55,7 @@ class MyFormulaCustomerResource extends Resource
                     ->dateTime()
                     ->sortable(),
             ])
+            ->defaultSort('customer_id', 'desc')
             ->filters([
                 //
             ])

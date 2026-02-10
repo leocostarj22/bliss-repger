@@ -57,6 +57,7 @@ class MyFormulaOrderResource extends Resource
                     ->dateTime()
                     ->sortable(),
             ])
+            ->defaultSort('order_id', 'desc')
             ->filters([
                 //
             ])

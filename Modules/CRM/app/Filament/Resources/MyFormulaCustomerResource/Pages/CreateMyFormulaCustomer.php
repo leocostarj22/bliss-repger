@@ -8,4 +8,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateMyFormulaCustomer extends CreateRecord
 {
     protected static string $resource = MyFormulaCustomerResource::class;
+
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
 }
