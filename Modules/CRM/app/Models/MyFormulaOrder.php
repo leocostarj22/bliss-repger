@@ -43,6 +43,13 @@ class MyFormulaOrder extends Model
         return $this->hasMany(MyFormulaOrderCustomField::class, 'order_id', 'order_id');
     }
 
+    public function quiz()
+    {
+        // Try to link via order_id if quiz has it, or fallback logic
+        // Assuming quiz table might have order_id or we match by email/customer
+        return $this->hasOne(Quiz::class, 'order_id', 'order_id');
+    }
+
     public function status()
     {
         return $this->belongsTo(MyFormulaOrderStatus::class, 'order_status_id', 'order_status_id')

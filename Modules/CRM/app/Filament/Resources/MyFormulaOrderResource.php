@@ -90,24 +90,53 @@ class MyFormulaOrderResource extends Resource
 
                 Forms\Components\Section::make('Detalhes Adicionais (Quiz/Suplementação)')
                     ->schema([
-                        Forms\Components\Placeholder::make('debug_options')
-                            ->label('Debug Dados do Banco')
-                            ->content(fn ($record) => json_encode($record->options()->get()->toArray(), JSON_PRETTY_PRINT)),
+                        Forms\Components\Placeholder::make('quiz_details')
+                            ->label('Resumo do Quiz')
+                            ->content(function ($record) {
+                                $quiz = \Modules\CRM\Models\Quiz::where('order_id', $record->order_id)->first();
+                                
+                                if (!$quiz) {
+                                    // Fallback: try to find by email and recent date if order_id link is missing
+                                    $quiz = \Modules\CRM\Models\Quiz::where('post->email', $record->email)
+                                        ->latest('date_added')
+                                        ->first();
+                                }
+
+                                if (!$quiz) {
+                                    return 'Nenhum quiz encontrado para este pedido.';
+                                }
+
+                                $data = $quiz->post ?? [];
+                                $output = [];
+
+                                // Extract relevant fields
+                                if (isset($data['name'])) $output[] = "Nome: {$data['name']}";
+                                if (isset($data['gender'])) $output[] = "Género: {$data['gender']}";
+                                if (isset($data['age'])) $output[] = "Idade: {$data['age']}";
+                                if (isset($data['height'])) $output[] = "Altura: {$data['height']} cm";
+                                if (isset($data['weight'])) $output[] = "Peso: {$data['weight']} kg";
+                                
+                                // Goals/Plans
+                                if (isset($data['improve_health'])) {
+                                    $plans = is_array($data['improve_health']) ? implode(', ', $data['improve_health']) : $data['improve_health'];
+                                    $output[] = "Objetivos: {$plans}";
+                                }
+
+                                return implode(' | ', $output);
+                            }),
                         
-                        Forms\Components\Repeater::make('options')
-                            ->relationship('options')
-                            ->schema([
-                                Forms\Components\TextInput::make('name')
-                                    ->label('Opção')
-                                    ->disabled(),
-                                Forms\Components\TextInput::make('value')
-                                    ->label('Valor')
-                                    ->disabled(),
-                            ])
-                            ->columns(2)
-                            ->addable(false)
-                            ->deletable(false)
-                            ->reorderable(false),
+                        Forms\Components\KeyValue::make('quiz_full_data')
+                            ->label('Dados Completos do Quiz')
+                            ->state(function ($record) {
+                                $quiz = \Modules\CRM\Models\Quiz::where('order_id', $record->order_id)->first();
+                                if (!$quiz) {
+                                    $quiz = \Modules\CRM\Models\Quiz::where('post->email', $record->email)
+                                        ->latest('date_added')
+                                        ->first();
+                                }
+                                return $quiz ? $quiz->post : [];
+                            })
+                            ->columnSpanFull(),
                     ]),
             ]);
     }
