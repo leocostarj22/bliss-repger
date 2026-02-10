@@ -52,6 +52,7 @@ class BlissCustomerResource extends Resource
                 ->formatStateUsing(fn (bool $state): string => $state ? 'Ativo' : 'Inativo'),
             Tables\Columns\TextColumn::make('date_added')->label('Data Registo')->dateTime()->sortable(),
         ])
+        ->defaultSort('customer_id', 'desc')
         ->actions([Tables\Actions\EditAction::make()]);
     }
 

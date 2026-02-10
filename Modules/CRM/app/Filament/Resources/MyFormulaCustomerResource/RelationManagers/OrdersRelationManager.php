@@ -9,10 +9,36 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Modules\CRM\Filament\Resources\MyFormulaOrderResource;
 
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Infolist;
+
 class OrdersRelationManager extends RelationManager
 {
     protected static string $relationship = 'orders';
     protected static ?string $title = 'Pedidos';
+
+    public function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                TextEntry::make('order_id')->label('ID'),
+                TextEntry::make('status.name')->label('Situação'),
+                TextEntry::make('total')->money('EUR')->label('Total'),
+                TextEntry::make('date_added')->dateTime('d/m/Y H:i')->label('Data'),
+                
+                RepeatableEntry::make('products')
+                    ->label('Itens do Pedido')
+                    ->schema([
+                        TextEntry::make('name')->label('Produto'),
+                        TextEntry::make('model')->label('Modelo'),
+                        TextEntry::make('quantity')->label('Qtd'),
+                        TextEntry::make('total')->money('EUR')->label('Total'),
+                    ])
+                    ->columns(4)
+                    ->columnSpanFull(),
+            ]);
+    }
 
     public function form(Form $form): Form
     {
@@ -46,7 +72,8 @@ class OrdersRelationManager extends RelationManager
             ])
             ->defaultSort('order_id', 'desc')
             ->actions([
-                Tables\Actions\ViewAction::make()->url(fn ($record) => MyFormulaOrderResource::getUrl('edit', ['record' => $record])),
+                Tables\Actions\ViewAction::make()
+                    ->url(fn ($record) => MyFormulaOrderResource::getUrl('edit', ['record' => $record])),
             ]);
     }
 }
