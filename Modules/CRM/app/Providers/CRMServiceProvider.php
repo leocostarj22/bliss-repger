@@ -35,6 +35,7 @@ class CRMServiceProvider extends ServiceProvider
             \Livewire\Livewire::component('modules.c-r-m.filament.bliss-widgets.bliss-latest-orders', \Modules\CRM\Filament\BlissWidgets\BlissLatestOrders::class);
             \Livewire\Livewire::component('modules.c-r-m.filament.bliss-widgets.bliss-latest-customers', \Modules\CRM\Filament\BlissWidgets\BlissLatestCustomers::class);
             \Livewire\Livewire::component('modules.c-r-m.filament.my-formula-widgets.my-formula-stats-overview', \Modules\CRM\Filament\MyFormulaWidgets\MyFormulaStatsOverview::class);
+            \Livewire\Livewire::component('modules.c-r-m.filament.my-formula-widgets.my-formula-latest-orders', \Modules\CRM\Filament\MyFormulaWidgets\MyFormulaLatestOrders::class);
         }
     }
 

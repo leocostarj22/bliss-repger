@@ -4,6 +4,7 @@ namespace Modules\CRM\Filament\Pages;
 
 use Filament\Pages\Dashboard;
 use Modules\CRM\Filament\MyFormulaWidgets\MyFormulaStatsOverview;
+use Modules\CRM\Filament\MyFormulaWidgets\MyFormulaLatestOrders;
 
 class MyFormulaDashboard extends Dashboard
 {
@@ -18,6 +19,7 @@ class MyFormulaDashboard extends Dashboard
     {
         return [
             MyFormulaStatsOverview::class,
+            MyFormulaLatestOrders::class,
         ];
     }
     

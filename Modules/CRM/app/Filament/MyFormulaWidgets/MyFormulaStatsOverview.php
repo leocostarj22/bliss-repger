@@ -18,14 +18,16 @@ class MyFormulaStatsOverview extends BaseWidget
                 ->descriptionIcon('heroicon-m-shopping-cart')
                 ->color('success'),
             
-            Stat::make('Novos Clientes', MyFormulaCustomer::where('date_added', '>=', now()->subDays(30))->count())
-                ->description('Últimos 30 dias')
-                ->descriptionIcon('heroicon-m-user-group')
+            Stat::make('Receita Total', '€ ' . number_format(MyFormulaOrder::sum('total'), 2, ',', '.'))
+                ->description('Soma total dos pedidos')
+                ->color('success'),
+
+            Stat::make('Clientes', MyFormulaCustomer::count())
+                ->description('Total de clientes registrados')
                 ->color('primary'),
 
-            Stat::make('Produtos Ativos', MyFormulaProduct::where('status', 1)->count())
-                ->description('Em catálogo')
-                ->descriptionIcon('heroicon-m-cube')
+            Stat::make('Produtos', MyFormulaProduct::count())
+                ->description('Produtos cadastrados')
                 ->color('warning'),
         ];
     }
