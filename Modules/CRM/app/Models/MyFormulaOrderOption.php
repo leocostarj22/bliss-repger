@@ -14,4 +14,8 @@ class MyFormulaOrderOption extends Model
     protected $fillable = [
         'order_id', 'order_product_id', 'product_option_id', 'product_option_value_id', 'name', 'value', 'type'
     ];
+public function product()
+    {
+        return $this->belongsTo(MyFormulaOrderProduct::class, 'order_product_id', 'order_product_id');
+    }
 }

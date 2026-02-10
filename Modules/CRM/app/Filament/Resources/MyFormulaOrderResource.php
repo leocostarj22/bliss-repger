@@ -84,6 +84,7 @@ class MyFormulaOrderResource extends Resource
                                 
                                 Forms\Components\Repeater::make('options')
                                     ->relationship('options')
+                                    ->label('Detalhes Adicionais (Quiz/Suplementação)')
                                     ->schema([
                                         Forms\Components\TextInput::make('name')
                                             ->label('Opção')
