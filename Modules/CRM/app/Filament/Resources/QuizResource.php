@@ -22,9 +22,9 @@ class QuizResource extends Resource
     protected static ?string $model = Quiz::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-beaker';
-    protected static ?string $navigationGroup = 'CRM';
-    protected static ?string $navigationLabel = 'MyFormula';
-    protected static ?int $navigationSort = 100;
+    protected static ?string $navigationGroup = 'MyFormula';
+    protected static ?string $navigationLabel = 'Quizzes';
+    protected static ?int $navigationSort = 5;
 
     public static function form(Form $form): Form
     {
