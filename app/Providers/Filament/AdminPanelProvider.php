@@ -98,7 +98,6 @@ class AdminPanelProvider extends PanelProvider
                 ->discoverResources(in: base_path('Modules/CRM/app/Filament/Resources'), for: 'Modules\\CRM\\Filament\\Resources')
                 ->discoverPages(in: base_path('Modules/CRM/app/Filament/Pages'), for: 'Modules\\CRM\\Filament\\Pages')
                 ->discoverWidgets(in: base_path('Modules/CRM/app/Filament/Widgets'), for: 'Modules\\CRM\\Filament\\Widgets')
-                ->discoverWidgets(in: base_path('Modules/CRM/app/Filament/BlissWidgets'), for: 'Modules\\CRM\\Filament\\BlissWidgets')
                 ->discoverClusters(in: base_path('Modules/CRM/app/Filament/Clusters'), for: 'Modules\\CRM\\Filament\\Clusters');
         }
 

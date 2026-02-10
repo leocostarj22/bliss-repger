@@ -29,6 +29,12 @@ class CRMServiceProvider extends ServiceProvider
         if (class_exists(\Filament\Facades\Filament::class)) {
             // Any additional Filament configuration can go here
         }
+
+        if (class_exists(\Livewire\Livewire::class)) {
+            \Livewire\Livewire::component('modules.c-r-m.filament.bliss-widgets.bliss-stats-overview', \Modules\CRM\Filament\BlissWidgets\BlissStatsOverview::class);
+            \Livewire\Livewire::component('modules.c-r-m.filament.bliss-widgets.bliss-latest-orders', \Modules\CRM\Filament\BlissWidgets\BlissLatestOrders::class);
+            \Livewire\Livewire::component('modules.c-r-m.filament.bliss-widgets.bliss-latest-customers', \Modules\CRM\Filament\BlissWidgets\BlissLatestCustomers::class);
+        }
     }
 
     public function register(): void
