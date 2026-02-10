@@ -89,8 +89,8 @@ class EspacoAbsolutoCustomerResource extends Resource
                         'CTA Orações' => 'primary',
                         'CTA E-book' => 'info',
                         'Tarot do Dia' => 'warning',
-                        'Nós Ligamos' => 'danger',
-                        'Newsletters', 'Notícias' => 'gray',
+                        'Nós ligamos!' => 'danger',
+                        'Newsletter', 'Contactos' => 'gray',
                         default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('data_added')
@@ -126,43 +126,21 @@ class EspacoAbsolutoCustomerResource extends Resource
                         'CTA E-book' => 'CTA E-book',
                         'Tarot do Dia' => 'Tarot do Dia',
                         'Nós Ligamos' => 'Nós Ligamos',
-                        'Newsletters' => 'Newsletters',
-                        'Notícias' => 'Notícias',
+                        'Contactos' => 'Contactos',
+                        'Newsletter' => 'Newsletter',
                     ])
                     ->query(function (Builder $query, array $data) {
                         $value = $data['value'];
                         if (!$value) return $query;
+                        
+                        $map = [
+                            'Nós Ligamos' => 'Nós ligamos!',
+                        ];
+                        
+                        $dbValue = $map[$value] ?? $value;
 
-                        return $query->whereHas('messages', function (Builder $query) use ($value) {
-                            switch ($value) {
-                                case 'Pergunta Grátis':
-                                    $query->where('subject', 'like', '%Pergunta%');
-                                    break;
-                                case 'CTA Orações':
-                                    $query->where(function($q) {
-                                        $q->where('subject', 'like', '%Oração%')
-                                          ->orWhere('subject', 'like', '%Orações%');
-                                    });
-                                    break;
-                                case 'CTA E-book':
-                                    $query->where('subject', 'like', '%E-book%');
-                                    break;
-                                case 'Tarot do Dia':
-                                    $query->where('subject', 'like', '%Tarot%');
-                                    break;
-                                case 'Nós Ligamos':
-                                    $query->where(function($q) {
-                                        $q->where('subject', 'like', '%Pedido%')
-                                          ->orWhere('subject', 'like', '%Ligação%');
-                                    });
-                                    break;
-                                case 'Newsletters':
-                                    $query->where('subject', 'like', '%Newsletter%');
-                                    break;
-                                case 'Notícias':
-                                    $query->where('subject', 'like', '%Notícias%');
-                                    break;
-                            }
+                        return $query->whereHas('groups', function ($q) use ($dbValue) {
+                            $q->where('nome', $dbValue);
                         });
                     }),
             ])

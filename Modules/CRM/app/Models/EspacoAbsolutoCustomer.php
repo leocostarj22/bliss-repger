@@ -29,8 +29,24 @@ class EspacoAbsolutoCustomer extends Model
         return $this->hasMany(EspacoAbsolutoUserMessage::class, 'iduser', 'iduser');
     }
 
+    public function groups()
+    {
+        return $this->belongsToMany(
+            EspacoAbsolutoUserGroup::class,
+            'user_groups_assoc',
+            'iduser',
+            'idgrupo'
+        );
+    }
+
     public function getOriginAttribute()
     {
+        // First check if user belongs to a group
+        $group = $this->groups()->first();
+        if ($group) {
+            return $group->nome;
+        }
+
         $message = $this->messages()->orderBy('data_added', 'asc')->first();
         if (!$message) {
             return 'Desconhecido';
