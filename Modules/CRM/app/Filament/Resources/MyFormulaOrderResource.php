@@ -93,14 +93,10 @@ class MyFormulaOrderResource extends Resource
                         Forms\Components\Placeholder::make('quiz_details')
                             ->label('Resumo do Quiz')
                             ->content(function ($record) {
-                                $quiz = \Modules\CRM\Models\Quiz::where('order_id', $record->order_id)->first();
-                                
-                                if (!$quiz) {
-                                    // Fallback: try to find by email and recent date if order_id link is missing
-                                    $quiz = \Modules\CRM\Models\Quiz::where('post->email', $record->email)
-                                        ->latest('date_added')
-                                        ->first();
-                                }
+                                // Fallback: try to find by email and recent date
+                                $quiz = \Modules\CRM\Models\Quiz::where('post->email', $record->email)
+                                    ->latest('date_added')
+                                    ->first();
 
                                 if (!$quiz) {
                                     return 'Nenhum quiz encontrado para este pedido.';
@@ -130,12 +126,10 @@ class MyFormulaOrderResource extends Resource
                             ->afterStateHydrated(function ($component, $record) {
                                 if (!$record) return;
                                 
-                                $quiz = \Modules\CRM\Models\Quiz::where('order_id', $record->order_id)->first();
-                                if (!$quiz) {
-                                    $quiz = \Modules\CRM\Models\Quiz::where('post->email', $record->email)
-                                        ->latest('date_added')
-                                        ->first();
-                                }
+                                $quiz = \Modules\CRM\Models\Quiz::where('post->email', $record->email)
+                                    ->latest('date_added')
+                                    ->first();
+
                                 $component->state($quiz ? $quiz->post : []);
                             })
                             ->dehydrated(false) // Prevent saving back to order table
