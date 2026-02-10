@@ -23,18 +23,68 @@ class MyFormulaOrderResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('invoice_no')
-                    ->label('Fatura'),
-                Forms\Components\TextInput::make('firstname')
-                    ->required(),
-                Forms\Components\TextInput::make('lastname')
-                    ->required(),
-                Forms\Components\TextInput::make('email')
-                    ->email()
-                    ->required(),
-                Forms\Components\TextInput::make('total')
-                    ->numeric()
-                    ->prefix('€'),
+                Forms\Components\Section::make('Detalhes do Pedido')
+                    ->schema([
+                        Forms\Components\TextInput::make('order_id')
+                            ->label('ID do Pedido')
+                            ->disabled(),
+                        Forms\Components\TextInput::make('date_added')
+                            ->label('Data do Pedido')
+                            ->disabled(),
+                        Forms\Components\TextInput::make('status.name')
+                            ->label('Situação'),
+                        Forms\Components\TextInput::make('payment_method')
+                            ->label('Forma de Pagamento'),
+                        Forms\Components\TextInput::make('total')
+                            ->label('Total')
+                            ->prefix('€')
+                            ->disabled(),
+                    ])->columns(3),
+
+                Forms\Components\Section::make('Cliente')
+                    ->schema([
+                        Forms\Components\TextInput::make('firstname')
+                            ->label('Nome')
+                            ->disabled(),
+                        Forms\Components\TextInput::make('lastname')
+                            ->label('Sobrenome')
+                            ->disabled(),
+                        Forms\Components\TextInput::make('email')
+                            ->label('Email')
+                            ->disabled(),
+                        Forms\Components\TextInput::make('telephone')
+                            ->label('Telefone')
+                            ->disabled(),
+                    ])->columns(2),
+
+                Forms\Components\Section::make('Itens do Pedido')
+                    ->schema([
+                        Forms\Components\Repeater::make('products')
+                            ->relationship()
+                            ->schema([
+                                Forms\Components\TextInput::make('name')
+                                    ->label('Produto')
+                                    ->disabled(),
+                                Forms\Components\TextInput::make('model')
+                                    ->label('Modelo')
+                                    ->disabled(),
+                                Forms\Components\TextInput::make('quantity')
+                                    ->label('Qtd')
+                                    ->disabled(),
+                                Forms\Components\TextInput::make('price')
+                                    ->label('Preço Unit.')
+                                    ->prefix('€')
+                                    ->disabled(),
+                                Forms\Components\TextInput::make('total')
+                                    ->label('Total')
+                                    ->prefix('€')
+                                    ->disabled(),
+                            ])
+                            ->columns(5)
+                            ->addable(false)
+                            ->deletable(false)
+                            ->reorderable(false),
+                    ]),
             ]);
     }
 
@@ -50,6 +100,9 @@ class MyFormulaOrderResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('email')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('status.name')
+                    ->label('Situação')
+                    ->badge(),
                 Tables\Columns\TextColumn::make('total')
                     ->money('eur')
                     ->sortable(),

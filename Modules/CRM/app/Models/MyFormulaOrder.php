@@ -13,7 +13,8 @@ class MyFormulaOrder extends Model
 
     protected $fillable = [
         'invoice_no', 'store_name', 'customer_id', 'firstname', 'lastname', 
-        'email', 'telephone', 'total', 'order_status_id', 'date_added', 'date_modified'
+        'email', 'telephone', 'total', 'order_status_id', 'date_added', 'date_modified',
+        'payment_method', 'payment_code'
     ];
 
     protected $casts = [
@@ -25,5 +26,15 @@ class MyFormulaOrder extends Model
     public function customer()
     {
         return $this->belongsTo(MyFormulaCustomer::class, 'customer_id', 'customer_id');
+    }
+
+    public function products()
+    {
+        return $this->hasMany(MyFormulaOrderProduct::class, 'order_id', 'order_id');
+    }
+
+    public function status()
+    {
+        return $this->belongsTo(MyFormulaOrderStatus::class, 'order_status_id', 'order_status_id');
     }
 }
