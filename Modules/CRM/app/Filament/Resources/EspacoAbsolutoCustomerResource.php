@@ -11,6 +11,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Modules\CRM\Models\Contact;
 use Filament\Notifications\Notification;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 class EspacoAbsolutoCustomerResource extends Resource
@@ -98,6 +99,73 @@ class EspacoAbsolutoCustomerResource extends Resource
                     ->label('Cadastro'),
             ])
             ->defaultSort('iduser', 'desc')
+            ->filters([
+                Tables\Filters\Filter::make('data_added')
+                    ->form([
+                        Forms\Components\DatePicker::make('registered_from')
+                            ->label('Registrado de'),
+                        Forms\Components\DatePicker::make('registered_until')
+                            ->label('Registrado até'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['registered_from'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('data_added', '>=', $date),
+                            )
+                            ->when(
+                                $data['registered_until'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('data_added', '<=', $date),
+                            );
+                    }),
+                Tables\Filters\SelectFilter::make('origin')
+                    ->label('Origem')
+                    ->options([
+                        'Pergunta Grátis' => 'Pergunta Grátis',
+                        'CTA Orações' => 'CTA Orações',
+                        'CTA E-book' => 'CTA E-book',
+                        'Tarot do Dia' => 'Tarot do Dia',
+                        'Nós Ligamos' => 'Nós Ligamos',
+                        'Newsletters' => 'Newsletters',
+                        'Notícias' => 'Notícias',
+                    ])
+                    ->query(function (Builder $query, array $data) {
+                        $value = $data['value'];
+                        if (!$value) return $query;
+
+                        return $query->whereHas('messages', function (Builder $query) use ($value) {
+                            switch ($value) {
+                                case 'Pergunta Grátis':
+                                    $query->where('subject', 'like', '%Pergunta%');
+                                    break;
+                                case 'CTA Orações':
+                                    $query->where(function($q) {
+                                        $q->where('subject', 'like', '%Oração%')
+                                          ->orWhere('subject', 'like', '%Orações%');
+                                    });
+                                    break;
+                                case 'CTA E-book':
+                                    $query->where('subject', 'like', '%E-book%');
+                                    break;
+                                case 'Tarot do Dia':
+                                    $query->where('subject', 'like', '%Tarot%');
+                                    break;
+                                case 'Nós Ligamos':
+                                    $query->where(function($q) {
+                                        $q->where('subject', 'like', '%Pedido%')
+                                          ->orWhere('subject', 'like', '%Ligação%');
+                                    });
+                                    break;
+                                case 'Newsletters':
+                                    $query->where('subject', 'like', '%Newsletter%');
+                                    break;
+                                case 'Notícias':
+                                    $query->where('subject', 'like', '%Notícias%');
+                                    break;
+                            }
+                        });
+                    }),
+            ])
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])
