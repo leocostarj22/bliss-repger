@@ -10,6 +10,11 @@ class ViewVacation extends ViewRecord
 {
     protected static string $resource = VacationResource::class;
 
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
+
     protected function getHeaderActions(): array
     {
         return [

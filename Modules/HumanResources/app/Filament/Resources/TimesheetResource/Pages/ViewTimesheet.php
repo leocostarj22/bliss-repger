@@ -10,6 +10,11 @@ class ViewTimesheet extends ViewRecord
 {
     protected static string $resource = TimesheetResource::class;
 
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
+
     protected function getHeaderActions(): array
     {
         return [

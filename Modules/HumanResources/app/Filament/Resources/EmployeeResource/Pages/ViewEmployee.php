@@ -10,6 +10,11 @@ class ViewEmployee extends ViewRecord
 {
     protected static string $resource = EmployeeResource::class;
 
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
+
     protected function getHeaderActions(): array
     {
         return [

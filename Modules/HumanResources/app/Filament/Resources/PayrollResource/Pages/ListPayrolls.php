@@ -10,6 +10,11 @@ class ListPayrolls extends ListRecords
 {
     protected static string $resource = PayrollResource::class;
 
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
+
     protected function getHeaderActions(): array
     {
         return [
