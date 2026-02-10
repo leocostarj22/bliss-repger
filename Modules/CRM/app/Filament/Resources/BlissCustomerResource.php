@@ -11,6 +11,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 
 use Modules\CRM\Filament\Resources\BlissCustomerResource\RelationManagers;
+use Modules\CRM\Models\Contact;
+use Filament\Notifications\Notification;
 
 class BlissCustomerResource extends Resource
 {
@@ -53,7 +55,36 @@ class BlissCustomerResource extends Resource
             Tables\Columns\TextColumn::make('date_added')->label('Data Registo')->dateTime()->sortable(),
         ])
         ->defaultSort('customer_id', 'desc')
-        ->actions([Tables\Actions\EditAction::make()]);
+        ->actions([Tables\Actions\EditAction::make()])
+        ->bulkActions([
+            Tables\Actions\BulkActionGroup::make([
+                Tables\Actions\DeleteBulkAction::make(),
+                Tables\Actions\BulkAction::make('import_to_crm')
+                    ->label('Importar para CRM')
+                    ->icon('heroicon-o-arrow-path')
+                    ->requiresConfirmation()
+                    ->action(function ($records) {
+                        $count = 0;
+                        foreach ($records as $record) {
+                            Contact::updateOrCreate(
+                                ['email' => $record->email],
+                                [
+                                    'name' => $record->firstname . ' ' . $record->lastname,
+                                    'phone' => $record->telephone,
+                                    'source' => 'bliss_natura',
+                                    'status' => 'active', // Assuming active status for imported contacts
+                                ]
+                            );
+                            $count++;
+                        }
+                        
+                        Notification::make()
+                            ->title("{$count} clientes importados para o CRM com sucesso!")
+                            ->success()
+                            ->send();
+                    }),
+            ]),
+        ]);
     }
 
     public static function getRelations(): array

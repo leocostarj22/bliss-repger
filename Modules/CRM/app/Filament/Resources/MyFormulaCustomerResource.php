@@ -12,6 +12,10 @@ use Filament\Tables\Table;
 
 use Modules\CRM\Filament\Resources\MyFormulaCustomerResource\RelationManagers;
 
+use Modules\CRM\Models\Contact;
+use Filament\Notifications\Notification;
+use Illuminate\Database\Eloquent\Collection;
+
 class MyFormulaCustomerResource extends Resource
 {
     protected static ?string $model = MyFormulaCustomer::class;
@@ -76,6 +80,30 @@ class MyFormulaCustomerResource extends Resource
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\BulkAction::make('import_to_crm')
+                        ->label('Importar para CRM')
+                        ->icon('heroicon-o-arrow-path')
+                        ->requiresConfirmation()
+                        ->action(function (Collection $records) {
+                            $count = 0;
+                            foreach ($records as $record) {
+                                Contact::updateOrCreate(
+                                    ['email' => $record->email],
+                                    [
+                                        'name' => $record->firstname . ' ' . $record->lastname,
+                                        'phone' => $record->telephone,
+                                        'source' => 'my_formula',
+                                        'status' => 'lead',
+                                    ]
+                                );
+                                $count++;
+                            }
+                            
+                            Notification::make()
+                                ->title("{$count} clientes importados para o CRM com sucesso!")
+                                ->success()
+                                ->send();
+                        }),
                 ]),
             ]);
     }
