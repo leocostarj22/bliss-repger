@@ -127,15 +127,18 @@ class MyFormulaOrderResource extends Resource
                         
                         Forms\Components\KeyValue::make('quiz_full_data')
                             ->label('Dados Completos do Quiz')
-                            ->state(function ($record) {
+                            ->afterStateHydrated(function ($component, $record) {
+                                if (!$record) return;
+                                
                                 $quiz = \Modules\CRM\Models\Quiz::where('order_id', $record->order_id)->first();
                                 if (!$quiz) {
                                     $quiz = \Modules\CRM\Models\Quiz::where('post->email', $record->email)
                                         ->latest('date_added')
                                         ->first();
                                 }
-                                return $quiz ? $quiz->post : [];
+                                $component->state($quiz ? $quiz->post : []);
                             })
+                            ->dehydrated(false) // Prevent saving back to order table
                             ->columnSpanFull(),
                     ]),
             ]);
