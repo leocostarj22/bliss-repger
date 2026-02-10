@@ -10,6 +10,8 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 
+use Modules\CRM\Filament\Resources\MyFormulaCustomerResource\RelationManagers;
+
 class MyFormulaCustomerResource extends Resource
 {
     protected static ?string $model = MyFormulaCustomer::class;
@@ -47,10 +49,19 @@ class MyFormulaCustomerResource extends Resource
                     ->label('Nome')
                     ->searchable(['firstname', 'lastname']),
                 Tables\Columns\TextColumn::make('email')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('telephone'),
-                Tables\Columns\IconColumn::make('status')
-                    ->boolean(),
+                    ->searchable()
+                    ->icon('heroicon-m-envelope')
+                    ->copyable()
+                    ->url(fn ($record) => "mailto:{$record->email}"),
+                Tables\Columns\TextColumn::make('telephone')
+                    ->label('Telefone')
+                    ->icon('heroicon-m-phone')
+                    ->url(fn ($record) => "tel:{$record->telephone}"),
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Status')
+                    ->badge()
+                    ->color(fn (bool $state): string => $state ? 'success' : 'danger')
+                    ->formatStateUsing(fn (bool $state): string => $state ? 'Ativo' : 'Inativo'),
                 Tables\Columns\TextColumn::make('date_added')
                     ->dateTime()
                     ->sortable(),
@@ -72,7 +83,7 @@ class MyFormulaCustomerResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\OrdersRelationManager::class,
         ];
     }
 

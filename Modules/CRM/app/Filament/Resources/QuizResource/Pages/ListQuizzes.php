@@ -13,6 +13,11 @@ class ListQuizzes extends ListRecords
 
     protected static string $resource = QuizResource::class;
 
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
+
     protected function getHeaderWidgets(): array
     {
         return [

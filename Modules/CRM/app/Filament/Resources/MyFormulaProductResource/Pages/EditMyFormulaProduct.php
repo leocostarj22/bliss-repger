@@ -12,5 +12,10 @@ class EditMyFormulaProduct extends EditRecord
     public function getMaxContentWidth(): ?string
     {
         return 'full';
+        
+    }
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
     }
 }

@@ -24,4 +24,9 @@ class MyFormulaCustomer extends Model
     {
         return "{$this->firstname} {$this->lastname}";
     }
+
+    public function orders()
+    {
+        return $this->hasMany(MyFormulaOrder::class, 'customer_id', 'customer_id');
+    }
 }
