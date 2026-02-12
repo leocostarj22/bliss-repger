@@ -12,6 +12,7 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Widgets;
 use Filament\Navigation\NavigationGroup;
+use Filament\Navigation\NavigationItem;
 use Filament\Navigation\MenuItem;
 use App\Filament\Pages\UserProfile;
 use App\Filament\Pages\Dashboard;
@@ -66,6 +67,13 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Resources\TicketResource\Widgets\StatsOverview::class,
                 \App\Filament\Widgets\MessagesOverview::class,
                 \App\Filament\Widgets\AdminPostsWidget::class,
+            ])
+            ->navigationItems([
+                NavigationItem::make('Acessar CRM (Novo)')
+                    ->url('/admin/crm/app')
+                    ->icon('heroicon-o-computer-desktop')
+                    ->group('CRM')
+                    ->sort(0),
             ])
             ->navigationGroups([
                 NavigationGroup::make('Administração')

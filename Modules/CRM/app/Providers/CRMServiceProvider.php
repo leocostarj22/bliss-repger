@@ -61,7 +61,10 @@ class CRMServiceProvider extends ServiceProvider
 
     protected function registerCommands(): void
     {
-        // ... existing code ...
+        $this->commands([
+            \Modules\CRM\Console\Commands\RunAutomations::class,
+            \Modules\CRM\Console\Commands\ProcessCampaigns::class,
+        ]);
     }
 
     protected function registerCommandSchedules(): void
@@ -69,6 +72,7 @@ class CRMServiceProvider extends ServiceProvider
         $this->app->booted(function () {
             $schedule = $this->app->make(\Illuminate\Console\Scheduling\Schedule::class);
             $schedule->command('crm:run-automations')->everyMinute()->withoutOverlapping();
+            $schedule->command('crm:process-campaigns')->everyMinute()->withoutOverlapping();
         });
     }
 

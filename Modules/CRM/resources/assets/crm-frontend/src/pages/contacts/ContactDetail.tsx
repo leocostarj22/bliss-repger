@@ -8,6 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/components/ui/use-toast';
+import { Input } from '@/components/ui/input';
+import { Plus } from 'lucide-react';
 
 export default function ContactDetail() {
   const { id } = useParams();
@@ -15,6 +17,7 @@ export default function ContactDetail() {
   const { toast } = useToast();
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(true);
+  const [newTag, setNewTag] = useState('');
 
   const loadContact = () => {
     if (id) {
@@ -35,7 +38,19 @@ export default function ContactDetail() {
       loadContact();
       toast({ title: 'Tag removida' });
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Erro ao remover tag' });
+      toast({ variant: 'destructive', title: 'Erro ao removar tag' });
+    }
+  };
+
+  const handleAddTag = async () => {
+    if (!id || !newTag.trim()) return;
+    try {
+      await addTag(id, newTag.trim());
+      setNewTag('');
+      loadContact();
+      toast({ title: 'Tag adicionada' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Erro ao adicionar tag' });
     }
   };
 
@@ -102,7 +117,7 @@ export default function ContactDetail() {
             <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
               <Tag className="w-4 h-4" /> Tags
             </h3>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mb-3">
               {contact.tags.map(tag => (
                 <Badge key={tag} variant="secondary" className="gap-1 pr-1">
                   {tag}
@@ -112,6 +127,19 @@ export default function ContactDetail() {
                 </Badge>
               ))}
               {contact.tags.length === 0 && <span className="text-sm text-muted-foreground">Sem tags</span>}
+            </div>
+            
+            <div className="flex gap-2 items-center max-w-xs">
+              <Input 
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                placeholder="Nova tag..."
+                className="h-8 text-sm"
+                onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
+              />
+              <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={handleAddTag} disabled={!newTag.trim()}>
+                <Plus className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </div>

@@ -4,6 +4,7 @@ export default {
     "./resources/**/*.blade.php",
     "./resources/**/*.js",
     "./resources/**/*.vue",
+    "./Modules/CRM/resources/assets/js/**/*.{js,jsx,ts,tsx}",
   ],
   theme: {
     extend: {},
