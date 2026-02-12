@@ -10,7 +10,7 @@
     "dynamicImports": [
       "resources/assets/crm-frontend/src/services/mockData.ts"
     ],
-    "file": "assets/main-65909988.js",
+    "file": "assets/main-3222558b.js",
     "isEntry": true,
     "src": "resources/assets/crm-frontend/src/main.tsx"
   },
