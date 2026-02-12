@@ -11,6 +11,15 @@ export interface Campaign {
   listId?: string;
   listName?: string;
   content?: string;
+  preheader?: string;
+  fromName?: string;
+  fromEmail?: string;
+  trackOpens?: boolean;
+  trackClicks?: boolean;
+  trackReplies?: boolean;
+  useGoogleAnalytics?: boolean;
+  isPublic?: boolean;
+  physicalAddress?: string;
   sentCount: number;
   openRate: number;
   clickRate: number;

@@ -13,6 +13,9 @@ class Campaign extends Model
     protected $fillable = [
         'name',
         'subject',
+        'preheader',
+        'from_name',
+        'from_email',
         'content',
         'gocontact_id',
         'channel',
@@ -21,12 +24,23 @@ class Campaign extends Model
         'segment_id',
         'template_id',
         'scheduled_at',
+        'track_opens',
+        'track_clicks',
+        'track_replies',
+        'use_google_analytics',
+        'is_public',
+        'physical_address',
         'created_at',
     ];
 
     protected $casts = [
         'scheduled_at' => 'datetime',
         'active' => 'boolean',
+        'track_opens' => 'boolean',
+        'track_clicks' => 'boolean',
+        'track_replies' => 'boolean',
+        'use_google_analytics' => 'boolean',
+        'is_public' => 'boolean',
     ];
 
     public function segment()

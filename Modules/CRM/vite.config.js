@@ -8,6 +8,7 @@ export default defineConfig({
         outDir: '../../public/build-crm',
         emptyOutDir: true,
         manifest: true,
+        modulePreload: false,
     },
     resolve: {
         alias: {
