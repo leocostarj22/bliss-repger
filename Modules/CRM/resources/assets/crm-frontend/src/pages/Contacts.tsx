@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { fetchContacts, deleteContact, addTag, removeTag } from '@/services/api';
+import { fetchContacts, deleteContact, addTag, removeTag, createSegment } from '@/services/api';
 import type { Contact } from '@/types';
-import { Search, Upload, Plus, Users, MoreHorizontal, Tag, Trash } from 'lucide-react';
+import { Search, Upload, Plus, Users, MoreHorizontal, Tag, Trash, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate, Link } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -39,7 +40,9 @@ export default function Contacts() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('');
   const [activeTag, setActiveTag] = useState('All');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   
   // Tag Dialog State
   const [tagDialogOpen, setTagDialogOpen] = useState(false);
@@ -48,17 +51,52 @@ export default function Contacts() {
 
   const loadContacts = () => {
     setLoading(true);
-    fetchContacts({ search, tag: activeTag === 'All' ? undefined : activeTag })
+    fetchContacts({ 
+      search, 
+      tag: activeTag === 'All' ? undefined : activeTag,
+      source: sourceFilter || undefined
+    })
       .then(r => {
         setContacts(r.data);
         setLoading(false);
+        // Clear selection on reload/filter change to avoid inconsistencies
+        setSelectedIds(new Set());
       })
       .catch(() => setLoading(false));
   };
 
   useEffect(() => {
     loadContacts();
-  }, [search, activeTag]);
+  }, [search, activeTag, sourceFilter]);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === contacts.length && contacts.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(contacts.map(c => c.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedIds(newSet);
+  };
+
+  const handleCreateCampaign = async () => {
+    if (selectedIds.size === 0) return;
+    const name = prompt("Nome para a nova lista de destinatários (Segmento Estático):");
+    if (!name) return;
+    
+    try {
+      const res = await createSegment({ name, contact_ids: Array.from(selectedIds) });
+      toast({ title: 'Lista criada', description: 'Redirecionando para nova campanha...' });
+      navigate(`/campaigns/new?segment_id=${res.data.id}`);
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Falha ao criar lista.' });
+    }
+  };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Tem a certeza que deseja eliminar este contacto?')) return;
@@ -106,6 +144,17 @@ export default function Contacts() {
         </div>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-primary">{selectedIds.size} contactos selecionados</span>
+          </div>
+          <Button size="sm" onClick={handleCreateCampaign} className="gap-2">
+            <Mail className="w-4 h-4" /> Criar Campanha
+          </Button>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2 flex-1 max-w-sm">
@@ -114,6 +163,14 @@ export default function Contacts() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Pesquisar contactos..."
+            className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground w-full"
+          />
+        </div>
+        <div className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2 w-48">
+          <input
+            value={sourceFilter}
+            onChange={e => setSourceFilter(e.target.value)}
+            placeholder="Filtrar por Origem..."
             className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground w-full"
           />
         </div>
@@ -141,6 +198,12 @@ export default function Contacts() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
+                <th className="py-3 px-4 w-10">
+                  <Checkbox 
+                    checked={contacts.length > 0 && selectedIds.size === contacts.length}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Contacto</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground hidden md:table-cell">Tags</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground hidden md:table-cell">Origem</th>
@@ -165,6 +228,12 @@ export default function Contacts() {
                   ))
                 : contacts.map(c => (
                     <tr key={c.id} className="border-b border-border/50 table-row-hover">
+                      <td className="py-3 px-4">
+                        <Checkbox 
+                          checked={selectedIds.has(c.id)}
+                          onCheckedChange={() => toggleSelect(c.id)}
+                        />
+                      </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">

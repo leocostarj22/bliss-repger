@@ -162,6 +162,7 @@ export async function fetchContacts(params?: {
   status?: string;
   search?: string;
   tag?: string;
+  source?: string;
 }): Promise<ApiResponse<Contact[]>> {
   const query = new URLSearchParams();
   if (params?.page) query.append('page', params.page.toString());
@@ -170,6 +171,7 @@ export async function fetchContacts(params?: {
   if (params?.search) query.append('search', params.search);
   // Note: Tag filtering is implemented in backend but might need adjustment if tag isn't a direct column
   if (params?.tag) query.append('tag', params.tag);
+  if (params?.source) query.append('source', params.source);
 
   const response = await fetch(`/api/v1/email/lists?${query.toString()}`, {
     method: 'GET',
@@ -350,6 +352,24 @@ export async function fetchAutomation(id: string): Promise<ApiResponse<Automatio
 
   if (!response.ok) {
     throw new Error(`Failed to fetch automation: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export async function createSegment(data: { name: string; contact_ids?: string[]; filters?: any[] }): Promise<ApiResponse<any>> {
+  const response = await fetch('/api/v1/email/segments', {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create segment: ${response.statusText}`);
   }
 
   return response.json();

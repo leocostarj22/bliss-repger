@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\CRM\Http\Controllers\Api\CampaignController;
 use Modules\CRM\Http\Controllers\Api\ContactController;
 use Modules\CRM\Http\Controllers\Api\DashboardController;
+use Modules\CRM\Http\Controllers\Api\SegmentController;
 use Modules\CRM\Http\Controllers\Api\UserController;
 use Modules\CRM\Http\Controllers\Api\AutomationController;
 use Modules\CRM\Http\Controllers\CRMController;
@@ -28,6 +29,10 @@ Route::prefix('v1')->group(function () {
         Route::delete('campaigns/{id}', [CampaignController::class, 'destroy']);
         Route::post('campaigns/{id}/duplicate', [CampaignController::class, 'duplicate']);
         
+        // Segments Routes
+        Route::get('segments', [SegmentController::class, 'index']);
+        Route::post('segments', [SegmentController::class, 'store']);
+
         // Contacts Routes
         Route::get('lists', [ContactController::class, 'index']);
         Route::post('lists', [ContactController::class, 'store']);

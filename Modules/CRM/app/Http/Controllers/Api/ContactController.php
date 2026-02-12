@@ -39,6 +39,16 @@ class ContactController extends Controller
             });
         }
 
+        // Source Filter
+        if ($request->filled('source')) {
+            $query->where('source', $request->source);
+        }
+
+        // Tag Filter
+        if ($request->filled('tag')) {
+            $query->whereJsonContains('tags', $request->tag);
+        }
+
         // Pagination
         $perPage = $request->input('perPage', 10);
         $contacts = $query->orderBy('created_at', 'desc')->paginate($perPage);
