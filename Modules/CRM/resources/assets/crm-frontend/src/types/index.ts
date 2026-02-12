@@ -6,6 +6,7 @@ export interface Campaign {
   name: string;
   subject: string;
   status: CampaignStatus;
+  channel?: 'email' | 'sms' | 'whatsapp' | 'gocontact';
   segment_id?: string;
   listId?: string;
   listName?: string;

@@ -19,6 +19,7 @@ const campaignSchema = z.object({
   name: z.string().min(1, 'O nome é obrigatório'),
   subject: z.string().min(1, 'O assunto é obrigatório'),
   status: z.enum(['draft', 'scheduled', 'sending', 'sent']),
+  channel: z.enum(['email', 'sms', 'whatsapp', 'gocontact']),
   segment_id: z.string().optional(),
   content: z.string().optional(),
 });
@@ -39,6 +40,7 @@ export function CampaignForm({ initialData, onSubmit, isLoading, segments = [] }
       name: initialData?.name || '',
       subject: initialData?.subject || '',
       status: initialData?.status || 'draft',
+      channel: initialData?.channel || 'email',
       segment_id: initialData?.segment_id || initialData?.listId || '',
       content: initialData?.content || '',
     },
@@ -63,6 +65,24 @@ export function CampaignForm({ initialData, onSubmit, isLoading, segments = [] }
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="channel">Canal de Envio</Label>
+          <Select
+            defaultValue={form.getValues('channel')}
+            onValueChange={(value) => form.setValue('channel', value as any)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecionar canal" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="email">Email</SelectItem>
+              <SelectItem value="sms">SMS</SelectItem>
+              <SelectItem value="whatsapp">WhatsApp</SelectItem>
+              <SelectItem value="gocontact">GoContact</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="status">Estado</Label>
           <Select
