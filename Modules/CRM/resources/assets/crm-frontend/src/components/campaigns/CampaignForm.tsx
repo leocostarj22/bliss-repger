@@ -21,6 +21,8 @@ const campaignSchema = z.object({
   status: z.enum(['draft', 'scheduled', 'sending', 'sent']),
   channel: z.enum(['email', 'sms', 'whatsapp', 'gocontact']),
   segment_id: z.string().optional(),
+  filter_source: z.string().optional(),
+  filter_tag: z.string().optional(),
   content: z.string().optional(),
 });
 
@@ -42,12 +44,37 @@ export function CampaignForm({ initialData, onSubmit, isLoading, segments = [] }
       status: initialData?.status || 'draft',
       channel: initialData?.channel || 'email',
       segment_id: initialData?.segment_id || initialData?.listId || '',
+      filter_source: '',
+      filter_tag: '',
       content: initialData?.content || '',
     },
   });
 
+  const selectedSegment = form.watch('segment_id');
+  const isCustomSegment = selectedSegment === 'custom';
+
+  const handleSubmit = (data: CampaignFormValues) => {
+    const payload: any = { ...data };
+    
+    if (data.segment_id === 'custom') {
+      payload.segment_id = null;
+      payload.filters = [];
+      if (data.filter_source) {
+        payload.filters.push({ field: 'source', op: 'eq', value: data.filter_source });
+      }
+      if (data.filter_tag) {
+        payload.filters.push({ field: 'tags', op: 'contains', value: data.filter_tag });
+      }
+      // Remove virtual fields
+      delete payload.filter_source;
+      delete payload.filter_tag;
+    }
+
+    onSubmit(payload);
+  };
+
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor="name">Nome da Campanha</Label>
         <Input id="name" {...form.register('name')} placeholder="ex: Saldos de Verão 2024" />
@@ -111,6 +138,9 @@ export function CampaignForm({ initialData, onSubmit, isLoading, segments = [] }
               <SelectValue placeholder="Selecionar uma lista" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="custom" className="font-semibold text-primary">
+                + Segmentar Agora (Origem/Tag)
+              </SelectItem>
               {segments.map((segment) => (
                 <SelectItem key={segment.id} value={segment.id}>
                   {segment.name}
@@ -120,6 +150,29 @@ export function CampaignForm({ initialData, onSubmit, isLoading, segments = [] }
           </Select>
         </div>
       </div>
+
+      {isCustomSegment && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-md bg-muted/20">
+          <div className="space-y-2">
+            <Label htmlFor="filter_source">Filtrar por Origem</Label>
+            <Input 
+              id="filter_source" 
+              {...form.register('filter_source')} 
+              placeholder="ex: MyFormula" 
+            />
+            <p className="text-xs text-muted-foreground">Opcional. Deixe vazio para ignorar.</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="filter_tag">Filtrar por Tag</Label>
+            <Input 
+              id="filter_tag" 
+              {...form.register('filter_tag')} 
+              placeholder="ex: VIP" 
+            />
+            <p className="text-xs text-muted-foreground">Opcional. Deixe vazio para ignorar.</p>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="content">Conteúdo</Label>

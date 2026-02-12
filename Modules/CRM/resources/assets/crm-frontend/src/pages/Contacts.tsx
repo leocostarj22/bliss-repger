@@ -143,6 +143,7 @@ export default function Contacts() {
               <tr className="border-b border-border">
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Contacto</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground hidden md:table-cell">Tags</th>
+                <th className="text-left py-3 px-4 font-medium text-muted-foreground hidden md:table-cell">Origem</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground hidden lg:table-cell">Estado</th>
                 <th className="text-right py-3 px-4 font-medium text-muted-foreground hidden lg:table-cell">Taxa Abertura</th>
                 <th className="text-right py-3 px-4 font-medium text-muted-foreground hidden xl:table-cell">Taxa Clique</th>
@@ -155,6 +156,7 @@ export default function Contacts() {
                     <tr key={i} className="border-b border-border/50">
                       <td className="py-3 px-4"><Skeleton className="h-5 w-48" /></td>
                       <td className="py-3 px-4 hidden md:table-cell"><Skeleton className="h-5 w-32" /></td>
+                      <td className="py-3 px-4 hidden md:table-cell"><Skeleton className="h-5 w-24" /></td>
                       <td className="py-3 px-4 hidden lg:table-cell"><Skeleton className="h-5 w-20" /></td>
                       <td className="py-3 px-4 hidden lg:table-cell"><Skeleton className="h-5 w-14 ml-auto" /></td>
                       <td className="py-3 px-4 hidden xl:table-cell"><Skeleton className="h-5 w-14 ml-auto" /></td>
@@ -187,6 +189,9 @@ export default function Contacts() {
                             </span>
                           )}
                         </div>
+                      </td>
+                      <td className="py-3 px-4 hidden md:table-cell text-sm text-muted-foreground">
+                        {c.source || '-'}
                       </td>
                       <td className="py-3 px-4 hidden lg:table-cell">
                         <span className={cn('px-2.5 py-1 rounded-full text-xs font-medium capitalize', statusColors[c.status])}>

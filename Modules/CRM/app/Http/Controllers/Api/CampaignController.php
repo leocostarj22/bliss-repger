@@ -93,7 +93,18 @@ class CampaignController extends Controller
             'template_id' => 'nullable|exists:templates,id',
             'content' => 'nullable|string',
             'scheduled_at' => 'nullable|date',
+            'filters' => 'nullable|array', // New field for dynamic segmentation
         ]);
+
+        if (!empty($validated['filters'])) {
+            $segment = \Modules\CRM\Models\Segment::create([
+                'name' => 'Auto Segment: ' . $validated['name'],
+                'type' => 'dynamic',
+                'definition' => ['filters' => $validated['filters']],
+            ]);
+            $validated['segment_id'] = $segment->id;
+            unset($validated['filters']);
+        }
 
         if ($validated['status'] === 'scheduled' && empty($validated['scheduled_at'])) {
             $validated['scheduled_at'] = now();

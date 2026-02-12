@@ -20,9 +20,9 @@ class SegmentResolver
         $definition = $segment->definition ?? [];
         $filters = $definition['filters'] ?? [];
 
-        $aliases = [
-            'source' => 'utm_source',
-        ];
+        // Aliases removed to allow direct filtering by 'source' column
+        // If utm_source filtering is needed, the frontend should send 'utm_source' as field
+        $aliases = [];
 
         foreach ($filters as $filter) {
             $field = $filter['field'] ?? null;
