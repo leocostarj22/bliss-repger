@@ -241,4 +241,19 @@ class CampaignController extends Controller
             'data' => $newCampaign
         ]);
     }
+
+    /**
+     * Get campaign delivery logs.
+     */
+    public function logs(Request $request, $id): JsonResponse
+    {
+        $campaign = Campaign::findOrFail($id);
+        
+        $logs = $campaign->deliveries()
+            ->with('contact:id,email,first_name,last_name')
+            ->orderBy('created_at', 'desc')
+            ->paginate($request->get('per_page', 20));
+            
+        return response()->json($logs);
+    }
 }

@@ -75,6 +75,27 @@ export async function fetchCampaign(id: string): Promise<ApiResponse<Campaign>> 
   return response.json();
 }
 
+export async function fetchCampaignLogs(id: string, params?: { page?: number; perPage?: number }): Promise<ApiResponse<any>> {
+  const query = new URLSearchParams();
+  if (params?.page) query.append('page', params.page.toString());
+  if (params?.perPage) query.append('per_page', params.perPage.toString());
+
+  const response = await fetch(`/api/v1/email/campaigns/${id}/logs?${query.toString()}`, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch campaign logs: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
 export async function createCampaign(data: Partial<Campaign>): Promise<ApiResponse<Campaign>> {
   const response = await fetch(`/api/v1/email/campaigns`, {
     method: 'POST',

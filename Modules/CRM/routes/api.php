@@ -28,6 +28,7 @@ Route::prefix('v1')->group(function () {
         Route::put('campaigns/{id}', [CampaignController::class, 'update']);
         Route::delete('campaigns/{id}', [CampaignController::class, 'destroy']);
         Route::post('campaigns/{id}/duplicate', [CampaignController::class, 'duplicate']);
+        Route::get('campaigns/{id}/logs', [CampaignController::class, 'logs']);
         
         // Segments Routes
         Route::get('segments', [SegmentController::class, 'index']);

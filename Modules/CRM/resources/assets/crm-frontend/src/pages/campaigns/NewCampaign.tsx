@@ -40,7 +40,7 @@ export default function NewCampaign() {
           <p className="page-subtitle">Criar uma nova campanha de e-mail</p>
         </div>
       </div>
-      <div className="glass-card p-6 max-w-2xl">
+      <div className="glass-card p-6 w-full">
         <CampaignForm onSubmit={handleSubmit} isLoading={loading} segments={segments} />
       </div>
     </div>

@@ -49,7 +49,7 @@ export default function EditCampaign() {
           <p className="page-subtitle">Atualizar detalhes da campanha</p>
         </div>
       </div>
-      <div className="glass-card p-6 max-w-2xl">
+      <div className="glass-card p-6 w-full">
         <CampaignForm initialData={campaign} onSubmit={handleSubmit} isLoading={loading} segments={segments} />
       </div>
     </div>
