@@ -6,7 +6,6 @@
     <title>CRM GMCentral</title>
     
     @vite([
-        'resources/assets/sass/app.scss',
         'resources/assets/crm-frontend/src/main.tsx'
     ], 'build-crm')
 </head>
