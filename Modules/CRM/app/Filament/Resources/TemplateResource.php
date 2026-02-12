@@ -17,6 +17,7 @@ class TemplateResource extends Resource
     protected static ?string $navigationLabel = 'Templates';
     protected static ?string $navigationGroup = 'CRM';
     protected static ?int $navigationSort = 4;
+    protected static bool $shouldRegisterNavigation = false;
 
     public static function form(Form $form): Form
     {

@@ -17,6 +17,7 @@ class SegmentResource extends Resource
     protected static ?string $navigationLabel = 'Seguimentos';
     protected static ?string $navigationGroup = 'CRM';
     protected static ?int $navigationSort = 3;
+    protected static bool $shouldRegisterNavigation = false;
 
     public static function getModelLabel(): string
     {

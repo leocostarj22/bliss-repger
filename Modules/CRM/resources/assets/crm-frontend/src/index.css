@@ -1,0 +1,203 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 30% 6%;
+    --foreground: 210 15% 92%;
+
+    --card: 222 25% 10%;
+    --card-foreground: 210 15% 92%;
+
+    --popover: 222 25% 12%;
+    --popover-foreground: 210 15% 92%;
+
+    --primary: 185 65% 48%;
+    --primary-foreground: 222 40% 4%;
+
+    --secondary: 222 20% 16%;
+    --secondary-foreground: 210 15% 85%;
+
+    --muted: 222 18% 14%;
+    --muted-foreground: 215 12% 52%;
+
+    --accent: 185 40% 18%;
+    --accent-foreground: 185 60% 72%;
+
+    --destructive: 0 68% 52%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 222 18% 18%;
+    --input: 222 18% 18%;
+    --ring: 185 65% 48%;
+
+    --radius: 0.625rem;
+
+    --sidebar-background: 222 30% 5%;
+    --sidebar-foreground: 210 10% 75%;
+    --sidebar-primary: 185 65% 48%;
+    --sidebar-primary-foreground: 222 40% 4%;
+    --sidebar-accent: 222 25% 12%;
+    --sidebar-accent-foreground: 210 15% 92%;
+    --sidebar-border: 222 18% 14%;
+    --sidebar-ring: 185 65% 48%;
+
+    --success: 152 60% 45%;
+    --success-foreground: 152 80% 10%;
+    --warning: 38 90% 55%;
+    --warning-foreground: 38 90% 10%;
+    --info: 210 80% 55%;
+    --info-foreground: 210 80% 10%;
+
+    --chart-1: 185 65% 48%;
+    --chart-2: 152 60% 45%;
+    --chart-3: 38 90% 55%;
+    --chart-4: 280 60% 55%;
+    --chart-5: 0 68% 52%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(185 65% 48%), hsl(195 80% 40%));
+    --gradient-card: linear-gradient(180deg, hsl(222 25% 12%), hsl(222 25% 9%));
+    --shadow-glow: 0 0 20px hsl(185 65% 48% / 0.15);
+  }
+
+  .light {
+    --background: 210 20% 98%;
+    --foreground: 222 30% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 30% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 30% 12%;
+
+    --primary: 185 65% 42%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 15% 93%;
+    --secondary-foreground: 222 20% 30%;
+
+    --muted: 210 15% 95%;
+    --muted-foreground: 215 12% 45%;
+
+    --accent: 185 30% 92%;
+    --accent-foreground: 185 50% 30%;
+
+    --destructive: 0 68% 52%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 210 15% 88%;
+    --input: 210 15% 88%;
+    --ring: 185 65% 42%;
+
+    --radius: 0.625rem;
+
+    --sidebar-background: 210 20% 97%;
+    --sidebar-foreground: 222 20% 35%;
+    --sidebar-primary: 185 65% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 15% 93%;
+    --sidebar-accent-foreground: 222 30% 12%;
+    --sidebar-border: 210 15% 90%;
+    --sidebar-ring: 185 65% 42%;
+
+    --success: 152 60% 38%;
+    --success-foreground: 152 80% 10%;
+    --warning: 38 90% 48%;
+    --warning-foreground: 38 90% 10%;
+    --info: 210 80% 50%;
+    --info-foreground: 210 80% 10%;
+
+    --chart-1: 185 65% 42%;
+    --chart-2: 152 60% 38%;
+    --chart-3: 38 90% 48%;
+    --chart-4: 280 60% 50%;
+    --chart-5: 0 68% 52%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(185 65% 42%), hsl(195 80% 35%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 20% 97%));
+    --shadow-glow: 0 1px 3px hsl(222 30% 12% / 0.08);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm border border-border/50 rounded-lg;
+    box-shadow: var(--shadow-glow);
+  }
+  .stat-card {
+    @apply glass-card p-5 transition-all duration-300;
+  }
+  .stat-card:hover {
+    @apply border-primary/30;
+    box-shadow: 0 0 30px hsl(185 65% 48% / 0.12);
+  }
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground transition-all duration-200;
+  }
+  .nav-item:hover {
+    @apply bg-secondary text-foreground;
+  }
+  .nav-item.active {
+    @apply bg-primary/10 text-primary border border-primary/20;
+  }
+  .page-header {
+    @apply mb-8;
+  }
+  .page-title {
+    @apply text-2xl font-bold tracking-tight;
+  }
+  .page-subtitle {
+    @apply text-muted-foreground text-sm mt-1;
+  }
+  .badge-draft {
+    @apply bg-muted text-muted-foreground;
+  }
+  .badge-scheduled {
+    @apply bg-info/15 text-[hsl(var(--info))];
+  }
+  .badge-sending {
+    @apply bg-warning/15 text-[hsl(var(--warning))];
+  }
+  .badge-sent {
+    @apply bg-success/15 text-[hsl(var(--success))];
+  }
+  .table-row-hover {
+    @apply transition-colors duration-150 hover:bg-secondary/50;
+  }
+}
+
+@layer utilities {
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+  .animate-count {
+    animation: countUp 0.6s ease-out;
+  }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes countUp {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}

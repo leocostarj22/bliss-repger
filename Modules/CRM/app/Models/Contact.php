@@ -25,14 +25,21 @@ class Contact extends Model
         'utm_campaign',
         'utm_content',
         'utm_term',
+        'tags',
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
+        'tags' => 'array',
     ];
 
     public function company()
     {
         return $this->belongsTo(\App\Models\Company::class);
+    }
+
+    public function automationExecutions()
+    {
+        return $this->hasMany(AutomationExecution::class);
     }
 }

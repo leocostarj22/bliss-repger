@@ -20,6 +20,9 @@ class CRMServiceProvider extends ServiceProvider
         $this->registerViews();
         $this->loadMigrationsFrom(base_path('Modules/' . $this->name . '/database/migrations'));
         $this->registerFilamentResources();
+        
+        // Register Observers
+        \Modules\CRM\Models\Contact::observe(\Modules\CRM\Observers\ContactObserver::class);
     }
 
     protected function registerFilamentResources(): void
@@ -52,7 +55,10 @@ class CRMServiceProvider extends ServiceProvider
 
     protected function registerCommandSchedules(): void
     {
-        // ... existing code ...
+        $this->app->booted(function () {
+            $schedule = $this->app->make(\Illuminate\Console\Scheduling\Schedule::class);
+            $schedule->command('crm:run-automations')->everyMinute()->withoutOverlapping();
+        });
     }
 
     protected function registerTranslations(): void

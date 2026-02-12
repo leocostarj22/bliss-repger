@@ -12,6 +12,8 @@ class Campaign extends Model
 
     protected $fillable = [
         'name',
+        'subject',
+        'content',
         'gocontact_id',
         'channel',
         'status',

@@ -18,6 +18,7 @@ class ContactResource extends Resource
     protected static ?string $navigationLabel = 'Contatos';
     protected static ?string $navigationGroup = 'CRM';
     protected static ?int $navigationSort = 2;
+    protected static bool $shouldRegisterNavigation = false;
 
     public static function form(Form $form): Form
     {
