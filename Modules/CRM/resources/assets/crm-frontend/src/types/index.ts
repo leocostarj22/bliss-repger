@@ -29,6 +29,7 @@ export interface Contact {
   firstName: string;
   lastName: string;
   phone?: string;
+  source?: string;
   tags: string[];
   listIds: string[];
   status: 'subscribed' | 'unsubscribed' | 'bounced';

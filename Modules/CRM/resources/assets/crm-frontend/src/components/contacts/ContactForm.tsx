@@ -18,6 +18,7 @@ const contactSchema = z.object({
   name: z.string().min(1, 'O nome é obrigatório'),
   email: z.string().email('E-mail inválido'),
   phone: z.string().optional(),
+  source: z.string().optional(),
   status: z.enum(['subscribed', 'unsubscribed', 'bounced']),
 });
 
@@ -36,6 +37,7 @@ export function ContactForm({ initialData, onSubmit, isLoading }: ContactFormPro
       name: initialData?.name || (initialData ? `${initialData.firstName} ${initialData.lastName}` : ''),
       email: initialData?.email || '',
       phone: initialData?.phone || '',
+      source: initialData?.source || '',
       status: initialData?.status || 'subscribed',
     },
   });
@@ -64,6 +66,11 @@ export function ContactForm({ initialData, onSubmit, isLoading }: ContactFormPro
         {form.formState.errors.phone && (
           <p className="text-sm text-destructive">{form.formState.errors.phone.message}</p>
         )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="source">Origem (Source)</Label>
+        <Input id="source" {...form.register('source')} placeholder="ex: MyFormula, Bliss Natura" />
       </div>
 
       <div className="space-y-2">

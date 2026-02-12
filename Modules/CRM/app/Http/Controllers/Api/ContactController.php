@@ -69,6 +69,7 @@ class ContactController extends Controller
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'status' => 'nullable|string|in:subscribed,unsubscribed,bounced',
+            'source' => 'nullable|string|max:100',
             'tags' => 'nullable|array',
         ]);
 
@@ -98,6 +99,7 @@ class ContactController extends Controller
             'name' => 'sometimes|string|max:255',
             'phone' => 'nullable|string|max:20',
             'status' => 'sometimes|string|in:subscribed,unsubscribed,bounced',
+            'source' => 'nullable|string|max:100',
             'tags' => 'nullable|array',
         ]);
 
@@ -170,6 +172,7 @@ class ContactController extends Controller
             'lastName' => $lastName,
             'name' => $contact->name,
             'phone' => $contact->phone,
+            'source' => $contact->source,
             'tags' => $contact->tags ?? [], 
             'listIds' => [], 
             'status' => $contact->status ?? 'subscribed',

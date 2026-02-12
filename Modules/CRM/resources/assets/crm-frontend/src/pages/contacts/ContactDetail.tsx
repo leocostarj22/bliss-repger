@@ -96,6 +96,13 @@ export default function ContactDetail() {
               </div>
             </div>
             <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Origem</label>
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-muted-foreground" />
+                <span>{contact.source || 'N/A'}</span>
+              </div>
+            </div>
+            <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Criado em</label>
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-muted-foreground" />
