@@ -467,19 +467,34 @@ export async function fetchNotifications(): Promise<ApiResponse<AppNotification[
   return response.json();
 }
 
+const getCsrfToken = () => {
+  const match = document.cookie.match(new RegExp('(^| )XSRF-TOKEN=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+};
+
 export async function markNotificationsAsRead(): Promise<void> {
+  const token = getCsrfToken();
   const response = await fetch('/api/v1/notifications/read', {
     method: 'POST',
-    headers: { 'Accept': 'application/json' },
+    headers: { 
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      ...(token ? { 'X-XSRF-TOKEN': token } : {})
+    },
     credentials: 'include',
   });
   if (!response.ok) throw new Error('Failed to mark notifications as read');
 }
 
 export async function clearNotifications(): Promise<void> {
+  const token = getCsrfToken();
   const response = await fetch('/api/v1/notifications', {
     method: 'DELETE',
-    headers: { 'Accept': 'application/json' },
+    headers: { 
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      ...(token ? { 'X-XSRF-TOKEN': token } : {})
+    },
     credentials: 'include',
   });
   if (!response.ok) throw new Error('Failed to clear notifications');
