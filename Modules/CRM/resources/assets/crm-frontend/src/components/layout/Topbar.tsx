@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Bell, Search, X, Sun, Moon } from 'lucide-react';
-import { fetchNotifications, fetchUser } from '@/services/api';
+import { Bell, Search, X, Sun, Moon, CheckCheck, Trash2 } from 'lucide-react';
+import { fetchNotifications, fetchUser, markNotificationsAsRead, clearNotifications } from '@/services/api';
 import { useTheme } from '@/hooks/use-theme';
 import type { AppNotification } from '@/types';
 import { cn } from '@/lib/utils';
@@ -21,6 +21,24 @@ export function Topbar() {
 
   const { theme, toggle } = useTheme();
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleMarkAsRead = async () => {
+    try {
+      await markNotificationsAsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleClear = async () => {
+    try {
+      await clearNotifications();
+      setNotifications([]);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   return (
     <header className="h-14 border-b border-border bg-card/60 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-20">
@@ -62,12 +80,37 @@ export function Topbar() {
 
           {notifOpen && (
             <div className="absolute right-0 top-10 w-80 bg-popover border border-border rounded-lg shadow-xl animate-fade-in z-50">
-              <div className="p-3 border-b border-border">
-                <h4 className="text-sm font-semibold">Notifications</h4>
+              <div className="p-3 border-b border-border flex items-center justify-between">
+                <h4 className="text-sm font-semibold">Notificações</h4>
+                <div className="flex gap-1">
+                  {unreadCount > 0 && (
+                    <button 
+                      onClick={handleMarkAsRead} 
+                      className="p-1.5 text-muted-foreground hover:text-primary hover:bg-secondary rounded-md transition-colors"
+                      title="Marcar todas como lidas"
+                    >
+                      <CheckCheck className="w-4 h-4" />
+                    </button>
+                  )}
+                  {notifications.length > 0 && (
+                    <button 
+                      onClick={handleClear} 
+                      className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-secondary rounded-md transition-colors"
+                      title="Limpar todas"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="max-h-64 overflow-y-auto">
-                {notifications.map(n => (
-                  <div
+                {notifications.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground text-sm">
+                    Nenhuma notificação
+                  </div>
+                ) : (
+                  notifications.map(n => (
+                    <div
                     key={n.id}
                     className={cn(
                       'px-3 py-2.5 border-b border-border/50 last:border-0 transition-colors hover:bg-secondary/50',
@@ -77,7 +120,8 @@ export function Topbar() {
                     <p className="text-sm font-medium">{n.title}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
                   </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           )}

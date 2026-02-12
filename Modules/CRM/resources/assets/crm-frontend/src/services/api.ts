@@ -466,3 +466,21 @@ export async function fetchNotifications(): Promise<ApiResponse<AppNotification[
   if (!response.ok) throw new Error('Failed to fetch notifications');
   return response.json();
 }
+
+export async function markNotificationsAsRead(): Promise<void> {
+  const response = await fetch('/api/v1/notifications/read', {
+    method: 'POST',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+  if (!response.ok) throw new Error('Failed to mark notifications as read');
+}
+
+export async function clearNotifications(): Promise<void> {
+  const response = await fetch('/api/v1/notifications', {
+    method: 'DELETE',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+  if (!response.ok) throw new Error('Failed to clear notifications');
+}

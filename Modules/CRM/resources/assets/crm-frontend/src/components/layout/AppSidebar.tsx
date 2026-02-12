@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Mail,
+  ArrowLeft,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -61,13 +62,33 @@ export function AppSidebar() {
         })}
       </nav>
 
-      {/* Collapse toggle */}
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center h-12 border-t border-sidebar-border text-muted-foreground hover:text-foreground transition-colors"
-      >
-        {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-      </button>
+      {/* Footer: Admin Link & Collapse Toggle */}
+      <div className="flex h-12 border-t border-sidebar-border shrink-0">
+        <a
+          href="/admin"
+          className={cn(
+            "flex-1 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors",
+            collapsed && "px-0"
+          )}
+          title="Voltar ao Painel Admin"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {!collapsed && <span className="ml-2 text-sm font-medium">Voltar</span>}
+        </a>
+        
+        <div className="w-[1px] bg-sidebar-border" />
+        
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className={cn(
+            "flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors",
+            collapsed ? "flex-1" : "w-12"
+          )}
+          title={collapsed ? "Expandir" : "Recolher"}
+        >
+          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        </button>
+      </div>
     </aside>
   );
 }

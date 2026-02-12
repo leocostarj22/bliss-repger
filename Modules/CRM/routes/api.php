@@ -16,6 +16,8 @@ Route::prefix('v1')->group(function () {
     Route::middleware(['web', 'auth'])->group(function () {
         Route::get('user', [UserController::class, 'me']);
         Route::get('notifications', [UserController::class, 'notifications']);
+        Route::post('notifications/read', [UserController::class, 'markAsRead']);
+        Route::delete('notifications', [UserController::class, 'clear']);
     });
 
     // Email Marketing / Dashboard Routes

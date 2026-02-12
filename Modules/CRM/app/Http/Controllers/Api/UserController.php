@@ -57,4 +57,16 @@ class UserController extends Controller
 
         return response()->json(['data' => $notifications]);
     }
+
+    public function markAsRead(Request $request)
+    {
+        $request->user()->unreadNotifications->markAsRead();
+        return response()->json(['message' => 'Todas as notificações marcadas como lidas']);
+    }
+
+    public function clear(Request $request)
+    {
+        $request->user()->notifications()->delete();
+        return response()->json(['message' => 'Notificações limpas']);
+    }
 }
