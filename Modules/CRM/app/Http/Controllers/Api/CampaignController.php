@@ -95,6 +95,10 @@ class CampaignController extends Controller
             'scheduled_at' => 'nullable|date',
         ]);
 
+        if ($validated['status'] === 'scheduled' && empty($validated['scheduled_at'])) {
+            $validated['scheduled_at'] = now();
+        }
+
         $campaign = Campaign::create($validated);
 
         return response()->json([
@@ -160,6 +164,13 @@ class CampaignController extends Controller
             'content' => 'nullable|string',
             'scheduled_at' => 'nullable|date',
         ]);
+
+        if (isset($validated['status']) && $validated['status'] === 'scheduled' && empty($validated['scheduled_at'])) {
+            $campaignScheduledAt = $campaign->scheduled_at;
+            if (!$campaignScheduledAt) {
+                 $validated['scheduled_at'] = now();
+            }
+        }
 
         $campaign->update($validated);
 
