@@ -4,6 +4,8 @@ namespace Modules\CRM\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Filament\Facades\Filament;
+use Filament\Navigation\NavigationItem;
 
 class CRMServiceProvider extends ServiceProvider
 {
@@ -30,7 +32,16 @@ class CRMServiceProvider extends ServiceProvider
         // Filament resources are automatically discovered through PSR-4 autoloading
         // This method can be used for additional Filament-specific configurations
         if (class_exists(\Filament\Facades\Filament::class)) {
-            // Any additional Filament configuration can go here
+            Filament::serving(function () {
+                Filament::registerNavigationItems([
+                    NavigationItem::make('CRM App')
+                        ->url('/admin/crm/app')
+                        ->icon('heroicon-o-presentation-chart-line')
+                        ->activeIcon('heroicon-s-presentation-chart-line')
+                        ->group('CRM')
+                        ->sort(1),
+                ]);
+            });
         }
 
         if (class_exists(\Livewire\Livewire::class)) {
