@@ -1,4 +1,5 @@
 import { useEditor, EditorContent, type Editor } from '@tiptap/react';
+import { useEffect } from 'react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
@@ -217,7 +218,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
         placeholder: placeholder || 'Escreva o conteúdo aqui...',
       }),
     ],
-    content: value,
+    content: value || '',
     editorProps: {
       attributes: {
         class: 'prose prose-sm max-w-none p-4 min-h-[300px] focus:outline-none dark:prose-invert',
@@ -227,6 +228,16 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
       onChange(editor.getHTML());
     },
   });
+
+  useEffect(() => {
+    if (editor && value !== editor.getHTML()) {
+      editor.commands.setContent(value || '');
+    }
+  }, [value, editor]);
+
+  if (!editor) {
+    return <div className="min-h-[300px] border rounded-md bg-muted/10 animate-pulse" />;
+  }
 
   return (
     <div className="border rounded-md bg-background shadow-sm overflow-hidden focus-within:ring-1 focus-within:ring-ring">
