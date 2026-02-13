@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
+import { Link } from 'react-router-dom';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,9 +73,16 @@ export default function Campaigns() {
           <h1 className="page-title">Campanhas</h1>
           <p className="page-subtitle">Crie, gira e acompanhe as suas campanhas de e-mail</p>
         </div>
-        <Button className="gap-2" onClick={() => navigate('/campaigns/new')}>
-          <Plus className="w-4 h-4" /> Nova Campanha
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" className="gap-2" asChild>
+            <Link to="/templates/editor"><FileEdit className="w-4 h-4" /> Editor de Template</Link>
+          </Button>
+          <Button className="gap-2" asChild>
+            <Link to="/campaigns/new">
+              <Plus className="w-4 h-4" /> Nova Campanha
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

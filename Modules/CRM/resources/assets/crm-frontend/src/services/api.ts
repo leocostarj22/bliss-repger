@@ -6,7 +6,7 @@
  * Base URL pattern: /api/v1/email/...
  */
 
-import type { ApiResponse, Campaign, Contact, DashboardStats, Automation, AppNotification } from '@/types';
+import type { ApiResponse, Campaign, Contact, DashboardStats, Automation, AppNotification, EmailTemplate } from '@/types';
 import { mockCampaigns, mockContacts, mockDashboardStats, mockAutomations, mockNotifications } from './mockData';
 
 const delay = (ms = 400) => new Promise(r => setTimeout(r, ms + Math.random() * 200));
@@ -27,6 +27,83 @@ export async function fetchDashboard(): Promise<ApiResponse<DashboardStats>> {
   }
 
   return response.json();
+}
+
+// ── Templates ──
+const getStoredTemplates = (): EmailTemplate[] => {
+  try {
+    const stored = localStorage.getItem('crm_templates');
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveTemplatesToStorage = (templates: EmailTemplate[]) => {
+  localStorage.setItem('crm_templates', JSON.stringify(templates));
+};
+
+export async function fetchTemplates(): Promise<ApiResponse<EmailTemplate[]>> {
+  // Mock fetch
+  await delay(300);
+  const stored = getStoredTemplates();
+  return { data: stored };
+}
+
+export async function fetchTemplate(id: string): Promise<ApiResponse<EmailTemplate>> {
+  await delay(300);
+  const stored = getStoredTemplates();
+  const template = stored.find(t => t.id === id);
+  
+  if (!template) throw new Error('Template not found');
+  return { data: template as EmailTemplate };
+}
+
+export async function createTemplate(data: Partial<EmailTemplate>): Promise<ApiResponse<EmailTemplate>> {
+  // Mock create
+  await delay(500);
+  const newTemplate: EmailTemplate = {
+    id: `t${Date.now()}`,
+    name: data.name || 'Untitled',
+    content: data.content || [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    ...data,
+  } as EmailTemplate;
+  
+  const stored = getStoredTemplates();
+  stored.unshift(newTemplate);
+  saveTemplatesToStorage(stored);
+  
+  return { data: newTemplate };
+}
+
+export async function updateTemplate(id: string, data: Partial<EmailTemplate>): Promise<ApiResponse<EmailTemplate>> {
+  await delay(500);
+  const stored = getStoredTemplates();
+  const index = stored.findIndex(t => t.id === id);
+  
+  if (index === -1) {
+    throw new Error('Template not found');
+  }
+  
+  stored[index] = { ...stored[index], ...data, updatedAt: new Date().toISOString() };
+  saveTemplatesToStorage(stored);
+  return { data: stored[index] as EmailTemplate };
+}
+
+export async function deleteTemplate(id: string): Promise<ApiResponse<void>> {
+  await delay(300);
+  const stored = getStoredTemplates();
+  const index = stored.findIndex(t => t.id === id);
+  
+  if (index !== -1) {
+    stored.splice(index, 1);
+    saveTemplatesToStorage(stored);
+    return { data: undefined };
+  }
+  
+  throw new Error('Template not found');
 }
 
 // ── Campaigns: /api/v1/email/campaigns ──

@@ -1,19 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CampaignForm, CampaignFormValues } from '@/components/campaigns/CampaignForm';
-import { createCampaign, fetchSegments } from '@/services/api';
+import { createCampaign, fetchSegments, fetchTemplates } from '@/services/api';
 import { useToast } from '@/components/ui/use-toast';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { EmailTemplate } from '@/types';
 
 export default function NewCampaign() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [segments, setSegments] = useState<{ id: string; name: string }[]>([]);
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
 
   useEffect(() => {
     fetchSegments().then(r => setSegments(r.data));
+    fetchTemplates().then(r => setTemplates(r.data));
   }, []);
 
   const handleSubmit = async (data: CampaignFormValues) => {
@@ -41,7 +44,7 @@ export default function NewCampaign() {
         </div>
       </div>
       <div className="glass-card p-6 w-full">
-        <CampaignForm onSubmit={handleSubmit} isLoading={loading} segments={segments} />
+        <CampaignForm onSubmit={handleSubmit} isLoading={loading} segments={segments} templates={templates} />
       </div>
     </div>
   );

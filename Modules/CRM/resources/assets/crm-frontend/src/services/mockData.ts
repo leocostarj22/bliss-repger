@@ -1,4 +1,4 @@
-import type { Campaign, Contact, ContactList, DashboardStats, Automation, AppNotification, DailyMetric } from '@/types';
+import type { Campaign, Contact, ContactList, DashboardStats, Automation, AppNotification, DailyMetric, EmailTemplate } from '@/types';
 
 // ── Helper ──
 const d = (daysAgo: number) => {
@@ -84,6 +84,12 @@ export const mockContacts: Contact[] = Array.from({ length: 50 }, (_, i) => {
 });
 
 // ── Contact Lists ──
+export const mockTemplates: EmailTemplate[] = [
+  { id: 't1', name: 'Newsletter Clean', content: '<p>Hello world</p>', createdAt: d(30), updatedAt: d(5) },
+  { id: 't2', name: 'Welcome Email', content: '<h1>Welcome!</h1>', createdAt: d(60), updatedAt: d(60) },
+  { id: 't3', name: 'Promo Alert', content: '<h2>Special Offer</h2>', createdAt: d(15), updatedAt: d(1) },
+];
+
 export const mockLists: ContactList[] = [
   { id: '1', name: 'All Subscribers', contactCount: 85420, createdAt: d(365) },
   { id: '2', name: 'New Users', contactCount: 12300, createdAt: d(200) },

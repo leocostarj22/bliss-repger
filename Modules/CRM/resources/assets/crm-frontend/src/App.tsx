@@ -1,5 +1,5 @@
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster as HotToaster } from "react-hot-toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -19,6 +19,9 @@ import AutomationBuilder from "@/pages/automations/AutomationBuilder";
 import Analytics from "@/pages/Analytics";
 import SettingsPage from "@/pages/Settings";
 import NotFound from "./pages/NotFound";
+import TemplateEditor from "@/pages/TemplateEditor";
+import Templates from "@/pages/Templates";
+
 
 const queryClient = new QueryClient();
 
@@ -27,7 +30,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
-      <Sonner />
+      <HotToaster />
       <BrowserRouter
         basename={window.location.pathname.startsWith('/admin/crm/app') ? '/admin/crm/app' : '/'}
         future={{
@@ -50,6 +53,9 @@ const App = () => (
             <Route path="/automations/:id" element={<AutomationBuilder />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/templates" element={<Templates />} />
+            <Route path="/templates/editor" element={<TemplateEditor />} />
+            <Route path="/templates/editor/:id" element={<TemplateEditor />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

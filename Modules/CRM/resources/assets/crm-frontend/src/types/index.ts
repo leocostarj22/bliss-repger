@@ -55,6 +55,16 @@ export interface ContactList {
   createdAt: string;
 }
 
+// ── Template Types ──
+export interface EmailTemplate {
+  id: string;
+  name: string;
+  content: string | any; // JSON string or object
+  thumbnail?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── Analytics Types ──
 export interface DailyMetric {
   date: string;

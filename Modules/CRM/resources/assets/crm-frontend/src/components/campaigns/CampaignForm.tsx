@@ -14,8 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Campaign } from '@/types';
+import { Campaign, EmailTemplate } from '@/types';
 import { Loader2 } from 'lucide-react';
+import { blocksToHtml } from '@/lib/template-to-html';
 
 const campaignSchema = z.object({
   name: z.string().min(1, 'O nome é obrigatório'),
@@ -46,9 +47,10 @@ interface CampaignFormProps {
   onSubmit: (data: CampaignFormValues) => void;
   isLoading?: boolean;
   segments?: { id: string; name: string }[];
+  templates?: EmailTemplate[];
 }
 
-export function CampaignForm({ initialData, onSubmit, isLoading, segments = [] }: CampaignFormProps) {
+export function CampaignForm({ initialData, onSubmit, isLoading, segments = [], templates = [] }: CampaignFormProps) {
   const form = useForm<CampaignFormValues>({
     resolver: zodResolver(campaignSchema),
     defaultValues: {
@@ -75,6 +77,14 @@ export function CampaignForm({ initialData, onSubmit, isLoading, segments = [] }
 
   const selectedSegment = form.watch('segment_id');
   const isCustomSegment = selectedSegment === 'custom';
+
+  const handleTemplateSelect = (templateId: string) => {
+    const template = templates.find(t => t.id === templateId);
+    if (template) {
+      const htmlContent = blocksToHtml(template.content);
+      form.setValue('content', htmlContent);
+    }
+  };
 
   const handleSubmit = (data: CampaignFormValues) => {
     const payload: any = { ...data };
@@ -137,14 +147,28 @@ export function CampaignForm({ initialData, onSubmit, isLoading, segments = [] }
         <div className="p-5 border rounded-lg bg-card shadow-sm space-y-4">
           <h3 className="font-semibold text-lg border-b pb-2">Conteúdo</h3>
           <div className="space-y-2">
-            <Label htmlFor="content">Corpo do E-mail</Label>
-            <div className="min-h-[350px]">
-              <RichTextEditor
-                value={form.watch('content') || ''}
-                onChange={(value) => form.setValue('content', value)}
-                placeholder="Escreva o conteúdo do seu e-mail aqui. Use 'Variáveis' para personalizar com o nome do cliente."
-              />
+            <div className="flex items-center justify-between">
+              <Label htmlFor="content">Corpo do E-mail</Label>
+              <div className="w-64">
+                <Select onValueChange={handleTemplateSelect}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Carregar modelo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            <div className="min-h-[350px]">
+             <RichTextEditor
+              value={form.watch('content') || ''}
+              onChange={(value) => form.setValue('content', value)}
+              placeholder="Escreva o conteúdo do seu e-mail aqui. Use 'Variáveis' para personalizar com o nome do cliente."
+            />
+          </div>
             {form.formState.errors.content && (
               <p className="text-sm text-destructive">{form.formState.errors.content.message}</p>
             )}

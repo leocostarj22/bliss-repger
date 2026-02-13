@@ -1,3 +1,6 @@
+@import './styles/_variables.scss';
+@import './styles/_keyframe-animations.scss';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -118,6 +121,98 @@
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 20% 97%));
     --shadow-glow: 0 1px 3px hsl(222 30% 12% / 0.08);
   }
+
+  /* Tiptap Template Variables Mapping */
+  :root {
+    --tt-bg-color: hsl(var(--background));
+    --tt-theme-text: hsl(var(--foreground));
+    --tt-scrollbar-color: hsl(var(--muted-foreground));
+    --tt-toolbar-bg-color: hsl(var(--card));
+    --tt-toolbar-border-color: hsl(var(--border));
+    
+    /* Neutral Grays */
+    --tt-gray-light-50: #f9fafb;
+    --tt-gray-light-100: #f3f4f6;
+    --tt-gray-light-200: #e5e7eb;
+    --tt-gray-light-300: #d1d5db;
+    --tt-gray-light-400: #9ca3af;
+    --tt-gray-light-500: #6b7280;
+    --tt-gray-light-600: #4b5563;
+    --tt-gray-light-700: #374151;
+    --tt-gray-light-800: #1f2937;
+    --tt-gray-light-900: #111827;
+    
+    --tt-gray-dark-50: #f9fafb;
+    --tt-gray-dark-100: #f3f4f6;
+    --tt-gray-dark-200: #e5e7eb;
+    --tt-gray-dark-300: #d1d5db;
+    --tt-gray-dark-400: #9ca3af;
+    --tt-gray-dark-500: #6b7280;
+    --tt-gray-dark-600: #4b5563;
+    --tt-gray-dark-700: #374151;
+    --tt-gray-dark-800: #1f2937;
+    --tt-gray-dark-900: #111827;
+    
+    /* Semantic Colors */
+    --tt-primary: hsl(var(--primary));
+    --tt-secondary: hsl(var(--secondary));
+    --tt-accent: hsl(var(--accent));
+    --tt-muted: hsl(var(--muted));
+    --tt-border: hsl(var(--border));
+  }
+}
+
+@layer components {
+  /* Tiptap Editor Styles */
+  
+  /* Placeholder */
+  .ProseMirror p.is-editor-empty:first-child::before {
+    @apply text-muted-foreground content-[attr(data-placeholder)] float-left h-0 pointer-events-none;
+  }
+
+  /* Task Lists - Override prose defaults */
+  .prose ul[data-type="taskList"] {
+    @apply list-none pl-0;
+  }
+
+  .prose ul[data-type="taskList"] li {
+    @apply flex items-start pl-0 mt-2 gap-2; 
+  }
+
+  .prose ul[data-type="taskList"] li > label {
+    @apply select-none mt-1 flex-none;
+  }
+
+  .prose ul[data-type="taskList"] li > div {
+    @apply flex-auto;
+  }
+  
+  .prose ul[data-type="taskList"] li p {
+    @apply m-0;
+  }
+
+  /* Table Selection & Resizing */
+  .ProseMirror .selectedCell:after {
+    @apply absolute inset-0 bg-primary/20 content-[''] pointer-events-none z-10;
+  }
+  
+  .ProseMirror .column-resize-handle {
+    @apply bg-primary w-1 absolute top-0 bottom-0 -right-0.5 pointer-events-none z-20;
+  }
+
+  /* Image Selection */
+  .ProseMirror img.ProseMirror-selectednode {
+    @apply ring-2 ring-primary ring-offset-2;
+  }
+  
+  /* Code Blocks - Enhance prose defaults if needed */
+  .prose pre {
+    @apply bg-muted text-foreground border border-border;
+  }
+  
+  .prose code {
+    @apply text-primary bg-muted/50 px-1 py-0.5 rounded font-normal before:content-none after:content-none;
+  }
 }
 
 @layer base {
@@ -147,6 +242,20 @@
   }
   .nav-item:hover {
     @apply bg-secondary text-foreground;
+  }
+  
+  /* TipTap Editor Styles */
+  .ProseMirror {
+    min-height: 300px;
+    outline: none;
+    padding: 0.5rem;
+  }
+  .ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    color: hsl(var(--muted-foreground));
+    pointer-events: none;
+    height: 0;
   }
   .nav-item.active {
     @apply bg-primary/10 text-primary border border-primary/20;
