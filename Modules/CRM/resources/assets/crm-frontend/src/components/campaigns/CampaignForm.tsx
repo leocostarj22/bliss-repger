@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import {
   Select,
   SelectContent,
@@ -137,12 +138,16 @@ export function CampaignForm({ initialData, onSubmit, isLoading, segments = [] }
           <h3 className="font-semibold text-lg border-b pb-2">Conteúdo</h3>
           <div className="space-y-2">
             <Label htmlFor="content">Corpo do E-mail</Label>
-            <Textarea
-              id="content"
-              {...form.register('content')}
-              placeholder="O conteúdo do e-mail vai aqui..."
-              className="min-h-[300px]"
-            />
+            <div className="min-h-[350px]">
+              <RichTextEditor
+                value={form.watch('content') || ''}
+                onChange={(value) => form.setValue('content', value)}
+                placeholder="Escreva o conteúdo do seu e-mail aqui. Use 'Variáveis' para personalizar com o nome do cliente."
+              />
+            </div>
+            {form.formState.errors.content && (
+              <p className="text-sm text-destructive">{form.formState.errors.content.message}</p>
+            )}
           </div>
 
           <div className="flex items-start space-x-2 pt-4 border-t">
