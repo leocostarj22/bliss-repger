@@ -68,13 +68,6 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Widgets\MessagesOverview::class,
                 \App\Filament\Widgets\AdminPostsWidget::class,
             ])
-            ->navigationItems([
-                NavigationItem::make('Acessar CRM (Novo)')
-                    ->url('/admin/crm/app')
-                    ->icon('heroicon-o-computer-desktop')
-                    ->group('CRM')
-                    ->sort(0),
-            ])
             ->navigationGroups([
                 NavigationGroup::make('Administração')
                     ->collapsible()
