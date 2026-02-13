@@ -61,25 +61,27 @@ export function blocksToHtml(blocks: TemplateBlock[] | string): string {
 
       case 'social': {
         const networks = (p.networks as string[]) || [];
-        const iconSize = Number(p.iconSize) || 24;
-        // Using generic placeholders or CDN icons could be better, here we use simple text/emoji fallback if images fail
-        // In a real app, these should be assets or reliable CDN links
-        const socialIcons: Record<string, string> = {
-          facebook: 'https://cdn-icons-png.flaticon.com/128/733/733547.png',
-          instagram: 'https://cdn-icons-png.flaticon.com/128/2111/2111463.png',
-          twitter: 'https://cdn-icons-png.flaticon.com/128/733/733579.png',
-          linkedin: 'https://cdn-icons-png.flaticon.com/128/174/174857.png',
-          youtube: 'https://cdn-icons-png.flaticon.com/128/1384/1384060.png',
-          tiktok: 'https://cdn-icons-png.flaticon.com/128/3046/3046121.png'
+        const iconSize = Number(p.iconSize) || 28;
+        const color = String(p.color || '#333333');
+        const links = (p.links as Record<string, string>) || {};
+        
+        const iconMap: Record<string, string> = {
+          facebook: 'f', instagram: 'In', twitter: 'X', linkedin: 'in', youtube: 'YT', tiktok: 'Tk',
         };
         
         return `
-          <p style="text-align: ${p.align};">
-            ${networks.map(net => `
-              <a href="#" style="display: inline-block; margin: 0 5px; text-decoration: none;">
-                <img src="${socialIcons[net] || ''}" alt="${net}" width="${iconSize}" height="${iconSize}" style="display: block; border-radius: 4px;" />
-              </a>
-            `).join('')}
+          <p style="text-align: ${p.align}; margin: 0;">
+            ${networks.map(net => {
+              const link = links[net] || '#';
+              const label = iconMap[net] || net[0].toUpperCase();
+              return `
+                <a href="${link}" target="_blank" style="display: inline-block; margin: 0 5px; text-decoration: none;">
+                  <span style="display: inline-block; width: ${iconSize}px; height: ${iconSize}px; line-height: ${iconSize}px; background-color: ${color}; color: #ffffff; border-radius: 50%; text-align: center; font-family: sans-serif; font-weight: bold; font-size: ${Math.round(iconSize * 0.45)}px;">
+                    ${label}
+                  </span>
+                </a>
+              `;
+            }).join('')}
           </p>`;
       }
 

@@ -18,6 +18,7 @@ export async function fetchDashboard(): Promise<ApiResponse<DashboardStats>> {
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
     },
     credentials: 'include', // Ensure Laravel session cookies are sent
   });
@@ -124,6 +125,7 @@ export async function fetchCampaigns(params?: {
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
     },
     credentials: 'include',
   });
@@ -141,6 +143,7 @@ export async function fetchCampaign(id: string): Promise<ApiResponse<Campaign>> 
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
     },
     credentials: 'include',
   });
@@ -162,6 +165,7 @@ export async function fetchCampaignLogs(id: string, params?: { page?: number; pe
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
     },
     credentials: 'include',
   });
@@ -179,6 +183,7 @@ export async function createCampaign(data: Partial<Campaign>): Promise<ApiRespon
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
     },
     credentials: 'include',
     body: JSON.stringify(data),
@@ -197,6 +202,7 @@ export async function updateCampaign(id: string, data: Partial<Campaign>): Promi
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
     },
     credentials: 'include',
     body: JSON.stringify(data),
@@ -394,10 +400,11 @@ export async function removeTag(id: string, tag: string): Promise<ApiResponse<Co
 // ── Analytics: /api/v1/email/analytics ──
 export async function fetchAnalytics(): Promise<ApiResponse<DashboardStats>> {
   const response = await fetch('/api/v1/email/analytics', {
-    method: 'GET',
+    method: 'GET', 
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
     },
     credentials: 'include', // Important: Send cookies/session with the request
   });

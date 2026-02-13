@@ -14,5 +14,18 @@ export const DEFAULT_BLOCK_PROPS: Record<BlockType, Record<string, unknown>> = {
   video: { src: 'https://www.youtube.com/watch?v=1234567890', width: '100%', height: 'auto' },
   spacer: { height: 16 },
   feed: { url: 'https://www.instagram.com/feed', width: '100%', height: 'auto' },
-  social: { networks: ['facebook', 'twitter', 'linkedin'], align: 'center' },
+  social: { 
+    networks: ['facebook', 'twitter', 'linkedin'], 
+    align: 'center',
+    iconSize: 28,
+    color: '#333333',
+    links: {
+      facebook: 'https://facebook.com',
+      twitter: 'https://twitter.com',
+      linkedin: 'https://linkedin.com',
+      instagram: 'https://instagram.com',
+      youtube: 'https://youtube.com',
+      tiktok: 'https://tiktok.com'
+    }
+  },
 };

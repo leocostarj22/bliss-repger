@@ -207,25 +207,46 @@ export function PropertiesPanel({ block, onChange }: Props) {
       {block.type === 'social' && (
         <>
           <Field label="Redes sociais">
-            <div className="space-y-1.5">
+            <div className="space-y-3">
               {['facebook','instagram','twitter','linkedin','youtube','tiktok'].map(net => {
                 const active = ((p.networks as string[]) || []).includes(net);
                 return (
-                  <label key={net} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={active}
-                      onChange={() => {
-                        const cur = (p.networks as string[]) || [];
-                        set('networks', active ? cur.filter(n => n !== net) : [...cur, net]);
-                      }}
-                      className="rounded"
-                    />
-                    <span className="capitalize">{net}</span>
-                  </label>
+                  <div key={net} className="space-y-1">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={active}
+                        onChange={() => {
+                          const cur = (p.networks as string[]) || [];
+                          set('networks', active ? cur.filter(n => n !== net) : [...cur, net]);
+                        }}
+                        className="rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <span className="capitalize">{net}</span>
+                    </label>
+                    {active && (
+                      <Input
+                        value={(p.links as Record<string, string>)?.[net] || ''}
+                        onChange={(e) => {
+                          const links = (p.links as Record<string, string>) || {};
+                          set('links', { ...links, [net]: e.target.value });
+                        }}
+                        placeholder={`URL do ${net}`}
+                        className="h-7 text-xs"
+                      />
+                    )}
+                  </div>
                 );
               })}
             </div>
+          </Field>
+          <Field label="Cor dos ícones">
+            <Input 
+              type="color" 
+              value={String(p.color || '#333333')} 
+              onChange={e => set('color', e.target.value)} 
+              className="h-9 w-full" 
+            />
           </Field>
           <Field label="Tamanho dos ícones">
             <div className="flex items-center gap-3">

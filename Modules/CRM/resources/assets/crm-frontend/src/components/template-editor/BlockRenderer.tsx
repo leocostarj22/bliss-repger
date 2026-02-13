@@ -105,6 +105,7 @@ case 'video':
     case 'social': {
       const networks = (p.networks as string[]) || [];
       const size = Number(p.iconSize) || 28;
+      const color = String(p.color || '#333333');
       const iconMap: Record<string, string> = {
         facebook: 'f', instagram: '📷', twitter: '𝕏', linkedin: 'in', youtube: '▶', tiktok: '♪',
       };
@@ -113,8 +114,8 @@ case 'video':
           {networks.map((n) => (
             <div
               key={n}
-              style={{ width: size, height: size, fontSize: size * 0.45 }}
-              className="rounded-full bg-gray-700 text-white flex items-center justify-center font-bold"
+              style={{ width: size, height: size, fontSize: size * 0.45, backgroundColor: color }}
+              className="rounded-full text-white flex items-center justify-center font-bold"
               title={n}
             >
               {iconMap[n] || n[0]}
