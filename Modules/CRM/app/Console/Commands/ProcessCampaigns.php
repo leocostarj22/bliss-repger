@@ -30,6 +30,17 @@ class ProcessCampaigns extends Command
      */
     public function handle(SegmentResolver $resolver)
     {
+        set_time_limit(0); // Prevent timeout for large lists
+
+        // 0. Reset Stuck Campaigns (Sending > 1 hour)
+        $stuck = Campaign::where('status', 'sending')
+            ->where('updated_at', '<', now()->subHour())
+            ->update(['status' => 'draft']);
+        
+        if ($stuck > 0) {
+            $this->info("Reset {$stuck} stuck campaigns to draft.");
+        }
+
         // 1. Get Scheduled Campaigns
         $campaigns = Campaign::where('status', 'scheduled')
             ->where('scheduled_at', '<=', now())

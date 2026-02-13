@@ -221,6 +221,7 @@ export async function deleteCampaign(id: string): Promise<void> {
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
     },
     credentials: 'include',
   });
@@ -236,6 +237,7 @@ export async function duplicateCampaign(id: string): Promise<ApiResponse<Campaig
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
     },
     credentials: 'include',
   });
@@ -282,6 +284,7 @@ export async function fetchContacts(params?: {
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
     },
     credentials: 'include',
   });
@@ -299,6 +302,7 @@ export async function fetchContact(id: string): Promise<ApiResponse<Contact>> {
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
     },
     credentials: 'include',
   });
