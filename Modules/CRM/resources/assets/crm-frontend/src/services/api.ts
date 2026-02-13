@@ -400,11 +400,10 @@ export async function removeTag(id: string, tag: string): Promise<ApiResponse<Co
 // ── Analytics: /api/v1/email/analytics ──
 export async function fetchAnalytics(): Promise<ApiResponse<DashboardStats>> {
   const response = await fetch('/api/v1/email/analytics', {
-    method: 'GET', 
+    method: 'GET',
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
-      'X-Requested-With': 'XMLHttpRequest',
     },
     credentials: 'include', // Important: Send cookies/session with the request
   });

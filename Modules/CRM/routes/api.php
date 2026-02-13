@@ -27,8 +27,8 @@ Route::prefix('v1')->group(function () {
     });
 
     // Email Marketing / Dashboard Routes
-    // Note: Re-enabled auth:sanctum for production.
-    Route::prefix('email')->middleware(['auth:sanctum'])->group(function () {
+    // Note: Temporarily removed auth:sanctum for development ease. Re-enable for production.
+    Route::prefix('email')->group(function () {
         // Route to serve images directly (bypassing storage link issues)
         Route::get('media/view/{filename}', function ($filename) {
             $path = storage_path('app/public/crm-media/' . $filename);
