@@ -152,7 +152,7 @@ export async function fetchCampaign(id: string): Promise<ApiResponse<Campaign>> 
   return response.json();
 }
 
-export async function fetchCampaignLogs(id: string, params?: { page?: number; perPage?: number }): Promise<ApiResponse<any>> {
+export async function fetchCampaignLogs(id: string, params?: { page?: number; perPage?: number }): Promise<ApiResponse<any[]>> {
   const query = new URLSearchParams();
   if (params?.page) query.append('page', params.page.toString());
   if (params?.perPage) query.append('per_page', params.perPage.toString());
@@ -170,7 +170,18 @@ export async function fetchCampaignLogs(id: string, params?: { page?: number; pe
     throw new Error(`Failed to fetch campaign logs: ${response.statusText}`);
   }
 
-  return response.json();
+  const json = await response.json();
+  const rows = Array.isArray(json.data) ? json.data : [];
+
+  return {
+    data: rows,
+    meta: json.total !== undefined ? {
+      total: json.total,
+      page: json.current_page ?? 1,
+      perPage: json.per_page ?? rows.length,
+      totalPages: json.last_page ?? 1,
+    } : undefined,
+  };
 }
 
 export async function createCampaign(data: Partial<Campaign>): Promise<ApiResponse<Campaign>> {
@@ -242,15 +253,111 @@ export async function duplicateCampaign(id: string): Promise<ApiResponse<Campaig
 }
 
 export async function fetchSegments(): Promise<ApiResponse<{ id: string; name: string }[]>> {
-  // Mock segments for now
-  await delay(200);
+  const response = await fetch('/api/v1/email/segments', {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch segments: ${response.statusText}`);
+  }
+
+  const json = await response.json();
+  const rows = Array.isArray(json.data) ? json.data : json;
   return {
-    data: [
-      { id: '1', name: 'All Contacts' },
-      { id: '2', name: 'New Subscribers' },
-      { id: '3', name: 'VIP Customers' },
-    ]
+    data: rows.map((s: any) => ({ id: String(s.id), name: s.name }))
   };
+}
+
+export async function fetchSegmentEstimate(id: string): Promise<ApiResponse<{ id: string; name: string; estimated: number }>> {
+  const response = await fetch(`/api/v1/email/segments/${id}/estimate`, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to estimate segment: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export async function fetchSegmentEstimateByFilters(payload: { filters: any[] }): Promise<ApiResponse<{ estimated: number }>> {
+  const response = await fetch(`/api/v1/email/segments/estimate-filters`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to estimate segment by filters: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export async function fetchSegmentsFull(): Promise<ApiResponse<any[]>> {
+  const response = await fetch('/api/v1/email/segments', {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch segments: ${response.statusText}`);
+  }
+
+  const json = await response.json();
+  const rows = Array.isArray(json.data) ? json.data : json;
+  return { data: rows };
+}
+
+export async function updateSegment(id: string, payload: { name: string }): Promise<ApiResponse<any>> {
+  const response = await fetch(`/api/v1/email/segments/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update segment: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export async function deleteSegment(id: string): Promise<void> {
+  const response = await fetch(`/api/v1/email/segments/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to delete segment: ${response.statusText}`);
+  }
 }
 
 // ── Contacts: /api/v1/email/lists ──

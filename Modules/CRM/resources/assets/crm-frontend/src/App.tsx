@@ -14,6 +14,7 @@ import Contacts from "@/pages/Contacts";
 import NewContact from "@/pages/contacts/NewContact";
 import EditContact from "@/pages/contacts/EditContact";
 import ContactDetail from "@/pages/contacts/ContactDetail";
+import Segments from "@/pages/Segments";
 import Automations from "@/pages/Automations";
 import AutomationBuilder from "@/pages/automations/AutomationBuilder";
 import Analytics from "@/pages/Analytics";
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/contacts/new" element={<NewContact />} />
             <Route path="/contacts/:id" element={<ContactDetail />} />
             <Route path="/contacts/:id/edit" element={<EditContact />} />
+            <Route path="/segments" element={<Segments />} />
             <Route path="/automations" element={<Automations />} />
             <Route path="/automations/:id" element={<AutomationBuilder />} />
             <Route path="/analytics" element={<Analytics />} />

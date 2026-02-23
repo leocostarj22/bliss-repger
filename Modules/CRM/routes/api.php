@@ -79,6 +79,11 @@ Route::prefix('v1')->group(function () {
         
         // Segments Routes
         Route::get('segments', [SegmentController::class, 'index']);
+        Route::get('segments/{id}/estimate', [SegmentController::class, 'estimate']);
+        Route::post('segments/estimate-filters', [SegmentController::class, 'estimateByFilters']);
+        Route::get('segments/{id}', [SegmentController::class, 'show']);
+        Route::put('segments/{id}', [SegmentController::class, 'update']);
+        Route::delete('segments/{id}', [SegmentController::class, 'destroy']);
         Route::post('segments', [SegmentController::class, 'store']);
 
         // Contacts Routes

@@ -154,14 +154,31 @@ class CampaignController extends Controller
             ->findOrFail($id);
 
         $sent = $campaign->sentCount;
+        $estimated = 0;
+        if ($campaign->segment_id) {
+            try {
+                $estimated = app(\Modules\CRM\Services\SegmentResolver::class)->resolveContacts($campaign->segment_id)->count();
+            } catch (\Throwable $e) {
+                $estimated = 0;
+            }
+        }
         $data = [
             'id' => (string)$campaign->id,
             'name' => $campaign->name,
             'subject' => $campaign->subject ?? $campaign->name,
+            'preheader' => $campaign->preheader,
+            'fromName' => $campaign->from_name,
+            'fromEmail' => $campaign->from_email,
             'status' => $campaign->status,
             'channel' => $campaign->channel,
             'listId' => (string)($campaign->segment_id ?? ''),
             'listName' => $campaign->segment ? $campaign->segment->name : 'All Contacts',
+            'trackOpens' => $campaign->track_opens,
+            'trackClicks' => $campaign->track_clicks,
+            'trackReplies' => $campaign->track_replies,
+            'useGoogleAnalytics' => $campaign->use_google_analytics,
+            'isPublic' => $campaign->is_public,
+            'physicalAddress' => $campaign->physical_address,
             'sentCount' => $sent,
             'openRate' => $sent > 0 ? round(($campaign->openedCount / $sent) * 100, 1) : 0,
             'clickRate' => $sent > 0 ? round(($campaign->clickedCount / $sent) * 100, 1) : 0,
@@ -171,6 +188,7 @@ class CampaignController extends Controller
             'createdAt' => $campaign->created_at->toIso8601String(),
             'updatedAt' => $campaign->updated_at->toIso8601String(),
             'content' => $campaign->content,
+            'estimatedRecipients' => $estimated,
         ];
 
         return response()->json(['data' => $data]);
@@ -183,25 +201,33 @@ class CampaignController extends Controller
     {
         $campaign = Campaign::findOrFail($id);
 
-        $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'subject' => 'nullable|string|max:255',
-            'status' => 'sometimes|required|in:draft,scheduled,sending,sent',
-            'channel' => 'sometimes|required|in:email,sms,whatsapp,gocontact',
-            'segment_id' => 'nullable|exists:segments,id',
-            'template_id' => 'nullable|exists:templates,id',
-            'content' => 'nullable|string',
-            'scheduled_at' => 'nullable|date',
+        $data = $request->only([
+            'name',
+            'subject',
+            'preheader',
+            'from_name',
+            'from_email',
+            'status',
+            'channel',
+            'segment_id',
+            'template_id',
+            'content',
+            'scheduled_at',
+            'track_opens',
+            'track_clicks',
+            'track_replies',
+            'use_google_analytics',
+            'is_public',
+            'physical_address',
         ]);
 
-        if (isset($validated['status']) && $validated['status'] === 'scheduled' && empty($validated['scheduled_at'])) {
-            $campaignScheduledAt = $campaign->scheduled_at;
-            if (!$campaignScheduledAt) {
-                 $validated['scheduled_at'] = now();
+        if (isset($data['status']) && $data['status'] === 'scheduled' && empty($data['scheduled_at'])) {
+            if (! $campaign->scheduled_at) {
+                $data['scheduled_at'] = now();
             }
         }
 
-        $campaign->update($validated);
+        $campaign->update($data);
 
         return response()->json([
             'message' => 'Campaign updated successfully',
@@ -250,7 +276,7 @@ class CampaignController extends Controller
         $campaign = Campaign::findOrFail($id);
         
         $logs = $campaign->deliveries()
-            ->with('contact:id,email,first_name,last_name')
+            ->with('contact:id,email')
             ->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 20));
             

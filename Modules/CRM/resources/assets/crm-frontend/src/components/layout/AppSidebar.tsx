@@ -18,6 +18,7 @@ const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { label: 'Campanhas', icon: Send, path: '/campaigns' },
   { label: 'Contactos', icon: Users, path: '/contacts' },
+  { label: 'Segmentos', icon: Mail, path: '/segments' },
   { label: 'Automações', icon: Workflow, path: '/automations' },
   { label: 'Analítica', icon: BarChart3, path: '/analytics' },
   { label: 'Configurações', icon: Settings, path: '/settings' },

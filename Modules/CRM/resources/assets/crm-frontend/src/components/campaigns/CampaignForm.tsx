@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -17,6 +18,7 @@ import {
 import { Campaign, EmailTemplate } from '@/types';
 import { Loader2 } from 'lucide-react';
 import { blocksToHtml } from '@/lib/template-to-html';
+import { fetchSegmentEstimate, fetchSegmentEstimateByFilters } from '@/services/api';
 
 const campaignSchema = z.object({
   name: z.string().min(1, 'O nome é obrigatório'),
@@ -76,7 +78,32 @@ export function CampaignForm({ initialData, onSubmit, isLoading, segments = [], 
   });
 
   const selectedSegment = form.watch('segment_id');
+  const [estimated, setEstimated] = useState<number | null>(null);
+
+  useEffect(() => {
+    setEstimated(null);
+    if (selectedSegment && selectedSegment !== 'custom') {
+      fetchSegmentEstimate(String(selectedSegment))
+        .then(r => setEstimated(r.data.estimated))
+        .catch(() => setEstimated(null));
+    }
+  }, [selectedSegment]);
+
   const isCustomSegment = selectedSegment === 'custom';
+  const filterSource = form.watch('filter_source');
+  const filterTag = form.watch('filter_tag');
+
+  useEffect(() => {
+    if (isCustomSegment) {
+      const filters: any[] = [];
+      if (filterSource) filters.push({ field: 'source', op: 'eq', value: filterSource });
+      if (filterTag) filters.push({ field: 'tags', op: 'contains', value: filterTag });
+      if (filters.length === 0) { setEstimated(null); return; }
+      fetchSegmentEstimateByFilters({ filters })
+        .then(r => setEstimated(r.data.estimated))
+        .catch(() => setEstimated(null));
+    }
+  }, [isCustomSegment, filterSource, filterTag]);
 
   const handleTemplateSelect = (templateId: string) => {
     const template = templates.find(t => t.id === templateId);
@@ -275,7 +302,7 @@ export function CampaignForm({ initialData, onSubmit, isLoading, segments = [], 
           
           <div className="pt-2 flex justify-between items-center text-sm text-muted-foreground">
             <span>Total estimado:</span>
-            <span className="font-mono font-bold">--</span>
+            <span className="font-mono font-bold">{estimated !== null ? estimated : '--'}</span>
           </div>
         </div>
 

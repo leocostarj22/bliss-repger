@@ -186,7 +186,7 @@ export default function Analytics() {
                   <td className="py-3 px-4 text-right font-mono">{c.opened.toLocaleString()}</td>
                   <td className="py-3 px-4 text-right font-mono">{c.clicked.toLocaleString()}</td>
                   <td className="py-3 px-4 text-right font-mono">{c.bounced.toLocaleString()}</td>
-                  <td className="py-3 px-4 text-right font-mono text-primary">{((c.opened / c.sent) * 100).toFixed(1)}%</td>
+                  <td className="py-3 px-4 text-right font-mono text-primary">{(c.sent > 0 ? (c.opened / c.sent) * 100 : 0).toFixed(1)}%</td>
                 </tr>
               ))}
             </tbody>

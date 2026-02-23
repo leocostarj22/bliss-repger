@@ -16,7 +16,7 @@ class ProcessCampaigns extends Command
      *
      * @var string
      */
-    protected $signature = 'crm:process-campaigns';
+    protected $signature = 'crm:process-campaigns {--sync : Envia os e-mails de forma síncrona (sem fila)}';
 
     /**
      * The console command description.
@@ -91,14 +91,16 @@ class ProcessCampaigns extends Command
                     }
 
                     // 5. Dispatch Job
-                    SendDeliveryEmail::dispatch($delivery->id);
+                    if ($this->option('sync')) {
+                        SendDeliveryEmail::dispatchSync($delivery->id);
+                    } else {
+                        SendDeliveryEmail::dispatch($delivery->id);
+                    }
                     $count++;
                 }
                 
-                // 6. Mark as Sent
-                $campaign->update(['status' => 'sent']);
-                
-                $this->info("Dispatched {$count} emails for campaign {$campaign->id}.");
+                // 6. Keep as Sending; final status will flip in SendDeliveryEmail when all deliveries are sent
+                $this->info("Dispatched {$count} emails for campaign {$campaign->id}. Campaign remains 'sending' until all deliveries complete.");
 
             } catch (\Exception $e) {
                 Log::error("Failed to process campaign {$campaign->id}: " . $e->getMessage());

@@ -40,13 +40,13 @@ class SendDeliveryEmail implements ShouldQueue
             return;
         }
 
-        $template = $campaign->template; // may be null
-        $subject = $template?->subject ?? $campaign->name;
-        $content = $template?->content ?? '<p>Olá {{ name }},</p><p>Mensagem da campanha: {{ campaign }}</p>';
+        $template = $campaign->template;
+        $subject = $campaign->subject ?: ($template?->subject ?? $campaign->name);
+        $content = $campaign->content ?: ($template?->content ?? '<p>Olá {{ name }},</p><p>Mensagem da campanha: {{ campaign }}</p>');
 
         try {
             $content = $this->renderContent($content, $contact, $campaign);
-            $content = $this->injectTracking($content, $delivery);
+            $content = $this->injectTracking($content, $delivery, $campaign);
 
             Log::info('crm.mail.composed', [
                 'delivery_id' => $delivery->id,
@@ -57,7 +57,10 @@ class SendDeliveryEmail implements ShouldQueue
                 'href_count' => preg_match_all('/<a\b[^>]*href\s*=\s*([\'\"])(.*?)\1/i', $content),
             ]);
 
-            Mail::html($content, function ($message) use ($contact, $subject) {
+            Mail::html($content, function ($message) use ($contact, $campaign, $subject) {
+                if ($campaign->from_email) {
+                    $message->from($campaign->from_email, $campaign->from_name ?: null);
+                }
                 $message->to($contact->email)->subject($subject);
             });
         } catch (\Throwable $e) {
@@ -68,10 +71,28 @@ class SendDeliveryEmail implements ShouldQueue
             throw $e;
         }
 
+        Log::info('crm.mail.sent', [
+            'delivery_id' => $delivery->id,
+            'campaign_id' => $campaign->id,
+            'to' => $contact->email,
+            'subject' => $subject,
+        ]);
+
         $delivery->update([
             'status' => 'sent',
             'sent_at' => now(),
         ]);
+
+        $pending = Delivery::where('campaign_id', $campaign->id)
+            ->where(function ($q) {
+                $q->whereNull('sent_at')->orWhere('status', '!=', 'sent');
+            })
+            ->count();
+
+        if ($pending === 0) {
+            $campaign->update(['status' => 'sent']);
+            Log::info('crm.campaign.completed', ['campaign_id' => $campaign->id]);
+        }
     }
 
     private function renderContent(string $content, Contact $contact, Campaign $campaign): string
@@ -86,27 +107,38 @@ class SendDeliveryEmail implements ShouldQueue
         }, $content);
     }
 
-    private function injectTracking(string $html, Delivery $delivery): string
+    private function injectTracking(string $html, Delivery $delivery, Campaign $campaign): string
     {
-        try {
-            $pixelUrl = route('crm.track.pixel', ['delivery' => $delivery->id]);
-        } catch (\Throwable $e) {
-            Log::warning('crm.route.missing', ['route' => 'crm.track.pixel', 'error' => $e->getMessage()]);
-            $pixelUrl = url('crm/track/pixel/' . $delivery->id);
-        }
-        $pixelUrl = $pixelUrl . (strpos($pixelUrl, '?') !== false ? '&' : '?') . 'v=' . time();
-        if (stripos($html, 'crm/track/pixel') === false) {
-            $html .= '<img src="' . $pixelUrl . '" width="1" height="1" style="display:none" alt="" />';
+        $trackOpens = (bool) $campaign->track_opens;
+        $trackClicks = (bool) $campaign->track_clicks;
+
+        if ($trackOpens) {
+            try {
+                $pixelUrl = route('crm.track.pixel', ['delivery' => $delivery->id]);
+            } catch (\Throwable $e) {
+                Log::warning('crm.route.missing', ['route' => 'crm.track.pixel', 'error' => $e->getMessage()]);
+                $pixelUrl = url('crm/track/pixel/' . $delivery->id);
+            }
+            $pixelUrl = $pixelUrl . (strpos($pixelUrl, '?') !== false ? '&' : '?') . 'v=' . time();
+            if (stripos($html, 'crm/track/pixel') === false) {
+                $html .= '<img src="' . $pixelUrl . '" width="1" height="1" style="display:none" alt="" />';
+            }
         }
 
-        try {
-            $clickBase = route('crm.track.click', ['delivery' => $delivery->id]);
-        } catch (\Throwable $e) {
-            Log::warning('crm.route.missing', ['route' => 'crm.track.click', 'error' => $e->getMessage()]);
-            $clickBase = url('crm/track/click/' . $delivery->id);
+        $clickBase = null;
+        if ($trackClicks) {
+            try {
+                $clickBase = route('crm.track.click', ['delivery' => $delivery->id]);
+            } catch (\Throwable $e) {
+                Log::warning('crm.route.missing', ['route' => 'crm.track.click', 'error' => $e->getMessage()]);
+                $clickBase = url('crm/track/click/' . $delivery->id);
+            }
         }
 
         $rewrite = function (string $target) use ($clickBase) {
+            if ($clickBase === null) {
+                return $target;
+            }
             if ($target === ''
                 || $target[0] === '#'
                 || stripos($target, 'mailto:') === 0
@@ -126,20 +158,22 @@ class SendDeliveryEmail implements ShouldQueue
             return $clickBase . '?url=' . urlencode($target);
         };
 
-        // Quoted href ("..." or '...')
-        $html = preg_replace_callback('/href\s*=\s*([\'\"])(.*?)\1/i', function ($m) use ($rewrite) {
-            $quote = $m[1];
-            $target = $m[2];
-            $new = $rewrite($target);
-            return 'href=' . $quote . $new . $quote;
-        }, $html);
+        if ($trackClicks && $clickBase !== null) {
+            // Quoted href ("..." or '...')
+            $html = preg_replace_callback('/href\s*=\s*([\'\"])(.*?)\1/i', function ($m) use ($rewrite) {
+                $quote = $m[1];
+                $target = $m[2];
+                $new = $rewrite($target);
+                return 'href=' . $quote . $new . $quote;
+            }, $html);
 
-        // Unquoted href (href=/path or href=https://...)
-        $html = preg_replace_callback('/href\s*=\s*([^\s\"\'>]+)/i', function ($m) use ($rewrite) {
-            $target = $m[1];
-            $new = $rewrite($target);
-            return 'href="' . $new . '"';
-        }, $html);
+            // Unquoted href (href=/path or href=https://...)
+            $html = preg_replace_callback('/href\s*=\s*([^\s\"\'>]+)/i', function ($m) use ($rewrite) {
+                $target = $m[1];
+                $new = $rewrite($target);
+                return 'href="' . $new . '"';
+            }, $html);
+        }
 
         // Append unsubscribe link if missing
         try {

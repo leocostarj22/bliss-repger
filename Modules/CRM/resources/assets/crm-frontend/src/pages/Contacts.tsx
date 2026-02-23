@@ -109,6 +109,21 @@ export default function Contacts() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Tem a certeza que deseja eliminar ${selectedIds.size} contactos selecionados?`)) return;
+    try {
+      const ids = Array.from(selectedIds);
+      for (const id of ids) {
+        await deleteContact(id);
+      }
+      toast({ title: 'Contactos eliminados', description: 'Os contactos selecionados foram removidos com sucesso.' });
+      loadContacts();
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível eliminar todos os contactos selecionados.' });
+    }
+  };
+
   const openTagDialog = (id: string) => {
     setSelectedContactId(id);
     setNewTag('');
@@ -149,9 +164,14 @@ export default function Contacts() {
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-primary">{selectedIds.size} contactos selecionados</span>
           </div>
-          <Button size="sm" onClick={handleCreateCampaign} className="gap-2">
-            <Mail className="w-4 h-4" /> Criar Campanha
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="destructive" onClick={handleBulkDelete} className="gap-2">
+              <Trash className="w-4 h-4" /> Apagar Selecionados
+            </Button>
+            <Button size="sm" onClick={handleCreateCampaign} className="gap-2">
+              <Mail className="w-4 h-4" /> Criar Campanha
+            </Button>
+          </div>
         </div>
       )}
 

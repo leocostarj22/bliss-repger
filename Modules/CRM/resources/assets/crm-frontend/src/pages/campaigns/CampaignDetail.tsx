@@ -32,10 +32,16 @@ export default function CampaignDetail() {
 
   const loadLogs = () => {
     setLoadingLogs(true);
-    fetchCampaignLogs(id!).then(r => {
-      setLogs(r.data.data); // Laravel paginate returns { data: [...], ... }
-      setLoadingLogs(false);
-    });
+    fetchCampaignLogs(id!)
+      .then(r => {
+        setLogs(r.data);
+        setLoadingLogs(false);
+      })
+      .catch(err => {
+        console.error('Falha ao carregar logs da campanha', err);
+        setLogs([]);
+        setLoadingLogs(false);
+      });
   };
 
   if (loading) {
@@ -130,7 +136,11 @@ export default function CampaignDetail() {
                 </div>
                 <div className="flex justify-between py-1 border-b">
                   <dt className="text-muted-foreground">Remetente:</dt>
-                  <dd className="font-medium">{campaign.fromName} &lt;{campaign.fromEmail}&gt;</dd>
+                  <dd className="font-medium">
+                    {campaign.fromEmail
+                      ? `${campaign.fromName || 'Sem nome'} <${campaign.fromEmail}>`
+                      : 'Não definido'}
+                  </dd>
                 </div>
                 <div className="flex justify-between py-1 border-b">
                   <dt className="text-muted-foreground">Lista:</dt>
@@ -146,10 +156,56 @@ export default function CampaignDetail() {
         </TabsContent>
 
         <TabsContent value="content">
-          <div className="glass-card p-6 border rounded-lg bg-card shadow-sm">
-            <h3 className="text-lg font-semibold mb-4">Pré-visualização do Conteúdo</h3>
-            <div className="prose max-w-none dark:prose-invert bg-white dark:bg-gray-900 p-4 rounded-md border min-h-[300px]">
-               {campaign.content || 'Conteúdo indisponível'}
+          <div className="glass-card p-6 border rounded-lg bg-card shadow-sm space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Pré-visualização do Conteúdo</h3>
+              <div className="prose max-w-none dark:prose-invert bg-white dark:bg-gray-900 p-4 rounded-md border min-h-[300px]">
+                {campaign.content ? (
+                  <div dangerouslySetInnerHTML={{ __html: campaign.content }} />
+                ) : (
+                  <span className="text-muted-foreground">Conteúdo indisponível.</span>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-4 border rounded-lg bg-muted/30">
+                <h4 className="text-sm font-semibold mb-3">Configurações de Acompanhamento</h4>
+                <dl className="space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Acompanhar Aberturas:</dt>
+                    <dd className="font-medium">{campaign.trackOpens ? 'Ativo' : 'Desativado'}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Acompanhar Cliques:</dt>
+                    <dd className="font-medium">{campaign.trackClicks ? 'Ativo' : 'Desativado'}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Acompanhar Respostas:</dt>
+                    <dd className="font-medium">{campaign.trackReplies ? 'Ativo' : 'Desativado'}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Google Analytics:</dt>
+                    <dd className="font-medium">{campaign.useGoogleAnalytics ? 'Ativo' : 'Desativado'}</dd>
+                  </div>
+                </dl>
+              </div>
+
+              <div className="p-4 border rounded-lg bg-muted/30">
+                <h4 className="text-sm font-semibold mb-3">Outras Configurações</h4>
+                <dl className="space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Público:</dt>
+                    <dd className="font-medium">{campaign.isPublic ? 'Sim' : 'Não'}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Endereço Físico:</dt>
+                    <dd className="font-medium max-w-[220px] text-right truncate" title={campaign.physicalAddress || ''}>
+                      {campaign.physicalAddress || 'Não definido'}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
             </div>
           </div>
         </TabsContent>
