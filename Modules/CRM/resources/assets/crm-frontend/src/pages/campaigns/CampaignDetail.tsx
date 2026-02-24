@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { fetchCampaign, fetchCampaignLogs } from '@/services/api';
 import { Campaign } from '@/types';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Edit, Send, MousePointerClick, Eye, AlertTriangle, RefreshCw } from 'lucide-react';
+import { ChevronLeft, Edit, Send, MousePointerClick, Eye, AlertTriangle, RefreshCw, UserX } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -95,7 +95,7 @@ export default function CampaignDetail() {
 
         <TabsContent value="overview" className="space-y-4">
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="stat-card p-4 border rounded-lg bg-card shadow-sm">
               <div className="flex items-center gap-2 text-muted-foreground mb-2">
                 <Send className="w-4 h-4" />
@@ -106,23 +106,30 @@ export default function CampaignDetail() {
             <div className="stat-card p-4 border rounded-lg bg-card shadow-sm">
               <div className="flex items-center gap-2 text-muted-foreground mb-2">
                 <Eye className="w-4 h-4" />
-                <span className="text-xs font-medium uppercase">Taxa de Abertura</span>
+                <span className="text-xs font-medium uppercase">Abertura</span>
               </div>
               <div className="text-2xl font-bold">{campaign.openRate}%</div>
             </div>
             <div className="stat-card p-4 border rounded-lg bg-card shadow-sm">
               <div className="flex items-center gap-2 text-muted-foreground mb-2">
                 <MousePointerClick className="w-4 h-4" />
-                <span className="text-xs font-medium uppercase">Taxa de Cliques</span>
+                <span className="text-xs font-medium uppercase">Cliques</span>
               </div>
               <div className="text-2xl font-bold">{campaign.clickRate}%</div>
             </div>
             <div className="stat-card p-4 border rounded-lg bg-card shadow-sm">
               <div className="flex items-center gap-2 text-muted-foreground mb-2">
                 <AlertTriangle className="w-4 h-4" />
-                <span className="text-xs font-medium uppercase">Taxa de Rejeição</span>
+                <span className="text-xs font-medium uppercase">Rejeição</span>
               </div>
               <div className="text-2xl font-bold">{campaign.bounceRate}%</div>
+            </div>
+            <div className="stat-card p-4 border rounded-lg bg-card shadow-sm">
+              <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                <UserX className="w-4 h-4" />
+                <span className="text-xs font-medium uppercase">Descadastro</span>
+              </div>
+              <div className="text-2xl font-bold">{campaign.unsubscribeRate ?? 0}%</div>
             </div>
           </div>
           
@@ -237,7 +244,9 @@ export default function CampaignDetail() {
                       <TableCell>
                         <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize
                           ${log.status === 'opened' ? 'bg-green-100 text-green-800' :
+                            log.status === 'clicked' ? 'bg-blue-100 text-blue-800' :
                             log.status === 'bounced' ? 'bg-red-100 text-red-800' :
+                            log.status === 'unsubscribed' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-gray-100 text-gray-800'}`}>
                           {log.status}
                         </span>

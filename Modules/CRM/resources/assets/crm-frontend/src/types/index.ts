@@ -24,6 +24,8 @@ export interface Campaign {
   openRate: number;
   clickRate: number;
   bounceRate: number;
+  unsubscribeRate?: number;
+  unsubscribedCount?: number;
   scheduledAt?: string;
   sentAt?: string;
   createdAt: string;

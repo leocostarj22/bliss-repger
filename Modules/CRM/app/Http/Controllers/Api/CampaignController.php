@@ -39,6 +39,8 @@ class CampaignController extends Controller
                 $q->whereNotNull('clicked_at');
             }, 'deliveries as bouncedCount' => function($q) {
                 $q->whereNotNull('bounced_at');
+            }, 'deliveries as unsubscribedCount' => function($q) {
+                $q->whereNotNull('unsubscribed_at');
             }])
             ->with('segment');
 
@@ -70,6 +72,7 @@ class CampaignController extends Controller
                 'openRate' => $sent > 0 ? round(($campaign->openedCount / $sent) * 100, 1) : 0,
                 'clickRate' => $sent > 0 ? round(($campaign->clickedCount / $sent) * 100, 1) : 0,
                 'bounceRate' => $sent > 0 ? round(($campaign->bouncedCount / $sent) * 100, 1) : 0,
+                'unsubscribeRate' => $sent > 0 ? round(($campaign->unsubscribedCount / $sent) * 100, 1) : 0,
                 'scheduledAt' => $campaign->scheduled_at?->toIso8601String(),
                 'sentAt' => $campaign->scheduled_at?->toIso8601String(),
                 'createdAt' => $campaign->created_at->toIso8601String(),
@@ -150,6 +153,8 @@ class CampaignController extends Controller
                 $q->whereNotNull('clicked_at');
             }, 'deliveries as bouncedCount' => function($q) {
                 $q->whereNotNull('bounced_at');
+            }, 'deliveries as unsubscribedCount' => function($q) {
+                $q->whereNotNull('unsubscribed_at');
             }])
             ->findOrFail($id);
 
@@ -183,6 +188,8 @@ class CampaignController extends Controller
             'openRate' => $sent > 0 ? round(($campaign->openedCount / $sent) * 100, 1) : 0,
             'clickRate' => $sent > 0 ? round(($campaign->clickedCount / $sent) * 100, 1) : 0,
             'bounceRate' => $sent > 0 ? round(($campaign->bouncedCount / $sent) * 100, 1) : 0,
+            'unsubscribeRate' => $sent > 0 ? round(($campaign->unsubscribedCount / $sent) * 100, 1) : 0,
+            'unsubscribedCount' => $campaign->unsubscribedCount,
             'scheduledAt' => $campaign->scheduled_at?->toIso8601String(),
             'sentAt' => $campaign->scheduled_at?->toIso8601String(),
             'createdAt' => $campaign->created_at->toIso8601String(),

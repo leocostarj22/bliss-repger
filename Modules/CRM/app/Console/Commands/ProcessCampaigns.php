@@ -32,6 +32,15 @@ class ProcessCampaigns extends Command
     {
         set_time_limit(0); // Prevent timeout for large lists
 
+        $this->info("Server Time: " . now()->toDateTimeString());
+
+        // DEBUG: List ALL campaigns to see what is actually in the DB
+        $all = Campaign::all(['id', 'name', 'status', 'scheduled_at', 'channel']);
+        $this->info("Total Campaigns in DB: " . $all->count());
+        foreach($all as $c) {
+            $this->info("ID: {$c->id} | Name: {$c->name} | Status: {$c->status} | Channel: {$c->channel} | Scheduled: {$c->scheduled_at}");
+        }
+
         // 0. Reset Stuck Campaigns (Sending > 1 hour)
         $stuck = Campaign::where('status', 'sending')
             ->where('updated_at', '<', now()->subHour())
@@ -42,13 +51,19 @@ class ProcessCampaigns extends Command
         }
 
         // 1. Get Scheduled Campaigns
-        $campaigns = Campaign::where('status', 'scheduled')
-            ->where('scheduled_at', '<=', now())
-            ->where('channel', 'email')
-            ->get();
+        $query = Campaign::where('status', 'scheduled')
+            ->where('channel', 'email');
+            
+        // Check for future scheduled campaigns to log them
+        $future = (clone $query)->where('scheduled_at', '>', now())->count();
+        if ($future > 0) {
+            $this->info("Found {$future} campaigns scheduled for the future.");
+        }
+
+        $campaigns = $query->where('scheduled_at', '<=', now())->get();
 
         if ($campaigns->isEmpty()) {
-            $this->info('No scheduled campaigns to process.');
+            $this->info('No scheduled campaigns ready to process (checked status=scheduled, channel=email, scheduled_at<=now).');
             return 0;
         }
 

@@ -133,11 +133,17 @@ class EmailTrackingController extends Controller
             $delivery->unsubscribed_at = now();
             $delivery->status = 'unsubscribed';
             $delivery->save();
+
+            // Atualizar status do contato para não receber mais envios
+            if ($delivery->contact) {
+                $delivery->contact->update(['status' => 'unsubscribed']);
+            }
+
             Log::info('crm.track.unsubscribed', ['delivery_id' => $delivery->id]);
         } else {
             Log::info('crm.track.unsubscribed.already', ['delivery_id' => $delivery->id]);
         }
 
-        return response('You have been unsubscribed.', 200);
+        return view('crm::unsubscribe', ['email' => $delivery->contact->email ?? '']);
     }
 }

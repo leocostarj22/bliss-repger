@@ -21,21 +21,27 @@ Route::get('crm/debug/{id}', function ($id) {
     $campaign = \Modules\CRM\Models\Campaign::find($id);
     if (!$campaign) return 'Campaign not found';
     
-    $deliveries = \Modules\CRM\Models\Delivery::where('campaign_id', $id)->get();
-    $stats = [
-        'total' => $deliveries->count(),
-        'status_counts' => $deliveries->groupBy('status')->map->count(),
-        'sent_at_filled' => $deliveries->whereNotNull('sent_at')->count(),
-        'opened_at_filled' => $deliveries->whereNotNull('opened_at')->count(),
-        'clicked_at_filled' => $deliveries->whereNotNull('clicked_at')->count(),
-    ];
+    $resolver = new \Modules\CRM\Services\SegmentResolver();
+    $contacts = $campaign->segment_id ? $resolver->resolveContacts($campaign->segment_id) : collect();
     
-    $lastFailedJob = \Illuminate\Support\Facades\DB::table('failed_jobs')->orderBy('failed_at', 'desc')->first();
+    $deliveries = \Modules\CRM\Models\Delivery::where('campaign_id', $id)->get();
     
     return [
         'campaign' => $campaign->toArray(),
-        'stats' => $stats,
-        'last_failed_job_exception' => $lastFailedJob ? substr($lastFailedJob->exception, 0, 1000) : 'No failed jobs',
-        'server_time' => now()->toDateTimeString(),
+        'diagnostics' => [
+            'is_scheduled' => $campaign->status === 'scheduled',
+            'is_due' => $campaign->scheduled_at <= now(),
+            'server_time' => now()->toDateTimeString(),
+            'scheduled_at' => $campaign->scheduled_at?->toDateTimeString(),
+            'channel_check' => $campaign->channel === 'email',
+            'segment_check' => $campaign->segment_id ? 'present' : 'missing',
+            'contacts_count' => $contacts->count(),
+            'contacts_sample' => $contacts->take(3)->pluck('email'),
+            'deliveries_count' => $deliveries->count(),
+        ],
+        'stats' => [
+            'total' => $deliveries->count(),
+            'status_counts' => $deliveries->groupBy('status')->map->count(),
+        ],
     ];
 });
