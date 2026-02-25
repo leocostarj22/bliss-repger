@@ -21,15 +21,19 @@ class TaskResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-list';
     
-    protected static ?string $navigationLabel = 'Minhas Tarefas';
+    protected static ?string $navigationLabel = 'Tarefas e Anotações';
     
     protected static ?string $modelLabel = 'Tarefa';
     
-    protected static ?string $pluralModelLabel = 'Tarefas';
+    protected static ?string $pluralModelLabel = 'Tarefas e Anotações';
     
     protected static ?string $navigationGroup = 'Pessoal';
     
     protected static ?int $navigationSort = 1;
+    
+    protected static ?string $navigationBadge = 'minhas tarefas';
+    
+    protected static ?string $navigationActiveBadge = 'ativas';
 
     public static function form(Form $form): Form
     {
@@ -92,15 +96,32 @@ class TaskResource extends Resource
                 
                 Section::make('Detalhes Adicionais')
                     ->schema([
-                        Forms\Components\Textarea::make('notes')
-                            ->label('Notas')
-                            ->rows(3),
+                        Forms\Components\RichEditor::make('notes')
+                            ->label('Notas e Anotações')
+                            ->helperText('Adicione anotações detalhadas, checklists ou comentários')
+                            ->toolbarButtons([
+                                'bold', 'italic', 'underline', 'strike',
+                                'bulletList', 'orderedList', 'link',
+                                'undo', 'redo'
+                            ])
+                            ->columnSpanFull(),
+                        
+                        Forms\Components\TagsInput::make('tags')
+                            ->label('Tags/Categorias')
+                            ->helperText('Organize suas tarefas com tags')
+                            ->placeholder('Adicione tags...'),
                         
                         Forms\Components\Toggle::make('is_private')
                             ->label('Tarefa Privada')
                             ->default(true)
                             ->helperText('Tarefas privadas são visíveis apenas para você'),
-                    ]),
+                        
+                        Forms\Components\Toggle::make('is_important')
+                            ->label('Tarefa Importante')
+                            ->default(false)
+                            ->helperText('Marque tarefas importantes para destaque visual'),
+                    ])
+                    ->columns(2),
             ]);
     }
 
@@ -118,7 +139,16 @@ class TaskResource extends Resource
                     ->label('Título')
                     ->searchable()
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->description(fn (Task $record) => 
+                        $record->description ? 
+                        (strlen($record->description) > 50 ? 
+                            substr($record->description, 0, 50) . '...' : 
+                            $record->description) : 
+                        null
+                    )
+                    ->icon(fn (Task $record) => $record->is_important ? 'heroicon-s-star' : null)
+                    ->iconColor(fn (Task $record) => $record->is_important ? 'warning' : null),
                 
                 Tables\Columns\BadgeColumn::make('priority')
                     ->label('Prioridade')
@@ -148,6 +178,12 @@ class TaskResource extends Resource
                         'success' => 'completed',
                         'gray' => 'cancelled',
                     ]),
+                
+                Tables\Columns\BadgeColumn::make('tags')
+                    ->label('Tags')
+                    ->formatStateUsing(fn (array $state): string => count($state) . ' tags')
+                    ->color('info')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 
                 Tables\Columns\TextColumn::make('due_date')
                     ->label('Vencimento')
@@ -196,6 +232,18 @@ class TaskResource extends Resource
                 Tables\Filters\Filter::make('this_week')
                     ->label('Esta Semana')
                     ->query(fn ($query) => $query->thisWeek()),
+                
+                Tables\Filters\Filter::make('important')
+                    ->label('Importantes')
+                    ->query(fn ($query) => $query->where('is_important', true)),
+                
+                Tables\Filters\Filter::make('private')
+                    ->label('Privadas')
+                    ->query(fn ($query) => $query->where('is_private', true)),
+                
+                Tables\Filters\Filter::make('with_notes')
+                    ->label('Com Anotações')
+                    ->query(fn ($query) => $query->whereNotNull('notes')->where('notes', '!=', '')),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -205,6 +253,25 @@ class TaskResource extends Resource
                     ->color('success')
                     ->action(fn (Task $record) => $record->markAsCompleted())
                     ->visible(fn (Task $record) => $record->status !== 'completed'),
+                
+                Tables\Actions\Action::make('duplicate')
+                    ->label('Duplicar')
+                    ->icon('heroicon-o-document-duplicate')
+                    ->color('info')
+                    ->action(function (Task $record) {
+                        $newTask = $record->replicate();
+                        $newTask->title = $record->title . ' (Cópia)';
+                        $newTask->status = 'pending';
+                        $newTask->save();
+                    })
+                    ->requiresConfirmation(),
+                
+                Tables\Actions\Action::make('toggle_important')
+                    ->label(fn (Task $record) => $record->is_important ? 'Remover Importante' : 'Marcar Importante')
+                    ->icon(fn (Task $record) => $record->is_important ? 'heroicon-o-star' : 'heroicon-s-star')
+                    ->color(fn (Task $record) => $record->is_important ? 'gray' : 'warning')
+                    ->action(fn (Task $record) => $record->update(['is_important' => !$record->is_important])),
+                
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
@@ -216,10 +283,71 @@ class TaskResource extends Resource
                         ->action(function (Collection $records) {
                             $records->each(fn (Task $record) => $record->markAsCompleted());
                         }),
+                    
+                    BulkAction::make('mark_important')
+                        ->label('Marcar como Importantes')
+                        ->icon('heroicon-s-star')
+                        ->color('warning')
+                        ->action(function (Collection $records) {
+                            $records->each(fn (Task $record) => $record->update(['is_important' => true]));
+                        }),
+                    
+                    BulkAction::make('mark_not_important')
+                        ->label('Remover Importância')
+                        ->icon('heroicon-o-star')
+                        ->color('gray')
+                        ->action(function (Collection $records) {
+                            $records->each(fn (Task $record) => $record->update(['is_important' => false]));
+                        }),
+                    
+                    BulkAction::make('duplicate_tasks')
+                        ->label('Duplicar Selecionadas')
+                        ->icon('heroicon-o-document-duplicate')
+                        ->color('info')
+                        ->action(function (Collection $records) {
+                            $records->each(function (Task $record) {
+                                $newTask = $record->replicate();
+                                $newTask->title = $record->title . ' (Cópia)';
+                                $newTask->status = 'pending';
+                                $newTask->save();
+                            });
+                        })
+                        ->requiresConfirmation(),
+                    
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('due_date', 'asc');
+    }
+    
+    public static function getNavigationBadge(): ?string
+    {
+        $user = Auth::user();
+        $count = Task::where('taskable_type', get_class($user))
+            ->where('taskable_id', $user->id)
+            ->where('status', '!=', 'completed')
+            ->count();
+        
+        return $count > 0 ? (string) $count : null;
+    }
+    
+    public static function getNavigationBadgeColor(): ?string
+    {
+        $user = Auth::user();
+        $count = Task::where('taskable_type', get_class($user))
+            ->where('taskable_id', $user->id)
+            ->where('status', '!=', 'completed')
+            ->count();
+        
+        if ($count === 0) return null;
+        
+        $urgentCount = Task::where('taskable_type', get_class($user))
+            ->where('taskable_id', $user->id)
+            ->where('status', '!=', 'completed')
+            ->where('priority', 'urgent')
+            ->count();
+        
+        return $urgentCount > 0 ? 'danger' : 'warning';
     }
     
     public static function getPages(): array
