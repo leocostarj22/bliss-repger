@@ -154,6 +154,13 @@ export function PropertiesPanel({ block, onChange }: Props) {
           <Field label="Espaçamento">
             <Slider value={[Number(p.gap)]} onValueChange={([v]) => set('gap', v)} min={0} max={32} step={4} />
           </Field>
+
+          <div className="pt-4 border-t border-border mt-4">
+            <h4 className="text-xs font-semibold mb-3 text-muted-foreground uppercase tracking-wider">Conteúdo das Colunas</h4>
+            <p className="text-xs text-muted-foreground mb-4">
+              Arraste blocos do painel para dentro das colunas no editor
+            </p>
+          </div>
         </>
       )}
 

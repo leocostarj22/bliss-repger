@@ -97,6 +97,30 @@ export default function TemplateEditor() {
       return;
     }
 
+    // From palette to column
+    if (source.droppableId === 'palette' && destination.droppableId.includes('-col-')) {
+      const type = draggableId.replace('palette-', '') as BlockType;
+      const newBlock: TemplateBlock = {
+        id: v4Fallback(),
+        type,
+        props: { ...DEFAULT_BLOCK_PROPS[type] },
+      };
+      
+      const [parentId, colIndex] = destination.droppableId.split('-col-');
+      const colIdx = parseInt(colIndex);
+      
+      setBlocks(prev => prev.map(block => {
+        if (block.id === parentId && block.type === 'columns') {
+          const newChildren = [...(block.children || [])];
+          newChildren[colIdx] = newBlock;
+          return { ...block, children: newChildren };
+        }
+        return block;
+      }));
+      setSelectedId(newBlock.id);
+      return;
+    }
+
     // Reorder within canvas
     if (source.droppableId === 'canvas' && destination.droppableId === 'canvas') {
       setBlocks(prev => {
@@ -105,6 +129,49 @@ export default function TemplateEditor() {
         copy.splice(destination.index, 0, moved);
         return copy;
       });
+    }
+
+    // Move from canvas to column
+    if (source.droppableId === 'canvas' && destination.droppableId.includes('-col-')) {
+      const [parentId, colIndex] = destination.droppableId.split('-col-');
+      const colIdx = parseInt(colIndex);
+      
+      setBlocks(prev => {
+        const copy = [...prev];
+        const [moved] = copy.splice(source.index, 1);
+        
+        return copy.map(block => {
+          if (block.id === parentId && block.type === 'columns') {
+            const newChildren = [...(block.children || [])];
+            newChildren[colIdx] = moved;
+            return { ...block, children: newChildren };
+          }
+          return block;
+        });
+      });
+      return;
+    }
+
+    // Move between columns
+    if (source.droppableId.includes('-col-') && destination.droppableId.includes('-col-')) {
+      const [sourceParentId, sourceColIndex] = source.droppableId.split('-col-');
+      const [destParentId, destColIndex] = destination.droppableId.split('-col-');
+      const sourceIdx = parseInt(sourceColIndex);
+      const destIdx = parseInt(destColIndex);
+      
+      if (sourceParentId !== destParentId || sourceIdx === destIdx) return;
+      
+      setBlocks(prev => prev.map(block => {
+        if (block.id === sourceParentId && block.type === 'columns') {
+          const newChildren = [...(block.children || [])];
+          const moved = newChildren[sourceIdx];
+          newChildren[sourceIdx] = undefined;
+          newChildren[destIdx] = moved;
+          return { ...block, children: newChildren };
+        }
+        return block;
+      }));
+      return;
     }
   }, []);
 

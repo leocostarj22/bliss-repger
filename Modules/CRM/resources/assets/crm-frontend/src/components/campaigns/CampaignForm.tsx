@@ -15,10 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useHref } from 'react-router-dom';
 import { Campaign, EmailTemplate } from '@/types';
 import { Loader2 } from 'lucide-react';
 import { blocksToHtml } from '@/lib/template-to-html';
-import { fetchSegmentEstimate, fetchSegmentEstimateByFilters } from '@/services/api';
+import { fetchSegmentEstimate, fetchSegmentEstimateByFilters, fetchTemplate, createSegment } from '@/services/api';
+import { Eye, Edit, RefreshCw, X, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
 
 const campaignSchema = z.object({
   name: z.string().min(1, 'O nome é obrigatório'),
@@ -79,6 +82,9 @@ export function CampaignForm({ initialData, onSubmit, isLoading, segments = [], 
 
   const selectedSegment = form.watch('segment_id');
   const [estimated, setEstimated] = useState<number | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [isRefreshingTemplate, setIsRefreshingTemplate] = useState(false);
+  const editorBaseUrl = useHref('/templates/editor');
 
   useEffect(() => {
     setEstimated(null);
@@ -110,21 +116,68 @@ export function CampaignForm({ initialData, onSubmit, isLoading, segments = [], 
     if (template) {
       const htmlContent = blocksToHtml(template.content);
       form.setValue('content', htmlContent);
+      setSelectedTemplateId(templateId);
+      toast.success('Modelo carregado com sucesso!');
     }
   };
 
-  const handleSubmit = (data: CampaignFormValues) => {
+  const handleRefreshTemplate = async () => {
+    if (!selectedTemplateId) return;
+    
+    setIsRefreshingTemplate(true);
+    try {
+      const response = await fetchTemplate(selectedTemplateId);
+      if (response.data) {
+        const htmlContent = blocksToHtml(response.data.content);
+        form.setValue('content', htmlContent);
+        toast.success('Conteúdo do modelo atualizado!');
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar modelo:', error);
+      toast.error('Falha ao atualizar o modelo.');
+    } finally {
+      setIsRefreshingTemplate(false);
+    }
+  };
+
+  const handleEditTemplate = () => {
+    if (selectedTemplateId) {
+      // Robust URL construction for the editor using React Router context
+      const url = `${window.location.origin}${editorBaseUrl}/${selectedTemplateId}`;
+      window.open(url, '_blank');
+      toast.info('Edite o modelo na nova aba e clique em "Atualizar Visualização" quando terminar.');
+    }
+  };
+
+  const handleDisconnectTemplate = () => {
+    setSelectedTemplateId(null);
+    toast.info('Modo de edição livre ativado. A formatação complexa pode ser perdida.');
+  };
+
+  const handleSubmit = async (data: CampaignFormValues) => {
     const payload: any = { ...data };
     
     if (data.segment_id === 'custom') {
-      payload.segment_id = null;
-      payload.filters = [];
-      if (data.filter_source) {
-        payload.filters.push({ field: 'source', op: 'eq', value: data.filter_source });
+      try {
+        const segmentName = `Auto Segment - ${data.name} - ${new Date().toISOString().slice(0, 19).replace('T', ' ')}`;
+        const filters = [];
+        if (data.filter_source) filters.push({ field: 'source', op: 'eq', value: data.filter_source });
+        if (data.filter_tag) filters.push({ field: 'tags', op: 'contains', value: data.filter_tag });
+        
+        // Create a real segment because backend ProcessCampaigns requires a segment_id
+        const res = await createSegment({ name: segmentName, filters });
+        if (res.data && res.data.id) {
+           payload.segment_id = String(res.data.id);
+        } else {
+           toast.error("Falha ao criar segmento automático. O ID não foi retornado.");
+           return;
+        }
+      } catch (e) {
+         console.error(e);
+         toast.error("Erro ao criar segmento automático para a campanha.");
+         return;
       }
-      if (data.filter_tag) {
-        payload.filters.push({ field: 'tags', op: 'contains', value: data.filter_tag });
-      }
+      
       // Remove virtual fields
       delete payload.filter_source;
       delete payload.filter_tag;
@@ -177,7 +230,7 @@ export function CampaignForm({ initialData, onSubmit, isLoading, segments = [], 
             <div className="flex items-center justify-between">
               <Label htmlFor="content">Corpo do E-mail</Label>
               <div className="w-64">
-                <Select onValueChange={handleTemplateSelect}>
+                <Select onValueChange={handleTemplateSelect} value={selectedTemplateId || undefined}>
                   <SelectTrigger>
                     <SelectValue placeholder="Carregar modelo..." />
                   </SelectTrigger>
@@ -189,13 +242,72 @@ export function CampaignForm({ initialData, onSubmit, isLoading, segments = [], 
                 </Select>
               </div>
             </div>
-            <div className="min-h-[350px]">
-             <RichTextEditor
-              value={form.watch('content') || ''}
-              onChange={(value) => form.setValue('content', value)}
-              placeholder="Escreva o conteúdo do seu e-mail aqui. Use 'Variáveis' para personalizar com o nome do cliente."
-            />
-          </div>
+            
+            {selectedTemplateId ? (
+              <div className="border rounded-md overflow-hidden bg-background">
+                <div className="bg-muted/40 p-3 border-b flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Eye className="w-4 h-4" />
+                    <span>Visualização do Modelo</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleRefreshTemplate}
+                      disabled={isRefreshingTemplate}
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 mr-2 ${isRefreshingTemplate ? 'animate-spin' : ''}`} />
+                      Atualizar Visualização
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="secondary" 
+                      size="sm" 
+                      onClick={handleEditTemplate}
+                    >
+                      <Edit className="w-3.5 h-3.5 mr-2" />
+                      Editar Modelo Original
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={handleDisconnectTemplate}
+                    >
+                      <X className="w-3.5 h-3.5 mr-2" />
+                      Usar Editor Livre
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="p-4 bg-white min-h-[400px] max-h-[600px] overflow-y-auto">
+                  <div 
+                    className="prose max-w-none dark:prose-invert"
+                    dangerouslySetInnerHTML={{ __html: form.watch('content') || '' }} 
+                  />
+                </div>
+                
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 text-xs text-yellow-800 dark:text-yellow-200 border-t border-yellow-100 dark:border-yellow-900/30 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <p>
+                    Você está usando um modelo pré-definido. Para garantir a melhor formatação, edite o modelo original.
+                    Se precisar fazer ajustes rápidos manuais, clique em "Usar Editor Livre", mas note que alguns estilos complexos podem ser perdidos.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="min-h-[350px]">
+                <RichTextEditor
+                  value={form.watch('content') || ''}
+                  onChange={(value) => form.setValue('content', value)}
+                  placeholder="Escreva o conteúdo do seu e-mail aqui. Use 'Variáveis' para personalizar com o nome do cliente."
+                />
+              </div>
+            )}
+
             {form.formState.errors.content && (
               <p className="text-sm text-destructive">{form.formState.errors.content.message}</p>
             )}

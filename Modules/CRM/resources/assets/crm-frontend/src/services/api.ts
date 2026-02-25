@@ -1,4 +1,4 @@
-/**
+import { generateTemplateThumbnail } from '@/lib/template-utils';/**
  * Mock API Service
  * Simulates REST API calls for future Laravel integration.
  * Replace implementations with real fetch calls when backend is ready.
@@ -24,6 +24,25 @@ export async function fetchDashboard(): Promise<ApiResponse<DashboardStats>> {
 
   if (!response.ok) {
     throw new Error(`Failed to fetch dashboard stats: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+
+export async function createSegment(payload: { name: string; filters?: any[]; contact_ids?: any[] }): Promise<ApiResponse<any>> {
+  const response = await fetch('/api/v1/email/segments', {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create segment: ${response.statusText}`);
   }
 
   return response.json();
@@ -62,10 +81,15 @@ export async function fetchTemplate(id: string): Promise<ApiResponse<EmailTempla
 export async function createTemplate(data: Partial<EmailTemplate>): Promise<ApiResponse<EmailTemplate>> {
   // Mock create
   await delay(500);
+  
+  // Gera thumbnail automaticamente
+  const thumbnail = data.content ? generateTemplateThumbnail(data.content) : '';
+  
   const newTemplate: EmailTemplate = {
     id: `t${Date.now()}`,
     name: data.name || 'Untitled',
     content: data.content || [],
+    thumbnail,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     ...data,
@@ -86,8 +110,11 @@ export async function updateTemplate(id: string, data: Partial<EmailTemplate>): 
   if (index === -1) {
     throw new Error('Template not found');
   }
+
+  // Se o conteúdo mudou, regenera o thumbnail
+  const thumbnail = data.content ? generateTemplateThumbnail(data.content) : stored[index].thumbnail;
   
-  stored[index] = { ...stored[index], ...data, updatedAt: new Date().toISOString() };
+  stored[index] = { ...stored[index], ...data, thumbnail, updatedAt: new Date().toISOString() };
   saveTemplatesToStorage(stored);
   return { data: stored[index] as EmailTemplate };
 }
@@ -557,24 +584,6 @@ export async function fetchAutomation(id: string): Promise<ApiResponse<Automatio
 
   if (!response.ok) {
     throw new Error(`Failed to fetch automation: ${response.statusText}`);
-  }
-
-  return response.json();
-}
-
-export async function createSegment(data: { name: string; contact_ids?: string[]; filters?: any[] }): Promise<ApiResponse<any>> {
-  const response = await fetch('/api/v1/email/segments', {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to create segment: ${response.statusText}`);
   }
 
   return response.json();
