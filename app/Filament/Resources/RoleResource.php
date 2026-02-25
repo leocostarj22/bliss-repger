@@ -141,6 +141,18 @@ class RoleResource extends Resource
             ->defaultSort('display_name');
     }
 
+    public static function getNavigationBadge(): ?string
+    {
+        $count = Role::where('is_active', true)->count();
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        $hasInactive = Role::where('is_active', false)->exists();
+        return $hasInactive ? 'warning' : 'primary';
+    }
+
     public static function getPages(): array
     {
         return [

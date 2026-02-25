@@ -213,6 +213,19 @@ class UserResource extends Resource
             ->defaultSort('name');
     }
 
+    public static function getNavigationBadge(): ?string
+    {
+        $count = User::count();
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        // Se houver utilizadores inativos, mostrar aviso
+        $hasInactive = User::where('is_active', false)->exists();
+        return $hasInactive ? 'warning' : 'primary';
+    }
+
     public static function getPages(): array
     {
         return [
