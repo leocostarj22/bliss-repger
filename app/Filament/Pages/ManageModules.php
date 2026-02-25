@@ -15,6 +15,29 @@ class ManageModules extends Page
     protected static string $view = 'filament.pages.manage-modules';
     protected static ?int $navigationSort = 1;
 
+    public static function getNavigationBadge(): ?string
+    {
+        $self = new static();
+        $modules = $self->loadModuleStatuses();
+        if (empty($modules)) {
+            return null;
+        }
+        $enabled = collect($modules)->filter(fn ($enabled) => $enabled)->count();
+        return (string) $enabled;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        $self = new static();
+        $modules = $self->loadModuleStatuses();
+        if (empty($modules)) {
+            return null;
+        }
+        $enabled = collect($modules)->filter(fn ($enabled) => $enabled)->count();
+        $total = count($modules);
+        return $enabled === $total ? 'success' : 'warning';
+    }
+
     public $modules = [];
 
     public function mount(): void

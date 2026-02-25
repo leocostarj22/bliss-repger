@@ -10,6 +10,11 @@ class ListCompanies extends ListRecords
 {
     protected static string $resource = CompanyResource::class;
 
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
+
     protected function getHeaderActions(): array
     {
         return [
