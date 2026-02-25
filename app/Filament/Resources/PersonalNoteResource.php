@@ -117,6 +117,22 @@ class PersonalNoteResource extends Resource
             ->defaultSort('created_at', 'desc');
     }
 
+    public static function getNavigationBadge(): ?string
+    {
+        $count = PersonalNote::where('user_id', auth()->id())
+            ->orWhereHas('sharedWith', function ($q) {
+                $q->where('users.id', auth()->id());
+            })
+            ->count();
+        
+        return $count > 0 ? (string) $count : null;
+    }
+    
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'primary';
+    }
+
     public static function getPages(): array
     {
         return [

@@ -13,6 +13,11 @@ class ListTasks extends ListRecords
 {
     protected static string $resource = TaskResource::class;
 
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
+
     protected function getHeaderActions(): array
     {
         return [

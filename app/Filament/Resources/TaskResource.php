@@ -279,6 +279,43 @@ class TaskResource extends Resource
             ->defaultSort('due_date', 'asc');
     }
     
+    public static function getNavigationBadge(): ?string
+    {
+        $user = Auth::user();
+        $count = Task::where(function ($query) use ($user) {
+                $query->where(function ($q) use ($user) {
+                    $q->where('taskable_type', get_class($user))
+                      ->where('taskable_id', $user->id);
+                })
+                ->orWhereHas('sharedWith', function ($q) use ($user) {
+                    $q->where('users.id', $user->id);
+                });
+            })
+            ->where('status', '!=', 'completed')
+            ->count();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        $user = Auth::user();
+        $urgent = Task::where(function ($query) use ($user) {
+                $query->where(function ($q) use ($user) {
+                    $q->where('taskable_type', get_class($user))
+                      ->where('taskable_id', $user->id);
+                })
+                ->orWhereHas('sharedWith', function ($q) use ($user) {
+                    $q->where('users.id', $user->id);
+                });
+            })
+            ->where('status', '!=', 'completed')
+            ->where('priority', 'urgent')
+            ->exists();
+
+        return $urgent ? 'danger' : 'warning';
+    }
+
     public static function getPages(): array
     {
         return [
