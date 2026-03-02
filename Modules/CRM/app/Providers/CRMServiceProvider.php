@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Filament\Facades\Filament;
 use Filament\Navigation\NavigationItem;
+use Illuminate\Support\Facades\File;
 
 class CRMServiceProvider extends ServiceProvider
 {
@@ -33,14 +34,17 @@ class CRMServiceProvider extends ServiceProvider
         // This method can be used for additional Filament-specific configurations
         if (class_exists(\Filament\Facades\Filament::class)) {
             Filament::serving(function () {
-                Filament::registerNavigationItems([
-                    NavigationItem::make('CRM App')
-                        ->url('/admin/crm/app')
-                        ->icon('heroicon-o-presentation-chart-line')
-                        ->activeIcon('heroicon-s-presentation-chart-line')
-                        ->group('CRM')
-                        ->sort(1),
-                ]);
+                // Verificar se o módulo CRM está ativo antes de registrar o menu
+                if ($this->isModuleEnabled('CRM')) {
+                    Filament::registerNavigationItems([
+                        NavigationItem::make('CRM App')
+                            ->url('/admin/crm/app')
+                            ->icon('heroicon-o-presentation-chart-line')
+                            ->activeIcon('heroicon-s-presentation-chart-line')
+                            ->group('CRM')
+                            ->sort(1),
+                    ]);
+                }
 
                 Filament::registerRenderHook('panels::head.start', function () {
                     return '<link rel="icon" type="image/png" href="'.e(asset('images/gmfavicon.png')).'" />';
@@ -133,6 +137,22 @@ class CRMServiceProvider extends ServiceProvider
     public function provides(): array
     {
         return [];
+    }
+
+    /**
+     * Verificar se o módulo está ativo
+     */
+    private function isModuleEnabled(string $moduleName): bool
+    {
+        $path = base_path('modules_statuses.json');
+        
+        if (! \Illuminate\Support\Facades\File::exists($path)) {
+            return true; // Por padrão, assume que está ativo se o arquivo não existir
+        }
+
+        $data = json_decode(\Illuminate\Support\Facades\File::get($path), true);
+        
+        return $data[$moduleName] ?? true; // Por padrão, assume ativo se não encontrar o módulo
     }
 
     private function getPublishableViewPaths(): array
