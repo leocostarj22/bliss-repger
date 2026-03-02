@@ -28,15 +28,13 @@ export function blocksToHtml(blocks: TemplateBlock[] | string): string {
       
       case 'video': {
         const width = String(p.width || '480px');
-        const height = '270px';
         const thumbnailUrl = p.thumbnailUrl;
         const thumbnailText = p.thumbnailText || 'Assista ao vídeo';
         
         if (thumbnailUrl) {
-          // Com thumbnail real
-          return `<p style="text-align: center; margin: 0;"><a href="${p.url}" target="_blank" style="display: inline-block; text-decoration: none; max-width: 100%;"><span style="background-image: url('${thumbnailUrl}'); background-size: cover; background-position: center; width: ${width}; max-width: 100%; height: ${height}; display: flex; align-items: center; justify-content: center; border-radius: 8px; position: relative; margin: 0 auto;"><span style="background-color: rgba(0,0,0,0.4); position: absolute; inset: 0; border-radius: 8px;"></span><span style="font-size: 32px; z-index: 10; color: #fff;">▶</span><span style="position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; font-size: 14px; font-family: sans-serif; color: #fff; z-index: 10;">${thumbnailText}</span></span></a></p>`;
+          return `<p style="text-align: center; margin: 0;"><a href="${p.url}" target="_blank" style="display: inline-block; text-decoration: none; max-width: 100%;"><img src="${thumbnailUrl}" alt="${thumbnailText}" style="width: ${width}; max-width: 100%; height: auto; border-radius: 8px; display: block;" /></a></p>`;
         } else {
-          // Fallback sem thumbnail
+          const height = '270px';
           return `<p style="text-align: center; margin: 0;"><a href="${p.url}" target="_blank" style="display: inline-block; text-decoration: none; max-width: 100%;"><span style="background-color: #000; color: #fff; width: ${width}; max-width: 100%; height: ${height}; display: flex; align-items: center; justify-content: center; border-radius: 8px; position: relative; margin: 0 auto;"><span style="font-size: 32px; z-index: 10;">▶</span><span style="position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; font-size: 14px; font-family: sans-serif; color: #ddd;">${thumbnailText}</span></span></a></p>`;
         }
       }
