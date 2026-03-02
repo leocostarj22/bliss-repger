@@ -285,7 +285,7 @@ export function CampaignForm({ initialData, onSubmit, isLoading, segments = [], 
                 
                 <div className="p-4 bg-white min-h-[400px] max-h-[600px] overflow-y-auto">
                   <div 
-                    className="prose max-w-none dark:prose-invert"
+                    className="prose max-w-none dark:prose-invert [&_p]:mb-3 [&_p]:mt-3 [&_div]:mb-3 [&_div]:mt-3 [&_table]:mb-3 [&_table]:mt-3"
                     dangerouslySetInnerHTML={{ __html: form.watch('content') || '' }} 
                   />
                 </div>

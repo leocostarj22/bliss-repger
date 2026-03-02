@@ -31,6 +31,8 @@ export default function Campaigns() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [isPolling, setIsPolling] = useState(false);
+  const [notifiedCampaigns, setNotifiedCampaigns] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -43,6 +45,59 @@ export default function Campaigns() {
 
     return () => clearTimeout(timer);
   }, [statusFilter, search]);
+
+  // Polling automático para campanhas em envio
+  useEffect(() => {
+    // Verificar se há campanhas em envio
+    const hasSendingCampaigns = campaigns.some(c => c.status === 'sending');
+    
+    if (!hasSendingCampaigns) {
+      setIsPolling(false);
+      return;
+    }
+
+    setIsPolling(true);
+
+    // Criar intervalo para polling
+    const pollingInterval = setInterval(() => {
+      fetchCampaigns({ status: statusFilter, search }).then(r => {
+        const newCampaigns = r.data;
+
+        const completedCampaigns = newCampaigns.filter((newCamp: Campaign) =>
+          newCamp.status === 'sent' &&
+          campaigns.some(oldCamp => oldCamp.id === newCamp.id && oldCamp.status === 'sending') &&
+          !notifiedCampaigns.has(newCamp.id)
+        );
+
+        if (completedCampaigns.length > 0) {
+          try {
+            const audio = new Audio('/sounds/campaign-sent.mp3');
+            audio.play().catch(() => {});
+          } catch (e) {}
+
+          setNotifiedCampaigns(prev => {
+            const next = new Set(prev);
+            completedCampaigns.forEach(camp => next.add(camp.id));
+            return next;
+          });
+        }
+
+        setCampaigns(newCampaigns);
+        
+        // Se não houver mais campanhas em envio, parar o polling
+        const stillHasSending = newCampaigns.some((c: Campaign) => c.status === 'sending');
+        if (!stillHasSending) {
+          setIsPolling(false);
+          clearInterval(pollingInterval);
+        }
+      });
+    }, 5000); // Atualizar a cada 5 segundos
+
+    return () => {
+      clearInterval(pollingInterval);
+      setIsPolling(false);
+    };
+  }, [campaigns, statusFilter, search, notifiedCampaigns]);
 
   const handleDuplicate = async (id: string) => {
     try {
@@ -77,12 +132,25 @@ export default function Campaigns() {
     }
   };
 
+  // Função para atualizar o status de uma campanha específica
+  const updateCampaignStatus = (id: string, newStatus: CampaignStatus) => {
+    setCampaigns(prev => prev.map(c => 
+      c.id === id ? { ...c, status: newStatus } : c
+    ));
+  };
+
   return (
     <div className="space-y-6 animate-slide-up">
       <div className="flex items-center justify-between">
         <div className="page-header">
           <h1 className="page-title">Campanhas</h1>
           <p className="page-subtitle">Crie, gira e acompanhe as suas campanhas de e-mail</p>
+          {isPolling && (
+            <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span>Atualizando status das campanhas...</span>
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2" asChild>

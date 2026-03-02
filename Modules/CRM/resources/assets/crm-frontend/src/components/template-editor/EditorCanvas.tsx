@@ -33,7 +33,7 @@ export function EditorCanvas({ blocks, selectedId, previewMode, onSelect, onDele
               ref={provided.innerRef}
               {...provided.droppableProps}
               className={cn(
-                'p-6 space-y-3 min-h-[400px] transition-colors',
+                'p-6 space-y-4 min-h-[400px] transition-colors',
                 snap.isDraggingOver && 'bg-primary/5'
               )}
             >

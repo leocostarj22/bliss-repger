@@ -154,6 +154,9 @@ export function PropertiesPanel({ block, onChange }: Props) {
               </Button>
             </div>
           </Field>
+          <Field label="Hyperlink (opcional)">
+            <Input value={String(p.hyperlink || '')} onChange={e => set('hyperlink', e.target.value)} className="text-sm" placeholder="https://exemplo.com" />
+          </Field>
           <Field label="Texto alternativo">
             <Input value={String(p.alt)} onChange={e => set('alt', e.target.value)} className="text-sm" />
           </Field>
@@ -169,7 +172,18 @@ export function PropertiesPanel({ block, onChange }: Props) {
             <Input value={String(p.text)} onChange={e => set('text', e.target.value)} className="text-sm" />
           </Field>
           <Field label="URL">
-            <Input value={String(p.url)} onChange={e => set('url', e.target.value)} className="text-sm" />
+            <Input 
+              value={String(p.url)} 
+              onChange={e => {
+                const value = e.target.value;
+                // Validar URL se não estiver vazio
+                if (value && !value.match(/^https?:\/\/.*\..*/)) {
+                  return;
+                }
+                set('url', value);
+              }} 
+              className="text-sm" 
+            />
           </Field>
           <Field label="Cor de fundo">
             <Input type="color" value={String(p.bgColor)} onChange={e => set('bgColor', e.target.value)} className="h-9 w-full" />

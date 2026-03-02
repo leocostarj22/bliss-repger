@@ -23,14 +23,24 @@ export function BlockRenderer({ block, onSelect, onDelete, isNested = false }: B
       );
 
     case 'image':
-      return (
+      const imageElement = (
+        <img
+          src={String(p.src)}
+          alt={String(p.alt)}
+          style={{ width: String(p.width), maxWidth: '100%' }}
+          className="rounded"
+        />
+      );
+      
+      return p.hyperlink ? (
         <div className="flex justify-center">
-          <img
-            src={String(p.src)}
-            alt={String(p.alt)}
-            style={{ width: String(p.width), maxWidth: '100%' }}
-            className="rounded"
-          />
+          <a href={String(p.hyperlink)} onClick={(e) => e.preventDefault()} className="inline-block">
+            {imageElement}
+          </a>
+        </div>
+      ) : (
+        <div className="flex justify-center">
+          {imageElement}
         </div>
       );
 

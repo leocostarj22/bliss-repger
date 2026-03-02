@@ -9,33 +9,38 @@ export function blocksToHtml(blocks: TemplateBlock[] | string): string {
     switch (block.type) {
       case 'text':
         const textContent = String(p.content || '').replace(/\n/g, '<br>');
-        return `<p style="text-align: ${p.align}; line-height: 1.5; margin: 0;"><span style="font-family: sans-serif; font-size: ${p.fontSize}px; color: ${p.color};">${textContent}</span></p>`;
+        return `<p style="text-align: ${p.align}; line-height: 1.5; margin: 10px 0;"><span style="font-family: sans-serif; font-size: ${p.fontSize}px; color: ${p.color};">${textContent}</span></p>`;
       
       case 'image':
-        return `<p style="text-align: center; margin: 0;"><img src="${p.src}" alt="${p.alt}" style="width: ${p.width}; max-width: 100%; height: auto; border-radius: 4px; display: inline-block;" /></p>`;
+        const imgTag = `<img src="${p.src}" alt="${p.alt}" style="width: ${p.width}; max-width: 100%; height: auto; border-radius: 4px; display: inline-block;" />`;
+        return p.hyperlink 
+          ? `<p style="text-align: center; margin: 10px 0;"><a href="${p.hyperlink}" target="_blank" style="text-decoration: none;">${imgTag}</a></p>`
+          : `<p style="text-align: center; margin: 10px 0;">${imgTag}</p>`;
       
       case 'button':
         return `<p style="text-align: ${p.align}; margin: 10px 0;"><a href="${p.url}" style="background-color: ${p.bgColor}; color: ${p.textColor}; border-radius: ${p.borderRadius}px; padding: 12px 24px; display: inline-block; text-decoration: none; font-family: sans-serif; font-weight: bold; font-size: 16px;">${p.text}</a></p>`;
       
-      case 'divider':
-        return `<div style="margin: ${p.margin}px 0;"><hr style="border: 0; border-top: ${p.height}px solid ${p.color};" /></div>`;
+      case 'divider': {
+        const margin = Math.max(Number(p.margin ?? 10), 10);
+        return `<div style="margin: ${margin}px 0;"><hr style="border: 0; border-top: ${p.height}px solid ${p.color};" /></div>`;
+      }
       
       case 'spacer':
         return `<div style="height: ${p.height}px; line-height: ${p.height}px; font-size: 0;">&nbsp;</div>`;
       
       case 'html':
-        return `<div>${p.code}</div>`;
-      
+        return `<div style="margin: 10px 0;">${p.code}</div>`;
+
       case 'video': {
         const width = String(p.width || '480px');
         const thumbnailUrl = p.thumbnailUrl;
         const thumbnailText = p.thumbnailText || 'Assista ao vídeo';
         
         if (thumbnailUrl) {
-          return `<p style="text-align: center; margin: 0;"><a href="${p.url}" target="_blank" style="display: inline-block; text-decoration: none; max-width: 100%;"><img src="${thumbnailUrl}" alt="${thumbnailText}" style="width: ${width}; max-width: 100%; height: auto; border-radius: 8px; display: block;" /></a></p>`;
+          return `<p style="text-align: center; margin: 10px 0;"><a href="${p.url}" target="_blank" style="display: inline-block; text-decoration: none; max-width: 100%;"><img src="${thumbnailUrl}" alt="${thumbnailText}" style="width: ${width}; max-width: 100%; height: auto; border-radius: 8px; display: block;" /></a></p>`;
         } else {
           const height = '270px';
-          return `<p style="text-align: center; margin: 0;"><a href="${p.url}" target="_blank" style="display: inline-block; text-decoration: none; max-width: 100%;"><span style="background-color: #000; color: #fff; width: ${width}; max-width: 100%; height: ${height}; display: flex; align-items: center; justify-content: center; border-radius: 8px; position: relative; margin: 0 auto;"><span style="font-size: 32px; z-index: 10;">▶</span><span style="position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; font-size: 14px; font-family: sans-serif; color: #ddd;">${thumbnailText}</span></span></a></p>`;
+          return `<p style="text-align: center; margin: 10px 0;"><a href="${p.url}" target="_blank" style="display: inline-block; text-decoration: none; max-width: 100%;"><span style="background-color: #000; color: #fff; width: ${width}; max-width: 100%; height: ${height}; display: flex; align-items: center; justify-content: center; border-radius: 8px; position: relative; margin: 0 auto;"><span style="font-size: 32px; z-index: 10;">▶</span><span style="position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; font-size: 14px; font-family: sans-serif; color: #ddd;">${thumbnailText}</span></span></a></p>`;
         }
       }
 
@@ -59,7 +64,7 @@ export function blocksToHtml(blocks: TemplateBlock[] | string): string {
         
         // Use a div wrapper for Tiptap compatibility (text-align works better on block containers in editors)
         // Keep the inner table with align attribute for Outlook support
-        return `<div style="text-align: ${align}; width: 100%;">
+        return `<div style="text-align: ${align}; width: 100%; margin: 10px 0;">
           <table align="${align}" style="display: inline-table; margin: ${margin}; text-align: ${align};" cellpadding="0" cellspacing="0" border="0" role="presentation">
             <tr>
               ${networks.map(net => {
@@ -80,7 +85,7 @@ export function blocksToHtml(blocks: TemplateBlock[] | string): string {
       const gap = Number(p.gap) || 10;
       const children = (block as any).children as TemplateBlock[] || [];
 
-      return `<table width="100%" cellpadding="0" cellspacing="0" style="table-layout: fixed; width: 100%;"><tr>${Array.from({ length: colCount }).map((_, i) => {
+      return `<table width="100%" cellpadding="0" cellspacing="0" style="table-layout: fixed; width: 100%; margin: 10px 0;"><tr>${Array.from({ length: colCount }).map((_, i) => {
         const content = children[i] ? blocksToHtml([children[i]]) : `<div style="background-color: #f9f9f9; padding: 20px; border: 1px dashed #ccc; text-align: center; color: #999; font-family: sans-serif; border-radius: 4px;">Coluna ${i + 1}</div>`;
         return `<td style="vertical-align: top; padding: 0 ${gap/2}px;">${content}</td>`;
       }).join('')}</tr></table>`;
@@ -91,9 +96,9 @@ export function blocksToHtml(blocks: TemplateBlock[] | string): string {
         const layout = p.layout || 'vertical';
         const isGrid = layout === 'grid';
         if (isGrid) {
-          return `<table width="100%" cellpadding="0" cellspacing="0"><tr>${Array.from({ length: items }).map(() => `<td style="padding: 5px; width: ${100/items}%;"><div style="background: #f5f5f5; height: 120px; border-radius: 4px; border: 1px solid #eee;"></div></td>`).join('')}</tr></table>`;
+          return `<table width="100%" cellpadding="0" cellspacing="0" style="margin: 10px 0;"><tr>${Array.from({ length: items }).map(() => `<td style="padding: 5px; width: ${100/items}%;"><div style="background: #f5f5f5; height: 120px; border-radius: 4px; border: 1px solid #eee;"></div></td>`).join('')}</tr></table>`;
         }
-        return `<div style="font-family: sans-serif;">${Array.from({ length: items }).map(() => `<div style="display: flex; gap: 15px; margin-bottom: 15px; border: 1px solid #eee; padding: 10px; border-radius: 8px;"><div style="width: 80px; height: 80px; background: #eee; border-radius: 4px; flex-shrink: 0;"></div><div style="flex: 1;"><div style="height: 16px; background: #eee; width: 80%; margin-bottom: 8px; border-radius: 2px;"></div><div style="height: 12px; background: #f5f5f5; width: 100%; border-radius: 2px;"></div></div></div>`).join('')}</div>`;
+        return `<div style="font-family: sans-serif; margin: 10px 0;">${Array.from({ length: items }).map(() => `<div style="display: flex; gap: 15px; margin-bottom: 15px; border: 1px solid #eee; padding: 10px; border-radius: 8px;"><div style="width: 80px; height: 80px; background: #eee; border-radius: 4px; flex-shrink: 0;"></div><div style="flex: 1;"><div style="height: 16px; background: #eee; width: 80%; margin-bottom: 8px; border-radius: 2px;"></div><div style="height: 12px; background: #f5f5f5; width: 100%; border-radius: 2px;"></div></div></div>`).join('')}</div>`;
       }
       
       default:

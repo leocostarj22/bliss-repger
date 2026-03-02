@@ -181,7 +181,7 @@ export default function CampaignDetail() {
           <div className="glass-card p-6 border rounded-lg bg-card shadow-sm space-y-6">
             <div>
               <h3 className="text-lg font-semibold mb-4">Pré-visualização do Conteúdo</h3>
-              <div className="prose max-w-none dark:prose-invert bg-white dark:bg-gray-900 p-4 rounded-md border min-h-[300px]">
+              <div className="prose max-w-none dark:prose-invert bg-white dark:bg-gray-900 p-4 rounded-md border min-h-[300px] [&_p]:mb-3 [&_p]:mt-3 [&_div]:mb-3 [&_div]:mt-3 [&_table]:mb-3 [&_table]:mt-3">
                 {campaign.content ? (
                   <div dangerouslySetInnerHTML={{ __html: campaign.content }} />
                 ) : (
