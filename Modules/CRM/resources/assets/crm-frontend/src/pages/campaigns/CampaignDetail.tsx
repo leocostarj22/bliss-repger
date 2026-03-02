@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchCampaign, fetchCampaignLogs } from '@/services/api';
+import { fetchCampaign, fetchCampaignLogs, sendCampaignNow } from '@/services/api';
 import { Campaign } from '@/types';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
 import { ChevronLeft, Edit, Send, MousePointerClick, Eye, AlertTriangle, RefreshCw, UserX } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 export default function CampaignDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<any[]>([]);
@@ -78,6 +80,19 @@ export default function CampaignDetail() {
            <Button variant="outline" size="sm" onClick={loadData} title="Atualizar">
              <RefreshCw className="w-4 h-4" />
            </Button>
+           {campaign.channel === 'email' && (campaign.status === 'draft' || campaign.status === 'scheduled') && (
+             <Button size="sm" className="gap-2" onClick={async () => {
+               try {
+                 const r = await sendCampaignNow(campaign.id);
+                 toast({ title: 'Envio iniciado', description: `${r.queued ?? 0} e-mails em processamento` });
+                 loadData();
+               } catch (e: any) {
+                 toast({ title: 'Erro', description: e?.message ?? 'Falha ao enviar agora', variant: 'destructive' });
+               }
+             }}>
+               <Send className="w-4 h-4" /> Enviar agora
+             </Button>
+           )}
            <Button onClick={() => navigate(`/campaigns/${id}/edit`)} className="gap-2">
              <Edit className="w-4 h-4" /> Editar Campanha
            </Button>

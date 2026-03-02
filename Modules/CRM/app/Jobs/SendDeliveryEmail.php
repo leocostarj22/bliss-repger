@@ -47,6 +47,9 @@ class SendDeliveryEmail implements ShouldQueue
         try {
             $content = $this->renderContent($content, $contact, $campaign);
             $content = $this->injectTracking($content, $delivery, $campaign);
+            $content = $this->ensureAbsoluteUrls($content);
+            $content = $this->inlineBasicImageStyles($content);
+            $content = $this->normalizeEmailHtml($content);
 
             Log::info('crm.mail.composed', [
                 'delivery_id' => $delivery->id,
@@ -189,5 +192,78 @@ class SendDeliveryEmail implements ShouldQueue
         }
 
         return $html;
+    }
+
+    private function ensureAbsoluteUrls(string $html): string
+    {
+        $base = rtrim(config('app.url') ?: url('/'), '/');
+
+        $html = preg_replace_callback('/\b(href|src)\s*=\s*([\'\"])(.*?)\2/i', function ($m) use ($base) {
+            $attr = $m[1];
+            $q = $m[2];
+            $val = $m[3];
+            if ($val === '' || preg_match('/^(https?:|mailto:|tel:|data:|cid:|javascript:|#|\/\/)/i', $val)) {
+                return $m[0];
+            }
+            $new = $val[0] === '/' ? ($base . $val) : ($base . '/' . $val);
+            return $attr . '=' . $q . $new . $q;
+        }, $html);
+
+        $html = preg_replace_callback('/\b(href|src)\s*=\s*([^\s"\'>]+)/i', function ($m) use ($base) {
+            $attr = $m[1];
+            $val = $m[2];
+            if ($val === '' || preg_match('/^(https?:|mailto:|tel:|data:|cid:|javascript:|#|\/\/)/i', $val)) {
+                return $m[0];
+            }
+            $new = $val[0] === '/' ? ($base . $val) : ($base . '/' . $val);
+            return $attr . '="' . $new . '"';
+        }, $html);
+
+        return $html;
+    }
+
+    private function inlineBasicImageStyles(string $html): string
+    {
+        $defaults = 'display:block;border:0;outline:none;text-decoration:none;max-width:100%;height:auto;-ms-interpolation-mode:bicubic;';
+
+        return preg_replace_callback('/<img\b([^>]*)>/i', function ($m) use ($defaults) {
+            $attrs = $m[1] ?? '';
+            if (preg_match('/\bstyle\s*=\s*([\'\"])(.*?)\1/i', $attrs, $sm)) {
+                $q = $sm[1];
+                $style = $sm[2];
+                $attrs = preg_replace('/\bstyle\s*=\s*([\'\"])(.*?)\1/i', 'style=' . $q . $style . ' ' . $defaults . $q, $attrs, 1);
+            } else {
+                $attrs .= ' style="' . $defaults . '"';
+            }
+            if (!preg_match('/\balt\s*=\s*/i', $attrs)) {
+                $attrs .= ' alt=""';
+            }
+            return '<img' . $attrs . '>';
+        }, $html);
+    }
+
+    private function normalizeEmailHtml(string $html): string
+    {
+        if (stripos($html, '<html') !== false) {
+            return $html;
+        }
+
+        $bodyStyle = 'margin:0;padding:0;background-color:#f5f7fb;';
+        $tdInnerStyle = "font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size:16px; line-height:1.5; color:#222222; padding:0 24px;";
+
+        $wrapped =
+            '<!doctype html><html><head>'.
+            '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />'.
+            '<meta name="viewport" content="width=device-width, initial-scale=1.0"/>'.
+            '</head><body style="' . $bodyStyle . '">'.
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="width:100%;background-color:#f5f7fb;">'.
+            '<tr><td align="center">'.
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="width:600px;max-width:600px;background:#ffffff;">'.
+            '<tr><td align="left" style="' . $tdInnerStyle . '">' . $html . '</td></tr>'.
+            '</table>'.
+            '</td></tr></table>'.
+            '</body></html>';
+
+        return $wrapped;
     }
 }

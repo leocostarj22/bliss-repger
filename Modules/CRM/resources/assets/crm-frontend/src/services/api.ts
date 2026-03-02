@@ -279,6 +279,24 @@ export async function duplicateCampaign(id: string): Promise<ApiResponse<Campaig
   return response.json();
 }
 
+export async function sendCampaignNow(id: string): Promise<{ message: string; queued: number }> {
+  const response = await fetch(`/api/v1/email/campaigns/${id}/send-now`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Falha ao enviar agora: ${response.statusText} ${text}`);
+  }
+
+  return response.json();
+}
+
 export async function fetchSegments(): Promise<ApiResponse<{ id: string; name: string }[]>> {
   const response = await fetch('/api/v1/email/segments', {
     method: 'GET',

@@ -17,24 +17,30 @@ class ManageModules extends Page
 
     public static function getNavigationBadge(): ?string
     {
-        $self = new static();
-        $modules = $self->loadModuleStatuses();
-        if (empty($modules)) {
+        $path = base_path('modules_statuses.json');
+        if (!\Illuminate\Support\Facades\File::exists($path)) {
             return null;
         }
-        $enabled = collect($modules)->filter(fn ($enabled) => $enabled)->count();
+        $data = json_decode(\Illuminate\Support\Facades\File::get($path), true) ?: [];
+        if (empty($data)) {
+            return null;
+        }
+        $enabled = collect($data)->filter(fn ($enabled) => (bool) $enabled)->count();
         return (string) $enabled;
     }
 
     public static function getNavigationBadgeColor(): ?string
     {
-        $self = new static();
-        $modules = $self->loadModuleStatuses();
-        if (empty($modules)) {
+        $path = base_path('modules_statuses.json');
+        if (!\Illuminate\Support\Facades\File::exists($path)) {
             return null;
         }
-        $enabled = collect($modules)->filter(fn ($enabled) => $enabled)->count();
-        $total = count($modules);
+        $data = json_decode(\Illuminate\Support\Facades\File::get($path), true) ?: [];
+        if (empty($data)) {
+            return null;
+        }
+        $enabled = collect($data)->filter(fn ($enabled) => (bool) $enabled)->count();
+        $total = count($data);
         return $enabled === $total ? 'success' : 'warning';
     }
 
@@ -128,9 +134,9 @@ class ManageModules extends Page
     {
         return match ($name) {
             'CRM' => 'Gestão de leads, contactos e campanhas.',
-            'Products' => 'Catálogo de produtos.',
-            'Finance' => 'Gestão financeira e faturação.',
-            'HumanResources' => 'Recursos Humanos (férias, folha de pagamento, ponto).',
+            'Products' => 'Catálogo de Produtos.',
+            'Finance' => 'Gestão Financeira e Faturação',
+            'HumanResources' => 'Recursos Humanos (férias, folha de pagamento, ponto)',
             default => 'Módulo ' . $name,
         };
     }

@@ -96,6 +96,54 @@ class CampaignResource extends Resource
                 Tables\Filters\TernaryFilter::make('active')->label('Ativa (GoContact)'),
             ])
             ->actions([
+                Tables\Actions\Action::make('send_now')
+                    ->label('Enviar agora')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->color('success')
+                    ->visible(fn ($record) => $record->channel === 'email' && in_array($record->status, ['draft','scheduled']))
+                    ->requiresConfirmation()
+                    ->action(function (\Modules\CRM\Models\Campaign $record) {
+                        if (! $record->segment_id) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Sem segmento')
+                                ->body('Defina um segmento para enviar.')
+                                ->warning()
+                                ->send();
+                            return;
+                        }
+
+                        $resolver = app(\Modules\CRM\Services\SegmentResolver::class);
+                        $contacts = $resolver->resolveContacts($record->segment_id);
+                        if ($contacts->isEmpty()) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Sem contatos')
+                                ->body('O segmento não retornou contatos.')
+                                ->warning()
+                                ->send();
+                            $record->update(['status' => 'draft']);
+                            return;
+                        }
+
+                        $count = 0;
+                        foreach ($contacts as $contact) {
+                            $delivery = \Modules\CRM\Models\Delivery::firstOrCreate(
+                                ['campaign_id' => $record->id, 'contact_id' => $contact->id],
+                                ['status' => 'queued', 'sent_at' => null]
+                            );
+                            if ($delivery->status !== 'sent') {
+                                \Modules\CRM\Jobs\SendDeliveryEmail::dispatch($delivery->id);
+                                $count++;
+                            }
+                        }
+
+                        $record->update(['status' => 'sending', 'scheduled_at' => now()]);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Envio iniciado')
+                            ->body("{$count} e-mails em processamento.")
+                            ->success()
+                            ->send();
+                    }),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),

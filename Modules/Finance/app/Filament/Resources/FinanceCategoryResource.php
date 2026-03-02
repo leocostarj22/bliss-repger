@@ -116,6 +116,18 @@ class FinanceCategoryResource extends Resource
         ];
     }
 
+    public static function getNavigationBadge(): ?string
+    {
+        $count = FinanceCategory::where('is_active', true)->count();
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        $hasInactive = FinanceCategory::where('is_active', false)->exists();
+        return $hasInactive ? 'warning' : 'primary';
+    }
+
     public static function getPages(): array
     {
         return [

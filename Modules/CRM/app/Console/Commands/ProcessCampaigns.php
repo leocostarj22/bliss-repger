@@ -85,8 +85,9 @@ class ProcessCampaigns extends Command
                 $contacts = $resolver->resolveContacts($campaign->segment_id);
                 
                 if ($contacts->isEmpty()) {
-                    $this->info("No contacts found for segment {$campaign->segment_id}.");
-                    $campaign->update(['status' => 'sent']);
+                    $this->info("No contacts found for segment {$campaign->segment_id}. Reverting campaign to draft.");
+                    Log::warning("crm.campaign.no_contacts", ['campaign_id' => $campaign->id, 'segment_id' => $campaign->segment_id]);
+                    $campaign->update(['status' => 'draft']);
                     continue;
                 }
 
@@ -114,8 +115,13 @@ class ProcessCampaigns extends Command
                     $count++;
                 }
                 
-                // 6. Keep as Sending; final status will flip in SendDeliveryEmail when all deliveries are sent
-                $this->info("Dispatched {$count} emails for campaign {$campaign->id}. Campaign remains 'sending' until all deliveries complete.");
+                if ($count === 0) {
+                    $this->info("No deliveries queued for campaign {$campaign->id}. Reverting to draft.");
+                    Log::warning("crm.campaign.no_deliveries", ['campaign_id' => $campaign->id]);
+                    $campaign->update(['status' => 'draft']);
+                } else {
+                    $this->info("Dispatched {$count} emails for campaign {$campaign->id}. Campaign remains 'sending' until all deliveries complete.");
+                }
 
             } catch (\Exception $e) {
                 Log::error("Failed to process campaign {$campaign->id}: " . $e->getMessage());

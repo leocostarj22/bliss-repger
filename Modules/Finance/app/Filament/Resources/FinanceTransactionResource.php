@@ -74,6 +74,23 @@ class FinanceTransactionResource extends Resource
         ->bulkActions([Tables\Actions\DeleteBulkAction::make()]);
     }
 
+    public static function getNavigationBadge(): ?string
+    {
+        $pending = FinanceTransaction::where('status', 'pending')->count();
+        return $pending > 0 ? (string) $pending : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        if (FinanceTransaction::where('status', 'late')->exists()) {
+            return 'danger';
+        }
+        if (FinanceTransaction::where('status', 'pending')->exists()) {
+            return 'warning';
+        }
+        return 'primary';
+    }
+
     public static function getPages(): array
     {
         return [

@@ -7,5 +7,10 @@ use Filament\Resources\Pages\ListRecords;
 class ListFinanceTransactions extends ListRecords
 {
     protected static string $resource = FinanceTransactionResource::class;
+
+    public function getMaxContentWidth(): ?string
+    {
+        return 'full';
+    }
     protected function getHeaderActions(): array { return [Actions\CreateAction::make()]; }
 }

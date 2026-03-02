@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchCampaigns, duplicateCampaign, deleteCampaign } from '@/services/api';
+import { fetchCampaigns, duplicateCampaign, deleteCampaign, sendCampaignNow } from '@/services/api';
 import type { Campaign, CampaignStatus } from '@/types';
 import { Search, Plus, MoreHorizontal, Send, Clock, FileEdit, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -63,6 +63,17 @@ export default function Campaigns() {
       setCampaigns(prev => prev.filter(c => c.id !== id));
     } catch (e) {
       toast({ title: "Erro", description: "Falha ao eliminar", variant: "destructive" });
+    }
+  };
+
+  const handleSendNow = async (id: string) => {
+    try {
+      const r = await sendCampaignNow(id);
+      toast({ title: 'Envio iniciado', description: `${r.queued ?? 0} e-mails em processamento` });
+      const res = await fetchCampaigns({ status: statusFilter, search });
+      setCampaigns(res.data);
+    } catch (e: any) {
+      toast({ title: 'Erro', description: e?.message ?? 'Falha ao enviar agora', variant: 'destructive' });
     }
   };
 
@@ -171,6 +182,9 @@ export default function Campaigns() {
                               <DropdownMenuItem onClick={() => navigate(`/campaigns/${c.id}`)}>Ver Detalhes</DropdownMenuItem>
                               <DropdownMenuItem onClick={() => navigate(`/campaigns/${c.id}/edit`)}>Editar</DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDuplicate(c.id)}>Duplicar</DropdownMenuItem>
+                              {(c.channel === 'email' && (c.status === 'draft' || c.status === 'scheduled')) && (
+                                <DropdownMenuItem onClick={() => handleSendNow(c.id)}>Enviar agora</DropdownMenuItem>
+                              )}
                               <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(c.id)}>Eliminar</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

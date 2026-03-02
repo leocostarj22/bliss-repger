@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\CRM\Models\Campaign;
+use Modules\CRM\Models\Delivery;
+use Modules\CRM\Services\SegmentResolver;
+use Modules\CRM\Jobs\SendDeliveryEmail;
 
 class CampaignController extends Controller
 {
@@ -288,5 +291,45 @@ class CampaignController extends Controller
             ->paginate($request->get('per_page', 20));
             
         return response()->json($logs);
+    }
+
+    public function sendNow($id): JsonResponse
+    {
+        $campaign = Campaign::findOrFail($id);
+        if ($campaign->channel !== 'email') {
+            return response()->json(['message' => 'Apenas campanhas de e-mail podem ser enviadas'], 422);
+        }
+        if (! $campaign->segment_id) {
+            return response()->json(['message' => 'Defina um segmento antes de enviar'], 422);
+        }
+
+        $resolver = app(SegmentResolver::class);
+        $contacts = $resolver->resolveContacts($campaign->segment_id);
+        if ($contacts->isEmpty()) {
+            $campaign->update(['status' => 'draft']);
+            return response()->json(['message' => 'Nenhum contacto encontrado para o segmento'], 422);
+        }
+
+        $queued = 0;
+        foreach ($contacts as $contact) {
+            $delivery = Delivery::firstOrCreate([
+                'campaign_id' => $campaign->id,
+                'contact_id' => $contact->id,
+            ], [
+                'status' => 'queued',
+                'sent_at' => null,
+            ]);
+            if ($delivery->status !== 'sent') {
+                SendDeliveryEmail::dispatch($delivery->id);
+                $queued++;
+            }
+        }
+
+        $campaign->update([
+            'status' => 'sending',
+            'scheduled_at' => $campaign->scheduled_at ?? now(),
+        ]);
+
+        return response()->json(['message' => 'Envio iniciado', 'queued' => $queued]);
     }
 }
