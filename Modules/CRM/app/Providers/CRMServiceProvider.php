@@ -41,6 +41,10 @@ class CRMServiceProvider extends ServiceProvider
                         ->group('CRM')
                         ->sort(1),
                 ]);
+
+                Filament::registerRenderHook('panels::head.start', function () {
+                    return '<link rel="icon" type="image/png" href="'.e(asset('images/gmfavicon.png')).'" />';
+                });
             });
         }
 

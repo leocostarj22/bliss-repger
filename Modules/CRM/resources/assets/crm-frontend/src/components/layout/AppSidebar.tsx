@@ -36,12 +36,12 @@ export function AppSidebar() {
       )}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border shrink-0">
+      <div className="flex items-center gap-3 px-4 h-14 border-b border-sidebar-border shrink-0">
         <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
           <Mail className="w-4 h-4 text-primary-foreground" />
         </div>
         {!collapsed && (
-          <span className="text-lg font-bold tracking-tight text-foreground">MailPulse</span>
+          <span className="text-lg font-bold tracking-tight text-foreground">GMC Mail</span>
         )}
       </div>
 

@@ -62,6 +62,8 @@ export default function Dashboard() {
     );
   }
 
+  const maxHeat = Math.max(1, ...stats.heatmapData.map(d => d.value));
+
   return (
     <div className="space-y-6 animate-slide-up">
       <div className="page-header">
@@ -175,7 +177,14 @@ export default function Dashboard() {
 
       {/* Activity Heatmap */}
       <div className="glass-card p-5">
-        <h3 className="text-sm font-semibold mb-4">Activity Heatmap (Opens by Day & Hour)</h3>
+        <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold">Activity Heatmap (Opens by Day & Hour)</h3>
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span>Menos</span>
+              <div className="h-2 w-20 rounded-sm" style={{ background: 'linear-gradient(to right, hsla(185,65%,48%,0.12), hsla(185,65%,48%,1))' }} />
+              <span>Mais</span>
+            </div>
+          </div>
         <div className="overflow-x-auto">
           <div className="grid gap-[2px]" style={{ gridTemplateColumns: `60px repeat(24, 1fr)`, minWidth: '700px' }}>
             {/* Header */}
@@ -188,14 +197,14 @@ export default function Dashboard() {
               <Fragment key={day}>
                 <div className="text-xs text-muted-foreground flex items-center">{day}</div>
                 {Array.from({ length: 24 }, (_, h) => {
-                  const val = stats.heatmapData.find(d => d.day === di && d.hour === h)?.value ?? 0;
-                  const opacity = Math.max(0.08, val / 100);
+                  const val = stats.heatmapData.find(d => ((d.day + 6) % 7) === di && d.hour === h)?.value ?? 0;
+                  const opacity = Math.max(0.08, val / maxHeat);
                   return (
                     <div
                       key={`${di}-${h}`}
                       className="aspect-square rounded-sm transition-colors"
                       style={{ backgroundColor: `hsl(185, 65%, 48%, ${opacity})` }}
-                      title={`${day} ${h}:00 — ${val}%`}
+                      title={`${day} ${h}:00 — ${val} aberturas`}
                     />
                   );
                 })}
