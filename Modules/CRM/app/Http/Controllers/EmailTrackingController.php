@@ -86,11 +86,9 @@ class EmailTrackingController extends Controller
             return redirect()->to('/');
         }
 
-        $host = parse_url($url, PHP_URL_HOST);
-        $appHost = parse_url(config('app.url'), PHP_URL_HOST);
-        $allowedHosts = array_values(array_filter([$appHost, 'www.gmcentral.pt', 'gmcentral.pt']));
-        if ($host && ! in_array($host, $allowedHosts, true)) {
-            Log::warning('crm.track.blocked', ['delivery_id' => $model?->id ?? $delivery, 'url' => $url, 'host' => $host]);
+        $scheme = strtolower(parse_url($url, PHP_URL_SCHEME) ?? '');
+        if (! in_array($scheme, ['http', 'https'], true)) {
+            Log::warning('crm.track.blocked_scheme', ['delivery_id' => $model?->id ?? $delivery, 'url' => $url, 'scheme' => $scheme]);
             return redirect()->to('/');
         }
 
