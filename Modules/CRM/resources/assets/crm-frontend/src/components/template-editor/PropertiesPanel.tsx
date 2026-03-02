@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import type { TemplateBlock } from '@/types/template';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,28 @@ import { ImagePlus } from 'lucide-react';
 import { handleImageUpload } from '@/lib/tiptap-utils';
 import { toast } from 'react-hot-toast';
 
+// Função para extrair thumbnail de vídeo
+function getVideoThumbnailUrl(url: string): string | null {
+  if (!url) return null;
+  
+  // YouTube
+  const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+  if (youtubeMatch) {
+    return `https://img.youtube.com/vi/${youtubeMatch[1]}/maxresdefault.jpg`;
+  }
+  
+  // Vimeo (suporte futuro - requer API)
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) {
+    // TODO: Implementar chamada à API do Vimeo para obter thumbnail
+    // Por enquanto, retornaremos null
+    console.log('Vimeo detectado - thumbnail requer API (em desenvolvimento)');
+    return null;
+  }
+  
+  return null;
+}
+
 
 interface Props {
   block: TemplateBlock;
@@ -18,8 +40,50 @@ interface Props {
 
 export function PropertiesPanel({ block, onChange }: Props) {
   const p = block.props;
+  const [videoThumbnail, setVideoThumbnail] = useState<string | null>(null);
+  const [isLoadingThumbnail, setIsLoadingThumbnail] = useState(false);
   const set = (key: string, val: unknown) => onChange({ ...p, [key]: val });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Efeito para carregar thumbnail automaticamente quando URL do vídeo mudar
+  useEffect(() => {
+    if (block.type === 'video' && p.url) {
+      const thumbnailUrl = getVideoThumbnailUrl(String(p.url));
+      if (thumbnailUrl) {
+        setIsLoadingThumbnail(true);
+        setVideoThumbnail(thumbnailUrl);
+        // Atualiza o bloco com a thumbnail
+        onChange({ 
+          ...p, 
+          thumbnailUrl: thumbnailUrl,
+          thumbnailText: p.thumbnailText || 'Assista ao vídeo'
+        });
+        setIsLoadingThumbnail(false);
+      } else {
+        setVideoThumbnail(null);
+      }
+    }
+  }, [block.type, p.url, onChange]);
+
+  // Efeito para carregar thumbnail automaticamente quando URL do vídeo mudar
+  useEffect(() => {
+    if (block.type === 'video' && p.url) {
+      const thumbnailUrl = getVideoThumbnailUrl(String(p.url));
+      if (thumbnailUrl) {
+        setIsLoadingThumbnail(true);
+        setVideoThumbnail(thumbnailUrl);
+        // Atualiza o bloco com a thumbnail
+        onChange({ 
+          ...p, 
+          thumbnailUrl: thumbnailUrl,
+          thumbnailText: p.thumbnailText || 'Assista ao vídeo'
+        });
+        setIsLoadingThumbnail(false);
+      } else {
+        setVideoThumbnail(null);
+      }
+    }
+  }, [block.type, p.url]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -172,8 +236,41 @@ export function PropertiesPanel({ block, onChange }: Props) {
       {block.type === 'video' && (
         <>
           <Field label="URL do vídeo">
-            <Input value={String(p.url)} onChange={e => set('url', e.target.value)} className="text-sm" />
+            <Input 
+              value={String(p.url)} 
+              onChange={e => set('url', e.target.value)} 
+              className="text-sm" 
+              placeholder="https://youtube.com/watch?v=... ou https://vimeo.com/..."
+            />
           </Field>
+          
+          {/* Preview da thumbnail */}
+          {(videoThumbnail || p.thumbnailUrl) && (
+            <Field label="Thumbnail do vídeo">
+              <div className="space-y-2">
+                <div className="relative w-full h-32 bg-gray-100 rounded-lg overflow-hidden">
+                  <img 
+                    src={videoThumbnail || p.thumbnailUrl} 
+                    alt="Thumbnail do vídeo" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Se a imagem falhar, esconde o preview
+                      setVideoThumbnail(null);
+                    }}
+                  />
+                  {isLoadingThumbnail && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                      <span className="text-white text-sm">Carregando...</span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Thumbnail extraída automaticamente do vídeo
+                </p>
+              </div>
+            </Field>
+          )}
+          
           <Field label="Texto do thumbnail">
             <Input value={String(p.thumbnailText)} onChange={e => set('thumbnailText', e.target.value)} className="text-sm" />
           </Field>

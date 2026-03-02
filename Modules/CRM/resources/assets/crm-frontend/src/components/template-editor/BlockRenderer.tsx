@@ -117,11 +117,30 @@ case 'video':
             style={{ width: String(p.width), maxWidth: '100%' }}
             className="relative rounded overflow-hidden bg-gray-900 text-white flex items-center justify-center min-h-[180px] cursor-pointer"
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-            <div className="relative z-10 flex flex-col items-center gap-2">
-              <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-2xl">▶</div>
-              <span className="text-sm font-medium">{String(p.thumbnailText)}</span>
-            </div>
+            {p.thumbnailUrl ? (
+              // Mostra thumbnail do vídeo se disponível
+              <>
+                <img 
+                  src={String(p.thumbnailUrl)} 
+                  alt="Thumbnail do vídeo" 
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black bg-opacity-40" />
+                <div className="relative z-10 flex flex-col items-center gap-2">
+                  <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-2xl">▶</div>
+                  <span className="text-sm font-medium">{String(p.thumbnailText || 'Assista ao vídeo')}</span>
+                </div>
+              </>
+            ) : (
+              // Fallback para quando não há thumbnail
+              <>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="relative z-10 flex flex-col items-center gap-2">
+                  <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-2xl">▶</div>
+                  <span className="text-sm font-medium">{String(p.thumbnailText)}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       );
