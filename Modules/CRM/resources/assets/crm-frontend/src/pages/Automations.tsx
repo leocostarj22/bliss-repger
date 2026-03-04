@@ -81,7 +81,7 @@ export default function Automations() {
                 <div className="flex items-center gap-4 text-xs text-muted-foreground mt-auto pt-3 border-t border-border/50">
                   <div className="flex items-center gap-1.5">
                     <Zap className="w-3.5 h-3.5" />
-                    <span>{a.triggeredCount.toLocaleString()} disparos</span>
+                    <span>{Number(a.triggeredCount ?? 0).toLocaleString()} disparos</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Users className="w-3.5 h-3.5" />

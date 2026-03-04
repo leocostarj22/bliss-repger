@@ -659,7 +659,13 @@ export async function fetchAutomations(params?: {
 
   const json = await response.json();
   const rows = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
-  return { data: rows };
+  const normalized = rows.map((it: any) => ({
+    ...it,
+    nodes: Array.isArray(it?.nodes) ? it.nodes : [],
+    connections: Array.isArray(it?.connections) ? it.connections : [],
+    triggeredCount: Number(it?.triggeredCount ?? 0),
+  }));
+  return { data: normalized };
 }
 
 export async function fetchAutomation(id: string): Promise<ApiResponse<Automation>> {
