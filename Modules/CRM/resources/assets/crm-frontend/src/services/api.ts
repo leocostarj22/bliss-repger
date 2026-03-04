@@ -29,6 +29,55 @@ export async function fetchDashboard(): Promise<ApiResponse<DashboardStats>> {
   return response.json();
 }
 
+export type EmailMediaItem = {
+  filename: string;
+  url: string;
+  size?: number;
+  last_modified?: number;
+};
+
+export async function fetchEmailMedia(): Promise<ApiResponse<EmailMediaItem[]>> {
+  const response = await fetch('/api/v1/email/media/list', {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch email media: ${response.statusText}`);
+  }
+
+  const json = await response.json();
+  const rows = Array.isArray(json.data) ? json.data : [];
+
+  return {
+    data: rows.map((r: any) => ({
+      filename: String(r.filename),
+      url: String(r.url),
+      size: r.size !== undefined ? Number(r.size) : undefined,
+      last_modified: r.last_modified !== undefined ? Number(r.last_modified) : undefined,
+    })),
+  };
+}
+
+export async function deleteEmailMedia(filename: string): Promise<void> {
+  const response = await fetch(`/api/v1/email/media/${encodeURIComponent(filename)}`, {
+    method: 'DELETE',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Failed to delete media: ${response.statusText} ${text}`);
+  }
+}
 
 export async function createSegment(payload: { name: string; filters?: any[]; contact_ids?: any[] }): Promise<ApiResponse<any>> {
   const response = await fetch('/api/v1/email/segments', {

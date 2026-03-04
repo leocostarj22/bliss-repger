@@ -40,25 +40,84 @@ Route::prefix('v1')->group(function () {
             return response()->file($path);
         })->name('crm.media.view');
 
+        Route::get('media/list', function () {
+            try {
+                $disk = Storage::disk('public');
+                $files = $disk->files('crm-media');
+
+                $items = collect($files)
+                    ->filter(fn ($path) => preg_match('/\.(png|jpe?g|gif|webp|svg)$/i', $path))
+                    ->map(function ($path) use ($disk) {
+                        $filename = basename($path);
+
+                        return [
+                            'filename' => $filename,
+                            'url' => url('api/v1/email/media/view/' . $filename),
+                            'size' => $disk->size($path),
+                            'last_modified' => $disk->lastModified($path),
+                        ];
+                    })
+                    ->sortByDesc('last_modified')
+                    ->values();
+
+                return response()->json(['data' => $items]);
+            } catch (\Throwable $e) {
+                Log::error('Media list failed: ' . $e->getMessage());
+                return response()->json(['error' => 'Media list failed'], 500);
+            }
+        });
+
+        Route::delete('media/{filename}', function ($filename) {
+            try {
+                $safe = basename($filename);
+                $disk = Storage::disk('public');
+                $path = 'crm-media/' . $safe;
+                if (! $disk->exists($path)) {
+                    return response()->json(['error' => 'Not found'], 404);
+                }
+                $disk->delete($path);
+                return response()->json(['deleted' => true]);
+            } catch (\Throwable $e) {
+                Log::error('Media delete failed: ' . $e->getMessage());
+                return response()->json(['error' => 'Media delete failed'], 500);
+            }
+        });
+
         Route::post('media/upload', function (Request $request) {
             try {
                 $request->validate([
-                    'file' => 'required|image|max:5120', // 5MB max
+                    'file' => 'required|image|max:15360', // 15MB max
                 ]);
 
                 if ($request->hasFile('file')) {
                     $file = $request->file('file');
-                    $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
+                    $overwrite = filter_var($request->query('overwrite'), FILTER_VALIDATE_BOOLEAN);
+
+                    $original = $file->getClientOriginalName();
+                    $name = pathinfo($original, PATHINFO_FILENAME);
+                    $ext = strtolower($file->getClientOriginalExtension());
+                    $safe = Str::slug($name);
+                    $disk = Storage::disk('public');
+                    $filename = $safe . '.' . $ext;
+
+                    if ($overwrite) {
+                        if ($disk->exists('crm-media/' . $filename)) {
+                            $disk->delete('crm-media/' . $filename);
+                        }
+                    } else {
+                        $i = 1;
+                        while ($disk->exists('crm-media/' . $filename)) {
+                            $filename = $safe . '-' . $i++ . '.' . $ext;
+                        }
+                    }
                     
-                    // Store in public disk under crm-media folder
                     $file->storeAs('crm-media', $filename, 'public');
                     
-                    // Generate URL using the dedicated view route
-                    // Manually construct URL to avoid route cache issues
                     $url = url('api/v1/email/media/view/' . $filename);
 
                     return response()->json([
                         'url' => $url,
+                        'filename' => $filename,
                     ]);
                 }
 

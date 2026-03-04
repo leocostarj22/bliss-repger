@@ -13,7 +13,7 @@ import {
   type NodeWithPos,
 } from "@tiptap/react"
 
-export const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+export const MAX_FILE_SIZE = 15 * 1024 * 1024 // 15MB
 
 export const MAC_SYMBOLS: Record<string, string> = {
   mod: "⌘",
@@ -390,54 +390,83 @@ export const handleImageUpload = async (
   }
 
   return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest()
-    xhr.open("POST", "/api/v1/email/media/upload")
-    
-    if (csrfToken) {
-      xhr.setRequestHeader("X-XSRF-TOKEN", decodeURIComponent(csrfToken))
+    const toSafeFilename = (name: string) => {
+      const dot = name.lastIndexOf('.')
+      const base = dot >= 0 ? name.slice(0, dot) : name
+      const ext = dot >= 0 ? name.slice(dot + 1).toLowerCase() : ''
+      const safeBase = base
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+      return ext ? `${safeBase}.${ext}` : safeBase
     }
-    
-    xhr.setRequestHeader("Accept", "application/json")
 
-    // Progress handler
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable && onProgress) {
-        const progress = Math.round((event.loaded / event.total) * 100)
-        onProgress({ progress })
+    const startUpload = (overwrite: boolean) => {
+      const xhr = new XMLHttpRequest()
+      const url = `/api/v1/email/media/upload${overwrite ? '?overwrite=1' : ''}`
+      xhr.open("POST", url)
+      
+      if (csrfToken) {
+        xhr.setRequestHeader("X-XSRF-TOKEN", decodeURIComponent(csrfToken))
       }
-    }
-
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const response = JSON.parse(xhr.responseText)
-          // Support various Laravel resource wrapper patterns
-          const url = response.url || response.data?.url || response.path
-          
-          if (url) {
-            resolve(url)
-          } else {
-            reject(new Error("Invalid server response: missing URL"))
-          }
-        } catch (e) {
-          reject(new Error("Failed to parse server response"))
+      
+      xhr.setRequestHeader("Accept", "application/json")
+  
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && onProgress) {
+          const progress = Math.round((event.loaded / event.total) * 100)
+          onProgress({ progress })
         }
-      } else {
-        reject(new Error(`Upload failed: ${xhr.statusText} (${xhr.status})`))
       }
+  
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const response = JSON.parse(xhr.responseText)
+            const url = response.url || response.data?.url || response.path
+            if (url) {
+              resolve(url)
+            } else {
+              reject(new Error("Invalid server response: missing URL"))
+            }
+          } catch (e) {
+            reject(new Error("Failed to parse server response"))
+          }
+        } else {
+          reject(new Error(`Upload failed: ${xhr.statusText} (${xhr.status})`))
+        }
+      }
+  
+      xhr.onerror = () => reject(new Error("Network error during upload"))
+      xhr.onabort = () => reject(new Error("Upload cancelled"))
+  
+      if (abortSignal) {
+        abortSignal.addEventListener("abort", () => xhr.abort())
+      }
+  
+      const formData = new FormData()
+      formData.append("file", file)
+      
+      xhr.send(formData)
     }
 
-    xhr.onerror = () => reject(new Error("Network error during upload"))
-    xhr.onabort = () => reject(new Error("Upload cancelled"))
-
-    if (abortSignal) {
-      abortSignal.addEventListener("abort", () => xhr.abort())
-    }
-
-    const formData = new FormData()
-    formData.append("file", file)
-    
-    xhr.send(formData)
+    // Pré-verificar existência pelo nome sanitizado
+    fetch('/api/v1/email/media/list', { headers: { 'Accept': 'application/json' }, credentials: 'include' })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(json => {
+        const items = Array.isArray(json?.data) ? json.data : []
+        const safeName = toSafeFilename(file.name)
+        const exists = items.some((it: any) => String(it.filename) === safeName)
+        if (exists) {
+          const shouldOverwrite = window.confirm('Uma imagem com o mesmo nome já existe. Deseja substituir?')
+          startUpload(shouldOverwrite)
+        } else {
+          startUpload(false)
+        }
+      })
+      .catch(() => startUpload(false))
   })
 }
 

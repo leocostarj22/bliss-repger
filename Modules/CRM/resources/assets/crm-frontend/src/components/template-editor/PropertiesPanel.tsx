@@ -1,14 +1,18 @@
-import { useRef, useState, useEffect } from 'react';
-import type { TemplateBlock } from '@/types/template';
+import { useRef, useState, useEffect, useMemo } from 'react';
+import type { TemplateBlock, BlockType } from '@/types/template';
+import { DEFAULT_BLOCK_PROPS } from '@/types/template';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { ImagePlus } from 'lucide-react';
+import { ImagePlus, Trash2 } from 'lucide-react';
 import { handleImageUpload } from '@/lib/tiptap-utils';
 import { toast } from 'react-hot-toast';
+import { fetchEmailMedia, deleteEmailMedia, type EmailMediaItem } from '@/services/api';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { v4Fallback } from '@/lib/id';
 
 // Função para extrair thumbnail de vídeo
 function getVideoThumbnailUrl(url: string): string | null {
@@ -36,12 +40,18 @@ function getVideoThumbnailUrl(url: string): string | null {
 interface Props {
   block: TemplateBlock;
   onChange: (props: Record<string, unknown>) => void;
+  onUpdateBlock?: (block: TemplateBlock) => void;
 }
 
-export function PropertiesPanel({ block, onChange }: Props) {
+export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
   const p = block.props;
   const [videoThumbnail, setVideoThumbnail] = useState<string | null>(null);
   const [isLoadingThumbnail, setIsLoadingThumbnail] = useState(false);
+  const [mediaOpen, setMediaOpen] = useState(false);
+  const [mediaLoading, setMediaLoading] = useState(false);
+  const [mediaItems, setMediaItems] = useState<EmailMediaItem[]>([]);
+  const [mediaSearch, setMediaSearch] = useState('');
+  const [mediaColumnIndex, setMediaColumnIndex] = useState<number | null>(null);
   const set = (key: string, val: unknown) => onChange({ ...p, [key]: val });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -105,8 +115,129 @@ export function PropertiesPanel({ block, onChange }: Props) {
     }
   };
 
+  useEffect(() => {
+    if (!mediaOpen) return;
+
+    setMediaLoading(true);
+    fetchEmailMedia()
+      .then(r => setMediaItems(r.data))
+      .catch(() => toast.error('Falha ao carregar imagens do servidor'))
+      .finally(() => setMediaLoading(false));
+  }, [mediaOpen]);
+
+  const filteredMedia = useMemo(() => {
+    const q = mediaSearch.trim().toLowerCase();
+    if (!q) return mediaItems;
+    return mediaItems.filter(m => m.filename.toLowerCase().includes(q));
+  }, [mediaItems, mediaSearch]);
+
+  const updateChild = (index: number, child?: TemplateBlock) => {
+    if (!onUpdateBlock) return;
+    const children = [...(block.children || [])] as (TemplateBlock | undefined)[];
+    children[index] = child as any;
+    onUpdateBlock({ ...block, children: children as TemplateBlock[] });
+  };
+
+  const createChildOfType = (index: number, type: BlockType) => {
+    const newChild: TemplateBlock = { id: v4Fallback(), type, props: { ...DEFAULT_BLOCK_PROPS[type] } } as TemplateBlock;
+    updateChild(index, newChild);
+  };
+
+  const updateChildProp = (index: number, key: string, value: unknown) => {
+    const child = block.children?.[index];
+    if (!child || !onUpdateBlock) return;
+    const newChild: TemplateBlock = { ...child, props: { ...(child.props || {}), [key]: value } } as TemplateBlock;
+    updateChild(index, newChild);
+  };
+
   return (
     <div className="w-64 shrink-0 border-l border-border bg-card p-4 space-y-5 overflow-y-auto">
+      <Dialog open={mediaOpen} onOpenChange={setMediaOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Biblioteca de imagens</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <Input
+              value={mediaSearch}
+              onChange={e => setMediaSearch(e.target.value)}
+              placeholder="Pesquisar por nome do ficheiro..."
+              className="text-sm"
+            />
+
+            {mediaLoading ? (
+              <div className="text-sm text-muted-foreground">Carregando...</div>
+            ) : filteredMedia.length === 0 ? (
+              <div className="text-sm text-muted-foreground">Nenhuma imagem encontrada.</div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[420px] overflow-auto pr-1">
+                {filteredMedia.map(item => (
+                  <div key={item.url} className="relative">
+                    <button
+                      type="button"
+                      className="group w-full rounded-md border border-border bg-card hover:bg-accent/40 text-left overflow-hidden"
+                      onClick={() => {
+                        if (mediaColumnIndex !== null && onUpdateBlock) {
+                          // Definir src numa imagem dentro das colunas
+                          const child = block.children?.[mediaColumnIndex];
+                          if (child && child.type === 'image') {
+                            const newChild: TemplateBlock = { ...child, props: { ...(child.props || {}), src: item.url } } as TemplateBlock;
+                            const children = [...(block.children || [])];
+                            children[mediaColumnIndex] = newChild;
+                            onUpdateBlock({ ...block, children });
+                          }
+                          setMediaColumnIndex(null);
+                        } else {
+                          set('src', item.url);
+                        }
+                        setMediaOpen(false);
+                      }}
+                      title={item.filename}
+                    >
+                      <div className="aspect-video bg-muted overflow-hidden">
+                        <img
+                          src={item.url}
+                          alt={item.filename}
+                          className="h-full w-full object-cover group-hover:scale-[1.01] transition-transform"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className="p-2">
+                        <div className="text-xs font-medium truncate">{item.filename}</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="absolute right-2 top-2 z-10 rounded-full bg-background/90 hover:bg-destructive hover:text-destructive-foreground p-1 shadow"
+                      title="Eliminar imagem do servidor"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (!confirm('Eliminar esta imagem do servidor?')) return;
+                        deleteEmailMedia(item.filename)
+                          .then(() => {
+                            setMediaItems(prev => prev.filter(m => m.filename !== item.filename));
+                            toast.success('Imagem eliminada');
+                          })
+                          .catch(() => toast.error('Falha ao eliminar imagem'));
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="text-xs text-muted-foreground">
+              Dica: imagens enviadas pelo utilizador ficam em crm-media e são servidas por /api/v1/email/media/view.
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <input
         type="file"
         ref={fileInputRef}
@@ -151,6 +282,16 @@ export function PropertiesPanel({ block, onChange }: Props) {
                 title="Carregar do PC"
               >
                 <ImagePlus className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="mt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => { setMediaColumnIndex(null); setMediaOpen(true); }}
+              >
+                Escolher do servidor
               </Button>
             </div>
           </Field>
@@ -233,11 +374,77 @@ export function PropertiesPanel({ block, onChange }: Props) {
             <Slider value={[Number(p.gap)]} onValueChange={([v]) => set('gap', v)} min={0} max={32} step={4} />
           </Field>
 
-          <div className="pt-4 border-t border-border mt-4">
-            <h4 className="text-xs font-semibold mb-3 text-muted-foreground uppercase tracking-wider">Conteúdo das Colunas</h4>
-            <p className="text-xs text-muted-foreground mb-4">
-              Arraste blocos do painel para dentro das colunas no editor
-            </p>
+          <div className="pt-4 border-t border-border mt-4 space-y-3">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Conteúdo das Colunas</h4>
+            {Array.from({ length: Number(p.columns) }).map((_, i) => {
+              const child = block.children?.[i] as TemplateBlock | undefined;
+              return (
+                <div key={i} className="rounded-lg border border-border p-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-medium">Coluna {i + 1}</div>
+                    {child && (
+                      <Button variant="outline" size="sm" onClick={() => updateChild(i, undefined)}>Limpar</Button>
+                    )}
+                  </div>
+                  <div className="mt-2 space-y-2">
+                    {!child ? (
+                      <Select onValueChange={(v) => createChildOfType(i, v as BlockType)}>
+                        <SelectTrigger><SelectValue placeholder="Escolher tipo de bloco" /></SelectTrigger>
+                        <SelectContent>
+                          {(['text','image','button','divider','spacer'] as BlockType[]).map(t => (
+                            <SelectItem key={t} value={t}>{t}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : child.type === 'text' ? (
+                      <Textarea
+                        value={String((child.props as any)?.content || '')}
+                        onChange={e => updateChildProp(i, 'content', e.target.value)}
+                        rows={3}
+                        className="text-sm"
+                      />
+                    ) : child.type === 'image' ? (
+                      <div className="space-y-2">
+                        <Input
+                          value={String((child.props as any)?.src || '')}
+                          onChange={e => updateChildProp(i, 'src', e.target.value)}
+                          className="text-sm"
+                          placeholder="URL da imagem"
+                        />
+                        <Button variant="outline" size="sm" onClick={() => { setMediaColumnIndex(i); setMediaOpen(true); }}>Escolher do servidor</Button>
+                      </div>
+                    ) : child.type === 'button' ? (
+                      <div className="space-y-2">
+                        <Input
+                          value={String((child.props as any)?.text || '')}
+                          onChange={e => updateChildProp(i, 'text', e.target.value)}
+                          className="text-sm"
+                          placeholder="Texto do botão"
+                        />
+                        <Input
+                          value={String((child.props as any)?.url || '')}
+                          onChange={e => updateChildProp(i, 'url', e.target.value)}
+                          className="text-sm"
+                          placeholder="URL"
+                        />
+                      </div>
+                    ) : child.type === 'divider' ? (
+                      <div>
+                        <Label className="text-xs">Espessura</Label>
+                        <Slider value={[Number((child.props as any)?.height || 1)]} onValueChange={([v]) => updateChildProp(i, 'height', v)} min={1} max={8} step={1} />
+                      </div>
+                    ) : child.type === 'spacer' ? (
+                      <div>
+                        <Label className="text-xs">Altura</Label>
+                        <Slider value={[Number((child.props as any)?.height || 16)]} onValueChange={([v]) => updateChildProp(i, 'height', v)} min={8} max={120} step={4} />
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted-foreground">Edição rápida indisponível para "{child.type}" — utilize arrastar e largar.</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </>
       )}

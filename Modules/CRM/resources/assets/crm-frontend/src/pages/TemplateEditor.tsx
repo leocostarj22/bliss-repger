@@ -185,6 +185,10 @@ export default function TemplateEditor() {
     setBlocks(prev => prev.map(b => b.id === selectedId ? { ...b, props } : b));
   }, [selectedId]);
 
+  const handleUpdateSelectedBlock = useCallback((updated: TemplateBlock) => {
+    setBlocks(prev => prev.map(b => b.id === updated.id ? updated : b));
+  }, []);
+
   const handleSave = async () => {
     if (!templateName.trim()) {
       toast({ title: 'Erro', description: 'O nome do template é obrigatório.', variant: 'destructive' });
@@ -292,7 +296,7 @@ export default function TemplateEditor() {
             onDelete={handleDelete}
           />
           {selectedBlock ? (
-            <PropertiesPanel block={selectedBlock} onChange={handlePropsChange} />
+            <PropertiesPanel block={selectedBlock} onChange={handlePropsChange} onUpdateBlock={handleUpdateSelectedBlock} />
           ) : (
             <div className="w-64 shrink-0 border-l border-border bg-card p-4 flex items-center justify-center">
               <p className="text-sm text-muted-foreground text-center">
