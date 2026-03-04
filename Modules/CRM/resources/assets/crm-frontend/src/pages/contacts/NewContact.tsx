@@ -14,8 +14,16 @@ export default function NewContact() {
       await createContact(data);
       toast({ title: 'Contacto criado', description: 'O contacto foi adicionado com sucesso.' });
       navigate('/contacts');
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível criar o contacto.' });
+    } catch (error: any) {
+      if (error?.status === 422 && error?.errors) {
+        const parts = Object.entries(error.errors).map(([field, msgs]: any) => {
+          const first = Array.isArray(msgs) ? msgs[0] : String(msgs);
+          return `${field}: ${first}`;
+        });
+        toast({ variant: 'destructive', title: 'Validação', description: parts.join(' • ') });
+      } else {
+        toast({ variant: 'destructive', title: 'Erro', description: error?.message || 'Não foi possível criar o contacto.' });
+      }
     }
   };
 

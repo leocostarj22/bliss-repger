@@ -517,7 +517,28 @@ export async function createContact(data: Partial<Contact>): Promise<ApiResponse
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to create contact: ${response.statusText}`);
+    let message = `Failed to create contact: ${response.statusText}`;
+    try {
+      const isJson = (response.headers.get('content-type') || '').includes('application/json');
+      const payload = isJson ? await response.json() : null;
+      if (response.status === 422 && payload && payload.errors) {
+        const parts: string[] = [];
+        for (const [field, msgs] of Object.entries(payload.errors)) {
+          const first = Array.isArray(msgs) ? msgs[0] : String(msgs);
+          parts.push(`${field}: ${first}`);
+        }
+        message = parts.join(' • ');
+        const err: any = new Error(message);
+        err.status = 422;
+        err.errors = payload.errors;
+        throw err;
+      } else if (payload && payload.message) {
+        message = payload.message;
+      }
+    } catch (_) {
+      // Fallback mantém a mensagem padrão
+    }
+    throw new Error(message);
   }
 
   return response.json();
