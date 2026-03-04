@@ -14,6 +14,10 @@ function formatNumber(n: number): string {
   return n.toString();
 }
 
+function formatHour(h: number): string {
+  return `${String(h).padStart(2, '0')}:00`;
+}
+
 const statConfig = [
   { key: 'totalSent', label: 'Emails Sent', icon: Mail, format: formatNumber, suffix: '' },
   { key: 'openRate', label: 'Open Rate', icon: Eye, format: (n: number) => n.toFixed(1), suffix: '%' },
@@ -34,6 +38,8 @@ const CHART_COLORS = [
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const heatmapDays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'] as const;
 
   useEffect(() => {
     fetchDashboard().then(r => { setStats(r.data); setLoading(false); });
@@ -234,46 +240,52 @@ export default function Dashboard() {
       </div>
 
       {/* Activity Heatmap */}
-      <div className="glass-card p-6 bg-gradient-to-b from-violet-500/5 via-background to-background border-t-violet-500/20">
+      <div className="glass-card p-6 bg-gradient-to-b from-violet-500/5 via-background to-background border-t-violet-500/20 relative">
         <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-base font-semibold">Activity Heatmap</h3>
-              <p className="text-xs text-muted-foreground">Opens by Day & Hour</p>
-            </div>
-            <div className="flex items-center gap-3 text-[11px] text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-full border border-border/50">
-              <span>Less</span>
-              <div className="h-2 w-24 rounded-full" style={{ background: 'linear-gradient(to right, rgba(34,211,238,0.1), #22d3ee)' }} />
-              <span>More</span>
-            </div>
+          <div>
+            <h3 className="text-base font-semibold">Mapa de Atividade</h3>
+            <p className="text-xs text-muted-foreground">Aberturas por dia e hora</p>
           </div>
-        <div className="overflow-x-auto pb-2">
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-full border border-border/50">
+            <span>Menos</span>
+            <div className="h-2 w-24 rounded-full" style={{ background: 'linear-gradient(to right, rgba(34,211,238,0.08), #22d3ee)' }} />
+            <span>Mais</span>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto overflow-y-visible pb-2 pt-2">
           <div className="grid gap-[3px]" style={{ gridTemplateColumns: `60px repeat(24, 1fr)`, minWidth: '800px' }}>
-            {/* Header */}
             <div key="header-empty" />
             {Array.from({ length: 24 }, (_, h) => (
               <div key={`header-${h}`} className="text-[10px] text-muted-foreground text-center font-medium">{h}h</div>
             ))}
-            {/* Rows */}
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, di) => (
+
+            {heatmapDays.map((day, di) => (
               <Fragment key={day}>
                 <div className="text-xs text-muted-foreground flex items-center font-medium">{day}</div>
                 {Array.from({ length: 24 }, (_, h) => {
                   const val = stats.heatmapData.find(d => ((d.day + 6) % 7) === di && d.hour === h)?.value ?? 0;
                   const opacity = Math.max(0.05, val / maxHeat);
+
                   return (
                     <div
                       key={`${di}-${h}`}
-                      className="aspect-square rounded-[2px] transition-all duration-300 hover:scale-125 hover:z-10 relative group"
-                      style={{ 
+                      className="group aspect-square rounded-[2px] transition-all duration-200 hover:scale-110 hover:z-20 relative"
+                      style={{
                         backgroundColor: `rgba(34, 211, 238, ${opacity})`,
-                        boxShadow: val > 0 ? `0 0 ${opacity * 10}px rgba(34, 211, 238, ${opacity * 0.5})` : 'none'
+                        boxShadow: val > 0 ? `0 0 ${opacity * 10}px rgba(34, 211, 238, ${opacity * 0.5})` : 'none',
                       }}
                     >
-                      {val > 0 && (
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-popover text-popover-foreground text-[10px] rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20 border border-border">
-                          {val} opens
+                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 translate-y-1/2 mt-1 opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all duration-150 pointer-events-none whitespace-nowrap z-30">
+                        <div className="rounded-md border border-border/80 bg-popover/95 text-popover-foreground backdrop-blur-md px-2.5 py-1.5 shadow-lg">
+                          <div className="text-[11px] font-semibold">
+                            {day}, {formatHour(h)}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">
+                            Aberturas: <span className="text-foreground font-semibold">{val}</span>
+                          </div>
                         </div>
-                      )}
+                      </div>
                     </div>
                   );
                 })}
@@ -281,6 +293,7 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+
       </div>
     </div>
   );
