@@ -59,6 +59,8 @@ class SendDeliveryEmail implements ShouldQueue
                 'has_pixel' => stripos($content, 'crm/track/pixel') !== false,
                 'has_click' => stripos($content, 'crm/track/click') !== false,
                 'href_count' => preg_match_all('/<a\b[^>]*href\s*=\s*([\'\"])(.*?)\1/i', $content),
+                'social_links' => preg_match_all('/<a[^>]*href[^>]*facebook|instagram|twitter|linkedin|youtube|tiktok[^>]*>/i', $content),
+                'button_links' => preg_match_all('/<a[^>]*style[^>]*background-color[^>]*>/i', $content),
             ]);
 
             Mail::html($content, function ($message) use ($contact, $campaign, $subject) {
@@ -144,12 +146,15 @@ class SendDeliveryEmail implements ShouldQueue
                 return $target;
             }
             if ($target === ''
-                || $target[0] === '#'
                 || stripos($target, 'mailto:') === 0
                 || stripos($target, 'tel:') === 0
                 || stripos($target, 'javascript:') === 0
                 || stripos($target, 'data:') === 0
                 || stripos($target, 'crm/track/unsubscribe') !== false) {
+                return $target;
+            }
+            // Permitir rastreamento de links que não sejam apenas âncoras internas
+            if ($target[0] === '#' && !preg_match('/^#[a-zA-Z]/', $target)) {
                 return $target;
             }
             if (stripos($target, 'crm/track/click') !== false) {

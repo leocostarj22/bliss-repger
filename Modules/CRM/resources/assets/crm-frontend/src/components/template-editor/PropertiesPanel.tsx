@@ -321,13 +321,14 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
               value={String(p.url)} 
               onChange={e => {
                 const value = e.target.value;
-                // Validar URL se não estiver vazio
-                if (value && !value.match(/^https?:\/\/.*\..*/)) {
+                // Validar URL se não estiver vazio - permitir http:// ou https:// seguido de qualquer coisa
+                if (value && !value.match(/^https?:\/\/.+/)) {
                   return;
                 }
                 set('url', value);
               }} 
               className="text-sm" 
+              placeholder="https://exemplo.com"
             />
           </Field>
           <Field label="Cor de fundo">

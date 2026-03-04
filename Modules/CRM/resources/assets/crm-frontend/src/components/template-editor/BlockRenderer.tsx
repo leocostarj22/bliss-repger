@@ -200,14 +200,21 @@ case 'video':
       return (
         <div className="flex gap-3 flex-wrap" style={{ justifyContent: String(p.align) }}>
           {networks.map((n) => (
-            <div
+            <a
               key={n}
-              style={{ width: size, height: size, padding: size * 0.22, backgroundColor: color }}
-              className="rounded-full text-white flex items-center justify-center transition-opacity hover:opacity-90"
-              title={n}
+              href={(p.links as Record<string, string>)?.[n] || '#'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block"
             >
-              {Icons[n] || n[0]}
-            </div>
+              <div
+                style={{ width: size, height: size, padding: size * 0.22, backgroundColor: color }}
+                className="rounded-full text-white flex items-center justify-center transition-opacity hover:opacity-90"
+                title={n}
+              >
+                {Icons[n] || n[0]}
+              </div>
+            </a>
           ))}
         </div>
       );
