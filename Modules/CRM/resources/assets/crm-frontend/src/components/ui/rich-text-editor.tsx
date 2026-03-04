@@ -265,6 +265,22 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
           </Select>
         </div>
 
+        <div className="flex items-center gap-1">
+          <input
+            type="color"
+            value={String(editor?.getAttributes('textStyle')?.color || '#000000')}
+            onChange={(e) => {
+              if (!editor) return;
+              editor.chain().focus().setColor(e.target.value).run();
+            }}
+            title="Cor do texto (seleção)"
+            className="w-8 h-8 p-0 border rounded"
+          />
+          <ToolbarButton onClick={() => editor?.chain().focus().unsetColor().run()} title="Remover cor">
+            CLR
+          </ToolbarButton>
+        </div>
+
         <div className="w-px h-6 bg-border mx-1" />
 
         <ToolbarButton onClick={setLink} isActive={editor.isActive('link')} title="Link">
