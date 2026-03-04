@@ -24,6 +24,18 @@ module.exports = {
       env: {
         APP_ENV: "production"
       }
+    },
+    {
+      name   : "bliss-scheduler",
+      script : "artisan",
+      interpreter: "php",
+      args   : "schedule:work",
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      env: {
+        APP_ENV: "production"
+      }
     }
   ]
 }

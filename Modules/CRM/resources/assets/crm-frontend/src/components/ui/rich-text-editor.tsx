@@ -15,7 +15,7 @@ import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, 
   Heading1, Heading2, List, ListOrdered, Quote, 
   AlignLeft, AlignCenter, AlignRight, Link as LinkIcon, 
-  Image as ImageIcon, Undo, Redo, Type 
+  Image as ImageIcon, Undo, Redo, Type, Droplet, Eraser 
 } from 'lucide-react'
 import { useCallback, useEffect } from 'react'
 import { cn } from '@/lib/utils'
@@ -266,6 +266,19 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
         </div>
 
         <div className="flex items-center gap-1">
+          <Droplet className="w-4 h-4 text-muted-foreground" />
+          <div className="flex items-center gap-1">
+            {['#000000','#333333','#666666','#999999','#ffffff','#1a8a8a','#e11d48','#f59e0b','#10b981','#3b82f6','#7c3aed'].map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => editor?.chain().focus().setColor(c).run()}
+                className="w-5 h-5 rounded border"
+                style={{ backgroundColor: c }}
+                title={c}
+              />
+            ))}
+          </div>
           <input
             type="color"
             value={String(editor?.getAttributes('textStyle')?.color || '#000000')}
@@ -277,7 +290,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
             className="w-8 h-8 p-0 border rounded"
           />
           <ToolbarButton onClick={() => editor?.chain().focus().unsetColor().run()} title="Remover cor">
-            CLR
+            <Eraser className="w-4 h-4" />
           </ToolbarButton>
         </div>
 
