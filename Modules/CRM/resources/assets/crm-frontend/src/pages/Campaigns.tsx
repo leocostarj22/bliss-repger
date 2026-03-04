@@ -145,6 +145,7 @@ export default function Campaigns() {
         <div className="page-header">
           <h1 className="page-title">Campanhas</h1>
           <p className="page-subtitle">Crie, gira e acompanhe as suas campanhas de e-mail</p>
+          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500"></div>
           {isPolling && (
             <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
               <Loader2 className="w-3 h-3 animate-spin" />
@@ -182,7 +183,7 @@ export default function Campaigns() {
               onClick={() => setStatusFilter(s)}
               className={cn(
                 'px-3 py-1.5 rounded-md text-xs font-medium transition-all capitalize',
-                statusFilter === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                statusFilter === s ? 'bg-primary text-primary-foreground shadow-[0_0_14px_hsl(var(--ring)/0.18)]' : 'text-muted-foreground hover:text-foreground hover:shadow-[0_0_12px_hsl(var(--ring)/0.12)]'
               )}
             >
               {s === 'all' ? 'Todas' : statusConfig[s as CampaignStatus]?.label || s}
@@ -242,7 +243,7 @@ export default function Campaigns() {
                         <td className="py-3 px-4 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button className="text-muted-foreground hover:text-foreground">
+                              <button className="text-muted-foreground hover:text-foreground hover:shadow-[0_0_16px_hsl(var(--ring)/0.15)] hover:-translate-y-0.5 transition-transform rounded-md p-1">
                                 <MoreHorizontal className="w-4 h-4" />
                               </button>
                             </DropdownMenuTrigger>

@@ -39,6 +39,9 @@ const PaginationLink = ({ className, isActive, size = "icon", ...props }: Pagina
         variant: isActive ? "outline" : "ghost",
         size,
       }),
+      isActive
+        ? "bg-primary/10 text-primary border border-primary/20 shadow-[0_0_12px_hsl(var(--ring)/0.18)]"
+        : "hover:shadow-[0_0_12px_hsl(var(--ring)/0.12)]",
       className,
     )}
     {...props}

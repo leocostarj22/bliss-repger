@@ -60,7 +60,7 @@ export function Topbar() {
       <div className="flex items-center gap-3">
         <button
           onClick={toggle}
-          className="text-muted-foreground hover:text-foreground transition-colors"
+          className="text-muted-foreground hover:text-foreground transition-colors hover:shadow-[0_0_16px_hsl(var(--ring)/0.25)] hover:-translate-y-0.5 transition-transform rounded-md p-1"
           title="Alternar tema"
         >
           {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -68,7 +68,7 @@ export function Topbar() {
         <div className="relative">
           <button
             onClick={() => setNotifOpen(!notifOpen)}
-            className="relative text-muted-foreground hover:text-foreground transition-colors"
+            className="relative text-muted-foreground hover:text-foreground transition-colors hover:shadow-[0_0_16px_hsl(var(--ring)/0.25)] hover:-translate-y-0.5 transition-transform rounded-md p-1"
           >
             <Bell className="w-5 h-5" />
             {unreadCount > 0 && (

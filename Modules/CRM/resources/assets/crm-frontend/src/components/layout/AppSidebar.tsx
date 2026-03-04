@@ -38,12 +38,17 @@ export function AppSidebar() {
       )}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 h-14 border-b border-sidebar-border shrink-0">
-        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-          <Mail className="w-4 h-4 text-primary-foreground" />
+      <div className="flex items-center gap-3 px-4 h-14 border-b border-sidebar-border shrink-0 relative overflow-hidden group">
+        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+        <div className="w-9 h-9 rounded-xl p-[2px] bg-gradient-to-br from-cyan-400 to-fuchsia-500 shrink-0 shadow-[0_0_15px_rgba(34,211,238,0.3)] group-hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] transition-shadow duration-300">
+          <div className="w-full h-full rounded-[10px] bg-sidebar flex items-center justify-center backdrop-blur-sm">
+            <Mail className="w-4 h-4 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
+          </div>
         </div>
         {!collapsed && (
-          <span className="text-lg font-bold tracking-tight text-foreground">GMC Mail</span>
+          <span className="text-lg font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-fuchsia-500 drop-shadow-[0_0_10px_rgba(34,211,238,0.2)]">
+            GMC Mail
+          </span>
         )}
       </div>
 
@@ -55,11 +60,20 @@ export function AppSidebar() {
             <Link
               key={item.path}
               to={item.path}
-              className={cn('nav-item', active && 'active')}
+              className={cn('nav-item group relative overflow-hidden', active && 'active')}
               title={collapsed ? item.label : undefined}
             >
-              <item.icon className="w-5 h-5 shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
+              {active && (
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />
+              )}
+              <item.icon className={cn(
+                "w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110",
+                active ? "text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.4)]" : "group-hover:text-cyan-400"
+              )} />
+              {!collapsed && <span className={cn(
+                "transition-colors duration-200",
+                active ? "font-semibold" : "group-hover:text-foreground"
+              )}>{item.label}</span>}
             </Link>
           );
         })}
@@ -70,7 +84,7 @@ export function AppSidebar() {
         <a
           href="/admin"
           className={cn(
-            "flex-1 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors",
+            "flex-1 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent hover:shadow-[0_0_15px_rgba(34,211,238,0.1)] transition-all",
             collapsed && "px-0"
           )}
           title="Voltar ao Painel Admin"

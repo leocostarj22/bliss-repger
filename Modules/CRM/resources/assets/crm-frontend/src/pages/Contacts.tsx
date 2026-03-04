@@ -148,6 +148,7 @@ export default function Contacts() {
         <div className="page-header">
           <h1 className="page-title">Contactos</h1>
           <p className="page-subtitle">Gerencie as suas listas de e-mail e subscritores</p>
+          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500"></div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2">
@@ -202,8 +203,8 @@ export default function Contacts() {
               className={cn(
                 'px-3 py-1.5 rounded-full text-xs font-medium transition-all border',
                 activeTag === t
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'
+                  ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_14px_hsl(var(--ring)/0.18)]'
+                  : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 hover:shadow-[0_0_12px_hsl(var(--ring)/0.12)]'
               )}
             >
               {t}
@@ -292,7 +293,7 @@ export default function Contacts() {
                       <td className="py-3 px-4 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <button className="text-muted-foreground hover:text-foreground">
+                            <button className="text-muted-foreground hover:text-foreground hover:shadow-[0_0_16px_hsl(var(--ring)/0.15)] hover:-translate-y-0.5 transition-transform rounded-md p-1">
                               <MoreHorizontal className="w-4 h-4" />
                             </button>
                           </DropdownMenuTrigger>

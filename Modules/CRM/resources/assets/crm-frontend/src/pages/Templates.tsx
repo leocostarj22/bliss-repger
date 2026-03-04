@@ -34,14 +34,31 @@ function TemplateThumbnail({ content }: { content: any }) {
       canvas.height = height * DPR;
       ctx.scale(DPR, DPR);
 
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, width, height);
-      ctx.fillStyle = '#f6f7f9';
-      ctx.fillRect(0, 0, width, 10);
+      // Paleta básica com toque de neon
+      const accentColors = ['#22d3ee', '#a855f7', '#f97316'];
 
-      let y = 18; const xPad = 16;
-      const drawLine = (w = width - 2 * xPad) => {
-        ctx.fillStyle = '#e5e7eb';
+      // Fundo suave mais claro (bom para modo claro)
+      ctx.fillStyle = '#f9fafb';
+      ctx.fillRect(0, 0, width, height);
+
+      // Card central claro
+      const cardX = 10;
+      const cardY = 10;
+      const cardW = width - 20;
+      const cardH = height - 20;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(cardX, cardY, cardW, cardH);
+
+      // Barra superior neon
+      const headerGradient = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY);
+      headerGradient.addColorStop(0, '#22d3ee');
+      headerGradient.addColorStop(1, '#a855f7');
+      ctx.fillStyle = headerGradient;
+      ctx.fillRect(cardX, cardY, cardW, 12);
+
+      let y = cardY + 20; const xPad = cardX + 12;
+      const drawLine = (w = cardW - 24) => {
+        ctx.fillStyle = '#1f2937';
         ctx.fillRect(xPad, y, w, 8);
         y += 14;
       };
@@ -54,62 +71,103 @@ function TemplateThumbnail({ content }: { content: any }) {
           if (count >= maxItems || y > height - 30) break;
           switch (b.type) {
             case 'image': {
-              ctx.fillStyle = '#e5e7eb';
-              ctx.fillRect(xPad, y, width - 2 * xPad, 56);
-              ctx.fillStyle = '#9ca3af';
+              ctx.fillStyle = '#f1f5f9';
+              ctx.fillRect(xPad, y, cardW - 24, 56);
+              ctx.strokeStyle = 'rgba(34,211,238,0.6)';
+              ctx.lineWidth = 1.5;
+              ctx.strokeRect(xPad + 0.5, y + 0.5, cardW - 25, 55);
+              ctx.fillStyle = '#64748b';
               ctx.font = '10px sans-serif';
-              ctx.fillText('Imagem', xPad + 8, y + 32);
+              ctx.fillText('Imagem', xPad + 10, y + 32);
               y += 64; count++; break;
             }
             case 'text': {
               const txt = String(b.props?.content || '').replace(/<[^>]*>/g, '').slice(0, 40);
               if (txt) {
-                ctx.fillStyle = '#334155';
-                ctx.font = '12px sans-serif';
-                ctx.fillText(txt, xPad, y + 10);
-                y += 20;
+                const color = accentColors[count % accentColors.length];
+                ctx.fillStyle = '#eef2ff';
+                ctx.fillRect(xPad, y, cardW - 24, 20);
+                ctx.fillStyle = color;
+                ctx.fillRect(xPad, y, 3, 20);
+                ctx.fillStyle = '#0f172a';
+                ctx.font = '11px sans-serif';
+                ctx.fillText(txt, xPad + 8, y + 13);
+                y += 26;
               } else {
                 drawLine();
-                drawLine(Math.max(60, (width - 2 * xPad) * 0.6));
+                drawLine(Math.max(60, (cardW - 24) * 0.6));
               }
               count++; break;
             }
             case 'button': {
-              const bg = String(b.props?.bgColor || '#1a8a8a');
-              ctx.fillStyle = bg; const btnW = 90, btnH = 24;
-              ctx.fillRect(xPad, y, btnW, btnH);
-              ctx.fillStyle = String(b.props?.textColor || '#ffffff');
+              const bg = String(b.props?.bgColor || accentColors[0]);
+              const btnW = 110, btnH = 26;
+              const btnX = xPad;
+              const btnY = y;
+              const grad = ctx.createLinearGradient(btnX, btnY, btnX + btnW, btnY + btnH);
+              grad.addColorStop(0, bg);
+              grad.addColorStop(1, accentColors[1]);
+              ctx.fillStyle = grad;
+              ctx.fillRect(btnX, btnY, btnW, btnH);
+              ctx.fillStyle = '#0f172a';
+              ctx.globalAlpha = 0.3;
+              ctx.fillRect(btnX, btnY + btnH - 6, btnW, 6);
+              ctx.globalAlpha = 1;
+              ctx.fillStyle = String(b.props?.textColor || '#e5e7eb');
               ctx.font = '10px sans-serif';
-              const t = String(b.props?.text || 'Botão').slice(0, 10);
-              ctx.fillText(t, xPad + 18, y + 16);
-              y += 34; count++; break;
+              const t = String(b.props?.text || 'Botão').slice(0, 12);
+              ctx.fillText(t, btnX + 14, btnY + 17);
+              y += 36; count++; break;
             }
             case 'columns': {
               const cols = Number(b.props?.columns) || 2; const gap = 8;
-              const colW = (width - 2 * xPad - gap * (cols - 1)) / cols;
+              const colW = (cardW - 24 - gap * (cols - 1)) / cols;
               for (let i = 0; i < cols; i++) {
-                ctx.fillStyle = '#f1f5f9';
-                ctx.fillRect(xPad + i * (colW + gap), y, colW, 36);
+                ctx.fillStyle = '#f8fafc';
+                ctx.fillRect(xPad + i * (colW + gap), y, colW, 32);
+                ctx.fillStyle = 'rgba(148,163,184,0.35)';
+                ctx.fillRect(xPad + i * (colW + gap) + 6, y + 8, colW - 12, 6);
+                ctx.fillRect(xPad + i * (colW + gap) + 6, y + 18, colW * 0.6, 6);
               }
-              y += 44; count++; break;
+              y += 40; count++; break;
             }
             case 'social': {
-              const size = 18; const sGap = 8; let sx = xPad;
-              ctx.fillStyle = '#1f2937';
-              for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(sx + size / 2, y + size / 2, size / 2, 0, Math.PI * 2); ctx.fill(); sx += size + sGap; }
-              y += size + 12; count++; break;
+              const size = 16; const sGap = 10; let sx = xPad;
+              for (let i = 0; i < 4; i++) {
+                const color = accentColors[i % accentColors.length];
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(sx + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                sx += size + sGap;
+              }
+              y += size + 14; count++; break;
             }
             case 'divider': {
-              ctx.strokeStyle = '#e5e7eb'; ctx.beginPath(); ctx.moveTo(xPad, y + 4); ctx.lineTo(width - xPad, y + 4); ctx.stroke(); y += 12; count++; break;
+              ctx.strokeStyle = 'rgba(148,163,184,0.5)';
+              ctx.beginPath();
+              ctx.moveTo(xPad, y + 4);
+              ctx.lineTo(cardX + cardW - 12, y + 4);
+              ctx.stroke();
+              y += 14; count++; break;
             }
             default: drawLine(); count++; break;
           }
         }
       } else {
-        drawLine(); drawLine(); drawLine(width * 0.7);
+        drawLine(); drawLine(); drawLine(cardW * 0.7);
       }
 
-      ctx.fillStyle = '#f6f7f9'; ctx.fillRect(0, height - 10, width, 10);
+      // Barra inferior suave
+      ctx.fillStyle = '#f9fafb';
+      ctx.fillRect(cardX, cardY + cardH - 10, cardW, 10);
+      ctx.fillStyle = 'rgba(100,116,139,0.8)';
+      ctx.font = '9px sans-serif';
+      ctx.fillText('Pré-visualização', cardX + 12, cardY + cardH - 3);
+
       setThumbnail(canvas.toDataURL('image/png'));
     } catch {
       setThumbnail('');
@@ -117,7 +175,7 @@ function TemplateThumbnail({ content }: { content: any }) {
   }, [content]);
 
   return (
-    <div className="h-32 rounded-md overflow-hidden border border-border/20 bg-white">
+    <div className="h-32 rounded-md overflow-hidden border border-border/40 bg-background/80 shadow-sm">
       {thumbnail ? (
         <img src={thumbnail} alt="Preview do template" className="w-full h-full object-cover" />
       ) : (
@@ -195,7 +253,7 @@ export default function Templates() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {templates.map((template) => (
-            <div key={template.id} className="group relative border rounded-lg bg-card hover:shadow-lg transition-all p-4 flex flex-col">
+            <div key={template.id} className="group relative rounded-xl border border-border bg-card hover:border-cyan-400/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.25)] transition-all p-4 flex flex-col">
               <div className="mb-4">
                 <TemplateThumbnail content={template.content || '[]'} />
               </div>

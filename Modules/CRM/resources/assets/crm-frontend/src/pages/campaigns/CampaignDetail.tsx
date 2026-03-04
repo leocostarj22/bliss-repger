@@ -66,10 +66,10 @@ export default function CampaignDetail() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold tracking-tight">{campaign.name}</h1>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize 
-                ${campaign.status === 'sent' ? 'bg-green-100 text-green-800' : 
-                  campaign.status === 'sending' ? 'bg-blue-100 text-blue-800' : 
-                  campaign.status === 'draft' ? 'bg-gray-100 text-gray-800' : 'bg-yellow-100 text-yellow-800'}`}>
+              <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize border
+                ${campaign.status === 'sent' ? 'bg-success/15 text-[hsl(var(--success))] border-success/30' :
+                  campaign.status === 'sending' ? 'bg-info/15 text-[hsl(var(--info))] border-info/30' :
+                  campaign.status === 'draft' ? 'bg-muted text-muted-foreground border-border' : 'bg-warning/15 text-[hsl(var(--warning))] border-warning/30'}`}>
                 {campaign.status}
               </span>
             </div>
@@ -257,12 +257,12 @@ export default function CampaignDetail() {
                     <TableRow key={log.id}>
                       <TableCell>{log.contact?.email || 'N/A'}</TableCell>
                       <TableCell>
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize
-                          ${log.status === 'opened' ? 'bg-green-100 text-green-800' :
-                            log.status === 'clicked' ? 'bg-blue-100 text-blue-800' :
-                            log.status === 'bounced' ? 'bg-red-100 text-red-800' :
-                            log.status === 'unsubscribed' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'}`}>
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize border
+                          ${log.status === 'opened' ? 'bg-success/15 text-[hsl(var(--success))] border-success/30' :
+                            log.status === 'clicked' ? 'bg-info/15 text-[hsl(var(--info))] border-info/30' :
+                            log.status === 'bounced' ? 'bg-destructive/15 text-destructive border-destructive/30' :
+                            log.status === 'unsubscribed' ? 'bg-warning/15 text-[hsl(var(--warning))] border-warning/30' :
+                            'bg-muted text-muted-foreground border-border'}`}>
                           {log.status}
                         </span>
                       </TableCell>

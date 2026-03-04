@@ -238,10 +238,11 @@
     box-shadow: 0 0 30px hsl(185 65% 48% / 0.12);
   }
   .nav-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground transition-all duration-200;
+    @apply relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground transition-all duration-200;
   }
   .nav-item:hover {
     @apply bg-secondary text-foreground;
+    box-shadow: 0 0 0 1px hsl(var(--border)) inset, 0 0 18px hsl(var(--ring) / 0.12);
   }
   
   /* TipTap Editor Styles */
@@ -259,6 +260,17 @@
   }
   .nav-item.active {
     @apply bg-primary/10 text-primary border border-primary/20;
+    box-shadow: 0 0 24px hsl(var(--ring) / 0.18);
+  }
+  .nav-item.active::before {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, hsl(var(--primary)), #a855f7);
   }
   .page-header {
     @apply mb-8;
