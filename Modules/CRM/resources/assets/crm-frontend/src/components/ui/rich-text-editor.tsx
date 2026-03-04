@@ -1,7 +1,6 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import { StarterKit } from '@tiptap/starter-kit'
-import { Underline } from '@tiptap/extension-underline'
-import { Link } from '@tiptap/extension-link'
+
 import { Image } from '@tiptap/extension-image'
 import { TextAlign } from '@tiptap/extension-text-align'
 import { Placeholder } from '@tiptap/extension-placeholder'
@@ -20,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 
 interface RichTextEditorProps {
   value: string
@@ -56,7 +56,6 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
   const editor = useEditor({
     extensions: [
       StarterKit,
-      Underline,
       TextStyle,
       Color,
       FontSize,
@@ -73,12 +72,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
           class: 'border border-border p-2',
         },
       }),
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-primary underline decoration-primary underline-offset-4',
-        },
-      }),
+
       Image.configure({
         HTMLAttributes: {
           class: 'rounded-lg border border-border',
@@ -237,6 +231,39 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
         >
           <AlignRight className="w-4 h-4" />
         </ToolbarButton>
+
+        <div className="w-px h-6 bg-border mx-1" />
+
+        {/* Tamanho da fonte */}
+        <div className="flex items-center gap-1">
+          <Type className="w-4 h-4 text-muted-foreground" />
+          <Select
+            value={String(editor?.getAttributes('textStyle')?.fontSize || '')}
+            onValueChange={(v) => {
+              if (!editor) return
+              if (!v || v === 'default') {
+                editor.chain().focus().unsetFontSize().run()
+              } else {
+                editor.chain().focus().setFontSize(v).run()
+              }
+            }}
+          >
+            <SelectTrigger className="h-8 w-[96px] text-xs">
+              <SelectValue placeholder="Tamanho" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default">Padrão</SelectItem>
+              <SelectItem value="12px">12px</SelectItem>
+              <SelectItem value="14px">14px</SelectItem>
+              <SelectItem value="16px">16px</SelectItem>
+              <SelectItem value="18px">18px</SelectItem>
+              <SelectItem value="20px">20px</SelectItem>
+              <SelectItem value="24px">24px</SelectItem>
+              <SelectItem value="28px">28px</SelectItem>
+              <SelectItem value="32px">32px</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         <div className="w-px h-6 bg-border mx-1" />
 

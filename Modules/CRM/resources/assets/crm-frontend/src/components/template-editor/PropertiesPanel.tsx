@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { ImagePlus, Trash2 } from 'lucide-react';
@@ -151,7 +152,7 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
   };
 
   return (
-    <div className="w-64 shrink-0 border-l border-border bg-card p-4 space-y-5 overflow-y-auto">
+    <div className="w-full shrink-0 border-l border-border bg-card p-4 space-y-5 overflow-y-auto">
       <Dialog open={mediaOpen} onOpenChange={setMediaOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
@@ -252,7 +253,7 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
       {block.type === 'text' && (
         <>
           <Field label="Conteúdo">
-            <Textarea value={String(p.content)} onChange={e => set('content', e.target.value)} rows={4} className="text-sm" />
+            <RichTextEditor value={String(p.content || '')} onChange={(html) => set('content', html)} />
           </Field>
           <Field label="Tamanho da fonte">
             <div className="flex items-center gap-3">
@@ -262,6 +263,9 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
           </Field>
           <Field label="Cor do texto">
             <Input type="color" value={String(p.color)} onChange={e => set('color', e.target.value)} className="h-9 w-full" />
+          </Field>
+          <Field label="Cor de fundo">
+            <Input type="color" value={String((p as any).bgColor || '#ffffff')} onChange={e => set('bgColor', e.target.value)} className="h-9 w-full" />
           </Field>
           <Field label="Alinhamento">
             <AlignSelect value={String(p.align)} onChange={v => set('align', v)} />
@@ -397,10 +401,9 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
                         </SelectContent>
                       </Select>
                     ) : child.type === 'text' ? (
-                      <Textarea
+                      <RichTextEditor
                         value={String((child.props as any)?.content || '')}
-                        onChange={e => updateChildProp(i, 'content', e.target.value)}
-                        rows={3}
+                        onChange={(html) => updateChildProp(i, 'content', html)}
                         className="text-sm"
                       />
                     ) : child.type === 'image' ? (

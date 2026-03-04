@@ -6,7 +6,7 @@ export interface TemplateBlock {
   children?: TemplateBlock[]; // Support nested blocks for columns
 }
 export const DEFAULT_BLOCK_PROPS: Record<BlockType, Record<string, unknown>> = {
-  text: { content: 'Digite seu texto aqui...', fontSize: 16, color: '#333333', align: 'left' },
+  text: { content: 'Digite seu texto aqui...', fontSize: 16, color: '#333333', align: 'left', bgColor: '#ffffff' },
   image: { src: 'https://placehold.co/600x200/1a8a8a/ffffff?text=Sua+Imagem', alt: 'Imagem', width: '100%', hyperlink: '' },
   button: { text: 'Clique Aqui', url: '#', bgColor: '#1a8a8a', textColor: '#ffffff', align: 'center', borderRadius: 6 },
   divider: { height: 1, color: '#e0e0e0', margin: 16 },

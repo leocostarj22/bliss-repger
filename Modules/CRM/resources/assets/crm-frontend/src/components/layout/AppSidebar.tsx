@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Mail,
   ArrowLeft,
+  FileEdit,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -19,6 +20,7 @@ const navItems = [
   { label: 'Campanhas', icon: Send, path: '/campaigns' },
   { label: 'Contactos', icon: Users, path: '/contacts' },
   { label: 'Segmentos', icon: Mail, path: '/segments' },
+  { label: 'Templates', icon: FileEdit, path: '/templates' },
   { label: 'Automações', icon: Workflow, path: '/automations' },
   { label: 'Analítica', icon: BarChart3, path: '/analytics' },
   { label: 'Configurações', icon: Settings, path: '/settings' },

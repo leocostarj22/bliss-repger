@@ -30,6 +30,29 @@ export default function TemplateEditor() {
   const [jsonOpen, setJsonOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+  const [panelWidth, setPanelWidth] = useState<number>(320);
+
+  const startResize = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = panelWidth;
+
+    const onMove = (ev: MouseEvent) => {
+      const dx = startX - ev.clientX;
+      let next = startW + dx;
+      if (next < 260) next = 260;
+      if (next > 520) next = 520;
+      setPanelWidth(next);
+    };
+
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [panelWidth]);
 
   const selectedBlock = blocks.find(b => b.id === selectedId) ?? null;
 
@@ -295,10 +318,17 @@ export default function TemplateEditor() {
             onSelect={setSelectedId}
             onDelete={handleDelete}
           />
+          <div
+            className="w-1 cursor-col-resize bg-transparent hover:bg-primary/30 active:bg-primary/40"
+            onMouseDown={startResize}
+            title="Arraste para ajustar a largura"
+          />
           {selectedBlock ? (
-            <PropertiesPanel block={selectedBlock} onChange={handlePropsChange} onUpdateBlock={handleUpdateSelectedBlock} />
+            <div style={{ width: panelWidth }} className="shrink-0">
+              <PropertiesPanel block={selectedBlock} onChange={handlePropsChange} onUpdateBlock={handleUpdateSelectedBlock} />
+            </div>
           ) : (
-            <div className="w-64 shrink-0 border-l border-border bg-card p-4 flex items-center justify-center">
+            <div style={{ width: panelWidth }} className="shrink-0 border-l border-border bg-card p-4 flex items-center justify-center">
               <p className="text-sm text-muted-foreground text-center">
                 <Eye className="w-8 h-8 mx-auto mb-2 opacity-30" />
                 Selecione um bloco para editar suas propriedades

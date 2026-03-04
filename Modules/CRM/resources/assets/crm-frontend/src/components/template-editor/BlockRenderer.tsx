@@ -15,11 +15,10 @@ export function BlockRenderer({ block, onSelect, onDelete, isNested = false }: B
     case 'text':
       return (
         <div
-          style={{ fontSize: Number(p.fontSize), color: String(p.color), textAlign: p.align as 'left' | 'center' | 'right' }}
-          className="min-h-[24px] whitespace-pre-wrap break-words"
-        >
-          {String(p.content)}
-        </div>
+          style={{ fontSize: Number(p.fontSize), color: String(p.color), textAlign: p.align as 'left' | 'center' | 'right', backgroundColor: String((p as any).bgColor) }}
+          className="min-h-[24px] break-words"
+          dangerouslySetInnerHTML={{ __html: String(p.content || '') }}
+        />
       );
 
     case 'image':
