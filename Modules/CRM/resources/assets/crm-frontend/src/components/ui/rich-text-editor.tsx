@@ -6,6 +6,7 @@ import { TextAlign } from '@tiptap/extension-text-align'
 import { Placeholder } from '@tiptap/extension-placeholder'
 import { Color } from '@tiptap/extension-color'
 import TextStyle from '@tiptap/extension-text-style'
+import Highlight from '@tiptap/extension-highlight'
 import Table from '@tiptap/extension-table'
 import TableRow from '@tiptap/extension-table-row'
 import TableCell from '@tiptap/extension-table-cell'
@@ -58,6 +59,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
       StarterKit,
       TextStyle,
       Color,
+      Highlight.configure({ multicolor: true }),
       FontSize,
       Table.configure({
         resizable: true,
@@ -266,9 +268,9 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
         </div>
 
         <div className="flex items-center gap-1">
-          <Droplet className="w-4 h-4 text-muted-foreground" />
+          <Droplet className="w-4 h-4 text-muted-foreground" title="Cor do texto" />
           <div className="flex items-center gap-1">
-            {['#000000','#333333','#666666','#999999','#ffffff','#1a8a8a','#e11d48','#f59e0b','#10b981','#3b82f6','#7c3aed'].map((c) => (
+            {['#000000','#333333','#666666','#999999','#FFFFFF','#1A8A8A','#0E7490','#14B8A6','#E11D48','#F59E0B','#10B981','#3B82F6','#7C3AED'].map((c) => (
               <button
                 key={c}
                 type="button"
@@ -290,6 +292,35 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
             className="w-8 h-8 p-0 border rounded"
           />
           <ToolbarButton onClick={() => editor?.chain().focus().unsetColor().run()} title="Remover cor">
+            <Eraser className="w-4 h-4" />
+          </ToolbarButton>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <Droplet className="w-4 h-4 text-muted-foreground" title="Fundo (highlight)" />
+          <div className="flex items-center gap-1">
+            {['#FFFACD','#FEF08A','#FDE68A','#E9D5FF','#BFDBFE','#D1FAE5','#FBCFE8','#FCA5A5','#E5E7EB'].map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => editor?.chain().focus().setHighlight({ color: c }).run()}
+                className="w-5 h-5 rounded border"
+                style={{ backgroundColor: c }}
+                title={c}
+              />
+            ))}
+          </div>
+          <input
+            type="color"
+            value={String(editor?.getAttributes('highlight')?.color || '#FFFACD')}
+            onChange={(e) => {
+              if (!editor) return;
+              editor.chain().focus().setHighlight({ color: e.target.value }).run();
+            }}
+            title="Cor de fundo (seleção)"
+            className="w-8 h-8 p-0 border rounded"
+          />
+          <ToolbarButton onClick={() => editor?.chain().focus().unsetHighlight().run()} title="Remover fundo">
             <Eraser className="w-4 h-4" />
           </ToolbarButton>
         </div>

@@ -48,6 +48,7 @@ class SendDeliveryEmail implements ShouldQueue
             $content = $this->renderContent($content, $contact, $campaign);
             $content = $this->injectTracking($content, $delivery, $campaign);
             $content = $this->ensureAbsoluteUrls($content);
+            $content = $this->normalizeHighlightMarks($content);
             $content = $this->inlineBasicImageStyles($content);
             $content = $this->normalizeEmailHtml($content);
 
@@ -240,6 +241,13 @@ class SendDeliveryEmail implements ShouldQueue
             }
             return '<img' . $attrs . '>';
         }, $html);
+    }
+
+    private function normalizeHighlightMarks(string $html): string
+    {
+        $html = preg_replace('/<mark\b/i', '<span', $html);
+        $html = preg_replace('/<\/mark>/i', '</span>', $html);
+        return $html;
     }
 
     private function normalizeEmailHtml(string $html): string
