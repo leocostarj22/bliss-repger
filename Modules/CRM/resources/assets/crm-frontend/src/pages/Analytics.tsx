@@ -71,6 +71,7 @@ export default function Analytics() {
         <div className="page-header">
           <h1 className="page-title">Analítica</h1>
           <p className="page-subtitle">Análise detalhada do desempenho dos seus emails</p>
+          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2">
@@ -84,32 +85,37 @@ export default function Analytics() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Line Chart */}
-        <div className="glass-card p-5 lg:col-span-2">
-          <h3 className="text-sm font-semibold mb-4">Desempenho de Entrega</h3>
+        <div className="glass-card p-6 lg:col-span-2 bg-gradient-to-b from-cyan-500/5 via-background to-background border-t border-cyan-500/20">
+          <h3 className="text-sm font-semibold mb-2">Desempenho de Entrega</h3>
+          <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
           <ResponsiveContainer width="100%" height={350}>
             <LineChart data={data.dailyMetrics}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 18%, 18%)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.6)" />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 11, fill: 'hsl(215, 12%, 52%)' }}
+                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                 tickFormatter={v => v.slice(5)}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: 'hsl(215, 12%, 52%)' }}
+                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={formatNumber}
               />
               <Tooltip
+                cursor={{ stroke: 'hsl(var(--border) / 0.8)' }}
                 contentStyle={{
-                  backgroundColor: '#f8f9fa',
-                  borderColor: '#e5e7eb',
-                  color: '#1f2937',
-                  borderRadius: '8px',
+                  backgroundColor: 'hsl(var(--popover) / 0.95)',
+                  borderColor: 'hsl(var(--border) / 0.9)',
+                  color: 'hsl(var(--popover-foreground))',
+                  borderRadius: '12px',
                   fontSize: 12,
+                  boxShadow: '0 10px 30px hsl(var(--foreground) / 0.12)',
                 }}
+                labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
+                itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
               />
               <Legend />
               <Line type="monotone" name="Enviado" dataKey="sent" stroke={COLORS[0]} strokeWidth={2} dot={false} />
@@ -121,8 +127,9 @@ export default function Analytics() {
         </div>
 
         {/* Pie Chart */}
-        <div className="glass-card p-5">
-          <h3 className="text-sm font-semibold mb-4">Detalhamento de Engajamento</h3>
+        <div className="glass-card p-6 bg-gradient-to-b from-fuchsia-500/5 via-background to-background border-t border-fuchsia-500/20">
+          <h3 className="text-sm font-semibold mb-2">Detalhamento de Engajamento</h3>
+          <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
               <Pie
@@ -140,12 +147,15 @@ export default function Analytics() {
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#f8f9fa',
-                  borderColor: '#e5e7eb',
-                  color: '#1f2937',
-                  borderRadius: '8px',
+                  backgroundColor: 'hsl(var(--popover) / 0.95)',
+                  borderColor: 'hsl(var(--border) / 0.9)',
+                  color: 'hsl(var(--popover-foreground))',
+                  borderRadius: '12px',
                   fontSize: 12,
+                  boxShadow: '0 10px 30px hsl(var(--foreground) / 0.12)',
                 }}
+                labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
+                itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -164,8 +174,9 @@ export default function Analytics() {
       </div>
 
       {/* Campaign Comparison */}
-      <div className="glass-card p-5">
-        <h3 className="text-sm font-semibold mb-4">Comparação de Campanhas</h3>
+      <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background">
+        <h3 className="text-sm font-semibold mb-2">Comparação de Campanhas</h3>
+        <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

@@ -657,7 +657,9 @@ export async function fetchAutomations(params?: {
     throw new Error(`Failed to fetch automations: ${response.statusText}`);
   }
 
-  return response.json();
+  const json = await response.json();
+  const rows = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
+  return { data: rows };
 }
 
 export async function fetchAutomation(id: string): Promise<ApiResponse<Automation>> {

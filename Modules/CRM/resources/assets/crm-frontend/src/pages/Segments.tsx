@@ -133,6 +133,7 @@ export default function Segments() {
           <p className="page-subtitle">
             Gerencie as listas e segmentos utilizados nas campanhas. Apague segmentos antigos e renomeie os atuais.
           </p>
+          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
         </div>
         <div className="flex items-center gap-2">
           {selectedIds.size > 0 && (
@@ -145,16 +146,16 @@ export default function Segments() {
               <Trash2 className="w-4 h-4" /> Apagar Selecionados
             </Button>
           )}
-          <Button variant="outline" onClick={loadSegments} className="gap-2">
+          <Button variant="outline" onClick={loadSegments} className="gap-2 hover:shadow-[0_0_14px_hsl(var(--ring)/0.14)]">
             <RefreshCw className="w-4 h-4" /> Atualizar
           </Button>
         </div>
       </div>
 
-      <div className="glass-card overflow-hidden">
+      <div className="glass-card overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
+            <thead className="bg-secondary/30">
               <tr className="border-b border-border">
                 <th className="py-3 px-4 w-10">
                   <Checkbox
