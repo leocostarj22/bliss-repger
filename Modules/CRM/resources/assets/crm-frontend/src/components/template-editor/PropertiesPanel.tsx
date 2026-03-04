@@ -152,7 +152,7 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
   };
 
   return (
-    <div className="w-full shrink-0 border-l border-border bg-card p-4 space-y-5 overflow-y-auto">
+    <div className="h-full w-full shrink-0 border-l border-border bg-card p-4 space-y-5 overflow-y-auto">
       <Dialog open={mediaOpen} onOpenChange={setMediaOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>

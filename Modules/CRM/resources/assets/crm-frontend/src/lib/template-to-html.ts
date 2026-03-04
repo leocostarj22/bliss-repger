@@ -7,9 +7,16 @@ export function blocksToHtml(blocks: TemplateBlock[] | string): string {
   const htmlContent = blocks.map(block => {
     const p = block.props || {};
     switch (block.type) {
-      case 'text':
-        const textContent = String(p.content || '').replace(/\n/g, '<br>');
-        return `<p style="text-align: ${p.align}; line-height: 1.5; margin: 10px 0;"><span style="font-family: sans-serif; font-size: ${p.fontSize}px; color: ${p.color};">${textContent}</span></p>`;
+      case 'text': {
+        const contentHtml = String(p.content || '');
+        const align = p.align || 'left';
+        const bg = (p as any).bgColor || 'transparent';
+        const size = `${p.fontSize}px`;
+        const color = String(p.color || '#333333');
+        return `<div style="text-align: ${align}; line-height: 1.5; margin: 10px 0; background-color: ${bg};">
+          <div style="font-family: sans-serif; font-size: ${size}; color: ${color};">${contentHtml}</div>
+        </div>`;
+      }
       
       case 'image':
         const imgTag = `<img src="${p.src}" alt="${p.alt}" style="width: ${p.width}; max-width: 100%; height: auto; border-radius: 4px; display: inline-block;" />`;

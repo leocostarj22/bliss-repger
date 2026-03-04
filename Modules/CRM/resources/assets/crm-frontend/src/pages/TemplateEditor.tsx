@@ -324,11 +324,11 @@ export default function TemplateEditor() {
             title="Arraste para ajustar a largura"
           />
           {selectedBlock ? (
-            <div style={{ width: panelWidth }} className="shrink-0">
+            <div style={{ width: panelWidth }} className="shrink-0 h-full">
               <PropertiesPanel block={selectedBlock} onChange={handlePropsChange} onUpdateBlock={handleUpdateSelectedBlock} />
             </div>
           ) : (
-            <div style={{ width: panelWidth }} className="shrink-0 border-l border-border bg-card p-4 flex items-center justify-center">
+            <div style={{ width: panelWidth }} className="shrink-0 h-full border-l border-border bg-card p-4 flex items-center justify-center">
               <p className="text-sm text-muted-foreground text-center">
                 <Eye className="w-8 h-8 mx-auto mb-2 opacity-30" />
                 Selecione um bloco para editar suas propriedades
