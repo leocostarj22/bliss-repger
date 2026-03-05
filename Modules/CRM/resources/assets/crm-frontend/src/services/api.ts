@@ -11,6 +11,68 @@ import { mockCampaigns, mockContacts, mockDashboardStats, mockAutomations, mockN
 
 const delay = (ms = 400) => new Promise(r => setTimeout(r, ms + Math.random() * 200));
 
+// ── Weather ──
+export interface WeatherData {
+  temp: number;
+  condition: string;
+  icon: string;
+}
+
+export async function fetchWeatherData(): Promise<WeatherData> {
+  try {
+    const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=38.7167&longitude=-9.1333&current_weather=true&timezone=Europe/Lisbon');
+    const data = await response.json();
+    
+    if (data.current_weather) {
+      const temp = Math.round(data.current_weather.temperature);
+      const weathercode = data.current_weather.weathercode;
+      
+      // Mapear códigos WMO para condições
+      const conditions: { [key: number]: string } = {
+        0: 'Céu limpo',
+        1: 'Céu limpo',
+        2: 'Parcialmente nublado',
+        3: 'Nublado',
+        45: 'Névoa',
+        48: 'Névoa',
+        51: 'Garoa',
+        53: 'Garoa',
+        55: 'Garoa',
+        61: 'Chuva',
+        63: 'Chuva',
+        65: 'Chuva',
+        71: 'Neve',
+        73: 'Neve',
+        75: 'Neve',
+        95: 'Trovoada',
+        96: 'Trovoada',
+        99: 'Trovoada'
+      };
+      
+      return {
+        temp,
+        condition: conditions[weathercode] || 'Desconhecido',
+        icon: getWeatherIcon(weathercode)
+      };
+    }
+    
+    throw new Error('Dados do clima não disponíveis');
+  } catch (error) {
+    console.error('Erro ao buscar clima:', error);
+    throw error;
+  }
+}
+
+function getWeatherIcon(code: number): string {
+  if ([0, 1].includes(code)) return 'sun';
+  if ([2, 3].includes(code)) return 'cloud';
+  if ([45, 48].includes(code)) return 'fog';
+  if ([51, 53, 55, 61, 63, 65].includes(code)) return 'rain';
+  if ([71, 73, 75].includes(code)) return 'snow';
+  if ([95, 96, 99].includes(code)) return 'storm';
+  return 'cloud';
+}
+
 // ── Dashboard ──
 export async function fetchDashboard(): Promise<ApiResponse<DashboardStats>> {
   const response = await fetch('/api/v1/email/analytics', {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Bell, Search, X, Sun, Moon, CheckCheck, Trash2 } from 'lucide-react';
-import { fetchNotifications, fetchUser, markNotificationsAsRead, clearNotifications } from '@/services/api';
+import { Bell, Search, X, Sun, Moon, CheckCheck, Trash2, Cloud, CloudRain, CloudSnow, Wind } from 'lucide-react';
+import { fetchNotifications, fetchUser, markNotificationsAsRead, clearNotifications, fetchWeatherData } from '@/services/api';
 import { useTheme } from '@/hooks/use-theme';
 import type { AppNotification } from '@/types';
 import { cn } from '@/lib/utils';
@@ -8,16 +8,47 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { Input } from "@/components/ui/input";
 
+interface WeatherView {
+  temp: number;
+  condition: string;
+  icon: string;
+  loading: boolean;
+  error: boolean;
+}
+
+const WeatherIcon = ({ type }: { type: string }) => {
+  const iconClass = "w-4 h-4 text-muted-foreground";
+  switch (type) {
+    case 'sun': return <Sun className={iconClass} />;
+    case 'cloud': return <Cloud className={iconClass} />;
+    case 'rain': return <CloudRain className={iconClass} />;
+    case 'snow': return <CloudSnow className={iconClass} />;
+    case 'storm': return <Wind className={iconClass} />;
+    default: return <Cloud className={iconClass} />;
+  }
+};
+
 export function Topbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [user, setUser] = useState<{ name: string; avatar: string } | null>(null);
+  const [weather, setWeather] = useState<WeatherView>({ temp: 0, condition: '', icon: 'cloud', loading: true, error: false });
 
   useEffect(() => {
     fetchNotifications().then(r => setNotifications(r.data)).catch(() => {});
     fetchUser().then(r => setUser(r.data)).catch(() => {});
+    fetchWeather();
   }, []);
+
+  const fetchWeather = async () => {
+    try {
+      const data = await fetchWeatherData();
+      setWeather({ ...data, loading: false, error: false });
+    } catch (e) {
+      setWeather({ temp: 0, condition: 'Erro', icon: 'cloud', loading: false, error: true });
+    }
+  };
 
   const { theme, toggle } = useTheme();
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -56,8 +87,21 @@ export function Topbar() {
         </div>
       </div>
 
-      {/* Right: notifications & avatar */}
+      {/* Right: weather, notifications & avatar */}
       <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          {weather.loading ? (
+            <div className="w-4 h-4 animate-pulse bg-muted rounded" />
+          ) : weather.error ? (
+            <span className="text-xs">--°</span>
+          ) : (
+            <>
+              <WeatherIcon type={weather.icon} />
+              <span className="font-medium">{weather.temp}°C</span>
+              <span className="hidden sm:inline">Lisboa</span>
+            </>
+          )}
+        </div>
         <button
           onClick={toggle}
           className="text-muted-foreground hover:text-foreground transition-colors hover:shadow-[0_0_16px_hsl(var(--ring)/0.25)] hover:-translate-y-0.5 transition-transform rounded-md p-1"
