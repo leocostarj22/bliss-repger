@@ -71,8 +71,20 @@ export default function TemplateEditor() {
       // Load existing template
       fetchTemplate(id)
         .then(response => {
-          setTemplateName(response.data.name);
-          setBlocks(response.data.content);
+          const tpl = response.data;
+          setTemplateName(tpl.name);
+          const c = tpl.content;
+          if (Array.isArray(c)) {
+            setBlocks(c);
+          } else if (typeof c === 'string') {
+            setBlocks([{
+              id: v4Fallback(),
+              type: 'html',
+              props: { code: c }
+            }]);
+          } else {
+            setBlocks([]);
+          }
         })
         .catch(() => {
           toast({ title: 'Erro', description: 'Template não encontrado', variant: 'destructive' });
