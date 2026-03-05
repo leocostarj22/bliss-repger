@@ -86,46 +86,51 @@ Route::prefix('v1')->group(function () {
 
         Route::post('media/upload', function (Request $request) {
             try {
-                $request->validate([
-                    'file' => 'required|image|max:15360', // 15MB max
+                $validator = \Validator::make($request->all(), [
+                    'file' => 'required|file|mimetypes:image/png,image/jpeg,image/gif,image/webp|max:15360',
                 ]);
-
-                if ($request->hasFile('file')) {
-                    $file = $request->file('file');
-                    $overwrite = filter_var($request->query('overwrite'), FILTER_VALIDATE_BOOLEAN);
-
-                    $original = $file->getClientOriginalName();
-                    $name = pathinfo($original, PATHINFO_FILENAME);
-                    $ext = strtolower($file->getClientOriginalExtension());
-                    $safe = Str::slug($name);
-                    $disk = Storage::disk('public');
-                    $filename = $safe . '.' . $ext;
-
-                    if ($overwrite) {
-                        if ($disk->exists('crm-media/' . $filename)) {
-                            $disk->delete('crm-media/' . $filename);
-                        }
-                    } else {
-                        $i = 1;
-                        while ($disk->exists('crm-media/' . $filename)) {
-                            $filename = $safe . '-' . $i++ . '.' . $ext;
-                        }
-                    }
-                    
-                    $file->storeAs('crm-media', $filename, 'public');
-                    
-                    $url = url('api/v1/email/media/view/' . $filename);
-
-                    return response()->json([
-                        'url' => $url,
-                        'filename' => $filename,
-                    ]);
+                if ($validator->fails()) {
+                    return response()->json(['errors' => $validator->errors()], 422);
                 }
 
-                return response()->json(['error' => 'No file uploaded'], 400);
-            } catch (\Exception $e) {
+                $file = $request->file('file');
+                $overwrite = filter_var($request->query('overwrite'), FILTER_VALIDATE_BOOLEAN);
+
+                $original = $file->getClientOriginalName();
+                $name = pathinfo($original, PATHINFO_FILENAME);
+                $ext = strtolower($file->getClientOriginalExtension());
+                $safe = Str::slug($name);
+                $disk = Storage::disk('public');
+                if (! $disk->exists('crm-media')) {
+                    $disk->makeDirectory('crm-media');
+                }
+                $filename = $safe . '.' . $ext;
+
+                if ($overwrite) {
+                    if ($disk->exists('crm-media/' . $filename)) {
+                        $disk->delete('crm-media/' . $filename);
+                    }
+                } else {
+                    $i = 1;
+                    while ($disk->exists('crm-media/' . $filename)) {
+                        $filename = $safe . '-' . $i++ . '.' . $ext;
+                    }
+                }
+                
+                $file->storeAs('crm-media', $filename, 'public');
+                
+                $url = url('api/v1/email/media/view/' . $filename);
+
+                return response()->json([
+                    'url' => $url,
+                    'filename' => $filename,
+                ]);
+            } catch (\Illuminate\Http\Exceptions\PostTooLargeException $e) {
+                Log::error('Image upload too large: ' . $e->getMessage());
+                return response()->json(['error' => 'File too large'], 413);
+            } catch (\Throwable $e) {
                 Log::error('Image upload failed: ' . $e->getMessage());
-                return response()->json(['error' => 'Upload failed: ' . $e->getMessage()], 500);
+                return response()->json(['error' => 'Upload failed'], 500);
             }
         });
         Route::get('analytics', [DashboardController::class, 'index']);

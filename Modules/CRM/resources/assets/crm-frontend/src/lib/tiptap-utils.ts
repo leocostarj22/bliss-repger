@@ -435,7 +435,16 @@ export const handleImageUpload = async (
             reject(new Error("Failed to parse server response"))
           }
         } else {
-          reject(new Error(`Upload failed: ${xhr.statusText} (${xhr.status})`))
+          let message = xhr.statusText || 'Erro no upload'
+          try {
+            const json = JSON.parse(xhr.responseText)
+            if (json?.error) message = String(json.error)
+            if (json?.errors) {
+              const list = Object.values(json.errors).flat().join(', ')
+              if (list) message = list
+            }
+          } catch {}
+          reject(new Error(`Upload failed: ${message} (${xhr.status})`))
         }
       }
   
