@@ -98,88 +98,115 @@ export async function createSegment(payload: { name: string; filters?: any[]; co
 }
 
 // ── Templates ──
-const getStoredTemplates = (): EmailTemplate[] => {
-  try {
-    const stored = localStorage.getItem('crm_templates');
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
+const mapTemplate = (row: any): EmailTemplate => {
+  const raw = row?.data ? row.data : row;
+  const content = raw?.content;
+  let parsed: any = content;
+  if (typeof content === 'string') {
+    try { parsed = JSON.parse(content); } catch {}
   }
-};
-
-const saveTemplatesToStorage = (templates: EmailTemplate[]) => {
-  localStorage.setItem('crm_templates', JSON.stringify(templates));
+  return {
+    id: String(raw.id),
+    name: raw.name ?? 'Sem Título',
+    content: parsed ?? [],
+    thumbnail: raw.thumbnail ?? (parsed ? generateTemplateThumbnail(parsed) : undefined),
+    createdAt: raw.createdAt ?? raw.created_at ?? new Date().toISOString(),
+    updatedAt: raw.updatedAt ?? raw.updated_at ?? new Date().toISOString(),
+  };
 };
 
 export async function fetchTemplates(): Promise<ApiResponse<EmailTemplate[]>> {
-  // Mock fetch
-  await delay(300);
-  const stored = getStoredTemplates();
-  return { data: stored };
+  const response = await fetch('/api/v1/email/templates', {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch templates: ${response.statusText}`);
+  }
+  const json = await response.json();
+  const rows = Array.isArray(json.data) ? json.data : json;
+  return { data: rows.map(mapTemplate) };
 }
 
 export async function fetchTemplate(id: string): Promise<ApiResponse<EmailTemplate>> {
-  await delay(300);
-  const stored = getStoredTemplates();
-  const template = stored.find(t => t.id === id);
-  
-  if (!template) throw new Error('Template not found');
-  return { data: template as EmailTemplate };
+  const response = await fetch(`/api/v1/email/templates/${id}`, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch template: ${response.statusText}`);
+  }
+  const json = await response.json();
+  return { data: mapTemplate(json.data ?? json) };
 }
 
 export async function createTemplate(data: Partial<EmailTemplate>): Promise<ApiResponse<EmailTemplate>> {
-  // Mock create
-  await delay(500);
-  
-  // Gera thumbnail automaticamente
-  const thumbnail = data.content ? generateTemplateThumbnail(data.content) : '';
-  
-  const newTemplate: EmailTemplate = {
-    id: `t${Date.now()}`,
-    name: data.name || 'Untitled',
-    content: data.content || [],
-    thumbnail,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    ...data,
-  } as EmailTemplate;
-  
-  const stored = getStoredTemplates();
-  stored.unshift(newTemplate);
-  saveTemplatesToStorage(stored);
-  
-  return { data: newTemplate };
+  const payload = {
+    name: data.name,
+    type: Array.isArray(data.content) ? 'blocks' : 'html',
+    content: data.content,
+    status: 'draft',
+  };
+  const response = await fetch('/api/v1/email/templates', {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to create template: ${response.statusText}`);
+  }
+  const json = await response.json();
+  return { data: mapTemplate(json.data ?? json) };
 }
 
 export async function updateTemplate(id: string, data: Partial<EmailTemplate>): Promise<ApiResponse<EmailTemplate>> {
-  await delay(500);
-  const stored = getStoredTemplates();
-  const index = stored.findIndex(t => t.id === id);
-  
-  if (index === -1) {
-    throw new Error('Template not found');
+  const payload = {
+    name: data.name,
+    type: Array.isArray(data.content) ? 'blocks' : 'html',
+    content: data.content,
+    status: 'draft',
+  };
+  const response = await fetch(`/api/v1/email/templates/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to update template: ${response.statusText}`);
   }
-
-  // Se o conteúdo mudou, regenera o thumbnail
-  const thumbnail = data.content ? generateTemplateThumbnail(data.content) : stored[index].thumbnail;
-  
-  stored[index] = { ...stored[index], ...data, thumbnail, updatedAt: new Date().toISOString() };
-  saveTemplatesToStorage(stored);
-  return { data: stored[index] as EmailTemplate };
+  const json = await response.json();
+  return { data: mapTemplate(json.data ?? json) };
 }
 
 export async function deleteTemplate(id: string): Promise<ApiResponse<void>> {
-  await delay(300);
-  const stored = getStoredTemplates();
-  const index = stored.findIndex(t => t.id === id);
-  
-  if (index !== -1) {
-    stored.splice(index, 1);
-    saveTemplatesToStorage(stored);
-    return { data: undefined };
+  const response = await fetch(`/api/v1/email/templates/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to delete template: ${response.statusText}`);
   }
-  
-  throw new Error('Template not found');
+  return { data: undefined };
 }
 
 // ── Campaigns: /api/v1/email/campaigns ──

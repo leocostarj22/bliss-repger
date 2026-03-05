@@ -7,6 +7,7 @@ use Modules\CRM\Http\Controllers\Api\DashboardController;
 use Modules\CRM\Http\Controllers\Api\SegmentController;
 use Modules\CRM\Http\Controllers\Api\UserController;
 use Modules\CRM\Http\Controllers\Api\AutomationController;
+use Modules\CRM\Http\Controllers\Api\TemplateController;
 use Modules\CRM\Http\Controllers\CRMController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -162,5 +163,12 @@ Route::prefix('v1')->group(function () {
         Route::put('automations/{id}', [AutomationController::class, 'update']);
         Route::delete('automations/{id}', [AutomationController::class, 'destroy']);
         Route::post('automations/{id}/duplicate', [AutomationController::class, 'duplicate']);
+
+        // Templates Routes
+        Route::get('templates', [TemplateController::class, 'index']);
+        Route::post('templates', [TemplateController::class, 'store']);
+        Route::get('templates/{id}', [TemplateController::class, 'show']);
+        Route::put('templates/{id}', [TemplateController::class, 'update']);
+        Route::delete('templates/{id}', [TemplateController::class, 'destroy']);
     });
 });
