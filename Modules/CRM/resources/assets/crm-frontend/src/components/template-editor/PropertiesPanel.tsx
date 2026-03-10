@@ -255,10 +255,17 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
           <Field label="Conteúdo">
             <RichTextEditor value={String(p.content || '')} onChange={(html) => set('content', html)} />
           </Field>
-          <Field label="Tamanho da fonte">
+          <Field label="Espaçamento entre linhas">
             <div className="flex items-center gap-3">
-              <Slider value={[Number(p.fontSize)]} onValueChange={([v]) => set('fontSize', v)} min={10} max={48} step={1} className="flex-1" />
-              <span className="text-xs text-muted-foreground w-8 text-right">{String(p.fontSize)}px</span>
+              <Slider
+                value={[Number((p as any).lineHeight ?? 1.5)]}
+                onValueChange={([v]) => set('lineHeight', v)}
+                min={1}
+                max={2.4}
+                step={0.1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-8 text-right">{String((p as any).lineHeight ?? 1.5)}</span>
             </div>
           </Field>
           <Field label="Cor do texto">

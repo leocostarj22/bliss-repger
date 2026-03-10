@@ -15,7 +15,13 @@ export function BlockRenderer({ block, onSelect, onDelete, isNested = false }: B
     case 'text':
       return (
         <div
-          style={{ fontSize: Number(p.fontSize), color: String(p.color), textAlign: p.align as 'left' | 'center' | 'right', backgroundColor: String((p as any).bgColor) }}
+          style={{
+            fontSize: Number(p.fontSize),
+            lineHeight: Number((p as any).lineHeight ?? 1.5),
+            color: String(p.color),
+            textAlign: p.align as 'left' | 'center' | 'right' | 'justify',
+            backgroundColor: String((p as any).bgColor),
+          }}
           className="min-h-[24px] break-words"
           dangerouslySetInnerHTML={{ __html: String(p.content || '') }}
         />
@@ -197,8 +203,10 @@ case 'video':
         )
       };
 
+      const justifyContent = String(p.align) === 'center' ? 'center' : (String(p.align) === 'right' ? 'flex-end' : 'flex-start');
+
       return (
-        <div className="flex gap-3 flex-wrap" style={{ justifyContent: String(p.align) }}>
+        <div className="flex gap-3 flex-wrap" style={{ justifyContent }}>
           {networks.map((n) => (
             <a
               key={n}

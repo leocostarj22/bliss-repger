@@ -15,7 +15,7 @@ import { FontSize } from './extensions/FontSize'
 import { 
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, 
   Heading1, Heading2, List, ListOrdered, Quote, 
-  AlignLeft, AlignCenter, AlignRight, Link as LinkIcon, 
+  AlignLeft, AlignCenter, AlignRight, AlignJustify, Link as LinkIcon, 
   Image as ImageIcon, Undo, Redo, Type, Droplet, Eraser 
 } from 'lucide-react'
 import { useCallback, useEffect } from 'react'
@@ -233,6 +233,13 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
         >
           <AlignRight className="w-4 h-4" />
         </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+          isActive={editor.isActive({ textAlign: 'justify' })}
+          title="Justificar"
+        >
+          <AlignJustify className="w-4 h-4" />
+        </ToolbarButton>
 
         <div className="w-px h-6 bg-border mx-1" />
 
@@ -255,6 +262,8 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="default">Padrão</SelectItem>
+              <SelectItem value="8px">8px</SelectItem>
+              <SelectItem value="10px">10px</SelectItem>
               <SelectItem value="12px">12px</SelectItem>
               <SelectItem value="14px">14px</SelectItem>
               <SelectItem value="16px">16px</SelectItem>

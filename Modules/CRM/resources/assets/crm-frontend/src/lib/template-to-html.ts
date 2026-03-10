@@ -43,7 +43,9 @@ export function blocksToHtml(blocks: TemplateBlock[] | string): string {
         const bg = (p as any).bgColor || 'transparent';
         const size = `${p.fontSize}px`;
         const color = String(p.color || '#333333');
-        return `<div style="text-align: ${align}; line-height: 1.5; margin: 10px 0; background-color: ${bg};">
+        const lineHeightRaw = Number((p as any).lineHeight ?? 1.5);
+        const lineHeight = Number.isFinite(lineHeightRaw) ? lineHeightRaw : 1.5;
+        return `<div style="text-align: ${align}; line-height: ${lineHeight}; margin: 10px 0; background-color: ${bg};">
           <div style="font-family: sans-serif; font-size: ${size}; color: ${color};">${contentHtml}</div>
         </div>`;
       }
@@ -83,45 +85,55 @@ export function blocksToHtml(blocks: TemplateBlock[] | string): string {
 
       case 'social': {
         const networks = (p.networks as string[]) || [];
-        const iconSize = Number(p.iconSize) || 28;
-        const color = String(p.color || '#333333');
+        const iconSize = Math.max(12, Number(p.iconSize) || 28);
+        const bgColor = String(p.color || '#111827');
         const links = (p.links as Record<string, string>) || {};
-        
-        // Caminhos SVG dos ícones no Simple Icons (serão convertidos para PNG via images.weserv)
-        const svgPaths: Record<string, string> = {
-          facebook: 'cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/facebook.svg',
-          instagram: 'cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.svg',
-          twitter: 'cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/twitter.svg',
-          linkedin: 'cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg',
-          youtube: 'cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg',
-          tiktok: 'cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/tiktok.svg'
+
+        const iconifyNames: Record<string, string> = {
+          facebook: 'facebook',
+          instagram: 'instagram',
+          twitter: 'twitter',
+          linkedin: 'linkedin',
+          youtube: 'youtube',
+          tiktok: 'tiktok',
         };
-        
+
         const align = p.align === 'center' ? 'center' : (p.align === 'right' ? 'right' : 'left');
-        const margin = align === 'center' ? '0 auto' : (align === 'right' ? '0 0 0 auto' : '0 auto 0 0');
-        
-        // Use a div wrapper for Tiptap compatibility (text-align works better on block containers in editors)
-        // Keep the inner table with align attribute for Outlook support
-        return `<div style="text-align: ${align}; width: 100%; margin: 10px 0;">
-          <table align="${align}" style="display: inline-table; margin: ${margin}; text-align: ${align};" cellpadding="0" cellspacing="0" border="0" role="presentation">
-            <tr>
-              ${networks.map(net => {
-                const link = links[net] || '#';
-                const svgPath = svgPaths[net];
-                const iconUrl = svgPath
-                  ? `https://images.weserv.nl/?url=${encodeURIComponent(svgPath)}&w=${iconSize}&h=${iconSize}&fit=contain&output=png`
-                  : `https://via.placeholder.com/${iconSize}x${iconSize}?text=${net.charAt(0).toUpperCase()}`;
-                
-                // Se a cor não for preta/branca, aplicar filtro para colorir o ícone
-                const colorFilter = color !== '#333333' && color !== '#000000' && color !== '#ffffff' 
-                  ? `filter: brightness(0) saturate(100%) invert(1) sepia(1) saturate(100%) hue-rotate(${getHueRotation(color)}deg);`
-                  : '';
-                
-                return `<td style="padding: 0 4px;"><a href="${link}" target="_blank" style="display: inline-block; text-decoration: none;"><img src="${iconUrl}" width="${iconSize}" height="${iconSize}" alt="${net}" style="display: block; width: ${iconSize}px; height: ${iconSize}px; border: 0; ${colorFilter}" /></a></td>`;
-              }).join('')}
-            </tr>
-          </table>
-        </div>`;
+
+        const iconUrlFor = (net: string) => {
+          const name = iconifyNames[net];
+          if (!name) return `https://via.placeholder.com/${iconSize}x${iconSize}.png?text=${net.charAt(0).toUpperCase()}`;
+          const svg = `https://api.iconify.design/simple-icons/${name}.svg?color=ffffff`;
+          return `https://images.weserv.nl/?url=${encodeURIComponent(svg)}&w=${iconSize}&h=${iconSize}&fit=contain&output=png`;
+        };
+
+        return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%; margin: 10px 0;">
+          <tr>
+            <td align="${align}">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="${align}">
+                <tr>
+                  ${networks.map((net) => {
+                    const link = links[net] || '#';
+                    const iconUrl = iconUrlFor(net);
+                    const box = iconSize + 14;
+
+                    return `<td style="padding: 0 4px;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse: separate;">
+                        <tr>
+                          <td width="${box}" height="${box}" align="center" valign="middle" style="background-color: ${bgColor}; border-radius: 999px;">
+                            <a href="${link}" target="_blank" style="display: inline-block; text-decoration: none;">
+                              <img src="${iconUrl}" width="${iconSize}" height="${iconSize}" alt="${net}" style="display: block; width: ${iconSize}px; height: ${iconSize}px; border: 0; outline: none; text-decoration: none;" />
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>`;
+                  }).join('')}
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>`;
       }
 
       case 'columns': {
