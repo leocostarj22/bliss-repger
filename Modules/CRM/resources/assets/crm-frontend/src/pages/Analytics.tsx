@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { fetchAnalytics } from '@/services/api';
 import type { DashboardStats } from '@/types';
 import { Download, Calendar } from 'lucide-react';
@@ -8,6 +8,13 @@ import {
 } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const COLORS = [
   'hsl(185, 65%, 48%)',
@@ -23,25 +30,70 @@ function formatNumber(n: number): string {
   return n.toString();
 }
 
+function escapeCsvValue(value: unknown): string {
+  const s = String(value ?? '');
+  const escaped = s.replace(/"/g, '""');
+  if (/[\n\r",;]/.test(escaped)) return `"${escaped}"`;
+  return escaped;
+}
+
+function downloadCsv(filename: string, csv: string): void {
+  const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export default function Analytics() {
+  const { toast } = useToast();
+  const [days, setDays] = useState<7 | 30 | 90>(30);
   const [data, setData] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const load = async (nextDays: number) => {
+    try {
+      if (data) setRefreshing(true);
+      else setLoading(true);
+
+      const r = await fetchAnalytics({ days: nextDays });
+      setData(r.data);
+    } catch (err) {
+      console.error('Failed to load analytics, using mock data:', err);
+      const m = await import('@/services/mockData');
+      const mock = m.mockDashboardStats;
+      setData({
+        ...mock,
+        dailyMetrics: Array.isArray(mock.dailyMetrics) ? mock.dailyMetrics.slice(-nextDays) : [],
+      });
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const pieData = useMemo(() => {
+    const openRate = data?.openRate ?? 0;
+    const clickRate = data?.clickRate ?? 0;
+    const bounceRate = data?.bounceRate ?? 0;
+
+    return [
+      { name: 'Aberto', value: openRate },
+      { name: 'Clicado', value: clickRate },
+      { name: 'Rejeitado', value: bounceRate },
+      { name: 'Ignorado', value: Math.max(0, 100 - openRate - clickRate - bounceRate) },
+    ];
+  }, [data?.bounceRate, data?.clickRate, data?.openRate]);
 
   useEffect(() => {
-    fetchAnalytics()
-      .then(r => {
-        setData(r.data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Failed to load analytics, using mock data:', err);
-        // Fallback to mock data to prevent crash
-        import('@/services/mockData').then(m => {
-          setData(m.mockDashboardStats);
-          setLoading(false);
-        });
-      });
-  }, []);
+    load(days);
+  }, [days]);
 
   if (loading || !data) {
     return (
@@ -58,12 +110,58 @@ export default function Analytics() {
     );
   }
 
-  const pieData = [
-    { name: 'Aberto', value: data.openRate },
-    { name: 'Clicado', value: data.clickRate },
-    { name: 'Rejeitado', value: data.bounceRate },
-    { name: 'Ignorado', value: Math.max(0, 100 - data.openRate - data.clickRate - data.bounceRate) },
-  ];
+  const handleExportCsv = async () => {
+    try {
+      setExporting(true);
+
+      const today = new Date().toISOString().slice(0, 10);
+      const filename = `crm-analytics-${days}d-${today}.csv`;
+
+      const lines: string[] = [];
+      lines.push(['periodo', `ultimos_${days}_dias`].map(escapeCsvValue).join(','));
+      lines.push('');
+
+      lines.push(['resumo', 'valor'].map(escapeCsvValue).join(','));
+      lines.push(['total_sent', data.totalSent].map(escapeCsvValue).join(','));
+      lines.push(['open_rate', `${data.openRate.toFixed(1)}%`].map(escapeCsvValue).join(','));
+      lines.push(['click_rate', `${data.clickRate.toFixed(1)}%`].map(escapeCsvValue).join(','));
+      lines.push(['bounce_rate', `${data.bounceRate.toFixed(1)}%`].map(escapeCsvValue).join(','));
+      lines.push('');
+
+      lines.push(['date', 'sent', 'opened', 'clicked', 'bounced'].map(escapeCsvValue).join(','));
+      for (const row of data.dailyMetrics) {
+        lines.push([
+          row.date,
+          row.sent,
+          row.opened,
+          row.clicked,
+          row.bounced,
+        ].map(escapeCsvValue).join(','));
+      }
+
+      lines.push('');
+      lines.push(['campaign_id', 'campaign_name', 'sent', 'opened', 'clicked', 'bounced', 'open_rate'].map(escapeCsvValue).join(','));
+      for (const c of data.topCampaigns) {
+        const openRate = c.sent > 0 ? (c.opened / c.sent) * 100 : 0;
+        lines.push([
+          c.campaignId,
+          c.campaignName,
+          c.sent,
+          c.opened,
+          c.clicked,
+          c.bounced,
+          `${openRate.toFixed(1)}%`,
+        ].map(escapeCsvValue).join(','));
+      }
+
+      downloadCsv(filename, lines.join('\n'));
+      toast({ title: 'CSV exportado', description: `Ficheiro ${filename} descarregado.` });
+    } catch {
+      toast({ title: 'Falha ao exportar CSV', description: 'Tente novamente.', variant: 'destructive' });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -74,10 +172,27 @@ export default function Analytics() {
           <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
-            <Calendar className="w-4 h-4" /> Últimos 30 dias
-          </Button>
-          <Button variant="outline" className="gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2" disabled={refreshing}>
+                <Calendar className="w-4 h-4" /> Últimos {days} dias
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {[7, 30, 90].map((d) => (
+                <DropdownMenuItem key={d} onClick={() => setDays(d as 7 | 30 | 90)}>
+                  Últimos {d} dias
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={handleExportCsv}
+            disabled={refreshing || exporting}
+          >
             <Download className="w-4 h-4" /> Exportar CSV
           </Button>
         </div>

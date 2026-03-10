@@ -703,8 +703,15 @@ export async function removeTag(id: string, tag: string): Promise<ApiResponse<Co
 }
 
 // ── Analytics: /api/v1/email/analytics ──
-export async function fetchAnalytics(): Promise<ApiResponse<DashboardStats>> {
-  const response = await fetch('/api/v1/email/analytics', {
+export async function fetchAnalytics(params?: { days?: number }): Promise<ApiResponse<DashboardStats>> {
+  const query = new URLSearchParams();
+  if (params?.days) query.append('days', params.days.toString());
+
+  const url = query.toString()
+    ? `/api/v1/email/analytics?${query.toString()}`
+    : '/api/v1/email/analytics';
+
+  const response = await fetch(url, {
     method: 'GET',
     headers: {
       'Accept': 'application/json',
