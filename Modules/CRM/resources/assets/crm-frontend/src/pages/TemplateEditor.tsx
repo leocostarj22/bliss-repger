@@ -19,6 +19,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function TemplateEditor() {
   const navigate = useNavigate();
@@ -28,6 +38,7 @@ export default function TemplateEditor() {
   const [templateName, setTemplateName] = useState('Sem Título');
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
   const [jsonOpen, setJsonOpen] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const [panelWidth, setPanelWidth] = useState<number>(320);
@@ -304,12 +315,12 @@ export default function TemplateEditor() {
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setJsonOpen(true)}>
             <Code2 className="w-4 h-4" /> JSON
           </Button>
-          <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => {
-            if (window.confirm('Tem certeza que deseja cancelar? Todas as alterações não salvas serão perdidas.')) {
-              localStorage.removeItem('template-draft');
-              navigate('/templates');
-            }
-          }}>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setCancelConfirmOpen(true)}
+          >
             Cancelar
           </Button>
           <Button size="sm" className="gap-1.5" onClick={handleSave} disabled={isSaving}>
@@ -361,6 +372,28 @@ export default function TemplateEditor() {
           </pre>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza que deseja cancelar?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Todas as alterações não salvas serão perdidas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continuar a editar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                localStorage.removeItem('template-draft');
+                navigate('/templates');
+              }}
+            >
+              Sim, cancelar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
