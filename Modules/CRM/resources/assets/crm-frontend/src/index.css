@@ -238,7 +238,7 @@
     box-shadow: 0 0 30px hsl(185 65% 48% / 0.12);
   }
   .nav-item {
-    @apply relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground transition-all duration-200;
+    @apply relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground dark:text-slate-200/80 transition-all duration-200;
   }
   .nav-item:hover {
     @apply bg-secondary text-foreground;

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   LayoutDashboard,
   Send,
@@ -16,15 +17,55 @@ import {
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
-  { label: 'Campanhas', icon: Send, path: '/campaigns' },
-  { label: 'Contactos', icon: Users, path: '/contacts' },
-  { label: 'Segmentos', icon: Mail, path: '/segments' },
-  { label: 'Templates', icon: FileEdit, path: '/templates' },
-  { label: 'Automações', icon: Workflow, path: '/automations' },
-  { label: 'Analítica', icon: BarChart3, path: '/analytics' },
-  { label: 'Configurações', icon: Settings, path: '/settings' },
-];
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/', color: 'cyan' },
+  { label: 'Campanhas', icon: Send, path: '/campaigns', color: 'fuchsia' },
+  { label: 'Contactos', icon: Users, path: '/contacts', color: 'emerald' },
+  { label: 'Segmentos', icon: Mail, path: '/segments', color: 'violet' },
+  { label: 'Templates', icon: FileEdit, path: '/templates', color: 'amber' },
+  { label: 'Automações', icon: Workflow, path: '/automations', color: 'sky' },
+  { label: 'Analítica', icon: BarChart3, path: '/analytics', color: 'cyan' },
+  { label: 'Configurações', icon: Settings, path: '/settings', color: 'slate' },
+] as const;
+
+type NavColor = (typeof navItems)[number]['color'];
+
+const colorStyles: Record<NavColor, { icon: string; glow: string; hover: string }> = {
+  cyan: {
+    icon: 'text-cyan-400',
+    glow: 'drop-shadow-[0_0_10px_rgba(34,211,238,0.45)]',
+    hover: 'group-hover:text-cyan-300',
+  },
+  fuchsia: {
+    icon: 'text-fuchsia-400',
+    glow: 'drop-shadow-[0_0_10px_rgba(232,121,249,0.45)]',
+    hover: 'group-hover:text-fuchsia-300',
+  },
+  emerald: {
+    icon: 'text-emerald-400',
+    glow: 'drop-shadow-[0_0_10px_rgba(52,211,153,0.4)]',
+    hover: 'group-hover:text-emerald-300',
+  },
+  violet: {
+    icon: 'text-violet-400',
+    glow: 'drop-shadow-[0_0_10px_rgba(167,139,250,0.45)]',
+    hover: 'group-hover:text-violet-300',
+  },
+  amber: {
+    icon: 'text-amber-400',
+    glow: 'drop-shadow-[0_0_10px_rgba(251,191,36,0.35)]',
+    hover: 'group-hover:text-amber-300',
+  },
+  sky: {
+    icon: 'text-sky-400',
+    glow: 'drop-shadow-[0_0_10px_rgba(56,189,248,0.4)]',
+    hover: 'group-hover:text-sky-300',
+  },
+  slate: {
+    icon: 'text-slate-600 dark:text-white',
+    glow: 'drop-shadow-[0_0_10px_rgba(148,163,184,0.35)]',
+    hover: 'group-hover:text-slate-700 dark:group-hover:text-white',
+  },
+};
 
 export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -56,25 +97,46 @@ export function AppSidebar() {
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const active = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
-          return (
+          const c = colorStyles[item.color];
+
+          const link = (
             <Link
               key={item.path}
               to={item.path}
-              className={cn('nav-item group relative overflow-hidden', active && 'active')}
-              title={collapsed ? item.label : undefined}
+              className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
             >
               {active && (
                 <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />
               )}
-              <item.icon className={cn(
-                "w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110",
-                active ? "text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.4)]" : "group-hover:text-cyan-400"
-              )} />
-              {!collapsed && <span className={cn(
-                "transition-colors duration-200",
-                active ? "font-semibold" : "group-hover:text-foreground"
-              )}>{item.label}</span>}
+              <item.icon
+                className={cn(
+                  'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
+                  c.icon,
+                  active ? c.glow : c.hover,
+                )}
+              />
+              {!collapsed && (
+                <span
+                  className={cn(
+                    'transition-colors duration-200',
+                    active ? 'font-semibold' : 'group-hover:text-foreground',
+                  )}
+                >
+                  {item.label}
+                </span>
+              )}
             </Link>
+          );
+
+          if (!collapsed) return link;
+
+          return (
+            <Tooltip key={item.path}>
+              <TooltipTrigger asChild>{link}</TooltipTrigger>
+              <TooltipContent side="right" align="center">
+                {item.label}
+              </TooltipContent>
+            </Tooltip>
           );
         })}
       </nav>
