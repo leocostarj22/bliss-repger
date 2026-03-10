@@ -155,6 +155,10 @@ class SendDeliveryEmail implements ShouldQueue
             if ($clickBase === null) {
                 return $target;
             }
+
+            $target = trim($target);
+            $target = trim($target, "`\t\n\r\0\x0B");
+
             if ($target === ''
                 || stripos($target, 'mailto:') === 0
                 || stripos($target, 'tel:') === 0
@@ -217,10 +221,16 @@ class SendDeliveryEmail implements ShouldQueue
     {
         $base = rtrim(config('app.url') ?: url('/'), '/');
 
-        $html = preg_replace_callback('/\b(href|src)\s*=\s*([\'\"])(.*?)\2/i', function ($m) use ($base) {
+        $sanitizeUrl = function (string $value): string {
+            $v = trim($value);
+            $v = trim($v, "`\t\n\r\0\x0B");
+            return $v;
+        };
+
+        $html = preg_replace_callback('/\b(href|src)\s*=\s*([\'\"])(.*?)\2/i', function ($m) use ($base, $sanitizeUrl) {
             $attr = $m[1];
             $q = $m[2];
-            $val = $m[3];
+            $val = $sanitizeUrl($m[3]);
             if ($val === '' || preg_match('/^(https?:|mailto:|tel:|data:|cid:|javascript:|#|\/\/)/i', $val)) {
                 return $m[0];
             }
@@ -228,9 +238,9 @@ class SendDeliveryEmail implements ShouldQueue
             return $attr . '=' . $q . $new . $q;
         }, $html);
 
-        $html = preg_replace_callback('/\b(href|src)\s*=\s*([^\s"\'>]+)/i', function ($m) use ($base) {
+        $html = preg_replace_callback('/\b(href|src)\s*=\s*([^\s"\'>]+)/i', function ($m) use ($base, $sanitizeUrl) {
             $attr = $m[1];
-            $val = $m[2];
+            $val = $sanitizeUrl($m[2]);
             if ($val === '' || preg_match('/^(https?:|mailto:|tel:|data:|cid:|javascript:|#|\/\/)/i', $val)) {
                 return $m[0];
             }
@@ -280,7 +290,7 @@ class SendDeliveryEmail implements ShouldQueue
         $wrapInner = function (string $inner) use ($tdInnerStyle): string {
             return '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="width:100%;background-color:#f5f7fb;">'.
                 '<tr><td align="center">'.
-                '<table data-crm-wrap="1" role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="width:100%;max-width:600px;margin:0 auto;background:#ffffff;">'.
+                '<table data-crm-wrap="1" role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="width:100%;max-width:600px;margin:0 auto;background:#ffffff;>'.
                 '<tr><td align="left" style="' . $tdInnerStyle . '">' . $inner . '</td></tr>'.
                 '</table>'.
                 '</td></tr></table>';
