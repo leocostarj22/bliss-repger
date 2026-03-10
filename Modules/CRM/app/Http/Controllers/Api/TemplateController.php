@@ -24,7 +24,7 @@ class TemplateController extends Controller
     {
         $validated = $request->validate([
             'name'    => 'required|string|max:255',
-            'content' => 'required',
+            'content' => 'present',
             'type'    => 'nullable|string|max:50',
             'subject' => 'nullable|string|max:255',
             'status'  => 'nullable|string|max:50',
@@ -47,7 +47,7 @@ class TemplateController extends Controller
         $t = Template::findOrFail($id);
         $validated = $request->validate([
             'name'    => 'sometimes|required|string|max:255',
-            'content' => 'sometimes|required',
+            'content' => 'sometimes|present',
             'type'    => 'nullable|string|max:50',
             'subject' => 'nullable|string|max:255',
             'status'  => 'nullable|string|max:50',

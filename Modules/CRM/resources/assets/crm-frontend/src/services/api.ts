@@ -227,7 +227,23 @@ export async function createTemplate(data: Partial<EmailTemplate>): Promise<ApiR
     body: JSON.stringify(payload),
   });
   if (!response.ok) {
-    throw new Error(`Failed to create template: ${response.statusText}`);
+    let msg = response.statusText || 'Erro ao criar template';
+    try {
+      const json = await response.json();
+      const errors = (json as any)?.errors;
+      const message = (json as any)?.message;
+      if (errors && typeof errors === 'object') {
+        const firstKey = Object.keys(errors)[0];
+        const firstVal = (errors as any)[firstKey];
+        const firstMsg = Array.isArray(firstVal) ? firstVal[0] : String(firstVal);
+        msg = firstMsg || msg;
+      } else if (message) {
+        msg = String(message);
+      }
+    } catch {
+      // ignore
+    }
+    throw new Error(`Failed to create template: ${msg}`);
   }
   const json = await response.json();
   return { data: mapTemplate(json.data ?? json) };
@@ -250,7 +266,23 @@ export async function updateTemplate(id: string, data: Partial<EmailTemplate>): 
     body: JSON.stringify(payload),
   });
   if (!response.ok) {
-    throw new Error(`Failed to update template: ${response.statusText}`);
+    let msg = response.statusText || 'Erro ao atualizar template';
+    try {
+      const json = await response.json();
+      const errors = (json as any)?.errors;
+      const message = (json as any)?.message;
+      if (errors && typeof errors === 'object') {
+        const firstKey = Object.keys(errors)[0];
+        const firstVal = (errors as any)[firstKey];
+        const firstMsg = Array.isArray(firstVal) ? firstVal[0] : String(firstVal);
+        msg = firstMsg || msg;
+      } else if (message) {
+        msg = String(message);
+      }
+    } catch {
+      // ignore
+    }
+    throw new Error(`Failed to update template: ${msg}`);
   }
   const json = await response.json();
   return { data: mapTemplate(json.data ?? json) };
