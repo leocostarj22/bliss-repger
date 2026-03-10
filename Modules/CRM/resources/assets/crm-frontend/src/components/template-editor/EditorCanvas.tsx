@@ -18,7 +18,7 @@ export function EditorCanvas({ blocks, selectedId, previewMode, onSelect, onDele
       <div
         className={cn(
           'mx-auto bg-white rounded-lg shadow-lg transition-all duration-300 min-h-[600px]',
-          previewMode === 'desktop' ? 'max-w-[640px]' : 'max-w-[375px]'
+          previewMode === 'desktop' ? 'max-w-[600px]' : 'max-w-[375px]'
         )}
       >
         {/* Email header preview */}

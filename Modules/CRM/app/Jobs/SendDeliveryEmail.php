@@ -271,7 +271,7 @@ class SendDeliveryEmail implements ShouldQueue
             '</head><body style="' . $bodyStyle . '">'.
             '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="width:100%;background-color:#f5f7fb;">'.
             '<tr><td align="center">'.
-            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="width:600px;max-width:600px;background:#ffffff;">'.
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="width:100%;max-width:600px;margin:0 auto;background:#ffffff;">'.
             '<tr><td align="left" style="' . $tdInnerStyle . '">' . $html . '</td></tr>'.
             '</table>'.
             '</td></tr></table>'.

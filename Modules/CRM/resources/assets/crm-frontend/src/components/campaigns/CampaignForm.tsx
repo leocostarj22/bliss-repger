@@ -283,11 +283,13 @@ export function CampaignForm({ initialData, onSubmit, isLoading, segments = [], 
                   </div>
                 </div>
                 
-                <div className="p-4 bg-white min-h-[400px] max-h-[600px] overflow-y-auto">
-                  <div 
-                    className="max-w-none [&_p]:my-3 [&_div]:my-3 [&_table]:my-3"
-                    dangerouslySetInnerHTML={{ __html: form.watch('content') || '' }} 
-                  />
+                <div className="p-4 bg-[#f5f7fb] min-h-[400px] max-h-[600px] overflow-y-auto">
+                  <div className="mx-auto w-full max-w-[600px] bg-white">
+                    <div
+                      className="px-6 py-0 max-w-none [&_p]:my-3 [&_div]:my-3 [&_table]:my-3 [&_img]:max-w-full [&_img]:h-auto"
+                      dangerouslySetInnerHTML={{ __html: form.watch('content') || '' }}
+                    />
+                  </div>
                 </div>
                 
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 text-xs text-yellow-800 dark:text-yellow-200 border-t border-yellow-100 dark:border-yellow-900/30 flex items-start gap-2">
