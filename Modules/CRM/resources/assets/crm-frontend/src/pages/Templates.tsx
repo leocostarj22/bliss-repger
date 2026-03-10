@@ -17,6 +17,7 @@ import { EmailTemplate } from '@/types';
 import { useToast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { playSound } from '@/lib/utils';
 
 
 // Componente para gerar thumbnail do template (renderização abstrata melhorada)
@@ -229,6 +230,7 @@ export default function Templates() {
 
     try {
       await deleteTemplate(pendingDeleteId);
+      playSound('/sounds/recycle.wav', { volume: 0.6 });
       toast({ title: 'Sucesso', description: 'Template excluído com sucesso' });
       loadTemplates();
     } catch (error) {

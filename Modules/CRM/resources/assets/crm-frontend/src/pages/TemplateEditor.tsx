@@ -10,7 +10,7 @@ import { EditorCanvas } from '@/components/template-editor/EditorCanvas';
 import { PropertiesPanel } from '@/components/template-editor/PropertiesPanel';
 import type { TemplateBlock, BlockType } from '@/types/template';
 import { DEFAULT_BLOCK_PROPS } from '@/types/template';
-import { cn } from '@/lib/utils';
+import { cn, playSound } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { createTemplate, updateTemplate, fetchTemplate } from '@/services/api';
 import {
@@ -222,6 +222,7 @@ export default function TemplateEditor() {
   }, []);
 
   const handleDelete = useCallback((id: string) => {
+    playSound('/sounds/recycle.wav', { volume: 0.6 });
     setBlocks(prev => prev.filter(b => b.id !== id));
     if (selectedId === id) setSelectedId(null);
   }, [selectedId]);
