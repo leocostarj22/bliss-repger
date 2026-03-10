@@ -66,7 +66,7 @@ export function blocksToHtml(blocks: TemplateBlock[] | string): string {
         return `<div style="height: ${p.height}px; line-height: ${p.height}px; font-size: 0;">&nbsp;</div>`;
       
       case 'html':
-        return `<div style="margin: 10px 0;">${p.code}</div>`;
+        return String((p as any).code || '');
 
       case 'video': {
         const width = String(p.width || '480px');
@@ -150,8 +150,14 @@ export function blocksToHtml(blocks: TemplateBlock[] | string): string {
     }
   }).join('');
 
-  const html = `<div style="width: 100%; background-color: #ffffff; font-family: sans-serif;"><div style="max-width: 600px; margin: 0 auto; padding: 0; box-sizing: border-box;">${htmlContent}</div></div>`;
-  
+  const minified = htmlContent.replace(/>\s+</g, '><').trim();
+
+  if (/<html\b/i.test(minified) || /<!doctype\b/i.test(minified)) {
+    return minified;
+  }
+
+  const html = `<div style="width: 100%; background-color: #ffffff; font-family: sans-serif;"><div style="max-width: 600px; margin: 0 auto; padding: 0; box-sizing: border-box;">${minified}</div></div>`;
+
   // Strict minification to remove all newlines and excessive whitespace between tags
   return html.replace(/>\s+</g, '><').trim();
 }

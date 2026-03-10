@@ -118,6 +118,16 @@ class SendDeliveryEmail implements ShouldQueue
         $trackOpens = (bool) $campaign->track_opens;
         $trackClicks = (bool) $campaign->track_clicks;
 
+        $appendToBody = function (string $source, string $snippet): string {
+            if (stripos($source, '</body>') !== false) {
+                return preg_replace('/<\/body>/i', $snippet . '</body>', $source, 1);
+            }
+            if (stripos($source, '</html>') !== false) {
+                return preg_replace('/<\/html>/i', $snippet . '</html>', $source, 1);
+            }
+            return $source . $snippet;
+        };
+
         if ($trackOpens) {
             try {
                 $pixelUrl = route('crm.track.pixel', ['delivery' => $delivery->id]);
@@ -127,7 +137,7 @@ class SendDeliveryEmail implements ShouldQueue
             }
             $pixelUrl = $pixelUrl . (strpos($pixelUrl, '?') !== false ? '&' : '?') . 'v=' . time();
             if (stripos($html, 'crm/track/pixel') === false) {
-                $html .= '<img src="' . $pixelUrl . '" width="1" height="1" style="display:none" alt="" />';
+                $html = $appendToBody($html, '<img src="' . $pixelUrl . '" width="1" height="1" style="display:none" alt="" />');
             }
         }
 
@@ -192,9 +202,12 @@ class SendDeliveryEmail implements ShouldQueue
             $unsubscribeUrl = url('crm/track/unsubscribe/' . $delivery->id);
         }
         if (stripos($html, 'crm/track/unsubscribe') === false) {
-            $html .= '<p style="margin-top:16px;font-size:12px;color:#666">' .
-                     'Para deixar de receber estes emails, <a href="' . $unsubscribeUrl . '">clique aqui</a>.' .
-                     '</p>';
+            $html = $appendToBody(
+                $html,
+                '<p style="margin-top:16px;font-size:12px;color:#666">' .
+                'Para deixar de receber estes emails, <a href="' . $unsubscribeUrl . '">clique aqui</a>.' .
+                '</p>'
+            );
         }
 
         return $html;
@@ -257,26 +270,55 @@ class SendDeliveryEmail implements ShouldQueue
 
     private function normalizeEmailHtml(string $html): string
     {
-        if (stripos($html, '<html') !== false) {
+        if (stripos($html, 'data-crm-wrap="1"') !== false) {
             return $html;
         }
 
         $bodyStyle = 'margin:0;padding:0;background-color:#f5f7fb;';
         $tdInnerStyle = "font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size:16px; line-height:1.5; color:#222222; padding:0 24px;";
 
-        $wrapped =
-            '<!doctype html><html><head>'.
+        $wrapInner = function (string $inner) use ($tdInnerStyle): string {
+            return '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="width:100%;background-color:#f5f7fb;">'.
+                '<tr><td align="center">'.
+                '<table data-crm-wrap="1" role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="width:100%;max-width:600px;margin:0 auto;background:#ffffff;">'.
+                '<tr><td align="left" style="' . $tdInnerStyle . '">' . $inner . '</td></tr>'.
+                '</table>'.
+                '</td></tr></table>';
+        };
+
+        if (stripos($html, '<html') !== false) {
+            if (stripos($html, 'name="viewport"') === false) {
+                if (preg_match('/<head\b[^>]*>/i', $html)) {
+                    $html = preg_replace('/<head\b[^>]*>/i', '$0<meta name="viewport" content="width=device-width, initial-scale=1.0"/>', $html, 1);
+                } else {
+                    $html = preg_replace('/<html\b[^>]*>/i', '$0<head><meta name="viewport" content="width=device-width, initial-scale=1.0"/></head>', $html, 1);
+                }
+            }
+
+            if (preg_match('/<body\b[^>]*>([\s\S]*?)<\/body>/i', $html, $bm)) {
+                $inner = $bm[1];
+                $html = preg_replace(
+                    '/<body\b[^>]*>[\s\S]*?<\/body>/i',
+                    '<body style="' . $bodyStyle . '">' . $wrapInner($inner) . '</body>',
+                    $html,
+                    1
+                );
+                return $html;
+            }
+
+            return '<!doctype html><html><head>'.
+                '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />'.
+                '<meta name="viewport" content="width=device-width, initial-scale=1.0"/>'.
+                '</head><body style="' . $bodyStyle . '">' .
+                $wrapInner($html) .
+                '</body></html>';
+        }
+
+        return '<!doctype html><html><head>'.
             '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />'.
             '<meta name="viewport" content="width=device-width, initial-scale=1.0"/>'.
-            '</head><body style="' . $bodyStyle . '">'.
-            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="width:100%;background-color:#f5f7fb;">'.
-            '<tr><td align="center">'.
-            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="width:100%;max-width:600px;margin:0 auto;background:#ffffff;">'.
-            '<tr><td align="left" style="' . $tdInnerStyle . '">' . $html . '</td></tr>'.
-            '</table>'.
-            '</td></tr></table>'.
+            '</head><body style="' . $bodyStyle . '">' .
+            $wrapInner($html) .
             '</body></html>';
-
-        return $wrapped;
     }
 }
