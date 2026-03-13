@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchContacts, deleteContact, addTag, removeTag, createSegment } from '@/services/api';
+import { fetchContacts, deleteContact, deleteContactsBySource, addTag, removeTag, createSegment, importContacts } from '@/services/api';
 import type { Contact } from '@/types';
 import { Search, Upload, Plus, Users, MoreHorizontal, Tag, Trash, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -25,6 +25,22 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 const statusColors: Record<string, string> = {
   subscribed: 'bg-success/15 text-success',
@@ -43,23 +59,38 @@ export default function Contacts() {
   const [sourceFilter, setSourceFilter] = useState('');
   const [activeTag, setActiveTag] = useState('All');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(25);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [sourceTotal, setSourceTotal] = useState<number | null>(null);
   
   // Tag Dialog State
   const [tagDialogOpen, setTagDialogOpen] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [newTag, setNewTag] = useState('');
 
+  // Import Dialog State
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importSource, setImportSource] = useState('');
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+
   const loadContacts = () => {
     setLoading(true);
-    fetchContacts({ 
-      search, 
+    fetchContacts({
+      page,
+      perPage,
+      search,
       tag: activeTag === 'All' ? undefined : activeTag,
-      source: sourceFilter || undefined
+      source: sourceFilter || undefined,
     })
       .then(r => {
         setContacts(r.data);
+        setTotalPages(r.meta?.totalPages ?? 1);
+        setTotal(r.meta?.total ?? r.data.length);
         setLoading(false);
-        // Clear selection on reload/filter change to avoid inconsistencies
         setSelectedIds(new Set());
       })
       .catch(() => setLoading(false));
@@ -67,7 +98,43 @@ export default function Contacts() {
 
   useEffect(() => {
     loadContacts();
-  }, [search, activeTag, sourceFilter]);
+  }, [page, perPage, search, activeTag, sourceFilter]);
+
+  useEffect(() => {
+    const src = sourceFilter.trim();
+    if (!src) {
+      setSourceTotal(null);
+      return;
+    }
+
+    fetchContacts({ page: 1, perPage: 1, source: src })
+      .then((r) => setSourceTotal(r.meta?.total ?? r.data.length))
+      .catch(() => setSourceTotal(null));
+  }, [sourceFilter]);
+
+  const paginationItems = (() => {
+    const items: Array<number | 'left' | 'right'> = [];
+
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) items.push(i);
+      return items;
+    }
+
+    items.push(1);
+
+    const start = Math.max(2, page - 1);
+    const end = Math.min(totalPages - 1, page + 1);
+
+    if (start > 2) items.push('left');
+
+    for (let i = start; i <= end; i++) items.push(i);
+
+    if (end < totalPages - 1) items.push('right');
+
+    items.push(totalPages);
+
+    return items;
+  })();
 
   const toggleSelectAll = () => {
     if (selectedIds.size === contacts.length && contacts.length > 0) {
@@ -124,6 +191,25 @@ export default function Contacts() {
     }
   };
 
+  const handleBulkDeleteBySource = async () => {
+    const src = sourceFilter.trim();
+    const count = sourceTotal ?? 0;
+    if (!src || count <= 0) return;
+
+    if (!confirm(`Tem a certeza que deseja eliminar TODOS os ${count} contactos da origem "${src}"?`)) return;
+
+    try {
+      const res = await deleteContactsBySource({ source: src });
+      const deleted = res.data.deleted;
+      toast({ title: 'Contactos eliminados', description: `Foram removidos ${deleted} contactos da origem "${src}".` });
+      setSelectedIds(new Set());
+      setPage(1);
+      loadContacts();
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Erro', description: error?.message || 'Não foi possível apagar todos os contactos da origem.' });
+    }
+  };
+
   const openTagDialog = (id: string) => {
     setSelectedContactId(id);
     setNewTag('');
@@ -142,6 +228,40 @@ export default function Contacts() {
     }
   };
 
+  const openImportDialog = () => {
+    setImportSource('');
+    setImportFile(null);
+    setImportDialogOpen(true);
+  };
+
+  const handleImport = async () => {
+    const source = importSource.trim();
+    if (!source) {
+      toast({ variant: 'destructive', title: 'Origem obrigatória', description: 'Defina a origem para esta importação.' });
+      return;
+    }
+    if (!importFile) {
+      toast({ variant: 'destructive', title: 'Ficheiro obrigatório', description: 'Selecione um ficheiro .xlsx ou .xls.' });
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const res = await importContacts({ file: importFile, source, deduplicate: true });
+      const r = res.data;
+      toast({
+        title: 'Importação concluída',
+        description: `Novos: ${r.imported} • Atualizados: ${r.updated} • Inválidos: ${r.invalid} • Duplicados no ficheiro: ${r.duplicatesInFile}`,
+      });
+      setImportDialogOpen(false);
+      loadContacts();
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Erro ao importar', description: error?.message || 'Falha ao importar contactos.' });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-slide-up">
       <div className="flex items-center justify-between">
@@ -151,7 +271,7 @@ export default function Contacts() {
           <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500"></div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" onClick={openImportDialog}>
             <Upload className="w-4 h-4" /> Importar
           </Button>
           <Button className="gap-2" onClick={() => navigate('/contacts/new')}>
@@ -166,6 +286,11 @@ export default function Contacts() {
             <span className="text-sm font-medium text-primary">{selectedIds.size} contactos selecionados</span>
           </div>
           <div className="flex items-center gap-2">
+            {sourceFilter.trim() && (sourceTotal ?? 0) > 0 && (
+              <Button size="sm" variant="destructive" onClick={handleBulkDeleteBySource} className="gap-2">
+                <Trash className="w-4 h-4" /> Apagar todos ({sourceTotal})
+              </Button>
+            )}
             <Button size="sm" variant="destructive" onClick={handleBulkDelete} className="gap-2">
               <Trash className="w-4 h-4" /> Apagar Selecionados
             </Button>
@@ -182,7 +307,10 @@ export default function Contacts() {
           <Search className="w-4 h-4 text-muted-foreground" />
           <input
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => {
+              setPage(1);
+              setSearch(e.target.value);
+            }}
             placeholder="Pesquisar contactos..."
             className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground w-full"
           />
@@ -190,7 +318,10 @@ export default function Contacts() {
         <div className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2 w-48">
           <input
             value={sourceFilter}
-            onChange={e => setSourceFilter(e.target.value)}
+            onChange={e => {
+              setPage(1);
+              setSourceFilter(e.target.value);
+            }}
             placeholder="Filtrar por Origem..."
             className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground w-full"
           />
@@ -199,7 +330,10 @@ export default function Contacts() {
           {tagFilters.map(t => (
             <button
               key={t}
-              onClick={() => setActiveTag(t)}
+              onClick={() => {
+                setPage(1);
+                setActiveTag(t);
+              }}
               className={cn(
                 'px-3 py-1.5 rounded-full text-xs font-medium transition-all border',
                 activeTag === t
@@ -210,6 +344,33 @@ export default function Contacts() {
               {t}
             </button>
           ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="text-xs text-muted-foreground">
+          {loading ? 'Carregando…' : `${total} contactos • Página ${page} de ${totalPages}`}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Por página</span>
+          <div className="w-28">
+            <Select
+              value={String(perPage)}
+              onValueChange={(v) => {
+                setPage(1);
+                setPerPage(Number(v));
+              }}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end">
+                {['25', '100', '250', '500', '1000'].map((n) => (
+                  <SelectItem key={n} value={n}>{n}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -328,6 +489,53 @@ export default function Contacts() {
         )}
       </div>
 
+      {totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setPage((p) => Math.max(1, p - 1));
+                }}
+                className={page <= 1 ? 'pointer-events-none opacity-50' : undefined}
+              />
+            </PaginationItem>
+
+            {paginationItems.map((it, idx) => (
+              <PaginationItem key={`${it}-${idx}`}>
+                {it === 'left' || it === 'right' ? (
+                  <PaginationEllipsis />
+                ) : (
+                  <PaginationLink
+                    href="#"
+                    isActive={it === page}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPage(it);
+                    }}
+                  >
+                    {it}
+                  </PaginationLink>
+                )}
+              </PaginationItem>
+            ))}
+
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setPage((p) => Math.min(totalPages, p + 1));
+                }}
+                className={page >= totalPages ? 'pointer-events-none opacity-50' : undefined}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
+
       <Dialog open={tagDialogOpen} onOpenChange={setTagDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -351,6 +559,48 @@ export default function Contacts() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setTagDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleAddTag}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Importar Contactos</DialogTitle>
+            <DialogDescription>
+              Importe um ficheiro Excel (.xlsx/.xls). Os contactos serão gravados com a origem definida abaixo e deduplicados por e-mail.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="importSource" className="text-right">Origem</Label>
+              <Input
+                id="importSource"
+                value={importSource}
+                onChange={(e) => setImportSource(e.target.value)}
+                className="col-span-3"
+                placeholder="Ex: loja, landing, parceiros"
+                disabled={importing}
+              />
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="importFile" className="text-right">Ficheiro</Label>
+              <Input
+                id="importFile"
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="col-span-3"
+                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                disabled={importing}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setImportDialogOpen(false)} disabled={importing}>Cancelar</Button>
+            <Button onClick={handleImport} disabled={importing}>Importar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

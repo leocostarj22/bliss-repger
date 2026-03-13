@@ -5,6 +5,9 @@ namespace Modules\CRM\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Modules\CRM\Models\Contact;
 use Modules\CRM\Models\Delivery;
 
@@ -88,6 +91,316 @@ class ContactController extends Controller
         return response()->json(['data' => $this->transformContact($contact)], 201);
     }
 
+    public function import(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'file' => 'required|file|max:102400|mimes:xlsx,xls,csv',
+            'source' => 'required|string|max:100',
+            'deduplicate' => 'nullable|boolean',
+        ]);
+
+        $source = trim((string) $validated['source']);
+        $deduplicate = (bool) ($validated['deduplicate'] ?? true);
+
+        @set_time_limit(0);
+        @ini_set('memory_limit', '1024M');
+
+        $storedPath = $request->file('file')->store('imports', 'local');
+        $fullPath = Storage::disk('local')->path($storedPath);
+        $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+
+        $normalizeHeader = function (string $h): string {
+            $norm = Str::of($h)->lower()->trim()->toString();
+            $norm = Str::of($norm)->replaceMatches('/[\s_-]+/', ' ')->toString();
+            $norm = Str::of($norm)->replace(' ', '_')->toString();
+
+            $map = [
+                'nome' => 'name',
+                'name' => 'name',
+                'contact' => 'name',
+                'email' => 'email',
+                'e_mail' => 'email',
+                'e-mail' => 'email',
+                'telefone' => 'phone',
+                'telemovel' => 'phone',
+                'celular' => 'phone',
+                'phone' => 'phone',
+                'mobile' => 'phone',
+                'tags' => 'tags',
+                'tag' => 'tags',
+                'status' => 'status',
+                'estado' => 'status',
+                'first_name' => 'first_name',
+                'firstname' => 'first_name',
+                'primeiro_nome' => 'first_name',
+                'last_name' => 'last_name',
+                'lastname' => 'last_name',
+                'sobrenome' => 'last_name',
+            ];
+
+            return $map[$norm] ?? $norm;
+        };
+
+        $normalizeText = function ($val) {
+            if (!is_string($val)) return $val;
+            $val = trim($val);
+            if ($val === '') return $val;
+
+            if (function_exists('mb_check_encoding') && !mb_check_encoding($val, 'UTF-8')) {
+                $candidates = [
+                    @iconv('Windows-1252', 'UTF-8//IGNORE', $val),
+                    @iconv('ISO-8859-1', 'UTF-8//IGNORE', $val),
+                    @utf8_encode($val),
+                ];
+                foreach ($candidates as $c) {
+                    if (is_string($c) && $c !== '') return $c;
+                }
+            }
+
+            return $val;
+        };
+
+        $normalizeEmail = fn($email) => $email ? strtolower(trim((string) $email)) : null;
+
+        $headers = [];
+        $imported = 0;
+        $updated = 0;
+        $invalid = 0;
+        $skipped = 0;
+        $duplicatesInFile = 0;
+        $seen = [];
+
+        $batch = [];
+        $batchSize = 1000;
+
+        $flushBatch = function () use (&$batch, &$imported, &$updated, $deduplicate) {
+            if (empty($batch)) {
+                return;
+            }
+
+            $now = now();
+            $emails = array_values(array_unique(array_map(fn($r) => $r['email'], $batch)));
+
+            $existingByEmail = Contact::withTrashed()
+                ->whereIn(DB::raw('LOWER(email)'), $emails)
+                ->get(['id', 'email'])
+                ->mapWithKeys(fn($c) => [strtolower((string) $c->email) => (int) $c->id]);
+
+            $insertRows = [];
+
+            DB::transaction(function () use (&$batch, &$imported, &$updated, &$insertRows, $existingByEmail, $now, $deduplicate) {
+                foreach ($batch as $row) {
+                    $id = $existingByEmail[$row['email']] ?? null;
+
+                    if ($id) {
+                        if ($deduplicate) {
+                            Contact::withTrashed()->where('id', $id)->update([
+                                'name' => $row['name'],
+                                'phone' => $row['phone'],
+                                'source' => $row['source'],
+                                'status' => $row['status'],
+                                'tags' => json_encode($row['tags'], JSON_UNESCAPED_UNICODE),
+                                'deleted_at' => null,
+                                'updated_at' => $now,
+                            ]);
+                            $updated++;
+                        } else {
+                            $insertRows[] = [
+                                'email' => $row['email'],
+                                'name' => $row['name'],
+                                'phone' => $row['phone'],
+                                'source' => $row['source'],
+                                'status' => $row['status'],
+                                'tags' => json_encode($row['tags'], JSON_UNESCAPED_UNICODE),
+                                'created_at' => $now,
+                                'updated_at' => $now,
+                            ];
+                        }
+
+                        continue;
+                    }
+
+                    $insertRows[] = [
+                        'email' => $row['email'],
+                        'name' => $row['name'],
+                        'phone' => $row['phone'],
+                        'source' => $row['source'],
+                        'status' => $row['status'],
+                        'tags' => json_encode($row['tags'], JSON_UNESCAPED_UNICODE),
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+
+                if (!empty($insertRows)) {
+                    Contact::insert($insertRows);
+                    $imported += count($insertRows);
+                }
+            });
+
+            $batch = [];
+        };
+
+        $processRow = function (array $rowAssoc) use (
+            &$invalid,
+            &$duplicatesInFile,
+            &$seen,
+            &$batch,
+            $batchSize,
+            $flushBatch,
+            $source,
+            $normalizeEmail,
+            $normalizeText
+        ) {
+            $email = $normalizeEmail($rowAssoc['email'] ?? null);
+            if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $invalid++;
+                return;
+            }
+
+            if (isset($seen[$email])) {
+                $duplicatesInFile++;
+                return;
+            }
+            $seen[$email] = true;
+
+            $name = $rowAssoc['name'] ?? null;
+            if (!is_string($name) || trim($name) === '') {
+                $first = $rowAssoc['first_name'] ?? null;
+                $last = $rowAssoc['last_name'] ?? null;
+                $candidate = trim((string) ($first ?? '') . ' ' . (string) ($last ?? ''));
+                $name = $candidate !== '' ? $candidate : $email;
+            }
+            $name = (string) $normalizeText($name);
+
+            $phone = $rowAssoc['phone'] ?? null;
+            $phone = is_string($phone) ? trim($phone) : ($phone !== null ? trim((string) $phone) : null);
+
+            $status = strtolower(trim((string) ($rowAssoc['status'] ?? 'subscribed')));
+            if (!in_array($status, ['subscribed', 'unsubscribed', 'bounced'], true)) {
+                $status = 'subscribed';
+            }
+
+            $tags = [];
+            $rawTags = $rowAssoc['tags'] ?? null;
+            if (is_array($rawTags)) {
+                $tags = array_values(array_filter(array_map(fn($t) => is_string($t) ? trim($t) : '', $rawTags)));
+            } elseif (is_string($rawTags)) {
+                $parts = preg_split('/[;,]+/', $rawTags) ?: [];
+                $tags = array_values(array_filter(array_map(fn($t) => trim((string) $t), $parts)));
+            }
+
+            $batch[] = [
+                'email' => $email,
+                'name' => $name,
+                'phone' => $phone,
+                'source' => $source,
+                'status' => $status,
+                'tags' => $tags,
+            ];
+
+            if (count($batch) >= $batchSize) {
+                $flushBatch();
+            }
+        };
+
+        try {
+            if ($ext === 'xlsx' && class_exists(\OpenSpout\Reader\XLSX\Reader::class)) {
+                $reader = new \OpenSpout\Reader\XLSX\Reader();
+                $reader->open($fullPath);
+
+                foreach ($reader->getSheetIterator() as $sheet) {
+                    $isHeaderProcessed = false;
+
+                    foreach ($sheet->getRowIterator() as $row) {
+                        $values = array_map(fn($cell) => $cell->getValue(), $row->getCells());
+                        $values = array_map(fn($v) => is_string($v) ? $normalizeText($v) : $v, $values);
+
+                        if (! $isHeaderProcessed) {
+                            $headers = array_map(fn($h) => $normalizeHeader((string) $h), $values);
+                            $isHeaderProcessed = true;
+                            continue;
+                        }
+
+                        if (empty($headers)) {
+                            $skipped++;
+                            continue;
+                        }
+
+                        $rowAssoc = [];
+                        foreach ($values as $i => $val) {
+                            $key = $headers[$i] ?? 'col_'.$i;
+                            if (!array_key_exists($key, $rowAssoc)) {
+                                $rowAssoc[$key] = is_string($val) ? trim((string) $val) : $val;
+                            }
+                        }
+
+                        $processRow($rowAssoc);
+                    }
+
+                    break;
+                }
+
+                $reader->close();
+            } else {
+                if (! class_exists(\PhpOffice\PhpSpreadsheet\IOFactory::class)) {
+                    return response()->json(['message' => 'Biblioteca de Excel ausente no servidor.'], 500);
+                }
+
+                $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($fullPath);
+                $worksheet = $spreadsheet->getActiveSheet();
+                $isHeaderProcessed = false;
+
+                foreach ($worksheet->getRowIterator() as $row) {
+                    $cellIterator = $row->getCellIterator();
+                    $cellIterator->setIterateOnlyExistingCells(false);
+
+                    $values = [];
+                    foreach ($cellIterator as $cell) {
+                        $raw = $cell->getValue();
+                        $values[] = is_string($raw) ? $normalizeText(trim((string) $raw)) : $raw;
+                    }
+
+                    if (! $isHeaderProcessed) {
+                        $headers = array_map(fn($h) => $normalizeHeader((string) $h), $values);
+                        $isHeaderProcessed = true;
+                        continue;
+                    }
+
+                    if (empty($headers)) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    $rowAssoc = [];
+                    foreach ($values as $i => $val) {
+                        $key = $headers[$i] ?? 'col_'.$i;
+                        if (!array_key_exists($key, $rowAssoc)) {
+                            $rowAssoc[$key] = is_string($val) ? trim((string) $val) : $val;
+                        }
+                    }
+
+                    $processRow($rowAssoc);
+                }
+            }
+
+            $flushBatch();
+        } finally {
+            try {
+                Storage::disk('local')->delete($storedPath);
+            } catch (\Throwable $e) {
+            }
+        }
+
+        return response()->json(['data' => [
+            'imported' => $imported,
+            'updated' => $updated,
+            'invalid' => $invalid,
+            'skipped' => $skipped,
+            'duplicatesInFile' => $duplicatesInFile,
+        ]]);
+    }
+
     /**
      * Show the specified contact.
      */
@@ -123,10 +436,25 @@ class ContactController extends Controller
      */
     public function destroy($id): JsonResponse
     {
-        $contact = Contact::findOrFail($id);
-        $contact->delete();
+        $contact = Contact::withTrashed()->findOrFail($id);
+        $contact->forceDelete();
 
         return response()->json(null, 204);
+    }
+
+    public function bulkDestroy(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'source' => 'required|string|max:100',
+        ]);
+
+        $source = trim((string) $validated['source']);
+
+        $deleted = Contact::withTrashed()->where('source', $source)->forceDelete();
+
+        return response()->json(['data' => [
+            'deleted' => (int) $deleted,
+        ]]);
     }
 
     /**

@@ -153,6 +153,8 @@ Route::prefix('v1')->group(function () {
         Route::post('segments', [SegmentController::class, 'store']);
 
         // Contacts Routes
+        Route::post('lists/import', [ContactController::class, 'import']);
+        Route::delete('lists/bulk', [ContactController::class, 'bulkDestroy']);
         Route::get('lists', [ContactController::class, 'index']);
         Route::post('lists', [ContactController::class, 'store']);
         Route::get('lists/{id}', [ContactController::class, 'show']);

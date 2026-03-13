@@ -609,6 +609,51 @@ export async function fetchContacts(params?: {
   return response.json();
 }
 
+export async function importContacts(params: {
+  file: File;
+  source: string;
+  deduplicate?: boolean;
+}): Promise<ApiResponse<{ imported: number; updated: number; invalid: number; skipped: number; duplicatesInFile: number }>> {
+  const form = new FormData();
+  form.append('file', params.file);
+  form.append('source', params.source);
+  if (typeof params.deduplicate === 'boolean') {
+    form.append('deduplicate', params.deduplicate ? '1' : '0');
+  }
+
+  const response = await fetch(`/api/v1/email/lists/import`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+    },
+    credentials: 'include',
+    body: form,
+  });
+
+  if (!response.ok) {
+    let message = `Failed to import contacts: ${response.statusText}`;
+    try {
+      const isJson = (response.headers.get('content-type') || '').includes('application/json');
+      const payload = isJson ? await response.json() : null;
+
+      if (response.status === 422 && payload && payload.errors) {
+        const parts: string[] = [];
+        for (const [field, msgs] of Object.entries(payload.errors)) {
+          const first = Array.isArray(msgs) ? msgs[0] : String(msgs);
+          parts.push(`${field}: ${first}`);
+        }
+        message = parts.join(' • ');
+      } else if (payload && payload.message) {
+        message = payload.message;
+      }
+    } catch (_) {
+    }
+    throw new Error(message);
+  }
+
+  return response.json();
+}
+
 export async function fetchContact(id: string): Promise<ApiResponse<Contact>> {
   const response = await fetch(`/api/v1/email/lists/${id}`, {
     method: 'GET',
@@ -696,6 +741,33 @@ export async function deleteContact(id: string): Promise<void> {
   if (!response.ok) {
     throw new Error(`Failed to delete contact: ${response.statusText}`);
   }
+}
+
+export async function deleteContactsBySource(params: {
+  source: string;
+}): Promise<ApiResponse<{ deleted: number }>> {
+  const response = await fetch(`/api/v1/email/lists/bulk`, {
+    method: 'DELETE',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({ source: params.source }),
+  });
+
+  if (!response.ok) {
+    let message = `Failed to delete contacts: ${response.statusText}`;
+    try {
+      const isJson = (response.headers.get('content-type') || '').includes('application/json');
+      const payload = isJson ? await response.json() : null;
+      if (payload && payload.message) message = payload.message;
+    } catch (_) {
+    }
+    throw new Error(message);
+  }
+
+  return response.json();
 }
 
 export async function addTag(id: string, tag: string): Promise<ApiResponse<Contact>> {
