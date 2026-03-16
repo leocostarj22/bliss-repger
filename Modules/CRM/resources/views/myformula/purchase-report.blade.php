@@ -102,24 +102,11 @@
         <div>
           <strong>{{ $group['title'] }}</strong>
           @if (!empty($group['items']))
-            <table style="margin-top:8px">
-              <thead>
-                <tr>
-                  <th>Suplemento</th>
-                  <th style="width:70px; text-align:center">Blister</th>
-                  <th style="width:70px; text-align:center">Toma</th>
-                </tr>
-              </thead>
-              <tbody>
-                @foreach ($group['items'] as $item)
-                  <tr>
-                    <td>{{ $item['name'] }}</td>
-                    <td style="text-align:center"><input type="checkbox" class="check" /></td>
-                    <td style="text-align:center"><input type="checkbox" class="check" /></td>
-                  </tr>
-                @endforeach
-              </tbody>
-            </table>
+            <ul style="margin:6px 0 0 18px; padding:0;">
+              @foreach ($group['items'] as $item)
+                <li>{{ $item['name'] }}</li>
+              @endforeach
+            </ul>
           @else
             <div class="subtle" style="margin-top:6px">—</div>
           @endif
