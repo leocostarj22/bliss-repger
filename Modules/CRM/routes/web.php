@@ -97,6 +97,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin/crm')->group(function () 
 
         $paymentCustom = $decodeArray($order->getAttribute('payment_custom_field'));
         $shippingCustom = $decodeArray($order->getAttribute('shipping_custom_field'));
+        $customerCustom = $decodeArray($order->getAttribute('custom_field'));
 
         $nifFieldIds = \Illuminate\Support\Facades\DB::connection('myformula')
             ->table('custom_field as cf')
@@ -112,6 +113,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin/crm')->group(function () 
 
         $nifValue = $extractNifFromCustomFields($paymentCustom, $nifFieldIds)
             ?: $extractNifFromCustomFields($shippingCustom, $nifFieldIds)
+            ?: $extractNifFromCustomFields($customerCustom, $nifFieldIds)
             ?: '';
 
         $birthdate = $quizPost['birthdate'] ?? null;
@@ -184,6 +186,36 @@ Route::middleware(['auth', 'verified'])->prefix('admin/crm')->group(function () 
 
         $takingInfo = (string) ($productInfo->taking_information ?? '');
 
+        $parseStatusIds = static function ($val): array {
+            if (is_array($val)) return array_map('intval', $val);
+            if (is_numeric($val)) return [(int)$val];
+            if (!is_string($val) || trim($val) === '') return [];
+            $json = json_decode($val, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($json)) return array_map('intval', $json);
+            $arr = @unserialize($val);
+            return is_array($arr) ? array_map('intval', $arr) : [];
+        };
+
+        $settings = \Illuminate\Support\Facades\DB::connection('myformula')
+            ->table('setting')
+            ->whereIn('key', ['config_processing_status', 'config_complete_status'])
+            ->pluck('value', 'key');
+        $processingIds = $parseStatusIds($settings['config_processing_status'] ?? null);
+        $completeIds   = $parseStatusIds($settings['config_complete_status'] ?? null);
+        $statusIds     = array_values(array_unique(array_merge($processingIds, $completeIds)));
+
+        $paymentDateRaw = null;
+        if ($statusIds) {
+            $paymentDateRaw = \Illuminate\Support\Facades\DB::connection('myformula')
+                ->table('order_history')
+                ->where('order_id', $order->order_id)
+                ->whereIn('order_status_id', $statusIds)
+                ->orderBy('date_added')
+                ->value('date_added');
+        }
+        $paymentDate = $paymentDateRaw ? date('d/m/Y H:i', strtotime((string) $paymentDateRaw))
+            : (! empty($order->getAttribute('approval_date')) ? date('d/m/Y H:i', strtotime((string) $order->getAttribute('approval_date'))) : '');
+
         $reportData = [
             'client_code' => $clientCode,
             'plan_letters' => $planLetters,
@@ -199,7 +231,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin/crm')->group(function () 
             'report_date' => $reportDate,
             'nif' => $nifValue,
             'payment_method' => (string) ($order->payment_method ?? ''),
-            'payment_date' => ! empty($order->getAttribute('approval_date')) ? date('d/m/Y H:i', strtotime((string) $order->getAttribute('approval_date'))) : '',
+            'payment_date' => $paymentDate,
         ];
 
         return view('crm::myformula.purchase-report', compact('order', 'reportData'));
