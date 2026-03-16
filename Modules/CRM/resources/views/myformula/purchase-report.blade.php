@@ -49,13 +49,13 @@
         <div class="value">{{ $order->firstname }} {{ $order->lastname }}</div>
       </div>
       <div>
-        <div class="label">Número do Cliente</div>
+        <div class="label">CLIENTE N.º:</div>
         <div class="value">{{ $order->customer_id }}</div>
       </div>
     </div>
     <div class="grid-3" style="margin-top:10px">
       <div>
-        <div class="label">Número do Plano</div>
+        <div class="label">NÚMERO DO PLANO:</div>
         <div class="value" contenteditable="true">{{ $reportData['plan_number'] ?? '' }}</div>
       </div>
       <div>
@@ -63,7 +63,7 @@
         <div class="value" contenteditable="true">{{ $reportData['month_number'] ?? '' }}</div>
       </div>
       <div>
-        <div class="label">Data do Relatório</div>
+        <div class="label">DATA DO RELATÓRIO:</div>
         <div class="value">{{ now()->format('d/m/Y H:i') }}</div>
       </div>
     </div>
@@ -73,11 +73,11 @@
     <h2>Plano</h2>
     <div class="grid-3">
       <div>
-        <div class="label">Nome do plano</div>
+        <div class="label">PLANO:</div>
         <div class="value" contenteditable="true">{{ $reportData['plan_name'] ?? '' }}</div>
       </div
       ><div>
-        <div class="label">Toma diária (cápsulas)</div>
+        <div class="label">N.º DE CÁPSULAS POR DIA:</div>
         <div class="value" contenteditable="true">{{ $reportData['capsules'] ?? '' }}</div>
       </div
       ><div>
@@ -86,7 +86,7 @@
       </div>
     </div>
     <div style="margin-top:10px">
-      <div class="label">Peso Líquido</div>
+      <div class="label">PESO LÍQUIDO:</div>
       <div class="value">{{ $reportData['net_weight'] ?? '' }}</div>
     </div>
     <div style="margin-top:10px">
