@@ -122,25 +122,29 @@ Route::middleware(['auth', 'verified'])->prefix('admin/crm')->group(function () 
         if ($netWeightVal === '' || $netWeightNum <= 0) {
             $uniqueSlugs = array_values(array_unique(array_map('strval', $planSupplements)));
             if ($uniqueSlugs) {
-                $subs = \Illuminate\Support\Facades\DB::connection('myformula')
-                    ->table('plans_supplements as sup')
-                    ->join('plans_supplements_substances as assoc', 'assoc.supplement_id', '=', 'sup.supplement_id')
-                    ->select('sup.slug', 'assoc.quantity', 'assoc.unit')
-                    ->whereIn('sup.slug', $uniqueSlugs)
+                $weights = \Illuminate\Support\Facades\DB::connection('myformula')
+                    ->table('plans_supplements')
+                    ->select('slug', 'weight', 'unit')
+                    ->whereIn('slug', $uniqueSlugs)
                     ->get();
 
-                $mgPerCapsule = 0.0;
-                foreach ($subs as $r) {
-                    $q = (float) $r->quantity;
-                    $unit = strtolower((string) $r->unit);
-                    if ($unit === 'micro') { $q = $q / 1000.0; }
-                    $mgPerCapsule += $q;
+                $gramsPerDay = 0.0;
+                foreach ($weights as $w) {
+                    $weight = (float) $w->weight;
+                    $unit = strtolower((string) $w->unit);
+
+                    $gramsPerDay += match ($unit) {
+                        'g' => $weight,
+                        'mg' => $weight / 1000.0,
+                        'micro' => $weight / 1000000.0,
+                        'kg' => $weight * 1000.0,
+                        default => $weight,
+                    };
                 }
 
-                $capsPerDay = (int) preg_replace('/\D+/', '', (string) $capsulesVal);
-                $grams = ($mgPerCapsule * $capsPerDay * 28) / 1000.0;
-                if ($grams > 0) {
-                    $netWeightVal = rtrim(rtrim(number_format($grams, 2, ',', ''), '0'), ',') . ' g';
+                $totalGrams = round($gramsPerDay * 28, 0);
+                if ($totalGrams > 0) {
+                    $netWeightVal = (string) $totalGrams . ' g';
                 }
             }
         } elseif (! preg_match('/[a-z]/i', $netWeightVal)) {
