@@ -117,37 +117,13 @@
 
   <div class="section">
     <h2>Verificações Finais para Checkout</h2>
-    <div class="grid-2">
-      <div class="checks">
-        <label class="check-item"><input type="checkbox" class="check" /> Blisters e Toma</label>
-        <label class="check-item"><input type="checkbox" class="check" /> Etiquetas do cliente (1/capa, interior)</label>
-        <label class="check-item"><input type="checkbox" class="check" /> Etiqueta global (1/embalagem, fundo da manga)</label>
-        <label class="check-item"><input type="checkbox" class="check" /> Post-it Nome do Cliente (1/embalagem, frente da manga)</label>
-        <label class="check-item"><input type="checkbox" class="check" /> Registo por fotos (por cada capa)</label>
-        <label class="check-item"><input type="checkbox" class="check" /> Embalagem final (Plastificação + Caixa Protetora)</label>
-      </div>
-      <div>
-        <div class="grid-2">
-          <div>
-            <div class="label">Data do Pedido</div>
-            <div class="value">{{ optional($order->date_added)->format('d/m/Y H:i') }}</div>
-          </div>
-          <div>
-            <div class="label">Data da Preparação</div>
-            <div class="value" contenteditable="true"></div>
-          </div>
-        </div>
-        <div class="grid-2" style="margin-top:10px">
-          <div>
-            <div class="label">Responsável</div>
-            <div class="value" contenteditable="true"></div>
-          </div>
-          <div>
-            <div class="label">Data de Envio / Responsável</div>
-            <div class="value" contenteditable="true"></div>
-          </div>
-        </div>
-      </div>
+    <div class="checks">
+      <label class="check-item"><input type="checkbox" class="check" /> Blisters e Toma</label>
+      <label class="check-item"><input type="checkbox" class="check" /> Etiquetas do cliente (1/capa, interior)</label>
+      <label class="check-item"><input type="checkbox" class="check" /> Etiqueta global (1/embalagem, fundo da manga)</label>
+      <label class="check-item"><input type="checkbox" class="check" /> Post-it Nome do Cliente (1/embalagem, frente da manga)</label>
+      <label class="check-item"><input type="checkbox" class="check" /> Registo por fotos (por cada capa)</label>
+      <label class="check-item"><input type="checkbox" class="check" /> Embalagem final (Plastificação + Caixa Protetora)</label>
     </div>
   </div>
 
@@ -170,6 +146,34 @@
     <div style="margin-top:10px">
       <div class="label">Data de Pagamento</div>
       <div class="value" contenteditable="true">{{ $reportData['payment_date'] ?? '' }}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Registo de Preparação e Envio</h2>
+    <div class="grid-2">
+      <div>
+        <div class="label">Data do Pedido</div>
+        <div class="value">{{ optional($order->date_added)->format('d/m/Y H:i') }}</div>
+      </div>
+      <div>
+        <div class="label">Data da Preparação</div>
+        <div class="value" contenteditable="true"></div>
+        <div class="label" style="margin-top:8px">Assinatura do Responsável</div>
+        <div class="value" style="height:40px" contenteditable="true"></div>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top:10px">
+      <div>
+        <div class="label">Responsável pela Preparação</div>
+        <div class="value" contenteditable="true"></div>
+      </div>
+      <div>
+        <div class="label">Data de Envio</div>
+        <div class="value" contenteditable="true"></div>
+        <div class="label" style="margin-top:8px">Assinatura do Responsável pelo Envio</div>
+        <div class="value" style="height:40px" contenteditable="true"></div>
+      </div>
     </div>
   </div>
 
