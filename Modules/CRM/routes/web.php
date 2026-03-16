@@ -43,46 +43,35 @@ Route::middleware(['auth', 'verified'])->prefix('admin/crm')->group(function () 
                 ->toArray();
         }
 
-        $uniqueSlugs = array_values(array_unique(array_map('strval', $planSupplements)));
-        $substancesBySlug = [];
-        if ($uniqueSlugs) {
-            $substances = \Illuminate\Support\Facades\DB::connection('myformula')
-                ->table('plans_supplements as sup')
-                ->join('plans_supplements_substances as assoc', 'assoc.supplement_id', '=', 'sup.supplement_id')
-                ->join('plans_substances as sub', 'sub.substance_id', '=', 'assoc.substance_id')
-                ->join('plans_substances_description as subdesc', function ($join) {
-                    $join->on('subdesc.substance_id', '=', 'sub.substance_id')->where('subdesc.language_id', 2);
-                })
-                ->whereIn('sup.slug', $uniqueSlugs)
-                ->select('sup.slug', 'subdesc.name', 'assoc.quantity', 'assoc.unit')
-                ->orderBy('subdesc.name')
-                ->get();
-            foreach ($substances as $row) {
-                $slug = (string) $row->slug;
-                $substancesBySlug[$slug][] = [
-                    'name' => (string) $row->name,
-                    'quantity' => (float) $row->quantity,
-                    'unit' => (string) $row->unit,
-                ];
-            }
-        }
-
-        $supplementItems = [];
-        $totals = ['morning' => 0, 'afternoon' => 0, 'night' => 0];
+        $morning = [];
+        $afternoon = [];
+        $night = [];
         foreach ($planSupplements as $i => $slugRaw) {
             $slug = (string) $slugRaw;
             $mask = (int) ($intakePeriods[$i] ?? 1);
-            $period = ($mask & 4) ? 'night' : (($mask & 2) ? 'afternoon' : 'morning');
-            $periodLabel = $period === 'night' ? 'Noite' : ($period === 'afternoon' ? 'Tarde' : 'Manhã');
-            $name = $supplementNames[$slug] ?? $slug;
-            $supplementItems[] = [
-                'name' => $name,
-                'period' => $period,
-                'period_label' => $periodLabel,
-                'substances' => $substancesBySlug[$slug] ?? [],
+            $sel  = ($mask & 1) ? 1 : (($mask & 2) ? 2 : (($mask & 4) ? 4 : 0));
+            if (! $sel) { $sel = 1; }
+            $item = [
+                'slug' => $slug,
+                'name' => $supplementNames[$slug] ?? $slug,
             ];
-            $totals[$period]++;
+            switch ($sel) {
+                case 2: $afternoon[] = $item; break;
+                case 4: $night[] = $item; break;
+                case 1:
+                default: $morning[] = $item; break;
+            }
         }
+        $totals = [
+            'morning' => count($morning),
+            'afternoon' => count($afternoon),
+            'night' => count($night),
+        ];
+        $supplements_by_period = [
+            ['title' => 'Manhã', 'items' => $morning],
+            ['title' => 'Tarde', 'items' => $afternoon],
+            ['title' => 'Noite', 'items' => $night],
+        ];
 
         $extractNif = static function (array $arr) {
             $flat = new \RecursiveIteratorIterator(new \RecursiveArrayIterator($arr));
@@ -102,7 +91,8 @@ Route::middleware(['auth', 'verified'])->prefix('admin/crm')->group(function () 
             'month_number' => '',
             'plan_name' => trim(((string) ($order->getAttribute('plan_name_letters') ?? '')) . ' ' . ((string) ($order->products->first()->name ?? ''))),
             'capsules' => (string) ($order->getAttribute('capsules') ?? ''),
-            'supplement_items' => $supplementItems,
+            'net_weight' => (string) ($order->getAttribute('net_weight') ?? ''),
+            'supplements_by_period' => $supplements_by_period,
             'totals' => $totals,
             'how_to_take' => trim(collect([
                 $totals['morning'] > 0 ? "{$totals['morning']} cápsulas pela manhã" : null,

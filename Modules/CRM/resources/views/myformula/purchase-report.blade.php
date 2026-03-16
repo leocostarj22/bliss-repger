@@ -86,47 +86,33 @@
       </div>
     </div>
     <div style="margin-top:10px">
+      <div class="label">Peso Líquido</div>
+      <div class="value">{{ $reportData['net_weight'] ?? '' }}</div>
+    </div>
+    <div style="margin-top:10px">
       <div class="label">Como tomar MyFórmula</div>
       <div class="value" style="height:60px" contenteditable="true">{{ $reportData['how_to_take'] ?? '' }}</div>
-      <div class="subtle" style="font-size:11px; margin-top:4px">Ex: Tomar 4 cápsulas pela manhã e 4 à noite</div>
     </div>
   </div>
 
   <div class="section">
     <h2>Suplementos</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Suplemento</th>
-          <th style="width:160px">Horários das Tomas</th>
-          <th>Substâncias</th>
-        </tr>
-      </thead>
-      <tbody>
-        @forelse (($reportData['supplement_items'] ?? []) as $item)
-          <tr>
-            <td>{{ $item['name'] }}</td>
-            <td>{{ $item['period_label'] }}</td>
-            <td>
-              @if (!empty($item['substances']))
-                <ul style="margin:0; padding-left:18px;">
-                  @foreach ($item['substances'] as $s)
-                    <li>{{ $s['name'] }} — {{ rtrim(rtrim(number_format($s['quantity'], 2, ',', ''), '0'), ',') }} {{ $s['unit'] }}</li>
-                  @endforeach
-                </ul>
-              @endif
-            </td>
-          </tr>
-        @empty
-          <tr><td colspan="3" class="subtle">Sem suplementos configurados neste pedido</td></tr>
-        @endforelse
-      </tbody>
-    </table>
-    <div class="totals">
-      <div class="total-pill">Total Manhã: <span contenteditable="true">{{ $reportData['totals']['morning'] ?? '' }}</span></div>
-      <div class="total-pill">Total Tarde: <span contenteditable="true">{{ $reportData['totals']['afternoon'] ?? '' }}</span></div>
-      <div class="total-pill">Total Noite: <span contenteditable="true">{{ $reportData['totals']['night'] ?? '' }}</span></div>
+    <div>
+      <h3 class="subtle" style="margin:8px 0 6px">Suplementos (por período)</h3>
+      @foreach (($reportData['supplements_by_period'] ?? []) as $group)
+        @if (!empty($group['items']))
+          <div style="margin-top:6px">
+            <strong>{{ $group['title'] }}</strong>
+            <ul style="margin:6px 0 0 18px; padding:0;">
+              @foreach ($group['items'] as $item)
+                <li>{{ $item['name'] }}</li>
+              @endforeach
+            </ul>
+          </div>
+        @endif
+      @endforeach
     </div>
+
   </div>
 
   <div class="section">
