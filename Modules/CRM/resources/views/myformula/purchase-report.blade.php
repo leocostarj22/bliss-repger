@@ -56,11 +56,11 @@
     <div class="grid-3" style="margin-top:10px">
       <div>
         <div class="label">Número do Plano</div>
-        <div class="value" contenteditable="true"></div>
+        <div class="value" contenteditable="true">{{ $reportData['plan_number'] ?? '' }}</div>
       </div>
       <div>
         <div class="label">Número do Mês</div>
-        <div class="value" contenteditable="true"></div>
+        <div class="value" contenteditable="true">{{ $reportData['month_number'] ?? '' }}</div>
       </div>
       <div>
         <div class="label">Data do Relatório</div>
@@ -74,11 +74,11 @@
     <div class="grid-3">
       <div>
         <div class="label">Nome do plano</div>
-        <div class="value" contenteditable="true"></div>
+        <div class="value" contenteditable="true">{{ $reportData['plan_name'] ?? '' }}</div>
       </div
       ><div>
         <div class="label">Toma diária (cápsulas)</div>
-        <div class="value" contenteditable="true"></div>
+        <div class="value" contenteditable="true">{{ $reportData['capsules'] ?? '' }}</div>
       </div
       ><div>
         <div class="label">Cor Capas</div>
@@ -87,7 +87,7 @@
     </div>
     <div style="margin-top:10px">
       <div class="label">Como tomar MyFórmula</div>
-      <div class="value" style="height:60px" contenteditable="true"></div>
+      <div class="value" style="height:60px" contenteditable="true">{{ $reportData['how_to_take'] ?? '' }}</div>
       <div class="subtle" style="font-size:11px; margin-top:4px">Ex: Tomar 4 cápsulas pela manhã e 4 à noite</div>
     </div>
   </div>
@@ -105,23 +105,23 @@
         </tr>
       </thead>
       <tbody>
-        @forelse ($order->products as $p)
+        @forelse (($reportData['supplement_rows'] ?? []) as $row)
           <tr>
-            <td>{{ $p->quantity }}</td>
-            <td>{{ $p->name }}</td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true"></td>
+            <td>{{ $row['total'] }}</td>
+            <td>{{ $row['name'] }}</td>
+            <td>{{ $row['morning'] > 0 ? $row['morning'] : '' }}</td>
+            <td>{{ $row['afternoon'] > 0 ? $row['afternoon'] : '' }}</td>
+            <td>{{ $row['night'] > 0 ? $row['night'] : '' }}</td>
           </tr>
         @empty
-          <tr><td colspan="5" class="subtle">Sem itens listados neste pedido</td></tr>
+          <tr><td colspan="5" class="subtle">Sem suplementos configurados neste pedido</td></tr>
         @endforelse
       </tbody>
     </table>
     <div class="totals">
-      <div class="total-pill">Total Manhã: <span contenteditable="true"></span></div>
-      <div class="total-pill">Total Tarde: <span contenteditable="true"></span></div>
-      <div class="total-pill">Total Noite: <span contenteditable="true"></span></div>
+      <div class="total-pill">Total Manhã: <span contenteditable="true">{{ $reportData['totals']['morning'] ?? '' }}</span></div>
+      <div class="total-pill">Total Tarde: <span contenteditable="true">{{ $reportData['totals']['afternoon'] ?? '' }}</span></div>
+      <div class="total-pill">Total Noite: <span contenteditable="true">{{ $reportData['totals']['night'] ?? '' }}</span></div>
     </div>
   </div>
 
@@ -166,11 +166,11 @@
     <div class="grid-3">
       <div>
         <div class="label">Data de Nascimento</div>
-        <div class="value" contenteditable="true"></div>
+        <div class="value" contenteditable="true">{{ $reportData['birthdate'] ?? '' }}</div>
       </div>
       <div>
         <div class="label">NIF</div>
-        <div class="value" contenteditable="true"></div>
+        <div class="value" contenteditable="true">{{ $reportData['nif'] ?? '' }}</div>
       </div>
       <div>
         <div class="label">Método de Pagamento</div>
@@ -179,7 +179,7 @@
     </div>
     <div style="margin-top:10px">
       <div class="label">Data de Pagamento</div>
-      <div class="value" contenteditable="true"></div>
+      <div class="value" contenteditable="true">{{ $reportData['payment_date'] ?? '' }}</div>
     </div>
   </div>
 
