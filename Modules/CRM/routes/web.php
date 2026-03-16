@@ -73,16 +73,47 @@ Route::middleware(['auth', 'verified'])->prefix('admin/crm')->group(function () 
             ['title' => 'Noite', 'items' => $night],
         ];
 
-        $extractNif = static function (array $arr) {
+        $extractNifFromCustomFields = static function (array $arr, array $nifIds): ?string {
+            if (!$arr) return null;
+            foreach ($arr as $k => $v) {
+                if (is_numeric($k) && in_array((int)$k, $nifIds, true)) {
+                    return is_array($v) ? (string)($v['value'] ?? reset($v) ?? '') : (string)$v;
+                }
+            }
+            foreach ($arr as $item) {
+                if (is_array($item) && isset($item['custom_field_id']) && in_array((int)$item['custom_field_id'], $nifIds, true)) {
+                    return (string)($item['value'] ?? '');
+                }
+            }
             $flat = new \RecursiveIteratorIterator(new \RecursiveArrayIterator($arr));
             foreach ($flat as $key => $value) {
                 $k = strtolower((string) $key);
-                if (in_array($k, ['nif', 'vat', 'tax_id', 'taxid'], true)) return (string) $value;
+                if (str_contains($k, 'nif') || in_array($k, ['vat','tax_id','taxid'], true)) {
+                    return (string) $value;
+                }
             }
             return null;
         };
 
         $paymentCustom = $decodeArray($order->getAttribute('payment_custom_field'));
+        $shippingCustom = $decodeArray($order->getAttribute('shipping_custom_field'));
+
+        $nifFieldIds = \Illuminate\Support\Facades\DB::connection('myformula')
+            ->table('custom_field as cf')
+            ->join('custom_field_description as cfd', function ($join) {
+                $join->on('cfd.custom_field_id', '=', 'cf.custom_field_id')
+                     ->where('cfd.language_id', 2);
+            })
+            ->where('cf.status', 1)
+            ->where('cfd.name', 'like', '%NIF%')
+            ->pluck('cf.custom_field_id')
+            ->map(fn($id) => (int) $id)
+            ->toArray();
+
+        $nifValue = $extractNifFromCustomFields($paymentCustom, $nifFieldIds)
+            ?: $extractNifFromCustomFields($shippingCustom, $nifFieldIds)
+            ?: '';
+
         $birthdate = $quizPost['birthdate'] ?? null;
         $birthdateFormatted = $birthdate ? date('d/m/Y', strtotime((string) $birthdate)) : '';
 
@@ -166,7 +197,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin/crm')->group(function () 
             'how_to_take' => $takingInfo,
             'birthdate' => $birthdateFormatted,
             'report_date' => $reportDate,
-            'nif' => $extractNif($paymentCustom) ?: '',
+            'nif' => $nifValue,
             'payment_method' => (string) ($order->payment_method ?? ''),
             'payment_date' => ! empty($order->getAttribute('approval_date')) ? date('d/m/Y H:i', strtotime((string) $order->getAttribute('approval_date'))) : '',
         ];
