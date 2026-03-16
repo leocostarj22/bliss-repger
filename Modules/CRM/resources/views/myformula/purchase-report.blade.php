@@ -52,7 +52,7 @@
   </div>
 
   <div class="meta">
-    <div class="grid-3">
+    <div class="grid-3" style="grid-template-columns: 0.8fr 1.4fr 0.8fr;">
       <div>
         <div class="label">Número do Pedido</div>
         <div class="value">{{ $order->order_id }}</div>
