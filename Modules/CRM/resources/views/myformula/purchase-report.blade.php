@@ -26,7 +26,7 @@
   .subtle { color: var(--muted); }
   .totals { display:flex; gap:12px; margin-top:8px; }
   .total-pill { border:1px solid var(--border); padding:6px 10px; border-radius:6px; font-size:12px; }
-  .supp-col { padding:10px; border-radius:8px; }
+  .supp-col { padding:10px; border-radius:8px; background:#f9fafb; }
   .supp-col--tarde { background:#f3f4f6; }
   .print-actions { margin-top: 16px; text-align: right; }
   .btn { display:inline-block; padding:8px 12px; border:1px solid var(--border); border-radius:8px; text-decoration:none; color: var(--fg); }
