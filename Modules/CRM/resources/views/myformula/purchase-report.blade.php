@@ -165,10 +165,6 @@
     </div>
     <div class="grid-2" style="margin-top:10px">
       <div>
-        <div class="label">Responsável pela Preparação</div>
-        <div class="value" contenteditable="true"></div>
-      </div>
-      <div>
         <div class="label">Data de Envio</div>
         <div class="value" contenteditable="true"></div>
         <div class="label" style="margin-top:8px">Assinatura do Responsável pelo Envio</div>
