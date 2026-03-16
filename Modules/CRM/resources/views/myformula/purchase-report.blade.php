@@ -158,13 +158,17 @@
     <div class="grid-2" style="margin-top:10px">
       <div>
         <div class="label">Data da Preparação</div>
-        <div class="value" contenteditable="true"></div>
+        <div class="value">
+          <input type="date" style="border:0; width:100%; padding:0; font:inherit; background:transparent;" />
+        </div>
         <div class="label" style="margin-top:8px">Assinatura do Responsável pela Preparação</div>
         <div class="value" style="height:40px" contenteditable="true"></div>
       </div>
       <div>
         <div class="label">Data de Envio</div>
-        <div class="value" contenteditable="true"></div>
+        <div class="value">
+          <input type="date" style="border:0; width:100%; padding:0; font:inherit; background:transparent;" />
+        </div>
         <div class="label" style="margin-top:8px">Assinatura do Responsável pelo Envio</div>
         <div class="value" style="height:40px" contenteditable="true"></div>
       </div>
