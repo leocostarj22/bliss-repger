@@ -97,9 +97,9 @@ Route::middleware(['auth', 'verified'])->prefix('admin/crm')->group(function () 
                 ->where('product_id', $productId)
                 ->first();
         }
-        $capsulesVal = (string) ($order->getAttribute('capsules') ?? '');
-        if ($capsulesVal === '' && $productInfo) {
-            $capsulesVal = (string) ($productInfo->capsules ?? '');
+        $capsulesVal = (string) ($productInfo->capsules ?? '');
+        if ($capsulesVal === '') {
+            $capsulesVal = (string) ($order->getAttribute('capsules') ?? '');
         }
 
         $planLetters = (string) ($order->getAttribute('plan_name_letters') ?? '');
