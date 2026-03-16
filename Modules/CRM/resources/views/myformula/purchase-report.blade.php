@@ -117,14 +117,47 @@
 
   <div class="section">
     <h2>Verificações Finais para Checkout</h2>
-    <div class="checks">
-      <label class="check-item"><input type="checkbox" class="check" /> Blisters e Toma</label>
-      <label class="check-item"><input type="checkbox" class="check" /> Etiquetas do cliente (1/capa, interior)</label>
-      <label class="check-item"><input type="checkbox" class="check" /> Etiqueta global (1/embalagem, fundo da manga)</label>
-      <label class="check-item"><input type="checkbox" class="check" /> Post-it Nome do Cliente (1/embalagem, frente da manga)</label>
-      <label class="check-item"><input type="checkbox" class="check" /> Registo por fotos (por cada capa)</label>
-      <label class="check-item"><input type="checkbox" class="check" /> Embalagem final (Plastificação + Caixa Protetora)</label>
-    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Detalhes</th>
+          <th style="width:80px; text-align:center">OK</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Blisters e Toma</td>
+          <td>Como tomar MyFórmula {{ $reportData['plan_letters'] ?? '' }} — {{ $reportData['how_to_take'] ?? '' }}</td>
+          <td style="text-align:center"><input type="checkbox" class="check" /></td>
+        </tr>
+        <tr>
+          <td>Etiquetas do cliente</td>
+          <td>1/capa, interior</td>
+          <td style="text-align:center"><input type="checkbox" class="check" /></td>
+        </tr>
+        <tr>
+          <td>Etiqueta global</td>
+          <td>1/embalagem, fundo da manga</td>
+          <td style="text-align:center"><input type="checkbox" class="check" /></td>
+        </tr>
+        <tr>
+          <td>Post-it Nome do Cliente</td>
+          <td>1/embalagem, frente da manga</td>
+          <td style="text-align:center"><input type="checkbox" class="check" /></td>
+        </tr>
+        <tr>
+          <td>Registo por fotos</td>
+          <td>por cada capa</td>
+          <td style="text-align:center"><input type="checkbox" class="check" /></td>
+        </tr>
+        <tr>
+          <td>Embalagem final</td>
+          <td>Plastificação + Caixa Protetora</td>
+          <td style="text-align:center"><input type="checkbox" class="check" /></td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
   <div class="section">
