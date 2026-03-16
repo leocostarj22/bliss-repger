@@ -112,8 +112,14 @@ Route::middleware(['auth', 'verified'])->prefix('admin/crm')->group(function () 
             $reportDate = date('d/m/Y H:i', strtotime((string) $quiz->date_added));
         }
 
-        $netWeightVal = (string) ($order->getAttribute('net_weight') ?? '');
-        if ($netWeightVal === '') {
+        $netWeightValRaw = $order->getAttribute('net_weight');
+        $netWeightVal = is_null($netWeightValRaw) ? '' : trim((string) $netWeightValRaw);
+
+        $netWeightNum = is_numeric(str_replace([',', ' '], ['.', ''], $netWeightVal))
+            ? (float) str_replace(',', '.', $netWeightVal)
+            : 0.0;
+
+        if ($netWeightVal === '' || $netWeightNum <= 0) {
             $uniqueSlugs = array_values(array_unique(array_map('strval', $planSupplements)));
             if ($uniqueSlugs) {
                 $subs = \Illuminate\Support\Facades\DB::connection('myformula')
@@ -122,6 +128,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin/crm')->group(function () 
                     ->select('sup.slug', 'assoc.quantity', 'assoc.unit')
                     ->whereIn('sup.slug', $uniqueSlugs)
                     ->get();
+
                 $mgPerCapsule = 0.0;
                 foreach ($subs as $r) {
                     $q = (float) $r->quantity;
@@ -129,12 +136,15 @@ Route::middleware(['auth', 'verified'])->prefix('admin/crm')->group(function () 
                     if ($unit === 'micro') { $q = $q / 1000.0; }
                     $mgPerCapsule += $q;
                 }
-                $capsPerDay = (int) ($capsulesVal !== '' ? $capsulesVal : 0);
+
+                $capsPerDay = (int) preg_replace('/\D+/', '', (string) $capsulesVal);
                 $grams = ($mgPerCapsule * $capsPerDay * 28) / 1000.0;
                 if ($grams > 0) {
                     $netWeightVal = rtrim(rtrim(number_format($grams, 2, ',', ''), '0'), ',') . ' g';
                 }
             }
+        } elseif (! preg_match('/[a-z]/i', $netWeightVal)) {
+            $netWeightVal = $netWeightVal . ' g';
         }
 
         $takingInfo = (string) ($productInfo->taking_information ?? '');
