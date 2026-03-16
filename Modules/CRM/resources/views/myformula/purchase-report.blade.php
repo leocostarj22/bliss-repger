@@ -56,11 +56,11 @@
     <div class="grid-3" style="margin-top:10px">
       <div>
         <div class="label">Número do Plano</div>
-        <div class="value">&nbsp;</div>
+        <div class="value" contenteditable="true"></div>
       </div>
       <div>
         <div class="label">Número do Mês</div>
-        <div class="value">&nbsp;</div>
+        <div class="value" contenteditable="true"></div>
       </div>
       <div>
         <div class="label">Data do Relatório</div>
@@ -74,20 +74,20 @@
     <div class="grid-3">
       <div>
         <div class="label">Nome do plano</div>
-        <div class="value">&nbsp;</div>
-      </div>
-      <div>
+        <div class="value" contenteditable="true"></div>
+      </div
+      ><div>
         <div class="label">Toma diária (cápsulas)</div>
-        <div class="value">&nbsp;</div>
-      </div>
-      <div>
+        <div class="value" contenteditable="true"></div>
+      </div
+      ><div>
         <div class="label">Cor Capas</div>
-        <div class="value">&nbsp;</div>
+        <div class="value" contenteditable="true"></div>
       </div>
     </div>
     <div style="margin-top:10px">
       <div class="label">Como tomar MyFórmula</div>
-      <div class="value" style="height:60px">&nbsp;</div>
+      <div class="value" style="height:60px" contenteditable="true"></div>
       <div class="subtle" style="font-size:11px; margin-top:4px">Ex: Tomar 4 cápsulas pela manhã e 4 à noite</div>
     </div>
   </div>
@@ -109,9 +109,9 @@
           <tr>
             <td>{{ $p->quantity }}</td>
             <td>{{ $p->name }}</td>
-            <td></td>
-            <td></td>
-            <td></td>
+            <td contenteditable="true"></td>
+            <td contenteditable="true"></td>
+            <td contenteditable="true"></td>
           </tr>
         @empty
           <tr><td colspan="5" class="subtle">Sem itens listados neste pedido</td></tr>
@@ -119,9 +119,9 @@
       </tbody>
     </table>
     <div class="totals">
-      <div class="total-pill">Total Manhã: ______</div>
-      <div class="total-pill">Total Tarde: ______</div>
-      <div class="total-pill">Total Noite: ______</div>
+      <div class="total-pill">Total Manhã: <span contenteditable="true"></span></div>
+      <div class="total-pill">Total Tarde: <span contenteditable="true"></span></div>
+      <div class="total-pill">Total Noite: <span contenteditable="true"></span></div>
     </div>
   </div>
 
@@ -129,12 +129,12 @@
     <h2>Verificações Finais para Checkout</h2>
     <div class="grid-2">
       <div class="checks">
-        <label class="check-item"><span class="box"></span> Blisters e Toma</label>
-        <label class="check-item"><span class="box"></span> Etiquetas do cliente (1/capa, interior)</label>
-        <label class="check-item"><span class="box"></span> Etiqueta global (1/embalagem, fundo da manga)</label>
-        <label class="check-item"><span class="box"></span> Post-it Nome do Cliente (1/embalagem, frente da manga)</label>
-        <label class="check-item"><span class="box"></span> Registo por fotos (por cada capa)</label>
-        <label class="check-item"><span class="box"></span> Embalagem final (Plastificação + Caixa Protetora)</label>
+        <label class="check-item"><input type="checkbox" class="check" /> Blisters e Toma</label>
+        <label class="check-item"><input type="checkbox" class="check" /> Etiquetas do cliente (1/capa, interior)</label>
+        <label class="check-item"><input type="checkbox" class="check" /> Etiqueta global (1/embalagem, fundo da manga)</label>
+        <label class="check-item"><input type="checkbox" class="check" /> Post-it Nome do Cliente (1/embalagem, frente da manga)</label>
+        <label class="check-item"><input type="checkbox" class="check" /> Registo por fotos (por cada capa)</label>
+        <label class="check-item"><input type="checkbox" class="check" /> Embalagem final (Plastificação + Caixa Protetora)</label>
       </div>
       <div>
         <div class="grid-2">
@@ -144,17 +144,17 @@
           </div>
           <div>
             <div class="label">Data da Preparação</div>
-            <div class="value">&nbsp;</div>
+            <div class="value" contenteditable="true"></div>
           </div>
         </div>
         <div class="grid-2" style="margin-top:10px">
           <div>
             <div class="label">Responsável</div>
-            <div class="value">&nbsp;</div>
+            <div class="value" contenteditable="true"></div>
           </div>
           <div>
             <div class="label">Data de Envio / Responsável</div>
-            <div class="value">&nbsp;</div>
+            <div class="value" contenteditable="true"></div>
           </div>
         </div>
       </div>
@@ -166,20 +166,20 @@
     <div class="grid-3">
       <div>
         <div class="label">Data de Nascimento</div>
-        <div class="value">&nbsp;</div>
+        <div class="value" contenteditable="true"></div>
       </div>
       <div>
         <div class="label">NIF</div>
-        <div class="value">&nbsp;</div>
+        <div class="value" contenteditable="true"></div>
       </div>
       <div>
         <div class="label">Método de Pagamento</div>
-        <div class="value">{{ $order->payment_method }}</div>
+        <div class="value" contenteditable="true">{{ $order->payment_method }}</div>
       </div>
     </div>
     <div style="margin-top:10px">
       <div class="label">Data de Pagamento</div>
-      <div class="value">&nbsp;</div>
+      <div class="value" contenteditable="true"></div>
     </div>
   </div>
 
