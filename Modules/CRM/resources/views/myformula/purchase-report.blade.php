@@ -104,9 +104,11 @@
           @if (!empty($group['items']))
             <ul style="margin:6px 0 0 18px; padding:0;">
               @foreach ($group['items'] as $item)
-                <li style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                  <span>{{ $item['name'] }}</span>
-                  <input type="checkbox" class="check" />
+                <li>
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                    <span>{{ $item['name'] }}</span>
+                    <input type="checkbox" class="check" />
+                  </div>
                 </li>
               @endforeach
             </ul>
