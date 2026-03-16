@@ -9,6 +9,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class MyFormulaOrderResource extends Resource
 {
@@ -136,6 +137,12 @@ class MyFormulaOrderResource extends Resource
                             ->columnSpanFull(),
                     ]),
             ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->where('is_plan', 1);
     }
 
     public static function table(Table $table): Table
