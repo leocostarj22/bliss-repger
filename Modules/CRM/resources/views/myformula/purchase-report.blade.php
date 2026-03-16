@@ -228,8 +228,41 @@
   </div>
 
   <div class="print-actions">
+    <a href="#" class="btn" id="btn-save">Gravar</a>
     <a href="#" class="btn" onclick="window.print()">Imprimir</a>
   </div>
 </div>
+<script>
+(function(){
+  const KEY = 'mf_report_state_{{ $order->order_id }}';
+  function collect(){
+    return {
+      editables: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML),
+      dates: Array.from(document.querySelectorAll('input[type="date"]')).map(el => el.value),
+      checks: Array.from(document.querySelectorAll('input.check')).map(el => el.checked)
+    };
+  }
+  function restore(){
+    try{
+      const raw = localStorage.getItem(KEY);
+      if(!raw) return;
+      const s = JSON.parse(raw);
+      const eds = document.querySelectorAll('[contenteditable="true"]');
+      eds.forEach((el,i)=>{ if(s.editables && s.editables[i]!==undefined) el.innerHTML = s.editables[i]; });
+      const dts = document.querySelectorAll('input[type="date"]');
+      dts.forEach((el,i)=>{ if(s.dates && s.dates[i]!==undefined) el.value = s.dates[i]; });
+      const chs = document.querySelectorAll('input.check');
+      chs.forEach((el,i)=>{ if(s.checks && s.checks[i]!==undefined) el.checked = s.checks[i]; });
+    }catch(e){}
+  }
+  document.getElementById('btn-save')?.addEventListener('click', function(ev){
+    ev.preventDefault();
+    localStorage.setItem(KEY, JSON.stringify(collect()));
+    this.textContent = 'Gravado';
+    setTimeout(()=> this.textContent = 'Gravar', 1200);
+  });
+  document.addEventListener('DOMContentLoaded', restore);
+})();
+</script>
 </body>
 </html>
