@@ -50,7 +50,7 @@
       </div>
       <div>
         <div class="label">CLIENTE N.º:</div>
-        <div class="value">{{ $order->customer_id }}</div>
+        <div class="value">{{ $reportData['client_code'] ?? '' }}</div>
       </div>
     </div>
     <div class="grid-3" style="margin-top:10px">
@@ -64,7 +64,7 @@
       </div>
       <div>
         <div class="label">DATA DO RELATÓRIO:</div>
-        <div class="value">{{ now()->format('d/m/Y H:i') }}</div>
+        <div class="value">{{ $reportData['report_date'] ?? '' }}</div>
       </div>
     </div>
   </div>
@@ -90,7 +90,7 @@
       <div class="value">{{ $reportData['net_weight'] ?? '' }}</div>
     </div>
     <div style="margin-top:10px">
-      <div class="label">Como tomar MyFórmula</div>
+      <div class="label">Como tomar MyFórmula {{ $reportData['plan_letters'] ?? '' }}</div>
       <div class="value" style="height:60px" contenteditable="true">{{ $reportData['how_to_take'] ?? '' }}</div>
     </div>
   </div>
