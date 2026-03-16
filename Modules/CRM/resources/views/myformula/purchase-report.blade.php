@@ -97,24 +97,28 @@
     <table>
       <thead>
         <tr>
-          <th style="width:80px">Qtd</th>
           <th>Suplemento</th>
-          <th style="width:110px">Manhã</th>
-          <th style="width:110px">Tarde</th>
-          <th style="width:110px">Noite</th>
+          <th style="width:160px">Horários das Tomas</th>
+          <th>Substâncias</th>
         </tr>
       </thead>
       <tbody>
-        @forelse (($reportData['supplement_rows'] ?? []) as $row)
+        @forelse (($reportData['supplement_items'] ?? []) as $item)
           <tr>
-            <td>{{ $row['total'] }}</td>
-            <td>{{ $row['name'] }}</td>
-            <td>{{ $row['morning'] > 0 ? $row['morning'] : '' }}</td>
-            <td>{{ $row['afternoon'] > 0 ? $row['afternoon'] : '' }}</td>
-            <td>{{ $row['night'] > 0 ? $row['night'] : '' }}</td>
+            <td>{{ $item['name'] }}</td>
+            <td>{{ $item['period_label'] }}</td>
+            <td>
+              @if (!empty($item['substances']))
+                <ul style="margin:0; padding-left:18px;">
+                  @foreach ($item['substances'] as $s)
+                    <li>{{ $s['name'] }} — {{ rtrim(rtrim(number_format($s['quantity'], 2, ',', ''), '0'), ',') }} {{ $s['unit'] }}</li>
+                  @endforeach
+                </ul>
+              @endif
+            </td>
           </tr>
         @empty
-          <tr><td colspan="5" class="subtle">Sem suplementos configurados neste pedido</td></tr>
+          <tr><td colspan="3" class="subtle">Sem suplementos configurados neste pedido</td></tr>
         @endforelse
       </tbody>
     </table>
