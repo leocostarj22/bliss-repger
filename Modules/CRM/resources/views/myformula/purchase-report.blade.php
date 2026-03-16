@@ -9,8 +9,11 @@
   * { box-sizing: border-box; }
   body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, Noto Sans, Helvetica, sans-serif; color: var(--fg); margin: 0; padding: 24px; }
   .container { max-width: 980px; margin: 0 auto; }
+  .header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
   .header h1 { margin: 0; font-size: 22px; }
   .header p { margin: 4px 0 0; color: var(--muted); }
+  .header-logo { display:flex; align-items:flex-start; justify-content:flex-end; }
+  .header-logo img { max-height: 44px; width:auto; object-fit: contain; }
   .meta, .section { border:1px solid var(--border); border-radius: 8px; padding:16px; margin-top:14px; }
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
@@ -36,8 +39,16 @@
 <body>
 <div class="container">
   <div class="header">
-    <h1>Departamento de Compras</h1>
-    <p>Encomendas MyFórmula</p>
+    <div>
+      <h1>Departamento de Compras</h1>
+      <p>Encomendas MyFórmula</p>
+    </div>
+    <div class="header-logo">
+      @php($myformulaLogoPath = public_path('images/myformula-logo.png'))
+      @if (is_file($myformulaLogoPath))
+        <img src="{{ asset('images/myformula-logo.png') }}" alt="MyFórmula" />
+      @endif
+    </div>
   </div>
 
   <div class="meta">
