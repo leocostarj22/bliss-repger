@@ -6,8 +6,13 @@ use Modules\CRM\Http\Controllers\EmailTrackingController;
 
 Route::middleware(['auth', 'verified'])->prefix('admin/crm')->group(function () {
     Route::resource('crms', CRMController::class)->names('crm');
+
+    Route::get('myformula/orders/{order}/purchase-report', function ($orderId) {
+        $order = \Modules\CRM\Models\MyFormulaOrder::with(['products', 'customer', 'status'])->find($orderId);
+        if (! $order) abort(404);
+        return view('crm::myformula.purchase-report', compact('order'));
+    })->name('crm.myformula.purchase-report');
     
-    // React SPA Route
     Route::get('/app/{any?}', function () {
         return view('crm::app');
     })->where('any', '.*')->name('crm.app');

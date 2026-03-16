@@ -176,6 +176,11 @@ class MyFormulaOrderResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('print_purchase_report')
+                    ->label('Imprimir Relatório')
+                    ->icon('heroicon-o-printer')
+                    ->url(fn (\Modules\CRM\Models\MyFormulaOrder $record): string => route('crm.myformula.purchase-report', ['order' => $record->order_id]))
+                    ->openUrlInNewTab(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

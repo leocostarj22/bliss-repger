@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relatório de Compras | Encomendas MyFórmula</title>
+<style>
+  :root { --fg:#111827; --muted:#6b7280; --border:#e5e7eb; }
+  * { box-sizing: border-box; }
+  body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, Noto Sans, Helvetica, sans-serif; color: var(--fg); margin: 0; padding: 24px; }
+  .container { max-width: 980px; margin: 0 auto; }
+  .header h1 { margin: 0; font-size: 22px; }
+  .header p { margin: 4px 0 0; color: var(--muted); }
+  .meta, .section { border:1px solid var(--border); border-radius: 8px; padding:16px; margin-top:14px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .label { font-size: 12px; color: var(--muted); }
+  .value { border-bottom:1px solid var(--border); min-height:26px; padding:3px 0; }
+  h2 { font-size: 16px; margin: 0 0 8px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border:1px solid var(--border); padding:8px; font-size: 13px; vertical-align: top; }
+  th { background:#f9fafb; text-align:left; }
+  .checks { display:grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .check-item { display:flex; align-items:center; gap: 8px; }
+  .box { display:inline-block; width:16px; height:16px; border:1px solid var(--fg); }
+  .subtle { color: var(--muted); }
+  .totals { display:flex; gap:12px; margin-top:8px; }
+  .total-pill { border:1px solid var(--border); padding:6px 10px; border-radius:6px; font-size:12px; }
+  .print-actions { margin-top: 16px; text-align: right; }
+  .btn { display:inline-block; padding:8px 12px; border:1px solid var(--border); border-radius:8px; text-decoration:none; color: var(--fg); }
+  @media print { .print-actions { display: none; } body { padding: 0; } .container { max-width: unset; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Departamento de Compras</h1>
+    <p>Encomendas MyFórmula</p>
+  </div>
+
+  <div class="meta">
+    <div class="grid-3">
+      <div>
+        <div class="label">Número do Pedido</div>
+        <div class="value">{{ $order->order_id }}</div>
+      </div>
+      <div>
+        <div class="label">Nome do Cliente</div>
+        <div class="value">{{ $order->firstname }} {{ $order->lastname }}</div>
+      </div>
+      <div>
+        <div class="label">Número do Cliente</div>
+        <div class="value">{{ $order->customer_id }}</div>
+      </div>
+    </div>
+    <div class="grid-3" style="margin-top:10px">
+      <div>
+        <div class="label">Número do Plano</div>
+        <div class="value">&nbsp;</div>
+      </div>
+      <div>
+        <div class="label">Número do Mês</div>
+        <div class="value">&nbsp;</div>
+      </div>
+      <div>
+        <div class="label">Data do Relatório</div>
+        <div class="value">{{ now()->format('d/m/Y H:i') }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Plano</h2>
+    <div class="grid-3">
+      <div>
+        <div class="label">Nome do plano</div>
+        <div class="value">&nbsp;</div>
+      </div>
+      <div>
+        <div class="label">Toma diária (cápsulas)</div>
+        <div class="value">&nbsp;</div>
+      </div>
+      <div>
+        <div class="label">Cor Capas</div>
+        <div class="value">&nbsp;</div>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <div class="label">Como tomar MyFórmula</div>
+      <div class="value" style="height:60px">&nbsp;</div>
+      <div class="subtle" style="font-size:11px; margin-top:4px">Ex: Tomar 4 cápsulas pela manhã e 4 à noite</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Suplementos</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:80px">Qtd</th>
+          <th>Suplemento</th>
+          <th style="width:110px">Manhã</th>
+          <th style="width:110px">Tarde</th>
+          <th style="width:110px">Noite</th>
+        </tr>
+      </thead>
+      <tbody>
+        @forelse ($order->products as $p)
+          <tr>
+            <td>{{ $p->quantity }}</td>
+            <td>{{ $p->name }}</td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+        @empty
+          <tr><td colspan="5" class="subtle">Sem itens listados neste pedido</td></tr>
+        @endforelse
+      </tbody>
+    </table>
+    <div class="totals">
+      <div class="total-pill">Total Manhã: ______</div>
+      <div class="total-pill">Total Tarde: ______</div>
+      <div class="total-pill">Total Noite: ______</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Verificações Finais para Checkout</h2>
+    <div class="grid-2">
+      <div class="checks">
+        <label class="check-item"><span class="box"></span> Blisters e Toma</label>
+        <label class="check-item"><span class="box"></span> Etiquetas do cliente (1/capa, interior)</label>
+        <label class="check-item"><span class="box"></span> Etiqueta global (1/embalagem, fundo da manga)</label>
+        <label class="check-item"><span class="box"></span> Post-it Nome do Cliente (1/embalagem, frente da manga)</label>
+        <label class="check-item"><span class="box"></span> Registo por fotos (por cada capa)</label>
+        <label class="check-item"><span class="box"></span> Embalagem final (Plastificação + Caixa Protetora)</label>
+      </div>
+      <div>
+        <div class="grid-2">
+          <div>
+            <div class="label">Data do Pedido</div>
+            <div class="value">{{ optional($order->date_added)->format('d/m/Y H:i') }}</div>
+          </div>
+          <div>
+            <div class="label">Data da Preparação</div>
+            <div class="value">&nbsp;</div>
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:10px">
+          <div>
+            <div class="label">Responsável</div>
+            <div class="value">&nbsp;</div>
+          </div>
+          <div>
+            <div class="label">Data de Envio / Responsável</div>
+            <div class="value">&nbsp;</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Informações Adicionais</h2>
+    <div class="grid-3">
+      <div>
+        <div class="label">Data de Nascimento</div>
+        <div class="value">&nbsp;</div>
+      </div>
+      <div>
+        <div class="label">NIF</div>
+        <div class="value">&nbsp;</div>
+      </div>
+      <div>
+        <div class="label">Método de Pagamento</div>
+        <div class="value">{{ $order->payment_method }}</div>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <div class="label">Data de Pagamento</div>
+      <div class="value">&nbsp;</div>
+    </div>
+  </div>
+
+  <div class="print-actions">
+    <a href="#" class="btn" onclick="window.print()">Imprimir</a>
+  </div>
+</div>
+</body>
+</html>
