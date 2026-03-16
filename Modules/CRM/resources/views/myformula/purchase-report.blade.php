@@ -71,7 +71,7 @@
 
   <div class="section">
     <h2>Plano</h2>
-    <div class="grid-3">
+    <div class="grid-3" style="grid-template-columns: 2fr 0.8fr 0.8fr;">
       <div>
         <div class="label">PLANO:</div>
         <div class="value" contenteditable="true">{{ $reportData['plan_name'] ?? '' }}</div>
@@ -97,19 +97,20 @@
 
   <div class="section">
     <h2>Suplementos</h2>
-    <div>
-      <h3 class="subtle" style="margin:8px 0 6px">Suplementos (por período)</h3>
+    <div class="grid-3">
       @foreach (($reportData['supplements_by_period'] ?? []) as $group)
-        @if (!empty($group['items']))
-          <div style="margin-top:6px">
-            <strong>{{ $group['title'] }}</strong>
+        <div>
+          <strong>{{ $group['title'] }}</strong>
+          @if (!empty($group['items']))
             <ul style="margin:6px 0 0 18px; padding:0;">
               @foreach ($group['items'] as $item)
                 <li>{{ $item['name'] }}</li>
               @endforeach
             </ul>
-          </div>
-        @endif
+          @else
+            <div class="subtle" style="margin-top:6px">—</div>
+          @endif
+        </div>
       @endforeach
     </div>
 
