@@ -43,6 +43,7 @@ import BlissNaturaDashboard from "@/pages/blissnatura/Dashboard";
 import BlissNaturaOrders from "@/pages/blissnatura/Orders";
 import BlissNaturaCustomers from "@/pages/blissnatura/Customers";
 import BlissNaturaProducts from "@/pages/blissnatura/Products";
+import BlissNaturaOrderDetail from "@/pages/blissnatura/OrderDetail";
 import EspacoAbsolutoCustomers from "@/pages/espacoabsoluto/Customers";
 import SupportCategories from "@/pages/support/SupportCategories";
 import SupportTickets from "@/pages/support/Tickets";
@@ -139,6 +140,7 @@ const App = () => (
               <Route path="/blissnatura" element={<Navigate to="/blissnatura/dashboard" replace />} />
               <Route path="/blissnatura/dashboard" element={<BlissNaturaDashboard />} />
               <Route path="/blissnatura/orders" element={<BlissNaturaOrders />} />
+              <Route path="/blissnatura/orders/:id" element={<BlissNaturaOrderDetail />} />
               <Route path="/blissnatura/customers" element={<BlissNaturaCustomers />} />
               <Route path="/blissnatura/products" element={<BlissNaturaProducts />} />
 
