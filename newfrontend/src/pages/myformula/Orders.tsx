@@ -121,8 +121,8 @@ export default function Orders() {
 
       <div className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40">
               <tr className="text-left">
                 <th className="p-4 text-sm font-medium text-muted-foreground">ID</th>
                 <th className="p-4 text-sm font-medium text-muted-foreground">Cliente</th>
@@ -160,14 +160,14 @@ export default function Orders() {
                         <td className="p-4">{o.order_id}</td>
                         <td className="p-4">
                           <div className="font-medium">{o.firstname} {o.lastname}</div>
-                          <div className="text-xs text-muted-foreground">{o.email}</div>
+
                         </td>
                         <td className="p-4">
-                          <span className="text-xs px-2 py-1 rounded-full bg-cyan-500/10 text-cyan-300">{statusName}</span>
+                          <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs text-primary border-primary/30">{statusName}</span>
                         </td>
                         <td className="p-4">{payment}</td>
                         <td className="p-4">
-                          <span className={"text-xs px-2 py-1 rounded-full " + (approvedOk ? "bg-emerald-500/10 text-emerald-400" : "bg-muted/40 text-muted-foreground")}>
+                          <span className={"inline-flex items-center rounded-md border px-2 py-0.5 text-xs " + (approvedOk ? "text-emerald-500 border-emerald-400/30" : "text-muted-foreground border-border/60")}>
                             {approvedOk ? "Aprovado" : "Pendente"}
                           </span>
                         </td>
@@ -178,7 +178,7 @@ export default function Orders() {
                             <Button size="sm" variant="outline" onClick={() => navigate(`/myformula/orders/${o.order_id}`)}>
                               <Pencil className="w-4 h-4" />
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => window.open(`/admin/crm/myformula/orders/${o.order_id}/purchase-report`, '_blank')}>
+                            <Button size="sm" variant="outline" onClick={() => { const url = new URL(`/admin/crm/myformula/orders/${o.order_id}/purchase-report`, window.location.origin); window.open(url.toString(), '_blank') }}>
                               <Printer className="w-4 h-4" />
                             </Button>
                           </div>
