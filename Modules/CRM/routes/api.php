@@ -189,6 +189,7 @@ Route::prefix('v1')->group(function () {
         Route::get('dashboard', [BlissDashboardApiController::class, 'index']);
         Route::get('products', [BlissProductController::class, 'index']);
         Route::get('customers', [BlissCustomerController::class, 'index']);
+        Route::post('customers/export-contacts', [BlissCustomerController::class, 'exportToContacts']);
         Route::get('orders', [BlissOrderController::class, 'index']);
         Route::get('order-statuses', [BlissOrderStatusController::class, 'index']);
     });

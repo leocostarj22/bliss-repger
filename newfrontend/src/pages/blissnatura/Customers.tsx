@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react"
-import { Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { Pencil, Plus, Search, Trash2, Send } from "lucide-react"
 
 import type { BlissCustomer } from "@/types"
-import { createBlissCustomer, deleteBlissCustomer, fetchBlissCustomers, updateBlissCustomer } from "@/services/api"
+import { createBlissCustomer, deleteBlissCustomer, fetchBlissCustomers, updateBlissCustomer, exportBlissCustomersToContacts, createSegment } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export default function Customers() {
   const { toast } = useToast()
@@ -23,6 +24,7 @@ export default function Customers() {
 
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<BlissCustomer | null>(null)
+  const [selected, setSelected] = useState<Record<string, boolean>>({})
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -111,7 +113,30 @@ export default function Customers() {
             </SelectContent>
           </Select>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="default"
+              onClick={async () => {
+                const ids = Object.keys(selected).filter((k) => selected[k]);
+                if (!ids.length) {
+                  toast({ title: "Seleção vazia", description: "Selecione pelo menos um cliente", variant: "destructive" });
+                  return;
+                }
+                try {
+                  const res = await exportBlissCustomersToContacts(ids);
+                  toast({ title: "Contactos exportados", description: `${res.data.created_count} criados, ${res.data.updated_count} atualizados` });
+                  const name = window.prompt('Nome do segmento (opcional):', `Clientes Bliss – ${new Date().toLocaleDateString('pt-PT')}`);
+                  if (name && res.data.contact_ids?.length) {
+                    await createSegment({ name, contact_ids: res.data.contact_ids, filters: [] });
+                    toast({ title: "Segmento criado", description: `${res.data.contact_ids.length} contactos adicionados` });
+                  }
+                } catch (e: any) {
+                  toast({ title: "Erro", description: e?.message ?? 'Falha ao exportar', variant: 'destructive' })
+                }
+              }}
+            >
+              <Send className="w-4 h-4 mr-2" /> Enviar para Campanha
+            </Button>
             <Button variant="outline" onClick={load} disabled={loading}>
               Atualizar
             </Button>
@@ -124,6 +149,20 @@ export default function Customers() {
           <table className="w-full text-sm">
             <thead className="bg-muted/40">
               <tr className="text-left">
+                <th className="p-3 w-[40px]">
+                  <Checkbox
+                    checked={filtered.length > 0 && filtered.every((c) => selected[c.customer_id])}
+                    onCheckedChange={(v) => {
+                      const all = { ...selected };
+                      if (v) {
+                        filtered.forEach((c) => { all[c.customer_id] = true; });
+                      } else {
+                        filtered.forEach((c) => { delete all[c.customer_id]; });
+                      }
+                      setSelected(all);
+                    }}
+                  />
+                </th>
                 <th className="p-3">Cliente</th>
                 <th className="p-3">Email</th>
                 <th className="p-3">Telefone</th>
@@ -145,6 +184,12 @@ export default function Customers() {
                   const active = Boolean(c.status ?? true)
                   return (
                     <tr key={c.customer_id} className="border-t border-border/50 hover:bg-muted/20">
+                      <td className="p-3 w-[40px]">
+                        <Checkbox
+                          checked={!!selected[c.customer_id]}
+                          onCheckedChange={(v) => setSelected((prev) => ({ ...prev, [c.customer_id]: !!v }))}
+                        />
+                      </td>
                       <td className="p-3">
                         <div className="font-medium">{c.firstname} {c.lastname}</div>
                         <div className="text-xs text-muted-foreground">{c.customer_id}</div>

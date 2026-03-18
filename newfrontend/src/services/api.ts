@@ -3163,6 +3163,28 @@ export async function fetchBlissCustomers(params?: { search?: string; status?: '
   return { data: Array.isArray(json?.data) ? (json.data as BlissCustomer[]) : [] };
 }
 
+export async function exportBlissCustomersToContacts(customerIds: string[]): Promise<ApiResponse<{ contact_ids: number[]; created_count: number; updated_count: number }>> {
+  const response = await apiFetch('/api/v1/bliss/customers/export-contacts', {
+    method: 'POST',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ customer_ids: customerIds }),
+  });
+
+  if (!response.ok) {
+    let msg = `Falha ao exportar contactos: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  const data = json?.data as { contact_ids: number[]; created_count: number; updated_count: number };
+  return { data };
+}
+
 export async function createBlissCustomer(payload: {
   firstname: string;
   lastname: string;

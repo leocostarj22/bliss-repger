@@ -5,6 +5,7 @@ namespace Modules\CRM\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\CRM\Models\BlissCustomer;
+use Modules\CRM\Models\Contact;
 
 class BlissCustomerController extends Controller
 {
@@ -44,5 +45,57 @@ class BlissCustomerController extends Controller
         })->values();
 
         return response()->json(['data' => $data]);
+    }
+
+    public function exportToContacts(Request $request)
+    {
+        $ids = $request->input('customer_ids', []);
+        if (!is_array($ids) || empty($ids)) {
+            return response()->json(['message' => 'customer_ids é obrigatório'], 422);
+        }
+
+        $customers = BlissCustomer::whereIn('customer_id', $ids)->get();
+
+        $created = [];
+        $updated = [];
+        $contactIds = [];
+
+        foreach ($customers as $c) {
+            $email = strtolower(trim((string) $c->email));
+            if (!$email) continue;
+            $name = trim(($c->firstname ?? '') . ' ' . ($c->lastname ?? ''));
+            $phone = $c->telephone ? trim((string) $c->telephone) : null;
+
+            $contact = Contact::withTrashed()->whereRaw('LOWER(email) = ?', [$email])->first();
+            if ($contact) {
+                $contact->name = $name !== '' ? $name : ($contact->name ?? $email);
+                if ($phone) $contact->phone = $phone;
+                if (empty($contact->status)) $contact->status = 'subscribed';
+                if (empty($contact->source)) $contact->source = 'bliss_natura';
+                if (method_exists($contact, 'trashed') && $contact->trashed()) $contact->restore();
+                $contact->save();
+                $updated[] = (int) $contact->id;
+                $contactIds[] = (int) $contact->id;
+            } else {
+                $new = Contact::create([
+                    'name'   => $name !== '' ? $name : $email,
+                    'email'  => $email,
+                    'phone'  => $phone,
+                    'status' => 'subscribed',
+                    'source' => 'bliss_natura',
+                    'tags'   => [],
+                ]);
+                $created[] = (int) $new->id;
+                $contactIds[] = (int) $new->id;
+            }
+        }
+
+        return response()->json([
+            'data' => [
+                'created_count' => count($created),
+                'updated_count' => count($updated),
+                'contact_ids'   => $contactIds,
+            ],
+        ]);
     }
 }

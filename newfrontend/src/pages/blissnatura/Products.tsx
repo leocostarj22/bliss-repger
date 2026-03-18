@@ -268,11 +268,20 @@ function ProductFormModal({
 
   const [name, setName] = useState(editing?.description?.name ?? "")
   const [model, setModel] = useState(editing?.model ?? "")
-  const [description, setDescription] = useState(editing?.description?.description ?? "")
+  const decodeHtml = (input: string) => {
+    if (typeof window === 'undefined') return input;
+    const txt = document.createElement('textarea');
+    txt.innerHTML = input;
+    return txt.value;
+  }
+  const hasHtml = (input: string) => /<[^>]+>/.test(input);
+  const [description, setDescription] = useState(decodeHtml(editing?.description?.description ?? ""))
   const [price, setPrice] = useState(String(editing?.price ?? ""))
   const [quantity, setQuantity] = useState(String(editing?.quantity ?? ""))
   const [isActive, setIsActive] = useState(editing ? Boolean(editing.status ?? true) : true)
   const [imageUrl, setImageUrl] = useState(editing?.image_url ?? "")
+  const [showPreview, setShowPreview] = useState(hasHtml(description))
+  const decodedHtml = useMemo(() => decodeHtml(description), [description])
 
   const submit = async () => {
     if (!model.trim()) {
@@ -363,6 +372,15 @@ function ProductFormModal({
           <div className="space-y-2 md:col-span-2">
             <div className="text-xs text-muted-foreground">Descrição</div>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição do produto..." />
+            <div className="flex items-center justify-end gap-2">
+              <span className="text-xs text-muted-foreground">Pré-visualizar</span>
+              <Switch checked={showPreview} onCheckedChange={setShowPreview} />
+            </div>
+            {showPreview && (
+              <div className="mt-2 p-3 rounded-md border bg-background">
+                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: decodedHtml }} />
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between md:col-span-2">
