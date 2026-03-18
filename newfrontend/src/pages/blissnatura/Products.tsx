@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react"
-import { Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { ImagePlus, Pencil, Plus, Search, Server, Trash2 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
 import type { BlissProduct } from "@/types"
-import { createBlissProduct, deleteBlissProduct, fetchBlissProducts, updateBlissProduct } from "@/services/api"
+import { createBlissProduct, deleteBlissProduct, fetchBlissProducts, fetchEmailMedia, updateBlissProduct } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { useToast } from "@/components/ui/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { handleImageUpload } from "@/lib/tiptap-utils"
 
 const money = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" })
 
@@ -317,7 +319,54 @@ function ProductFormModal({
   const [isActive, setIsActive] = useState(editing ? Boolean(editing.status ?? true) : true)
   const [imageUrl, setImageUrl] = useState(editing?.image_url ?? "")
   const [showPreview, setShowPreview] = useState(hasHtml(description))
+  const [descriptionMode, setDescriptionMode] = useState<"visual" | "html">("visual")
+  const [mediaLoading, setMediaLoading] = useState(false)
+  const imageInputRef = useRef<HTMLInputElement | null>(null)
   const decodedHtml = useMemo(() => decodeHtml(description), [description])
+
+  const pickImageFromPc = async (file?: File | null) => {
+    if (!file) return
+    setMediaLoading(true)
+    try {
+      const url = await handleImageUpload(file)
+      setImageUrl(url)
+      toast({ title: "Sucesso", description: "Imagem enviada" })
+    } catch (e: any) {
+      toast({ title: "Erro", description: e?.message ?? "Falha ao enviar imagem", variant: "destructive" })
+    } finally {
+      setMediaLoading(false)
+    }
+  }
+
+  const pickImageFromServer = async () => {
+    setMediaLoading(true)
+    try {
+      const res = await fetchEmailMedia()
+      const items = Array.isArray(res.data) ? res.data : []
+      if (!items.length) {
+        toast({ title: "Sem imagens", description: "Não há imagens no servidor", variant: "destructive" })
+        return
+      }
+      const list = items.slice(0, 30).map((m, i) => `${i + 1}. ${m.filename}`).join("\n")
+      const value = window.prompt(`Escolha o número, filename ou URL:\n\n${list}`)
+      if (!value) return
+      let chosen = items.find((m) => m.url === value || m.filename === value)
+      if (!chosen) {
+        const idx = Number(value)
+        if (Number.isFinite(idx) && idx >= 1 && idx <= items.length) chosen = items[idx - 1]
+      }
+      if (!chosen) {
+        toast({ title: "Imagem inválida", description: "Seleção não encontrada", variant: "destructive" })
+        return
+      }
+      setImageUrl(chosen.url)
+      toast({ title: "Sucesso", description: "Imagem selecionada do servidor" })
+    } catch (e: any) {
+      toast({ title: "Erro", description: e?.message ?? "Falha ao carregar imagens", variant: "destructive" })
+    } finally {
+      setMediaLoading(false)
+    }
+  }
 
   const submit = async () => {
     if (!model.trim()) {
@@ -402,12 +451,41 @@ function ProductFormModal({
 
           <div className="space-y-2 md:col-span-2">
             <div className="text-xs text-muted-foreground">Imagem (URL)</div>
-            <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
+            <div className="flex gap-2">
+              <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
+              <Button type="button" variant="outline" disabled={mediaLoading} onClick={() => imageInputRef.current?.click()}>
+                <ImagePlus className="w-4 h-4 mr-2" /> PC
+              </Button>
+              <Button type="button" variant="outline" disabled={mediaLoading} onClick={pickImageFromServer}>
+                <Server className="w-4 h-4 mr-2" /> Servidor
+              </Button>
+            </div>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                e.target.value = ""
+                void pickImageFromPc(file)
+              }}
+            />
           </div>
 
           <div className="space-y-2 md:col-span-2">
-            <div className="text-xs text-muted-foreground">Descrição</div>
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição do produto..." />
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs text-muted-foreground">Descrição</div>
+              <div className="flex items-center gap-2">
+                <Button type="button" size="sm" variant={descriptionMode === "visual" ? "default" : "outline"} onClick={() => setDescriptionMode("visual")}>Editor</Button>
+                <Button type="button" size="sm" variant={descriptionMode === "html" ? "default" : "outline"} onClick={() => setDescriptionMode("html")}>HTML</Button>
+              </div>
+            </div>
+            {descriptionMode === "visual" ? (
+              <RichTextEditor value={description} onChange={setDescription} placeholder="Descrição do produto..." />
+            ) : (
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição do produto..." className="min-h-[220px] font-mono text-xs" />
+            )}
             <div className="flex items-center justify-end gap-2">
               <span className="text-xs text-muted-foreground">Pré-visualizar</span>
               <Switch checked={showPreview} onCheckedChange={setShowPreview} />
