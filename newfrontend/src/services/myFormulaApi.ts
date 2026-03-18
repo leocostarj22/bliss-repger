@@ -478,3 +478,46 @@ export async function fetchMyFormulaDashboard(): Promise<ApiResponse<MyFormulaDa
   const json = await res.json()
   return { data: json?.data as MyFormulaDashboardData }
 }
+
+export async function fetchMyFormulaOrderStatusesReal(): Promise<ApiResponse<MyFormulaOrderStatus[]>> {
+  const res = await fetch('/api/v1/myformula/order-statuses', {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`Falha ao obter estados de pedido MyFormula: ${res.status} ${text}`)
+  }
+  const json = await res.json()
+  return { data: json?.data ?? [] }
+}
+
+export async function fetchMyFormulaOrdersReal(params: {
+  page?: number
+  per_page?: number
+  search?: string
+  status_id?: string
+  include_unknown?: boolean
+  dedup?: boolean
+}): Promise<ApiResponse<MyFormulaOrder[]>> {
+  const q = new URLSearchParams()
+  if (params.page) q.set('page', String(params.page))
+  if (params.per_page) q.set('per_page', String(params.per_page))
+  if (params.search) q.set('search', params.search)
+  if (params.status_id) q.set('status_id', params.status_id)
+  if (params.include_unknown !== undefined) q.set('include_unknown', String(params.include_unknown))
+  if (params.dedup !== undefined) q.set('dedup', String(params.dedup))
+
+  const res = await fetch(`/api/v1/myformula/orders?${q.toString()}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`Falha ao obter pedidos MyFormula: ${res.status} ${text}`)
+  }
+  const json = await res.json()
+  return { data: json?.data ?? [], meta: json?.meta }
+}

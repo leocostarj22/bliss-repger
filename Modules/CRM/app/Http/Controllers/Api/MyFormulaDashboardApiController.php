@@ -68,6 +68,7 @@ class MyFormulaDashboardApiController extends Controller
                     'date_modified'   => $o->date_modified ? $o->date_modified->toIso8601String() : null,
                     'payment_method'  => $o->payment_method ?: null,
                     'payment_code'    => $o->payment_code ?: null,
+                    'approved'        => isset($o->approved) ? (bool) $o->approved : null,
                     'status'          => $o->relationLoaded('status') && $o->status ? [
                         'order_status_id' => (string) $o->status->order_status_id,
                         'language_id'     => isset($o->status->language_id) ? (int) $o->status->language_id : 0,

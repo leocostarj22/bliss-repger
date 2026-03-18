@@ -14,6 +14,8 @@ use Modules\CRM\Http\Controllers\Api\BlissOrderController;
 use Modules\CRM\Http\Controllers\Api\BlissOrderStatusController;
 use Modules\CRM\Http\Controllers\Api\BlissDashboardApiController;
 use Modules\CRM\Http\Controllers\Api\MyFormulaDashboardApiController;
+use Modules\CRM\Http\Controllers\Api\MyFormulaOrderController;
+use Modules\CRM\Http\Controllers\Api\MyFormulaOrderStatusController;
 use Modules\CRM\Http\Controllers\CRMController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -197,5 +199,7 @@ Route::prefix('v1')->group(function () {
 
     Route::prefix('myformula')->middleware(['web', 'auth'])->group(function () {
         Route::get('dashboard', [MyFormulaDashboardApiController::class, 'index']);
+        Route::get('orders', [MyFormulaOrderController::class, 'index']);
+        Route::get('order-statuses', [MyFormulaOrderStatusController::class, 'index']);
     });
 });

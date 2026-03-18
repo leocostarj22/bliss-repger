@@ -602,6 +602,7 @@ export interface MyFormulaOrder {
   date_modified?: string | null;
   payment_method?: string | null;
   payment_code?: string | null;
+  approved?: boolean | number | null;
   status?: MyFormulaOrderStatus | null;
   products?: MyFormulaOrderProduct[];
   quiz?: MyFormulaQuiz | null;

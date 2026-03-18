@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { Link } from "react-router-dom"
-import type { MyFormulaOrder } from "@/types"
-import { fetchMyFormulaDashboard } from "@/services/myFormulaApi"
+import type { MyFormulaOrder, MyFormulaOrderStatus } from "@/types"
+import { fetchMyFormulaDashboard, fetchMyFormulaOrderStatusesReal, fetchMyFormulaOrdersReal } from "@/services/myFormulaApi"
 
 const money = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" })
 
@@ -15,41 +15,17 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [counts, setCounts] = useState({ orders: 0, revenue: 0, customers: 0, products: 0 })
   const [orders, setOrders] = useState<MyFormulaOrder[]>([])
+  const [statuses, setStatuses] = useState<MyFormulaOrderStatus[]>([])
+  const [meta, setMeta] = useState<{ total: number; totalPages: number }>({ total: 0, totalPages: 1 })
+
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
 
-  const statuses = useMemo(() => {
-    const set = new Map<string, string>()
-    orders.forEach(o => {
-      const id = String(o.order_status_id)
-      const name = o.status?.name ?? id
-      if (name.trim() && id !== "0") set.set(id, name)
-    })
-    return Array.from(set.entries()).map(([order_status_id, name]) => ({ order_status_id, name }))
-  }, [orders])
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return orders.filter(o => {
-      if (statusFilter !== "all" && String(o.order_status_id) !== statusFilter) return false
-      if (!q) return true
-      const hay = `${o.order_id} ${o.firstname} ${o.lastname} ${o.email} ${o.telephone ?? ""}`.toLowerCase()
-      return hay.includes(q)
-    })
-  }, [orders, search, statusFilter])
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage))
-  const currentRows = useMemo(() => {
-    const start = (page - 1) * perPage
-    return filtered.slice(start, start + perPage)
-  }, [filtered, page, perPage])
-
   useEffect(() => {
     let mounted = true
-    const load = async () => {
-      setLoading(true)
+    const loadCounts = async () => {
       try {
         const resp = await fetchMyFormulaDashboard()
         if (!mounted) return
@@ -59,14 +35,40 @@ export default function Dashboard() {
           customers: Number(resp.data?.customers_count ?? 0),
           products: Number(resp.data?.products_count ?? 0),
         })
-        setOrders(Array.isArray(resp.data?.latest_orders) ? resp.data.latest_orders : [])
+      } finally {}
+    }
+    loadCounts()
+    return () => { mounted = false }
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      setLoading(true)
+      try {
+        if (statuses.length === 0) {
+          const sts = await fetchMyFormulaOrderStatusesReal()
+          if (!mounted) return
+          setStatuses(sts.data || [])
+        }
+        const ord = await fetchMyFormulaOrdersReal({
+          page,
+          per_page: perPage,
+          search,
+          status_id: statusFilter === 'all' ? undefined : statusFilter,
+          include_unknown: false,
+          dedup: true,
+        })
+        if (!mounted) return
+        setOrders(ord.data || [])
+        setMeta({ total: Number((ord as any).meta?.total ?? 0), totalPages: Number((ord as any).meta?.totalPages ?? 1) })
       } finally {
         if (mounted) setLoading(false)
       }
     }
     load()
     return () => { mounted = false }
-  }, [])
+  }, [page, perPage, search, statusFilter])
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -156,6 +158,9 @@ export default function Dashboard() {
               <tr className="text-left">
                 <th className="p-3">ID</th>
                 <th className="p-3">Cliente</th>
+                <th className="p-3">Situação</th>
+                <th className="p-3">Pagamento</th>
+                <th className="p-3">Aprovação</th>
                 <th className="p-3">Total</th>
                 <th className="p-3">Data</th>
                 <th className="p-3 w-[80px]"></th>
@@ -165,22 +170,39 @@ export default function Dashboard() {
               {loading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} className="border-t border-border/50">
-                    <td className="p-3" colSpan={5}><Skeleton className="h-6 w-full" /></td>
+                    <td className="p-3" colSpan={8}><Skeleton className="h-6 w-full" /></td>
                   </tr>
                 ))
-              ) : currentRows.length ? (
-                currentRows.map((o) => (
-                  <tr key={o.order_id} className="border-t border-border/50 hover:bg-muted/20">
-                    <td className="p-3">{o.order_id}</td>
-                    <td className="p-3">{o.firstname} {o.lastname}</td>
-                    <td className="p-3">{money.format(Number(o.total ?? 0))}</td>
-                    <td className="p-3">{o.date_added ? new Date(o.date_added).toLocaleString("pt-PT") : "—"}</td>
-                    <td className="p-3"><Link to="/myformula/orders" className="text-primary hover:underline">Ver</Link></td>
-                  </tr>
-                ))
+              ) : orders.length ? (
+                orders.map((o) => {
+                  const statusName = o.status?.name ?? o.order_status_id
+                  const payment = o.payment_method ?? o.payment_code ?? '—'
+                  const approvedVal = (o as any).approved
+                  const approvedOk = approvedVal !== undefined && approvedVal !== null
+                    ? Boolean(approvedVal)
+                    : /aprov|aprovado|approv|complet|complete/i.test(String(statusName))
+                  return (
+                    <tr key={o.order_id} className="border-t border-border/50 hover:bg-muted/20">
+                      <td className="p-3">{o.order_id}</td>
+                      <td className="p-3">{o.firstname} {o.lastname}</td>
+                      <td className="p-3">
+                        <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs text-primary border-primary/30">
+                          {statusName}
+                        </span>
+                      </td>
+                      <td className="p-3">{payment}</td>
+                      <td className="p-3">
+                        <span className={"inline-flex items-center rounded-md border px-2 py-0.5 text-xs " + (approvedOk ? "text-emerald-500 border-emerald-400/30" : "text-muted-foreground border-border/60")}>{approvedOk ? "Aprovado" : "Pendente"}</span>
+                      </td>
+                      <td className="p-3">{money.format(Number(o.total ?? 0))}</td>
+                      <td className="p-3">{o.date_added ? new Date(o.date_added).toLocaleString("pt-PT") : "—"}</td>
+                      <td className="p-3"><Link to="/myformula/orders" className="text-primary hover:underline">Ver</Link></td>
+                    </tr>
+                  )
+                })
               ) : (
                 <tr className="border-t border-border/50">
-                  <td className="p-6 text-center text-muted-foreground" colSpan={5}>Sem dados</td>
+                  <td className="p-6 text-center text-muted-foreground" colSpan={8}>Sem dados</td>
                 </tr>
               )}
             </tbody>
@@ -193,10 +215,10 @@ export default function Dashboard() {
                 <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }} />
               </PaginationItem>
               <PaginationItem>
-                <span className="text-xs text-muted-foreground px-2">Página {page} de {totalPages}</span>
+                <span className="text-xs text-muted-foreground px-2">Página {page} de {meta.totalPages}</span>
               </PaginationItem>
               <PaginationItem>
-                <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages, p + 1)) }} />
+                <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(meta.totalPages || 1, p + 1)) }} />
               </PaginationItem>
             </PaginationContent>
           </Pagination>
