@@ -5,6 +5,7 @@ namespace Modules\CRM\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\CRM\Models\BlissOrder;
+use Modules\CRM\Models\BlissProduct;
 
 class BlissOrderController extends Controller
 {
@@ -73,6 +74,7 @@ class BlissOrderController extends Controller
                 ] : null,
                 'products'        => $o->relationLoaded('products')
                     ? $o->products->map(function ($p) {
+                        $prod = \Modules\CRM\Models\BlissProduct::find($p->product_id);
                         return [
                             'order_product_id' => (string) $p->order_product_id,
                             'order_id'         => (string) $p->order_id,
@@ -84,6 +86,7 @@ class BlissOrderController extends Controller
                             'total'            => (float) $p->total,
                             'tax'              => isset($p->tax) ? (float) $p->tax : null,
                             'reward'           => isset($p->reward) ? (float) $p->reward : null,
+                            'image_url'        => $prod?->image_url ?? null,
                         ];
                     })->values()
                     : [],

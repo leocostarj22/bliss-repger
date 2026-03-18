@@ -514,6 +514,7 @@ export interface BlissOrderProduct {
   total: number;
   tax?: number | null;
   reward?: number | null;
+  image_url?: string | null;
 }
 
 export interface BlissOrder {

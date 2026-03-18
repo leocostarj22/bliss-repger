@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 const money = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" })
 
@@ -151,8 +152,16 @@ export default function Products() {
                   return (
                     <tr key={p.product_id} className="border-t border-border/50 hover:bg-muted/20">
                       <td className="p-3">
-                        <div className="font-medium">{p.description?.name ?? "—"}</div>
-                        <div className="text-xs text-muted-foreground">{p.product_id}</div>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={p.image_url || undefined} alt={p.description?.name ?? p.model} />
+                            <AvatarFallback>{(p.description?.name?.[0] ?? p.model?.[0] ?? '#').toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{p.description?.name ?? "—"}</div>
+                            <div className="text-xs text-muted-foreground">{p.product_id}</div>
+                          </div>
+                        </div>
                       </td>
                       <td className="p-3">{p.model}</td>
                       <td className="p-3">{money.format(Number(p.price ?? 0))}</td>

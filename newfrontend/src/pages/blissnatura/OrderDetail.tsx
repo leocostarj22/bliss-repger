@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { BlissOrder } from "@/types";
 import { fetchBlissOrders } from "@/services/api";
 
@@ -102,7 +103,15 @@ export default function OrderDetail() {
               ) : order?.products?.length ? (
                 order.products.map((p) => (
                   <tr key={p.order_product_id} className="border-t border-border/50">
-                    <td className="p-3">{p.name}</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={p.image_url || undefined} alt={p.name} />
+                          <AvatarFallback>{(p.name?.[0] ?? '#').toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div>{p.name}</div>
+                      </div>
+                    </td>
                     <td className="p-3">{p.model}</td>
                     <td className="p-3">{p.quantity}</td>
                     <td className="p-3">{money.format(Number(p.price ?? 0))}</td>
