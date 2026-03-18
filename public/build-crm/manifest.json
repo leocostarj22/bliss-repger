@@ -1,29 +1,17 @@
 {
   "resources/assets/crm-frontend/src/main.css": {
-<<<<<<< HEAD
-    "file": "assets/main-2678e66c.css",
-=======
     "file": "assets/main-e8dc5122.css",
->>>>>>> 3b407fe4 (novo frontend em vite)
     "src": "resources/assets/crm-frontend/src/main.css"
   },
   "resources/assets/crm-frontend/src/main.tsx": {
     "css": [
-<<<<<<< HEAD
-      "assets/main-2678e66c.css"
-=======
       "assets/main-e8dc5122.css"
->>>>>>> 3b407fe4 (novo frontend em vite)
     ],
     "dynamicImports": [
       "resources/assets/crm-frontend/src/services/mockData.ts",
       "resources/assets/crm-frontend/src/services/mockData.ts"
     ],
-<<<<<<< HEAD
-    "file": "assets/main-481e67bb.js",
-=======
     "file": "assets/main-5b5a2cd7.js",
->>>>>>> 3b407fe4 (novo frontend em vite)
     "isEntry": true,
     "src": "resources/assets/crm-frontend/src/main.tsx"
   },
