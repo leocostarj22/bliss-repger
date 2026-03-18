@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import type { BlissProduct } from "@/types"
 import { fetchBlissProducts, updateBlissProduct } from "@/services/api"
@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { handleImageUpload } from "@/lib/tiptap-utils"
 import { useToast } from "@/components/ui/use-toast"
 import { ChevronLeft } from "lucide-react"
 
@@ -37,7 +40,9 @@ export default function ProductEdit() {
   const [quantity, setQuantity] = useState("")
   const [isActive, setIsActive] = useState(true)
   const [imageUrl, setImageUrl] = useState("")
-  const [showPreview, setShowPreview] = useState(false)
+  const [editorMode, setEditorMode] = useState<'visual' | 'html'>('visual')
+  const productImageInputRef = useRef<HTMLInputElement>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   const decodedHtml = useMemo(() => decodeHtml(description), [description])
 
@@ -55,7 +60,7 @@ export default function ProductEdit() {
         setQuantity(found.quantity != null ? String(found.quantity) : "")
         setIsActive(Boolean(found.status ?? true))
         setImageUrl(found.image_url ?? "")
-        setShowPreview(hasHtml(found.description?.description ?? ""))
+        setEditorMode(hasHtml(found.description?.description ?? "") ? 'visual' : 'html')
       }
     } catch {
       toast({ title: "Erro", description: "Não foi possível carregar o produto", variant: "destructive" })
@@ -162,22 +167,58 @@ export default function ProductEdit() {
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <div className="text-xs text-muted-foreground">Imagem (URL)</div>
-              <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
+              <div className="text-xs text-muted-foreground">Imagem principal</div>
+              <div className="flex items-center gap-2">
+                <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." className="flex-1" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => productImageInputRef.current?.click()}
+                  disabled={uploadingImage}
+                >
+                  {uploadingImage ? 'A enviar...' : 'Escolher do PC'}
+                </Button>
+                <input
+                  ref={productImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    e.target.value = ''
+                    if (!file) return
+                    setUploadingImage(true)
+                    try {
+                      const url = await handleImageUpload(file)
+                      setImageUrl(url)
+                      toast({ title: 'Sucesso', description: 'Imagem carregada' })
+                    } catch (err: any) {
+                      toast({ title: 'Erro', description: err?.message || 'Não foi possível enviar a imagem', variant: 'destructive' })
+                    } finally {
+                      setUploadingImage(false)
+                    }
+                  }}
+                />
+              </div>
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <div className="text-xs text-muted-foreground">Descrição (HTML permitido)</div>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição do produto..." />
-              <div className="flex items-center justify-end gap-2">
-                <span className="text-xs text-muted-foreground">Pré-visualizar</span>
-                <Switch checked={showPreview} onCheckedChange={setShowPreview} />
-              </div>
-              {showPreview && (
-                <div className="mt-2 p-3 rounded-md border bg-background">
-                  <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: decodedHtml }} />
-                </div>
-              )}
+              <div className="text-xs text-muted-foreground">Descrição</div>
+              <Tabs value={editorMode} onValueChange={(v) => setEditorMode(v as 'visual' | 'html')}>
+                <TabsList>
+                  <TabsTrigger value="visual">Visual</TabsTrigger>
+                  <TabsTrigger value="html">HTML</TabsTrigger>
+                </TabsList>
+                <TabsContent value="visual">
+                  <RichTextEditor value={description} onChange={setDescription} placeholder="Descrição do produto..." />
+                </TabsContent>
+                <TabsContent value="html">
+                  <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição do produto..." />
+                  <div className="mt-2 p-3 rounded-md border bg-background">
+                    <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: decodedHtml }} />
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
 
             <div className="flex items-center justify-between md:col-span-2">
