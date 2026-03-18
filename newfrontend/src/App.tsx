@@ -50,6 +50,7 @@ import SupportCategories from "@/pages/support/SupportCategories";
 import SupportTickets from "@/pages/support/Tickets";
 import MyFormulaDashboard from "@/pages/myformula/Dashboard";
 import MyFormulaOrders from "@/pages/myformula/Orders";
+import MyFormulaOrderDetail from "@/pages/myformula/OrderDetail";
 import MyFormulaCustomers from "@/pages/myformula/Customers";
 import MyFormulaProducts from "@/pages/myformula/Products";
 import MyFormulaQuizzes from "@/pages/myformula/Quizzes";
@@ -147,6 +148,7 @@ const App = () => (
               <Route path="/myformula" element={<Navigate to="/myformula/dashboard" replace />} />
               <Route path="/myformula/dashboard" element={<MyFormulaDashboard />} />
               <Route path="/myformula/orders" element={<MyFormulaOrders />} />
+              <Route path="/myformula/orders/:id" element={<MyFormulaOrderDetail />} />
               <Route path="/myformula/customers" element={<MyFormulaCustomers />} />
               <Route path="/myformula/products" element={<MyFormulaProducts />} />
               <Route path="/myformula/quizzes" element={<MyFormulaQuizzes />} />
