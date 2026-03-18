@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { Package, ShoppingCart, Users, Coins } from "lucide-react"
 
-import type { BlissCustomer, BlissOrder, BlissProduct } from "@/types"
-import { fetchBlissCustomers, fetchBlissOrders, fetchBlissProducts } from "@/services/api"
+import type { BlissOrder } from "@/types"
+import { fetchBlissDashboard } from "@/services/api"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Link } from "react-router-dom"
 
@@ -10,30 +10,15 @@ const money = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true)
-  const [products, setProducts] = useState<BlissProduct[]>([])
-  const [customers, setCustomers] = useState<BlissCustomer[]>([])
   const [orders, setOrders] = useState<BlissOrder[]>([])
+  const [counts, setCounts] = useState({ products: 0, customers: 0, orders: 0, revenue: 0 })
 
-  const stats = useMemo(() => {
-    const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total ?? 0), 0)
-    const byStatus: Record<string, number> = {}
-    orders.forEach((o) => {
-      const key = o.status?.name ?? o.order_status_id
-      byStatus[key] = (byStatus[key] ?? 0) + 1
-    })
-
-    const topStatuses = Object.entries(byStatus)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 4)
-
-    return {
-      productsCount: products.length,
-      customersCount: customers.length,
-      ordersCount: orders.length,
-      totalRevenue,
-      topStatuses,
-    }
-  }, [products, customers, orders])
+  const stats = useMemo(() => ({
+    productsCount: counts.products,
+    customersCount: counts.customers,
+    ordersCount: counts.orders,
+    totalRevenue: counts.revenue,
+  }), [counts])
 
   const latestOrders = useMemo(() => {
     return [...orders]
@@ -47,11 +32,15 @@ export default function Dashboard() {
     const load = async () => {
       setLoading(true)
       try {
-        const [p, c, o] = await Promise.all([fetchBlissProducts(), fetchBlissCustomers(), fetchBlissOrders()])
+        const resp = await fetchBlissDashboard()
         if (!mounted) return
-        setProducts(p.data)
-        setCustomers(c.data)
-        setOrders(o.data)
+        setCounts({
+          products: Number(resp.data.products_count || 0),
+          customers: Number(resp.data.customers_count || 0),
+          orders: Number(resp.data.total_orders || 0),
+          revenue: Number(resp.data.total_revenue || 0),
+        })
+        setOrders(resp.data.latest_orders || [])
       } finally {
         if (mounted) setLoading(false)
       }

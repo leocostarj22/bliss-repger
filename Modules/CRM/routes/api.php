@@ -12,10 +12,12 @@ use Modules\CRM\Http\Controllers\Api\BlissProductController;
 use Modules\CRM\Http\Controllers\Api\BlissCustomerController;
 use Modules\CRM\Http\Controllers\Api\BlissOrderController;
 use Modules\CRM\Http\Controllers\Api\BlissOrderStatusController;
+use Modules\CRM\Http\Controllers\Api\BlissDashboardApiController;
 use Modules\CRM\Http\Controllers\CRMController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Validator;
 
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
@@ -90,7 +92,7 @@ Route::prefix('v1')->group(function () {
 
         Route::post('media/upload', function (Request $request) {
             try {
-                $validator = \Validator::make($request->all(), [
+                $validator = Validator::make($request->all(), [
                     'file' => 'required|file|mimetypes:image/png,image/jpeg,image/gif,image/webp|max:15360',
                 ]);
                 if ($validator->fails()) {
@@ -184,6 +186,7 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::prefix('bliss')->middleware(['web', 'auth'])->group(function () {
+        Route::get('dashboard', [BlissDashboardApiController::class, 'index']);
         Route::get('products', [BlissProductController::class, 'index']);
         Route::get('customers', [BlissCustomerController::class, 'index']);
         Route::get('orders', [BlissOrderController::class, 'index']);

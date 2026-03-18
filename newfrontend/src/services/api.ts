@@ -3250,6 +3250,35 @@ export async function fetchBlissOrderStatuses(): Promise<ApiResponse<BlissOrderS
   return { data: Array.isArray(json?.data) ? (json.data as BlissOrderStatus[]) : [] };
 }
 
+export interface BlissDashboardData {
+  total_orders: number;
+  total_revenue: number;
+  customers_count: number;
+  products_count: number;
+  latest_orders: BlissOrder[];
+}
+
+export async function fetchBlissDashboard(): Promise<ApiResponse<BlissDashboardData>> {
+  const response = await apiFetch('/api/v1/bliss/dashboard', {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let msg = `Falha ao obter dashboard Bliss: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  const data = json?.data as BlissDashboardData;
+  return { data };
+}
+
 export async function fetchBlissOrders(params?: { search?: string; status_id?: string }): Promise<ApiResponse<BlissOrder[]>> {
   const qs = new URLSearchParams();
   if (params?.search) qs.set('search', params.search);
