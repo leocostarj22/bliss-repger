@@ -176,7 +176,7 @@ export default function ProductEdit() {
                   onClick={() => productImageInputRef.current?.click()}
                   disabled={uploadingImage}
                 >
-                  {uploadingImage ? 'A enviar...' : 'Escolher do PC'}
+                  {uploadingImage ? 'A enviar...' : 'Enviar Imagem'}
                 </Button>
                 <input
                   ref={productImageInputRef}
