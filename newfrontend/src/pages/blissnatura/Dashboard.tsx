@@ -112,21 +112,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="mt-1 text-xs text-muted-foreground">Produtos cadastrados</div>
-          <div className="mt-4">
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }} />
-                </PaginationItem>
-                <PaginationItem>
-                  <span className="text-xs text-muted-foreground px-2">Página {page} de {meta.totalPages}</span>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(meta.totalPages || 1, p + 1)) }} />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
+
         </div>
       </div>
 
@@ -204,6 +190,21 @@ export default function Dashboard() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="mt-4">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }} />
+              </PaginationItem>
+              <PaginationItem>
+                <span className="text-xs text-muted-foreground px-2">Página {page} de {meta.totalPages}</span>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(meta.totalPages || 1, p + 1)) }} />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       </div>
     </div>

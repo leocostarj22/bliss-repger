@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { useToast } from "@/components/ui/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -27,6 +28,8 @@ export default function Products() {
 
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<BlissProduct | null>(null)
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -42,6 +45,16 @@ export default function Products() {
       return hay.includes(q)
     })
   }, [rows, search, statusFilter])
+
+  const pageRows = useMemo(() => {
+    const start = (page - 1) * perPage
+    return filtered.slice(start, start + perPage)
+  }, [filtered, page, perPage])
+
+  const totalPages = useMemo(() => {
+    const size = Math.max(1, Number(perPage) || 1)
+    return Math.max(1, Math.ceil(filtered.length / size))
+  }, [filtered, perPage])
 
   const load = async () => {
     setLoading(true)
@@ -97,15 +110,30 @@ export default function Products() {
           </Button>
         </div>
       </div>
+      <div className="mt-4">
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }} />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="text-xs text-muted-foreground px-2">Página {page} de {totalPages}</span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages || 1, p + 1)) }} />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
 
       <div className="glass-card p-4">
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-4">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar..." className="pl-9" />
+            <Input value={search} onChange={(e) => { setPage(1); setSearch(e.target.value) }} placeholder="Pesquisar..." className="pl-9" />
           </div>
 
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+          <Select value={statusFilter} onValueChange={(v) => { setPage(1); setStatusFilter(v as any) }}>
             <SelectTrigger>
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
@@ -113,6 +141,15 @@ export default function Products() {
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="active">Ativos</SelectItem>
               <SelectItem value="inactive">Inativos</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={String(perPage)} onValueChange={(v) => { setPage(1); setPerPage(Number(v)) }}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[10, 20, 50].map((n) => (<SelectItem key={n} value={String(n)}>{n} por página</SelectItem>))}
             </SelectContent>
           </Select>
 
@@ -147,7 +184,7 @@ export default function Products() {
                   </tr>
                 ))
               ) : filtered.length ? (
-                filtered.map((p) => {
+                pageRows.map((p) => {
                   const active = Boolean(p.status ?? true)
                   return (
                     <tr key={p.product_id} className="border-t border-border/50 hover:bg-muted/20">

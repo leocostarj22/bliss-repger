@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as HotToaster } from "react-hot-toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ThemeProvider } from "@/hooks/use-theme";
 import Dashboard from "@/pages/Dashboard";
@@ -75,13 +75,8 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <HotToaster />
-        <BrowserRouter
-          basename="/"
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true,
-          }}
-        >
+        <HashRouter>
+
           <Routes>
             <Route element={<AppLayout />}>
               <Route path="/" element={<Dashboard />} />
@@ -166,7 +161,7 @@ const App = () => (
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
+        </HashRouter>
       </TooltipProvider>
     </QueryClientProvider>
   </ThemeProvider>

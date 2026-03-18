@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { useToast } from "@/components/ui/use-toast"
 
 const money = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" })
@@ -30,6 +31,9 @@ export default function Orders() {
 
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
+  const [meta, setMeta] = useState<{ total: number; totalPages: number }>({ total: 0, totalPages: 1 })
 
   const [createOpen, setCreateOpen] = useState(false)
   const [statusOpen, setStatusOpen] = useState(false)
@@ -44,24 +48,22 @@ export default function Orders() {
     return map
   }, [statuses])
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return orders.filter((o) => {
-      if (statusFilter !== "all" && o.order_status_id !== statusFilter) return false
-      if (!q) return true
-      const hay = `${o.order_id} ${o.firstname} ${o.lastname} ${o.email} ${o.telephone ?? ""}`.toLowerCase()
-      return hay.includes(q)
-    })
-  }, [orders, search, statusFilter])
+  const filtered = useMemo(() => orders, [orders])
 
   const load = async () => {
     setLoading(true)
     try {
-      const [o, s, c, p] = await Promise.all([fetchBlissOrders(), fetchBlissOrderStatuses(), fetchBlissCustomers(), fetchBlissProducts()])
+      const [o, s, c, p] = await Promise.all([
+        fetchBlissOrders({ page, per_page: perPage, search, status_id: statusFilter === 'all' ? undefined : statusFilter, include_unknown: false, dedup: true }),
+        fetchBlissOrderStatuses(),
+        fetchBlissCustomers({ search: "", status: "all" }),
+        fetchBlissProducts({ search: "", status: "all" }),
+      ])
       setOrders(o.data)
       setStatuses(s.data)
       setCustomers(c.data)
       setProducts(p.data)
+      setMeta({ total: Number((o as any).meta?.total ?? 0), totalPages: Number((o as any).meta?.totalPages ?? 1) })
     } catch {
       toast({ title: "Erro", description: "Não foi possível carregar pedidos", variant: "destructive" })
     } finally {
@@ -71,7 +73,7 @@ export default function Orders() {
 
   useEffect(() => {
     load()
-  }, [])
+  }, [page, perPage, search, statusFilter])
 
   const requestDelete = (row: BlissOrder) => {
     setPendingDelete(row)
@@ -110,15 +112,30 @@ export default function Orders() {
           </Button>
         </div>
       </div>
+      <div className="mt-4">
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }} />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="text-xs text-muted-foreground px-2">Página {page} de {meta.totalPages}</span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(meta.totalPages || 1, p + 1)) }} />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
 
       <div className="glass-card p-4">
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-4">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar..." className="pl-9" />
+            <Input value={search} onChange={(e) => { setPage(1); setSearch(e.target.value) }} placeholder="Pesquisar..." className="pl-9" />
           </div>
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={(v) => { setPage(1); setStatusFilter(v) }}>
             <SelectTrigger>
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
@@ -129,6 +146,15 @@ export default function Orders() {
                   {s.name}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={String(perPage)} onValueChange={(v) => { setPage(1); setPerPage(Number(v)) }}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[10, 20, 50].map((n) => (<SelectItem key={n} value={String(n)}>{n} por página</SelectItem>))}
             </SelectContent>
           </Select>
 

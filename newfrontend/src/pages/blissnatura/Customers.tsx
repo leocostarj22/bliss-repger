@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { useToast } from "@/components/ui/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
 
@@ -25,6 +26,8 @@ export default function Customers() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<BlissCustomer | null>(null)
   const [selected, setSelected] = useState<Record<string, boolean>>({})
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -39,6 +42,13 @@ export default function Customers() {
       return hay.includes(q)
     })
   }, [rows, search, statusFilter])
+
+  const pageRows = useMemo(() => {
+    const start = (page - 1) * perPage
+    return filtered.slice(start, start + perPage)
+  }, [filtered, page, perPage])
+
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(filtered.length / perPage)), [filtered, perPage])
 
   const load = async () => {
     setLoading(true)
@@ -94,15 +104,30 @@ export default function Customers() {
           </Button>
         </div>
       </div>
+      <div className="mt-4">
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }} />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="text-xs text-muted-foreground px-2">Página {page} de {totalPages}</span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages || 1, p + 1)) }} />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
 
       <div className="glass-card p-4">
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-4">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar..." className="pl-9" />
+            <Input value={search} onChange={(e) => { setPage(1); setSearch(e.target.value) }} placeholder="Pesquisar..." className="pl-9" />
           </div>
 
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+          <Select value={statusFilter} onValueChange={(v) => { setPage(1); setStatusFilter(v as any) }}>
             <SelectTrigger>
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
@@ -110,6 +135,15 @@ export default function Customers() {
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="active">Ativos</SelectItem>
               <SelectItem value="inactive">Inativos</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={String(perPage)} onValueChange={(v) => { setPage(1); setPerPage(Number(v)) }}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[10, 20, 50].map((n) => (<SelectItem key={n} value={String(n)}>{n} por página</SelectItem>))}
             </SelectContent>
           </Select>
 
@@ -151,13 +185,13 @@ export default function Customers() {
               <tr className="text-left">
                 <th className="p-3 w-[40px]">
                   <Checkbox
-                    checked={filtered.length > 0 && filtered.every((c) => selected[c.customer_id])}
+                    checked={pageRows.length > 0 && pageRows.every((c) => selected[c.customer_id])}
                     onCheckedChange={(v) => {
                       const all = { ...selected };
                       if (v) {
-                        filtered.forEach((c) => { all[c.customer_id] = true; });
+                        pageRows.forEach((c) => { all[c.customer_id] = true; });
                       } else {
-                        filtered.forEach((c) => { delete all[c.customer_id]; });
+                        pageRows.forEach((c) => { delete all[c.customer_id]; });
                       }
                       setSelected(all);
                     }}
@@ -180,7 +214,7 @@ export default function Customers() {
                   </tr>
                 ))
               ) : filtered.length ? (
-                filtered.map((c) => {
+                pageRows.map((c) => {
                   const active = Boolean(c.status ?? true)
                   return (
                     <tr key={c.customer_id} className="border-t border-border/50 hover:bg-muted/20">
