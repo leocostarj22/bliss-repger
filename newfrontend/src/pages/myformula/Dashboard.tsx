@@ -1,22 +1,50 @@
 import { useEffect, useMemo, useState } from "react"
-import { Beaker, Package, ShoppingCart, Users } from "lucide-react"
+import { Package, ShoppingCart, Users, Coins } from "lucide-react"
 
 import { Skeleton } from "@/components/ui/skeleton"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
+import { Link } from "react-router-dom"
+import type { MyFormulaOrder } from "@/types"
 import { fetchMyFormulaDashboard } from "@/services/myFormulaApi"
 
 const money = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" })
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState<null | {
-    products_count: number
-    customers_count: number
-    orders_count: number
-    total_revenue: number
-    quizzes_count: number
-    completed_quizzes: number
-    top_statuses: { name: string; count: number }[]
-  }>(null)
+  const [counts, setCounts] = useState({ orders: 0, revenue: 0, customers: 0, products: 0 })
+  const [orders, setOrders] = useState<MyFormulaOrder[]>([])
+  const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
+
+  const statuses = useMemo(() => {
+    const set = new Map<string, string>()
+    orders.forEach(o => {
+      const id = String(o.order_status_id)
+      const name = o.status?.name ?? id
+      if (name.trim() && id !== "0") set.set(id, name)
+    })
+    return Array.from(set.entries()).map(([order_status_id, name]) => ({ order_status_id, name }))
+  }, [orders])
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return orders.filter(o => {
+      if (statusFilter !== "all" && String(o.order_status_id) !== statusFilter) return false
+      if (!q) return true
+      const hay = `${o.order_id} ${o.firstname} ${o.lastname} ${o.email} ${o.telephone ?? ""}`.toLowerCase()
+      return hay.includes(q)
+    })
+  }, [orders, search, statusFilter])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage))
+  const currentRows = useMemo(() => {
+    const start = (page - 1) * perPage
+    return filtered.slice(start, start + perPage)
+  }, [filtered, page, perPage])
 
   useEffect(() => {
     let mounted = true
@@ -25,15 +53,19 @@ export default function Dashboard() {
       try {
         const resp = await fetchMyFormulaDashboard()
         if (!mounted) return
-        setStats(resp.data)
+        setCounts({
+          orders: Number(resp.data?.orders_count ?? 0),
+          revenue: Number(resp.data?.total_revenue ?? 0),
+          customers: Number(resp.data?.customers_count ?? 0),
+          products: Number(resp.data?.products_count ?? 0),
+        })
+        setOrders(Array.isArray(resp.data?.latest_orders) ? resp.data.latest_orders : [])
       } finally {
         if (mounted) setLoading(false)
       }
     }
     load()
-    return () => {
-      mounted = false
-    }
+    return () => { mounted = false }
   }, [])
 
   return (
@@ -45,64 +77,129 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="glass-card p-5 flex items-center justify-between">
-          <div>
-            <div className="text-xs text-muted-foreground">Produtos</div>
-            <div className="text-2xl font-semibold">{loading ? <Skeleton className="h-7 w-16" /> : (stats?.products_count ?? 0)}</div>
+        <div className="glass-card p-5">
+          <div className="text-xs text-muted-foreground">Vendas Totais</div>
+          <div className="mt-1 flex items-center justify-between">
+            <div className="text-2xl font-semibold">{loading ? <Skeleton className="h-7 w-16" /> : counts.orders}</div>
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+              <ShoppingCart className="w-5 h-5 text-amber-400" />
+            </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-fuchsia-500/10 flex items-center justify-center">
-            <Package className="w-5 h-5 text-fuchsia-400" />
-          </div>
+          <div className="mt-1 text-xs text-muted-foreground">Total de pedidos realizados</div>
         </div>
 
-        <div className="glass-card p-5 flex items-center justify-between">
-          <div>
-            <div className="text-xs text-muted-foreground">Clientes</div>
-            <div className="text-2xl font-semibold">{loading ? <Skeleton className="h-7 w-16" /> : (stats?.customers_count ?? 0)}</div>
+        <div className="glass-card p-5">
+          <div className="text-xs text-muted-foreground">Receita Total</div>
+          <div className="mt-1 flex items-center justify-between">
+            <div className="text-2xl font-semibold">{loading ? <Skeleton className="h-7 w-24" /> : money.format(counts.revenue)}</div>
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Coins className="w-5 h-5 text-primary" />
+            </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-            <Users className="w-5 h-5 text-emerald-400" />
-          </div>
+          <div className="mt-1 text-xs text-muted-foreground">Soma total dos pedidos</div>
         </div>
 
-        <div className="glass-card p-5 flex items-center justify-between">
-          <div>
-            <div className="text-xs text-muted-foreground">Pedidos</div>
-            <div className="text-2xl font-semibold">{loading ? <Skeleton className="h-7 w-16" /> : (stats?.orders_count ?? 0)}</div>
-            <div className="text-xs text-muted-foreground mt-1">{loading ? <Skeleton className="h-4 w-28" /> : `Total: ${money.format(stats?.total_revenue ?? 0)}`}</div>
+        <div className="glass-card p-5">
+          <div className="text-xs text-muted-foreground">Clientes</div>
+          <div className="mt-1 flex items-center justify-between">
+            <div className="text-2xl font-semibold">{loading ? <Skeleton className="h-7 w-16" /> : counts.customers}</div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+              <Users className="w-5 h-5 text-emerald-400" />
+            </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-            <ShoppingCart className="w-5 h-5 text-amber-400" />
-          </div>
+          <div className="mt-1 text-xs text-muted-foreground">Total de clientes registados</div>
         </div>
 
-        <div className="glass-card p-5 flex items-center justify-between">
-          <div>
-            <div className="text-xs text-muted-foreground">Quizzes</div>
-            <div className="text-2xl font-semibold">{loading ? <Skeleton className="h-7 w-16" /> : (stats?.quizzes_count ?? 0)}</div>
-            <div className="text-xs text-muted-foreground mt-1">{loading ? <Skeleton className="h-4 w-28" /> : `Concluídos: ${stats?.completed_quizzes ?? 0}`}</div>
+        <div className="glass-card p-5">
+          <div className="text-xs text-muted-foreground">Produtos</div>
+          <div className="mt-1 flex items-center justify-between">
+            <div className="text-2xl font-semibold">{loading ? <Skeleton className="h-7 w-16" /> : counts.products}</div>
+            <div className="w-10 h-10 rounded-xl bg-fuchsia-500/10 flex items-center justify-center">
+              <Package className="w-5 h-5 text-fuchsia-400" />
+            </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
-            <Beaker className="w-5 h-5 text-violet-400" />
-          </div>
+          <div className="mt-1 text-xs text-muted-foreground">Produtos cadastrados</div>
         </div>
       </div>
 
-      <div className="glass-card p-6">
-        <div className="text-sm font-semibold">Estados mais frequentes</div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          {loading
-            ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)
-            : (stats?.top_statuses?.length ?? 0) > 0
-              ? stats!.top_statuses.map((s) => (
-                  <div key={`${s.name}:${s.count}`} className="rounded-lg border border-border/60 p-3">
-                    <div className="text-xs text-muted-foreground">{s.name}</div>
-                    <div className="text-lg font-semibold">{s.count}</div>
-                  </div>
+      <div className="glass-card p-6 mt-4">
+        <div className="text-sm font-semibold">Últimos Pedidos</div>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <Input
+            value={search}
+            onChange={(e) => { setPage(1); setSearch(e.target.value) }}
+            placeholder="Pesquisar por ID, cliente, email ou telefone"
+          />
+          <Select value={statusFilter} onValueChange={(v) => { setPage(1); setStatusFilter(v) }}>
+            <SelectTrigger>
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os estados</SelectItem>
+              {statuses.map((s) => (
+                <SelectItem key={s.order_status_id} value={String(s.order_status_id)}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={String(perPage)} onValueChange={(v) => { setPage(1); setPerPage(Number(v)) }}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[10, 20, 50].map((n) => (<SelectItem key={n} value={String(n)}>{n} por página</SelectItem>))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="mt-3 overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40">
+              <tr className="text-left">
+                <th className="p-3">ID</th>
+                <th className="p-3">Cliente</th>
+                <th className="p-3">Total</th>
+                <th className="p-3">Data</th>
+                <th className="p-3 w-[80px]"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={i} className="border-t border-border/50">
+                    <td className="p-3" colSpan={5}><Skeleton className="h-6 w-full" /></td>
+                  </tr>
                 ))
-              : (
-                  <div className="text-sm text-muted-foreground">Sem dados.</div>
-                )}
+              ) : currentRows.length ? (
+                currentRows.map((o) => (
+                  <tr key={o.order_id} className="border-t border-border/50 hover:bg-muted/20">
+                    <td className="p-3">{o.order_id}</td>
+                    <td className="p-3">{o.firstname} {o.lastname}</td>
+                    <td className="p-3">{money.format(Number(o.total ?? 0))}</td>
+                    <td className="p-3">{o.date_added ? new Date(o.date_added).toLocaleString("pt-PT") : "—"}</td>
+                    <td className="p-3"><Link to="/myformula/orders" className="text-primary hover:underline">Ver</Link></td>
+                  </tr>
+                ))
+              ) : (
+                <tr className="border-t border-border/50">
+                  <td className="p-6 text-center text-muted-foreground" colSpan={5}>Sem dados</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-4">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }} />
+              </PaginationItem>
+              <PaginationItem>
+                <span className="text-xs text-muted-foreground px-2">Página {page} de {totalPages}</span>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages, p + 1)) }} />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       </div>
     </div>
