@@ -137,7 +137,11 @@ class BlissOrderResource extends Resource
                 
                 Tables\Filters\SelectFilter::make('order_status_id')
                     ->label('Situação')
-                    ->options(BlissOrderStatus::where('language_id', 1)->pluck('name', 'order_status_id')),
+                    ->options(
+                        BlissOrderStatus::where('language_id', (int) config('crm.blissnatura_language_id', 2))
+                            ->orderBy('name')
+                            ->pluck('name', 'order_status_id')
+                    ),
 
                 Tables\Filters\Filter::make('customer_filter')
                     ->form([

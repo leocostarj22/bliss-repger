@@ -21,11 +21,11 @@ class BlissProduct extends Model
         'status' => 'boolean',
     ];
 
-    // Removido o filtro de language_id para garantir que traz algo. 
-    // O ideal seria filtrar pelo idioma da loja, ex: ->where('language_id', 2) se for PT.
     public function description()
     {
-        return $this->hasOne(BlissProductDescription::class, 'product_id', 'product_id');
+        $langId = (int) config('crm.blissnatura_language_id', 2);
+        return $this->hasOne(BlissProductDescription::class, 'product_id', 'product_id')
+            ->where('language_id', $langId);
     }
 
     public function getNameAttribute()
