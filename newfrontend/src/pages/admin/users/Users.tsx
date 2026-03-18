@@ -1,0 +1,313 @@
+import { useEffect, useMemo, useState } from "react"
+import { Link } from "react-router-dom"
+import { Eye, Pencil, Plus, Search, Trash2, User as UserIcon } from "lucide-react"
+
+import type { Company, Department, User } from "@/types"
+import { deleteUser, fetchCompanies, fetchDepartments, fetchUsers } from "@/services/api"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/components/ui/use-toast"
+
+export default function Users() {
+  const { toast } = useToast()
+  const [rows, setRows] = useState<User[]>([])
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const [search, setSearch] = useState("")
+  const [companyFilter, setCompanyFilter] = useState<string>("all")
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all")
+  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all")
+
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<User | null>(null)
+
+  const companyNameById = useMemo(() => {
+    const map: Record<string, string> = {}
+    companies.forEach((c) => (map[c.id] = c.name))
+    return map
+  }, [companies])
+
+  const departmentNameById = useMemo(() => {
+    const map: Record<string, string> = {}
+    departments.forEach((d) => (map[d.id] = d.name))
+    return map
+  }, [departments])
+
+  const filteredDepartmentsForSelect = useMemo(() => {
+    if (companyFilter === "all") return departments
+    return departments.filter((d) => d.company_id === companyFilter)
+  }, [companyFilter, departments])
+
+  useEffect(() => {
+    if (companyFilter !== "all" && departmentFilter !== "all") {
+      const dep = departments.find((d) => d.id === departmentFilter)
+      if (dep && dep.company_id !== companyFilter) setDepartmentFilter("all")
+    }
+  }, [companyFilter, departmentFilter, departments])
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setLoading(true)
+
+      const is_active =
+        activeFilter === "all" ? undefined : activeFilter === "active" ? true : false
+
+      Promise.all([
+        fetchUsers({
+          search,
+          company_id: companyFilter === "all" ? undefined : companyFilter,
+          department_id: departmentFilter === "all" ? undefined : departmentFilter,
+          is_active,
+        }),
+        fetchCompanies(),
+        fetchDepartments(),
+      ])
+        .then(([usersResp, compsResp, depsResp]) => {
+          setRows(usersResp.data)
+          setCompanies(compsResp.data)
+          setDepartments(depsResp.data)
+        })
+        .finally(() => setLoading(false))
+    }, 250)
+
+    return () => clearTimeout(t)
+  }, [search, companyFilter, departmentFilter, activeFilter])
+
+  const requestDelete = (u: User) => {
+    setPendingDelete(u)
+    setDeleteOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    const u = pendingDelete
+    setDeleteOpen(false)
+    setPendingDelete(null)
+    if (!u) return
+
+    try {
+      await deleteUser(u.id)
+      setRows((prev) => prev.filter((x) => x.id !== u.id))
+      toast({ title: "Sucesso", description: "Utilizador eliminado" })
+    } catch {
+      toast({ title: "Erro", description: "Falha ao eliminar", variant: "destructive" })
+    }
+  }
+
+  return (
+    <div className="space-y-6 animate-slide-up">
+      <div className="page-header">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="page-title">Utilizadores</h1>
+            <p className="page-subtitle">Administração → Utilizadores</p>
+            <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+          </div>
+
+          <Button asChild>
+            <Link to="/admin/users/new">
+              <Plus />
+              Novo utilizador
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="glass-card p-4">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
+          <div className="flex items-center gap-2 flex-1">
+            <Search className="w-4 h-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Pesquisar por nome, email, telefone, role…"
+              className="max-w-lg"
+            />
+          </div>
+
+          <div className="w-full lg:w-[240px]">
+            <Select value={companyFilter} onValueChange={setCompanyFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Empresa" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as empresas</SelectItem>
+                {companies.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="w-full lg:w-[240px]">
+            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Departamento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os departamentos</SelectItem>
+                {filteredDepartmentsForSelect.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="w-full lg:w-[180px]">
+            <Select value={activeFilter} onValueChange={(v) => setActiveFilter(v as any)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="active">Ativos</SelectItem>
+                <SelectItem value="inactive">Inativos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-muted-foreground border-b border-border">
+                <th className="py-3 pr-4">Utilizador</th>
+                <th className="py-3 pr-4">Empresa</th>
+                <th className="py-3 pr-4">Departamento</th>
+                <th className="py-3 pr-4">Role</th>
+                <th className="py-3 pr-4">Ativo</th>
+                <th className="py-3 text-right">Ações</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={i} className="border-b border-border/60">
+                    <td className="py-4 pr-4">
+                      <div className="flex items-center gap-2">
+                        <UserIcon className="w-4 h-4 text-muted-foreground" />
+                        <Skeleton className="h-4 w-56" />
+                      </div>
+                    </td>
+                    <td className="py-4 pr-4">
+                      <Skeleton className="h-4 w-44" />
+                    </td>
+                    <td className="py-4 pr-4">
+                      <Skeleton className="h-4 w-44" />
+                    </td>
+                    <td className="py-4 pr-4">
+                      <Skeleton className="h-4 w-20" />
+                    </td>
+                    <td className="py-4 pr-4">
+                      <Skeleton className="h-4 w-16" />
+                    </td>
+                    <td className="py-4 text-right">
+                      <Skeleton className="h-9 w-28 ml-auto" />
+                    </td>
+                  </tr>
+                ))
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-10 text-center text-muted-foreground">
+                    Nenhum utilizador encontrado
+                  </td>
+                </tr>
+              ) : (
+                rows.map((u) => (
+                  <tr key={u.id} className="border-b border-border/60 hover:bg-secondary/30 transition-colors">
+                    <td className="py-4 pr-4">
+                      <div className="min-w-0">
+                        <div className="font-semibold truncate">{u.name}</div>
+                        <div className="text-xs text-muted-foreground truncate">{u.email}</div>
+                      </div>
+                    </td>
+                    <td className="py-4 pr-4">{u.company_id ? companyNameById[u.company_id] ?? u.company_id : "—"}</td>
+                    <td className="py-4 pr-4">
+                      {u.department_id ? departmentNameById[u.department_id] ?? u.department_id : "—"}
+                    </td>
+                    <td className="py-4 pr-4">{u.role ?? "—"}</td>
+                    <td className="py-4 pr-4">
+                      <span
+                        className={[
+                          "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium border",
+                          u.is_active
+                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                            : "bg-muted text-muted-foreground border-border",
+                        ].join(" ")}
+                      >
+                        {u.is_active ? "Sim" : "Não"}
+                      </span>
+                    </td>
+                    <td className="py-4 text-right">
+                      <div className="inline-flex items-center gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to={`/admin/users/${u.id}`}>
+                            <Eye />
+                            Ver
+                          </Link>
+                        </Button>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to={`/admin/users/${u.id}/edit`}>
+                            <Pencil />
+                            Editar
+                          </Link>
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => requestDelete(u)}>
+                          <Trash2 />
+                          Eliminar
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {deleteOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => {
+            setDeleteOpen(false)
+            setPendingDelete(null)
+          }}
+        >
+          <div className="glass-card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="space-y-2">
+              <div className="text-lg font-semibold">Eliminar utilizador?</div>
+              <div className="text-sm text-muted-foreground">
+                {pendingDelete ? `Deseja eliminar “${pendingDelete.name}”?` : "Deseja eliminar este utilizador?"}
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setDeleteOpen(false)
+                  setPendingDelete(null)
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button type="button" variant="destructive" onClick={confirmDelete}>
+                Eliminar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

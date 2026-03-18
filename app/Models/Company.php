@@ -72,7 +72,7 @@ class Company extends Model
         if (Str::startsWith($logo, ['http://', 'https://'])) {
             return $logo;
         }
-        $path = ltrim($logo, '/');
+        $path = str_replace('\\', '/', ltrim($logo, '/'));
         try {
             if (Storage::disk('public')->exists($path)) {
                 return Storage::disk('public')->url($path);
@@ -93,7 +93,7 @@ class Company extends Model
         if (empty($logo)) {
             return false;
         }
-        $path = ltrim($logo, '/');
+        $path = str_replace('\\', '/', ltrim($logo, '/'));
         try {
             if (Storage::disk('public')->exists($path)) {
                 return true;
@@ -110,7 +110,7 @@ class Company extends Model
         if (empty($logo)) {
             return;
         }
-        $path = ltrim($logo, '/');
+        $path = str_replace('\\', '/', ltrim($logo, '/'));
         try {
             if (Storage::disk('public')->exists($path)) {
                 Storage::disk('public')->delete($path);

@@ -161,7 +161,7 @@
             <img src="{{ asset('images/logocolors.png') }}" alt="Multicontact Logo" class="logo">
             
             <div class="login-buttons">
-                <a href="/admin/login" class="login-btn admin-btn">
+                <a href="/newadmin/login" class="login-btn admin-btn">
                     🔧 Administrador
                 </a>
                 <a href="/employee/login" class="login-btn employee-btn">

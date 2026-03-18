@@ -33,7 +33,7 @@ const App = () => (
       <Toaster />
       <HotToaster />
       <BrowserRouter
-        basename={window.location.pathname.startsWith('/admin/crm/app') ? '/admin/crm/app' : '/'}
+        basename={(import.meta as any).env?.DEV ? '/' : '/admin/crm/app'}
         future={{
           v7_startTransition: true,
           v7_relativeSplatPath: true,

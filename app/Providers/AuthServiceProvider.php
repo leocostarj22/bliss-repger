@@ -29,7 +29,7 @@ class AuthServiceProvider extends ServiceProvider
         Timesheet::class => TimesheetPolicy::class,
         Vacation::class => VacationPolicy::class,
         Ticket::class => TicketPolicy::class,
-        //PostComment::class => PostCommentPolicy::class,
+        PostComment::class => PostCommentPolicy::class,
     ];
 
     /**

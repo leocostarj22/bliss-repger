@@ -130,12 +130,41 @@
                 this.openJitsi();
             },
 
-            createNewCall() {
+            async createNewCall() {
                 const room = this.generateRoomName();
-                this.roomName = room;
-                this.inviteUrl = this.buildInviteUrl(room);
-                this.meetingUrl = this.inviteUrl;
-                this.openJitsi();
+
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+                try {
+                    const res = await fetch('/api/v1/communication/video-calls', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            ...(csrf ? { 'X-CSRF-TOKEN': csrf } : {}),
+                        },
+                        body: JSON.stringify({
+                            title: 'Videochamada',
+                            scheduled_at: null,
+                            room_id: room,
+                        }),
+                    });
+
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                    const json = await res.json();
+                    const createdRoom = json?.data?.room_id || room;
+
+                    this.roomName = createdRoom;
+                    this.inviteUrl = this.buildInviteUrl(createdRoom);
+                    this.meetingUrl = this.inviteUrl;
+                    this.openJitsi();
+                } catch (e) {
+                    console.error('Erro ao criar reunião:', e);
+                    alert('Não foi possível criar a reunião.');
+                }
             },
 
             copyInvite() {

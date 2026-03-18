@@ -36,7 +36,7 @@ class AdminPanelProvider extends PanelProvider
         $panel = $panel
             ->default()
             ->id('admin')
-            ->path('admin')
+            ->path('filament-admin')
             ->login()
             ->databaseNotifications()
             ->broadcasting()

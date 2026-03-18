@@ -13,6 +13,8 @@ class VideoCall extends Model
         'room_id',
         'created_by',
         'status',
+        'title',
+        'description',
     ];
 
     public function creator()

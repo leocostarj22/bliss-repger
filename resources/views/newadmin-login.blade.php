@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Entrar — GMCentral</title>
+    <link rel="icon" href="{{ asset('images/gmfavicon.png') }}" />
+    <style>
+      :root { color-scheme: dark light; }
+      body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: radial-gradient(1000px 400px at 20% -10%, rgba(34,211,238,.08), transparent), radial-gradient(800px 320px at 100% 0%, rgba(232,121,249,.08), transparent), #0b0c0f; color:#e6e7eb; }
+      .wrap { min-height:100dvh; display:grid; place-items:center; padding:24px; }
+      .card { width:100%; max-width:420px; background:#10131a; border:1px solid #1c2332; border-radius:14px; padding:28px; box-shadow: 0 12px 40px rgba(0,0,0,.30); backdrop-filter:saturate(120%) blur(6px); }
+      .form { max-width:320px; margin:0 auto; }
+      h1 { margin:0 0 6px; font-size:22px; }
+      p { margin:0 0 18px; color:#a8afc0; font-size:13px; }
+      label { display:block; font-size:12px; color:#9aa3b2; margin:12px 0 6px; }
+      input[type="email"], input[type="password"] {
+        width:100%; padding:10px 12px; border-radius:8px; border:1px solid #253047; background:#0f1320; color:#e6e7eb; outline:none; transition:border-color .2s, box-shadow .2s;
+      }
+      input[type="email"]::placeholder, input[type="password"]::placeholder { color:#6b7280; }
+      input[type="email"]:focus, input[type="password"]:focus { border-color:#22d3ee; box-shadow:0 0 0 3px rgba(34,211,238,.15); }
+      .row { display:flex; align-items:center; justify-content:space-between; margin:12px 0 18px; }
+      .row label { display:flex; align-items:center; gap:8px; margin:0; color:#a8afc0; font-size:12px; }
+      .btn { width:100%; padding:12px 16px; background:linear-gradient(90deg,#22d3ee,#e879f9); color:#0b0c0f; font-weight:700; border:0; border-radius:10px; cursor:pointer; transition: filter .15s ease, transform .06s ease; }
+      .btn:hover { filter:brightness(1.05); }
+      .btn:active { transform: translateY(1px); }
+      .err { margin:8px 0; color:#fda4af; font-size:12px; }
+      .muted { margin-top:14px; font-size:12px; color:#7b8398; text-align:center; }
+      .logo { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+      .logo img { width:32px; height:32px; border-radius:8px; box-shadow:0 4px 16px rgba(34,211,238,.25); }
+      a { color:#a8afc0; text-decoration:none; font-size:12px; }
+      a:hover { color:#cbd5e1; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <form class="card" method="POST" action="/newadmin/login">
+        @csrf
+        <div class="logo" aria-label="Identidade visual">
+          <img src="{{ asset('images/gmfavicon.png') }}" alt="GMCentral Logo">
+          <div>
+            <h1>Entrar</h1>
+            <p>Acesse o painel administrativo</p>
+          </div>
+        </div>
+        <div class="form">
+
+        @if ($errors->any())
+          <div class="err">
+            {{ $errors->first() }}
+          </div>
+        @endif
+
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" value="{{ old('email') }}" placeholder="seu@email.com" autocomplete="username" required autofocus />
+
+        <label for="password">Senha</label>
+        <input id="password" name="password" type="password" placeholder="********" autocomplete="current-password" required />
+
+        <div class="row">
+          <label><input type="checkbox" name="remember" value="1" {{ old('remember') ? 'checked' : '' }}/> Lembrar‑me</label>
+          <a href="/filament-admin/forgot-password">Esqueci a senha</a>
+        </div>
+
+        <button type="submit" class="btn">Entrar</button>
+        <div class="muted">Após autenticar, será redirecionado para /admin (novo painel).</div>
+        </div>
+      </form>
+    </div>
+  </body>
+</html>
