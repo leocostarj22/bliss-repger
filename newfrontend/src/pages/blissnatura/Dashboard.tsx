@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react"
 import { Package, ShoppingCart, Users, Coins } from "lucide-react"
 
-import type { BlissOrder } from "@/types"
-import { fetchBlissDashboard } from "@/services/api"
+import type { BlissOrder, BlissOrderStatus } from "@/types"
+import { fetchBlissDashboard, fetchBlissOrderStatuses, fetchBlissOrders } from "@/services/api"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { Link } from "react-router-dom"
 
 const money = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" })
@@ -12,6 +15,12 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [orders, setOrders] = useState<BlissOrder[]>([])
   const [counts, setCounts] = useState({ products: 0, customers: 0, orders: 0, revenue: 0 })
+  const [statuses, setStatuses] = useState<BlissOrderStatus[]>([])
+  const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
+  const [meta, setMeta] = useState<{ total: number; totalPages: number }>({ total: 0, totalPages: 1 })
 
   const stats = useMemo(() => ({
     productsCount: counts.products,
@@ -20,11 +29,7 @@ export default function Dashboard() {
     totalRevenue: counts.revenue,
   }), [counts])
 
-  const latestOrders = useMemo(() => {
-    return [...orders]
-      .sort((a, b) => (b.date_added ?? '').localeCompare(a.date_added ?? ''))
-      .slice(0, 10);
-  }, [orders])
+  const latestOrders = useMemo(() => orders, [orders])
 
   useEffect(() => {
     let mounted = true
@@ -32,25 +37,29 @@ export default function Dashboard() {
     const load = async () => {
       setLoading(true)
       try {
-        const resp = await fetchBlissDashboard()
+        const [dash, sts, ord] = await Promise.all([
+          fetchBlissDashboard(),
+          fetchBlissOrderStatuses(),
+          fetchBlissOrders({ page, per_page: perPage, search, status_id: statusFilter === 'all' ? undefined : statusFilter, include_unknown: false, dedup: true }),
+        ])
         if (!mounted) return
         setCounts({
-          products: Number(resp.data.products_count || 0),
-          customers: Number(resp.data.customers_count || 0),
-          orders: Number(resp.data.total_orders || 0),
-          revenue: Number(resp.data.total_revenue || 0),
+          products: Number(dash.data.products_count || 0),
+          customers: Number(dash.data.customers_count || 0),
+          orders: Number(dash.data.total_orders || 0),
+          revenue: Number(dash.data.total_revenue || 0),
         })
-        setOrders(resp.data.latest_orders || [])
+        setStatuses(sts.data || [])
+        setOrders((ord.data || []).filter((o) => String(o.order_status_id) !== '0' && (o.status?.name ?? '').trim() !== ''))
+        setMeta({ total: Number(ord.meta?.total ?? 0), totalPages: Number(ord.meta?.totalPages ?? 1) })
       } finally {
         if (mounted) setLoading(false)
       }
     }
 
     load()
-    return () => {
-      mounted = false
-    }
-  }, [])
+    return () => { mounted = false }
+  }, [page, perPage, search, statusFilter])
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -103,11 +112,52 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="mt-1 text-xs text-muted-foreground">Produtos cadastrados</div>
+          <div className="mt-4">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }} />
+                </PaginationItem>
+                <PaginationItem>
+                  <span className="text-xs text-muted-foreground px-2">Página {page} de {meta.totalPages}</span>
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(meta.totalPages || 1, p + 1)) }} />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
         </div>
       </div>
 
       <div className="glass-card p-6 mt-4">
         <div className="text-sm font-semibold">Últimos Pedidos</div>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <Input
+            value={search}
+            onChange={(e) => { setPage(1); setSearch(e.target.value) }}
+            placeholder="Pesquisar por ID, cliente, email ou telefone"
+          />
+          <Select value={statusFilter} onValueChange={(v) => { setPage(1); setStatusFilter(v) }}>
+            <SelectTrigger>
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os estados</SelectItem>
+              {statuses.map((s) => (
+                <SelectItem key={s.order_status_id} value={String(s.order_status_id)}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={String(perPage)} onValueChange={(v) => { setPage(1); setPerPage(Number(v)) }}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[10, 20, 50].map((n) => (<SelectItem key={n} value={String(n)}>{n} por página</SelectItem>))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="mt-3 overflow-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/40">

@@ -10,11 +10,18 @@ class BlissOrderController extends Controller
 {
     public function index(Request $request)
     {
-        $search   = trim((string) $request->query('search', ''));
-        $statusId = trim((string) $request->query('status_id', ''));
+        $search         = trim((string) $request->query('search', ''));
+        $statusId       = trim((string) $request->query('status_id', ''));
+        $includeUnknown = $request->boolean('include_unknown', false);
+        $dedup          = $request->boolean('dedup', true);
+        $perPage        = min(100, max(5, (int) $request->query('per_page', 10)));
+        $page           = max(1, (int) $request->query('page', 1));
 
-        $q = BlissOrder::query()
-            ->with(['status', 'products']);
+        $q = BlissOrder::query()->with(['status', 'products']);
+
+        if (! $includeUnknown) {
+            $q->whereNotIn('order_status_id', [0, '0']);
+        }
 
         if ($statusId !== '') {
             $q->where('order_status_id', $statusId);
@@ -30,9 +37,21 @@ class BlissOrderController extends Controller
             });
         }
 
-        $rows = $q->orderByDesc('date_added')->get();
+        $q->orderByDesc('date_added');
 
-        $data = $rows->map(function (BlissOrder $o) {
+        $paginator = $q->paginate($perPage, ['*'], 'page', $page);
+        $items = collect($paginator->items());
+
+        if ($dedup) {
+            $items = $items->unique(function ($o) {
+                $minute = optional($o->date_added)->format('Y-m-d H:i');
+                $base = ($o->email ?: ($o->firstname.' '.$o->lastname));
+                $inv = $o->invoice_no ? ('INV:'.$o->invoice_no) : null;
+                return $inv ?: md5($base.'|'.(string) $o->total.'|'.(string) $minute);
+            })->values();
+        }
+
+        $data = $items->map(function (BlissOrder $o) {
             return [
                 'order_id'        => (string) $o->order_id,
                 'invoice_no'      => $o->invoice_no ?: null,
@@ -71,6 +90,14 @@ class BlissOrderController extends Controller
             ];
         })->values();
 
-        return response()->json(['data' => $data]);
+        return response()->json([
+            'data' => $data,
+            'meta' => [
+                'total' => (int) $paginator->total(),
+                'page' => (int) $paginator->currentPage(),
+                'perPage' => (int) $paginator->perPage(),
+                'totalPages' => (int) $paginator->lastPage(),
+            ],
+        ]);
     }
 }

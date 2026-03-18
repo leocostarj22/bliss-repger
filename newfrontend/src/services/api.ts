@@ -3279,10 +3279,14 @@ export async function fetchBlissDashboard(): Promise<ApiResponse<BlissDashboardD
   return { data };
 }
 
-export async function fetchBlissOrders(params?: { search?: string; status_id?: string }): Promise<ApiResponse<BlissOrder[]>> {
+export async function fetchBlissOrders(params?: { search?: string; status_id?: string; page?: number; per_page?: number; include_unknown?: boolean; dedup?: boolean }): Promise<ApiResponse<BlissOrder[]>> {
   const qs = new URLSearchParams();
   if (params?.search) qs.set('search', params.search);
   if (params?.status_id) qs.set('status_id', params.status_id);
+  if (params?.page) qs.set('page', String(params.page));
+  if (params?.per_page) qs.set('per_page', String(params.per_page));
+  if (params?.include_unknown !== undefined) qs.set('include_unknown', params.include_unknown ? '1' : '0');
+  if (params?.dedup !== undefined) qs.set('dedup', params.dedup ? '1' : '0');
 
   const response = await apiFetch(`/api/v1/bliss/orders${qs.toString() ? `?${qs.toString()}` : ''}`, {
     method: 'GET',
@@ -3300,7 +3304,8 @@ export async function fetchBlissOrders(params?: { search?: string; status_id?: s
   }
 
   const json = await response.json();
-  return { data: Array.isArray(json?.data) ? (json.data as BlissOrder[]) : [] };
+  const meta = json?.meta && typeof json.meta === 'object' ? json.meta : undefined;
+  return { data: Array.isArray(json?.data) ? (json.data as BlissOrder[]) : [], meta };
 }
 
 export async function createBlissOrder(payload: {
