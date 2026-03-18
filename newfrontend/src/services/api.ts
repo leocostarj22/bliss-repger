@@ -3035,25 +3035,27 @@ const writeBlissOrderProducts = (items: BlissOrderProduct[]) => {
 const normalizeCrmEmail = (email: string) => email.trim().toLowerCase();
 
 export async function fetchBlissProducts(params?: { search?: string; status?: 'all' | 'active' | 'inactive' }): Promise<ApiResponse<BlissProduct[]>> {
-  await delay();
-  const rows = readBlissProducts();
-  const search = (params?.search ?? '').trim().toLowerCase();
-  const status = params?.status ?? 'all';
+  const qs = new URLSearchParams();
+  if (params?.search) qs.set('search', params.search);
+  if (params?.status) qs.set('status', params.status);
 
-  const filtered = rows.filter((p) => {
-    if (status !== 'all') {
-      const active = Boolean(p.status ?? true);
-      if (status === 'active' && !active) return false;
-      if (status === 'inactive' && active) return false;
-    }
-    if (!search) return true;
-    const name = p.description?.name ?? '';
-    const hay = `${name} ${p.model} ${p.product_id}`.toLowerCase();
-    return hay.includes(search);
+  const response = await apiFetch(`/api/v1/bliss/products${qs.toString() ? `?${qs.toString()}` : ''}`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
   });
 
-  filtered.sort((a, b) => (b.date_modified ?? b.date_added ?? '').localeCompare(a.date_modified ?? a.date_added ?? ''));
-  return { data: filtered };
+  if (!response.ok) {
+    let msg = `Falha ao obter produtos: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as BlissProduct[]) : [] };
 }
 
 export async function createBlissProduct(payload: {
@@ -3138,25 +3140,27 @@ export async function deleteBlissProduct(product_id: string): Promise<void> {
 }
 
 export async function fetchBlissCustomers(params?: { search?: string; status?: 'all' | 'active' | 'inactive' }): Promise<ApiResponse<BlissCustomer[]>> {
-  await delay();
-  const rows = readBlissCustomers();
-  const search = (params?.search ?? '').trim().toLowerCase();
-  const status = params?.status ?? 'all';
+  const qs = new URLSearchParams();
+  if (params?.search) qs.set('search', params.search);
+  if (params?.status) qs.set('status', params.status);
 
-  const filtered = rows.filter((c) => {
-    if (status !== 'all') {
-      const active = Boolean(c.status ?? true);
-      if (status === 'active' && !active) return false;
-      if (status === 'inactive' && active) return false;
-    }
-
-    if (!search) return true;
-    const hay = `${c.firstname} ${c.lastname} ${c.email} ${c.telephone ?? ''} ${c.customer_id}`.toLowerCase();
-    return hay.includes(search);
+  const response = await apiFetch(`/api/v1/bliss/customers${qs.toString() ? `?${qs.toString()}` : ''}`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
   });
 
-  filtered.sort((a, b) => (b.date_added ?? '').localeCompare(a.date_added ?? ''));
-  return { data: filtered };
+  if (!response.ok) {
+    let msg = `Falha ao obter clientes: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as BlissCustomer[]) : [] };
 }
 
 export async function createBlissCustomer(payload: {
@@ -3227,41 +3231,47 @@ export async function deleteBlissCustomer(customer_id: string): Promise<void> {
 }
 
 export async function fetchBlissOrderStatuses(): Promise<ApiResponse<BlissOrderStatus[]>> {
-  await delay(150);
-  return { data: readBlissOrderStatuses() };
-}
-
-export async function fetchBlissOrders(params?: {
-  search?: string;
-  status_id?: string;
-}): Promise<ApiResponse<BlissOrder[]>> {
-  await delay();
-  const statuses = readBlissOrderStatuses();
-  const statusById: Record<string, BlissOrderStatus> = {};
-  statuses.forEach((s) => (statusById[s.order_status_id] = s));
-
-  const orders = readBlissOrders();
-  const orderProducts = readBlissOrderProducts();
-
-  const search = (params?.search ?? '').trim().toLowerCase();
-  const statusId = (params?.status_id ?? '').trim();
-
-  const filtered = orders.filter((o) => {
-    if (statusId && o.order_status_id !== statusId) return false;
-    if (!search) return true;
-    const hay = `${o.order_id} ${o.firstname} ${o.lastname} ${o.email} ${o.telephone ?? ''}`.toLowerCase();
-    return hay.includes(search);
+  const response = await apiFetch('/api/v1/bliss/order-statuses', {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
   });
 
-  const enriched = filtered
-    .map((o) => ({
-      ...o,
-      status: statusById[o.order_status_id] ?? null,
-      products: orderProducts.filter((op) => op.order_id === o.order_id),
-    }))
-    .sort((a, b) => (b.date_added ?? '').localeCompare(a.date_added ?? ''));
+  if (!response.ok) {
+    let msg = `Falha ao obter estados de pedido: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {}
+    throw new Error(msg);
+  }
 
-  return { data: enriched };
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as BlissOrderStatus[]) : [] };
+}
+
+export async function fetchBlissOrders(params?: { search?: string; status_id?: string }): Promise<ApiResponse<BlissOrder[]>> {
+  const qs = new URLSearchParams();
+  if (params?.search) qs.set('search', params.search);
+  if (params?.status_id) qs.set('status_id', params.status_id);
+
+  const response = await apiFetch(`/api/v1/bliss/orders${qs.toString() ? `?${qs.toString()}` : ''}`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let msg = `Falha ao obter pedidos: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as BlissOrder[]) : [] };
 }
 
 export async function createBlissOrder(payload: {

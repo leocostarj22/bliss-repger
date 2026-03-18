@@ -8,6 +8,10 @@ use Modules\CRM\Http\Controllers\Api\SegmentController;
 use Modules\CRM\Http\Controllers\Api\UserController;
 use Modules\CRM\Http\Controllers\Api\AutomationController;
 use Modules\CRM\Http\Controllers\Api\TemplateController;
+use Modules\CRM\Http\Controllers\Api\BlissProductController;
+use Modules\CRM\Http\Controllers\Api\BlissCustomerController;
+use Modules\CRM\Http\Controllers\Api\BlissOrderController;
+use Modules\CRM\Http\Controllers\Api\BlissOrderStatusController;
 use Modules\CRM\Http\Controllers\CRMController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -177,5 +181,12 @@ Route::prefix('v1')->group(function () {
         Route::get('templates/{id}', [TemplateController::class, 'show']);
         Route::put('templates/{id}', [TemplateController::class, 'update']);
         Route::delete('templates/{id}', [TemplateController::class, 'destroy']);
+    });
+
+    Route::prefix('bliss')->middleware(['web', 'auth'])->group(function () {
+        Route::get('products', [BlissProductController::class, 'index']);
+        Route::get('customers', [BlissCustomerController::class, 'index']);
+        Route::get('orders', [BlissOrderController::class, 'index']);
+        Route::get('order-statuses', [BlissOrderStatusController::class, 'index']);
     });
 });
