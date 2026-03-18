@@ -1,4 +1,12 @@
-import type { ApiResponse, MyFormulaCustomer, MyFormulaOrder, MyFormulaOrderProduct, MyFormulaOrderStatus, MyFormulaProduct, MyFormulaQuiz } from '@/types'
+import type {
+  ApiResponse,
+  MyFormulaCustomer,
+  MyFormulaOrder,
+  MyFormulaOrderProduct,
+  MyFormulaOrderStatus,
+  MyFormulaProduct,
+  MyFormulaQuiz,
+} from '@/types'
 import {
   mockMyFormulaCustomers,
   mockMyFormulaOrderProducts,
@@ -242,67 +250,26 @@ export async function deleteMyFormulaCustomer(customer_id: string): Promise<ApiR
   return { data: { ok: true } }
 }
 
+import axios from 'axios'
+
 export async function fetchMyFormulaOrderStatuses(): Promise<ApiResponse<MyFormulaOrderStatus[]>> {
-  await delay()
-  return { data: readMyFormulaOrderStatuses() }
+  const res = await axios.get('/api/v1/myformula/order-statuses')
+  return res.data
 }
 
 export async function fetchMyFormulaOrders(params?: {
+  page?: number
+  per_page?: number
   search?: string
-  statusId?: string | 'all'
+  status_id?: string
 }): Promise<ApiResponse<MyFormulaOrder[]>> {
-  await delay()
-  const q = params?.search?.trim().toLowerCase() ?? ''
-  const statusId = params?.statusId ?? 'all'
+  const res = await axios.get('/api/v1/myformula/orders', { params })
+  return res.data
+}
 
-  const orders = readMyFormulaOrders()
-  const statuses = readMyFormulaOrderStatuses()
-  const products = readMyFormulaProducts()
-  const orderProducts = readMyFormulaOrderProducts()
-  const quizzes = readMyFormulaQuizzes()
-
-  const statusById: Record<string, MyFormulaOrderStatus> = {}
-  statuses.forEach((s) => (statusById[s.order_status_id] = s))
-
-  const productById: Record<string, MyFormulaProduct> = {}
-  products.forEach((p) => (productById[p.product_id] = p))
-
-  const quizByEmail: Record<string, MyFormulaQuiz> = {}
-  quizzes
-    .slice()
-    .sort((a, b) => String(b.date_added ?? '').localeCompare(String(a.date_added ?? '')))
-    .forEach((qz) => {
-      const email = qz?.post?.email ? normalizeEmail(String(qz.post.email)) : ''
-      if (email && !quizByEmail[email]) quizByEmail[email] = qz
-    })
-
-  const enriched = orders.map((o) => {
-    const ops = orderProducts.filter((op) => op.order_id === o.order_id)
-    const safeOps = ops.map((op) => {
-      const p = productById[op.product_id]
-      return {
-        ...op,
-        name: op.name || p?.description?.name || p?.model || op.model,
-        model: op.model || p?.model || '',
-      }
-    })
-    const email = o.email ? normalizeEmail(o.email) : ''
-    return {
-      ...o,
-      status: statusById[o.order_status_id] ?? null,
-      products: safeOps,
-      quiz: email ? quizByEmail[email] ?? null : null,
-    }
-  })
-
-  const filtered = enriched.filter((o) => {
-    if (statusId !== 'all' && o.order_status_id !== statusId) return false
-    if (!q) return true
-    const hay = `${o.order_id} ${o.firstname} ${o.lastname} ${o.email} ${o.telephone ?? ''}`.toLowerCase()
-    return hay.includes(q)
-  })
-
-  return { data: filtered }
+export async function fetchMyFormulaOrder(id: string): Promise<ApiResponse<MyFormulaOrder>> {
+  const res = await axios.get(`/api/v1/myformula/orders/${id}`)
+  return res.data
 }
 
 export async function createMyFormulaOrder(payload: {
@@ -312,109 +279,27 @@ export async function createMyFormulaOrder(payload: {
   payment_method?: string | null
   payment_code?: string | null
 }): Promise<ApiResponse<MyFormulaOrder>> {
-  await delay()
-
-  const customers = readMyFormulaCustomers()
-  const products = readMyFormulaProducts()
-  const statuses = readMyFormulaOrderStatuses()
-
-  const customer = customers.find((c) => c.customer_id === payload.customer_id)
-  if (!customer) throw new Error('Cliente não encontrado')
-
-  const status = statuses.find((s) => s.order_status_id === payload.order_status_id)
-  if (!status) throw new Error('Estado inválido')
-
-  const order_id = genId('mf_o')
-
-  const items = payload.products
-    .map((it) => {
-      const p = products.find((pp) => pp.product_id === it.product_id)
-      if (!p) return null
-      const qty = Math.max(0, Number(it.quantity || 0))
-      if (!qty) return null
-      const price = Number(p.price ?? 0)
-      return {
-        order_product_id: genId('mf_op'),
-        order_id,
-        product_id: p.product_id,
-        name: p.description?.name ?? p.model,
-        model: p.model,
-        quantity: qty,
-        price,
-        total: qty * price,
-        tax: 0,
-      } satisfies MyFormulaOrderProduct
-    })
-    .filter(Boolean) as MyFormulaOrderProduct[]
-
-  if (!items.length) throw new Error('Selecione pelo menos um produto com quantidade > 0')
-
-  const total = items.reduce((sum, it) => sum + Number(it.total ?? 0), 0)
-
-  const order: MyFormulaOrder = {
-    order_id,
-    invoice_no: null,
-    store_name: 'MyFormula',
-    customer_id: customer.customer_id,
-    firstname: customer.firstname,
-    lastname: customer.lastname,
-    email: customer.email,
-    telephone: customer.telephone ?? null,
-    total,
-    order_status_id: payload.order_status_id,
-    date_added: new Date().toISOString(),
-    date_modified: new Date().toISOString(),
-    payment_method: payload.payment_method ?? null,
-    payment_code: payload.payment_code ?? null,
-    status,
-    products: items,
-    quiz: null,
-  }
-
-  const orders = readMyFormulaOrders()
-  writeMyFormulaOrders([order, ...orders])
-
-  const orderProducts = readMyFormulaOrderProducts()
-  writeMyFormulaOrderProducts([...items, ...orderProducts])
-
-  return { data: order }
+  // TODO: Implement real API call
+  await delay(1000)
+  console.log('Creating order with', payload)
+  throw new Error('A cria\u00e7\u00e3o de pedidos ainda n\u00e3o foi implementada no backend.')
 }
 
 export async function updateMyFormulaOrderStatus(
   order_id: string,
   payload: { order_status_id: string }
 ): Promise<ApiResponse<MyFormulaOrder>> {
-  await delay()
-  const orders = readMyFormulaOrders()
-  const idx = orders.findIndex((o) => o.order_id === order_id)
-  if (idx < 0) throw new Error('Pedido não encontrado')
-
-  const statuses = readMyFormulaOrderStatuses()
-  const status = statuses.find((s) => s.order_status_id === payload.order_status_id) ?? null
-
-  const current = orders[idx]
-  const nextRow: MyFormulaOrder = {
-    ...current,
-    order_status_id: payload.order_status_id,
-    date_modified: new Date().toISOString(),
-    status,
-  }
-
-  const next = orders.slice()
-  next[idx] = nextRow
-  writeMyFormulaOrders(next)
-  return { data: nextRow }
+  // TODO: Implement real API call
+  await delay(1000)
+  console.log(`Updating order ${order_id} with`, payload)
+  throw new Error('A atualiza\u00e7\u00e3o de pedidos ainda n\u00e3o foi implementada no backend.')
 }
 
 export async function deleteMyFormulaOrder(order_id: string): Promise<ApiResponse<{ ok: true }>> {
-  await delay()
-  const orders = readMyFormulaOrders()
-  writeMyFormulaOrders(orders.filter((o) => o.order_id !== order_id))
-
-  const ops = readMyFormulaOrderProducts()
-  writeMyFormulaOrderProducts(ops.filter((op) => op.order_id !== order_id))
-
-  return { data: { ok: true } }
+  // TODO: Implement real API call
+  await delay(1000)
+  console.log(`Deleting order ${order_id}`)
+  throw new Error('A exclus\u00e3o de pedidos ainda n\u00e3o foi implementada no backend.')
 }
 
 export async function fetchMyFormulaQuizzes(params?: {
@@ -450,7 +335,6 @@ export async function fetchMyFormulaQuizzes(params?: {
   })
 
   const sorted = filtered.slice().sort((a, b) => String(b.date_added ?? '').localeCompare(String(a.date_added ?? '')))
-  writeMyFormulaQuizzes(rows)
   return { data: sorted }
 }
 
@@ -466,17 +350,8 @@ export interface MyFormulaDashboardData {
 }
 
 export async function fetchMyFormulaDashboard(): Promise<ApiResponse<MyFormulaDashboardData>> {
-  const res = await fetch('/api/v1/myformula/dashboard', {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
-    credentials: 'include',
-  })
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`Falha ao obter dashboard MyFormula: ${res.status} ${text}`)
-  }
-  const json = await res.json()
-  return { data: json?.data as MyFormulaDashboardData }
+  const res = await axios.get('/api/v1/myformula/dashboard')
+  return res.data
 }
 
 export async function fetchMyFormulaOrderStatusesReal(): Promise<ApiResponse<MyFormulaOrderStatus[]>> {
