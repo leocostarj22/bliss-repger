@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 import type { BlissProduct } from "@/types"
 import { createBlissProduct, deleteBlissProduct, fetchBlissProducts, updateBlissProduct } from "@/services/api"
@@ -17,6 +18,7 @@ const money = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR
 
 export default function Products() {
   const { toast } = useToast()
+  const navigate = useNavigate()
   const [rows, setRows] = useState<BlissProduct[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -110,21 +112,6 @@ export default function Products() {
           </Button>
         </div>
       </div>
-      <div className="mt-4">
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }} />
-            </PaginationItem>
-            <PaginationItem>
-              <span className="text-xs text-muted-foreground px-2">Página {page} de {totalPages}</span>
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages || 1, p + 1)) }} />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      </div>
 
       <div className="glass-card p-4">
         <div className="grid gap-3 md:grid-cols-4">
@@ -211,10 +198,7 @@ export default function Products() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => {
-                              setEditing(p)
-                              setFormOpen(true)
-                            }}
+                            onClick={() => navigate(`/blissnatura/products/${p.product_id}/edit`)}
                           >
                             <Pencil className="w-4 h-4" />
                           </Button>
@@ -236,6 +220,21 @@ export default function Products() {
             </tbody>
           </table>
         </div>
+      </div>
+      <div className="mt-4">
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }} />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="text-xs text-muted-foreground px-2">Página {page} de {totalPages}</span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages || 1, p + 1)) }} />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
 
       {formOpen && (

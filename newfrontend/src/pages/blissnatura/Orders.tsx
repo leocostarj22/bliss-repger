@@ -112,21 +112,6 @@ export default function Orders() {
           </Button>
         </div>
       </div>
-      <div className="mt-4">
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }} />
-            </PaginationItem>
-            <PaginationItem>
-              <span className="text-xs text-muted-foreground px-2">Página {page} de {meta.totalPages}</span>
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(meta.totalPages || 1, p + 1)) }} />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      </div>
 
       <div className="glass-card p-4">
         <div className="grid gap-3 md:grid-cols-4">
@@ -232,6 +217,21 @@ export default function Orders() {
             </tbody>
           </table>
         </div>
+      </div>
+      <div className="mt-4">
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }} />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="text-xs text-muted-foreground px-2">Página {page} de {meta.totalPages}</span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(meta.totalPages || 1, p + 1)) }} />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
 
       {createOpen && (
