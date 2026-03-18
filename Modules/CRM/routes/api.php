@@ -13,6 +13,7 @@ use Modules\CRM\Http\Controllers\Api\BlissCustomerController;
 use Modules\CRM\Http\Controllers\Api\BlissOrderController;
 use Modules\CRM\Http\Controllers\Api\BlissOrderStatusController;
 use Modules\CRM\Http\Controllers\Api\BlissDashboardApiController;
+use Modules\CRM\Http\Controllers\Api\MyFormulaDashboardApiController;
 use Modules\CRM\Http\Controllers\CRMController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -192,5 +193,9 @@ Route::prefix('v1')->group(function () {
         Route::post('customers/export-contacts', [BlissCustomerController::class, 'exportToContacts']);
         Route::get('orders', [BlissOrderController::class, 'index']);
         Route::get('order-statuses', [BlissOrderStatusController::class, 'index']);
+    });
+
+    Route::prefix('myformula')->middleware(['web', 'auth'])->group(function () {
+        Route::get('dashboard', [MyFormulaDashboardApiController::class, 'index']);
     });
 });

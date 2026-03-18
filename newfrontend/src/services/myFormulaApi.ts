@@ -453,3 +453,28 @@ export async function fetchMyFormulaQuizzes(params?: {
   writeMyFormulaQuizzes(rows)
   return { data: sorted }
 }
+
+export interface MyFormulaDashboardData {
+  products_count: number
+  customers_count: number
+  orders_count: number
+  total_revenue: number
+  quizzes_count: number
+  completed_quizzes: number
+  top_statuses: { order_status_id: string; name: string; count: number }[]
+  latest_orders: MyFormulaOrder[]
+}
+
+export async function fetchMyFormulaDashboard(): Promise<ApiResponse<MyFormulaDashboardData>> {
+  const res = await fetch('/api/v1/myformula/dashboard', {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`Falha ao obter dashboard MyFormula: ${res.status} ${text}`)
+  }
+  const json = await res.json()
+  return { data: json?.data as MyFormulaDashboardData }
+}
