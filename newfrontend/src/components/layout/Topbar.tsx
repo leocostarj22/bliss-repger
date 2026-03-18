@@ -5,7 +5,9 @@ import { useTheme } from '@/hooks/use-theme';
 import type { AppNotification } from '@/types';
 import { cn, getInitials, resolvePhotoUrl } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { logout } from "@/services/api";
 
 import { Input } from "@/components/ui/input";
 
@@ -31,6 +33,7 @@ const WeatherIcon = ({ type }: { type: string }) => {
 
 export function Topbar() {
   const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [user, setUser] = useState<{ id: string; name: string; email: string; photo_path?: string | null } | null>(null);
@@ -182,15 +185,39 @@ export function Topbar() {
           )}
         </div>
 
-        {/* Avatar */}
-        <Link to="/admin/profile" title="Perfil">
-          <Avatar className="w-8 h-8 border border-border hover:shadow-[0_0_16px_hsl(var(--ring)/0.25)] transition-shadow">
-            <AvatarImage src={resolvePhotoUrl(user?.photo_path ?? null) ?? undefined} alt={user?.name} />
-            <AvatarFallback className="bg-primary/20 text-xs font-bold text-primary">
-              {getInitials(user?.name)}
-            </AvatarFallback>
-          </Avatar>
-        </Link>
+        {/* Avatar + Menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button title="Perfil">
+              <Avatar className="w-8 h-8 border border-border hover:shadow-[0_0_16px_hsl(var(--ring)/0.25)] transition-shadow">
+                <AvatarImage src={resolvePhotoUrl(user?.photo_path ?? null) ?? undefined} alt={user?.name} />
+                <AvatarFallback className="bg-primary/20 text-xs font-bold text-primary">
+                  {getInitials(user?.name)}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); navigate('/admin/profile'); }}>
+              Editar perfil
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onSelect={async (e) => {
+                e.preventDefault();
+                try {
+                  await logout();
+                } catch {
+                  // ignore
+                } finally {
+                  window.location.href = '/';
+                }
+              }}
+            >
+              Terminar sessão
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

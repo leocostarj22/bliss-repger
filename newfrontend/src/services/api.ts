@@ -1037,6 +1037,23 @@ export async function clearNotifications(): Promise<void> {
   }
 }
 
+export async function logout(): Promise<void> {
+  const response = await apiFetch('/logout', {
+    method: 'POST',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let msg = `Falha ao terminar sessão: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {}
+    throw new Error(msg);
+  }
+}
+
 // ── Companies (Admin) ──
 const COMPANIES_STORAGE_KEY = 'bliss:admin:companies';
 

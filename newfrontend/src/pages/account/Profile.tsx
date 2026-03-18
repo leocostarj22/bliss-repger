@@ -250,30 +250,6 @@ export default function Profile() {
           </div>
         </div>
 
-        <div className="glass-card p-6 space-y-4 lg:col-span-2">
-          <div className="text-lg font-semibold">Dados da conta</div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Nome</div>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" />
-            </div>
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Email</div>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@dominio.com" />
-            </div>
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Telefone</div>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(+351) ..." />
-            </div>
-          </div>
-          <div className="pt-2">
-            <Button type="button" onClick={onSaveInfo} disabled={savingInfo}>
-              <Save className="w-4 h-4" />
-              Guardar dados
-            </Button>
-          </div>
-        </div>
-
         <div className="glass-card p-6 space-y-4">
           <div className="text-lg font-semibold">Alterar palavra‑passe</div>
           <div className="space-y-2">
@@ -298,6 +274,30 @@ export default function Profile() {
             <Button type="button" onClick={onSavePassword} disabled={savingPassword}>
               <Save className="w-4 h-4" />
               Guardar palavra‑passe
+            </Button>
+          </div>
+        </div>
+
+        <div className="glass-card p-6 space-y-4 lg:col-span-2">
+          <div className="text-lg font-semibold">Dados da conta</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Nome</div>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" />
+            </div>
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Email</div>
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@dominio.com" />
+            </div>
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Telefone</div>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(+351) ..." />
+            </div>
+          </div>
+          <div className="pt-2">
+            <Button type="button" onClick={onSaveInfo} disabled={savingInfo}>
+              <Save className="w-4 h-4" />
+              Guardar dados
             </Button>
           </div>
         </div>
