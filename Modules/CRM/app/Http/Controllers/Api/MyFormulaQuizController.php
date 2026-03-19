@@ -22,6 +22,19 @@ class MyFormulaQuizController extends Controller
             ->get();
     }
 
+    private function safePost($row): array
+    {
+        try {
+            $raw = $row->getAttribute('post');
+            if (is_array($raw)) return $raw;
+            if (is_string($raw) && $raw !== '') {
+                $decoded = json_decode($raw, true);
+                return is_array($decoded) ? $decoded : [];
+            }
+        } catch (\Throwable) {}
+        return [];
+    }
+
     private function isCompleted(array $post): bool
     {
         $step = (string) ($post['step'] ?? '');
@@ -37,7 +50,7 @@ class MyFormulaQuizController extends Controller
         $ageRange = $request->query('age_range');
 
         return $rows->filter(function ($row) use ($search, $status, $plan, $gender, $ageRange) {
-            $post = is_array($row->post ?? null) ? $row->post : [];
+            $post = $this->safePost($row);
 
             if ($search !== '') {
                 $hay = strtolower(
@@ -79,7 +92,7 @@ class MyFormulaQuizController extends Controller
             $rows = $this->applyFilters($this->loadRows($request), $request);
 
             $data = $rows->map(function ($q) {
-                $post = is_array($q->post ?? null) ? $q->post : [];
+                $post = $this->safePost($q);
                 return [
                     'quiz_id' => (string) $q->getKey(),
                     'date_added' => $q->date_added ? $q->date_added->toIso8601String() : null,
@@ -100,7 +113,7 @@ class MyFormulaQuizController extends Controller
             $rows = $this->applyFilters($this->loadRows($request), $request);
             $total = $rows->count();
             $completed = $rows->filter(function ($q) {
-                $post = is_array($q->post ?? null) ? $q->post : [];
+                $post = $this->safePost($q);
                 return $this->isCompleted($post);
             })->count();
             $notCompleted = $total - $completed;
