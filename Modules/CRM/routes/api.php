@@ -201,6 +201,7 @@ Route::prefix('v1')->group(function () {
     Route::prefix('myformula')->middleware(['web', 'auth'])->group(function () {
         Route::get('dashboard', [MyFormulaDashboardApiController::class, 'index']);
         Route::get('customers', [MyFormulaCustomerController::class, 'index']);
+        Route::post('customers/export-contacts', [MyFormulaCustomerController::class, 'exportToContacts']);
         Route::get('orders', [MyFormulaOrderController::class, 'index']);
         Route::get('orders/{id}', [MyFormulaOrderController::class, 'show']);
         Route::get('orders/{id}/purchase-report', [MyFormulaOrderController::class, 'purchaseReport']);

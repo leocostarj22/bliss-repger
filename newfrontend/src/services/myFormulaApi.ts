@@ -239,6 +239,11 @@ export async function deleteMyFormulaCustomer(customer_id: string): Promise<ApiR
   return { data: { ok: true } }
 }
 
+export async function exportCustomersToContacts(customer_ids: string[]): Promise<ApiResponse<{ created_count: number; updated_count: number; contact_ids: number[] }>> {
+  const res = await axios.post('/api/v1/myformula/customers/export-contacts', { customer_ids })
+  return { data: res.data?.data }
+}
+
 import axios from 'axios'
 
 export async function fetchMyFormulaOrderStatuses(): Promise<ApiResponse<MyFormulaOrderStatus[]>> {

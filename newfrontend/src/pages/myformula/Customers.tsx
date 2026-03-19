@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { ChevronDown, Mail, Pencil, Phone, Plus, Search } from "lucide-react"
 
 import type { MyFormulaCustomer } from "@/types"
-import { createMyFormulaCustomer, fetchMyFormulaCustomers, updateMyFormulaCustomer } from "@/services/myFormulaApi"
+import { createMyFormulaCustomer, fetchMyFormulaCustomers, updateMyFormulaCustomer, exportCustomersToContacts } from "@/services/myFormulaApi"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -40,6 +40,24 @@ export default function Customers() {
   const [editing, setEditing] = useState<MyFormulaCustomer | null>(null)
 
   const [selected, setSelected] = useState<Record<string, boolean>>({})
+  const selectedIds = useMemo(() => Object.keys(selected).filter((id) => selected[id]), [selected])
+
+  const exportSelected = async () => {
+    if (!selectedIds.length) return
+    try {
+      const r = await exportCustomersToContacts(selectedIds)
+      const created = r.data?.created_count ?? 0
+      const updated = r.data?.updated_count ?? 0
+      toast({ title: "Exportação concluída", description: `${created} criados, ${updated} atualizados` })
+      setSelected((prev) => {
+        const next = { ...prev }
+        for (const id of selectedIds) delete next[id]
+        return next
+      })
+    } catch (e: any) {
+      toast({ title: "Erro", description: e?.message ?? "Falha ao exportar", variant: "destructive" })
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -124,7 +142,12 @@ export default function Customers() {
       </div>
 
       <div className="glass-card overflow-hidden">
-        <div className="flex items-center justify-end gap-3 border-b border-border/60 p-4">
+        <div className="flex items-center justify-between gap-3 border-b border-border/60 p-4">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" disabled={!selectedIds.length} onClick={exportSelected}>
+              Exportar para contactos do CRM
+            </Button>
+          </div>
           <div className="relative w-full max-w-xs">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
