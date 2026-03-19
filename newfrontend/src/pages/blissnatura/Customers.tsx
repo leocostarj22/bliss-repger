@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Pencil, Plus, Search, Trash2, Send } from "lucide-react"
 
 import type { BlissCustomer } from "@/types"
-import { createBlissCustomer, deleteBlissCustomer, fetchBlissCustomers, updateBlissCustomer, exportBlissCustomersToContacts, createSegment } from "@/services/api"
+import { createBlissCustomer, deleteBlissCustomer, fetchBlissCustomers, updateBlissCustomer, exportBlissCustomersToContacts } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -26,8 +26,10 @@ export default function Customers() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<BlissCustomer | null>(null)
   const [selected, setSelected] = useState<Record<string, boolean>>({})
+  const selectedIds = useMemo(() => Object.keys(selected).filter((k) => selected[k]), [selected])
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
+  const [sortDir, setSortDir] = useState<"desc" | "asc">("desc")
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -135,27 +137,19 @@ export default function Customers() {
 
           <div className="flex justify-end gap-2">
             <Button
-              variant="default"
+              variant="outline"
+              disabled={!selectedIds.length}
               onClick={async () => {
-                const ids = Object.keys(selected).filter((k) => selected[k]);
-                if (!ids.length) {
-                  toast({ title: "Seleção vazia", description: "Selecione pelo menos um cliente", variant: "destructive" });
-                  return;
-                }
                 try {
-                  const res = await exportBlissCustomersToContacts(ids);
+                  const res = await exportBlissCustomersToContacts(selectedIds);
                   toast({ title: "Contactos exportados", description: `${res.data.created_count} criados, ${res.data.updated_count} atualizados` });
-                  const name = window.prompt('Nome do segmento (opcional):', `Clientes Bliss – ${new Date().toLocaleDateString('pt-PT')}`);
-                  if (name && res.data.contact_ids?.length) {
-                    await createSegment({ name, contact_ids: res.data.contact_ids, filters: [] });
-                    toast({ title: "Segmento criado", description: `${res.data.contact_ids.length} contactos adicionados` });
-                  }
+                  setSelected({})
                 } catch (e: any) {
                   toast({ title: "Erro", description: e?.message ?? 'Falha ao exportar', variant: 'destructive' })
                 }
               }}
             >
-              <Send className="w-4 h-4 mr-2" /> Enviar para Campanha
+              <Send className="w-4 h-4 mr-2" /> Exportar para contactos do CRM
             </Button>
             <Button variant="outline" onClick={load} disabled={loading}>
               Atualizar
