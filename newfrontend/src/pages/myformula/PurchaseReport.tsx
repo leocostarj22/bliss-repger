@@ -177,7 +177,7 @@ export default function MyFormulaPurchaseReport() {
           th, td { border:1px solid var(--border); padding:8px; font-size: 13px; vertical-align: top; }
           th { background:#f9fafb; text-align:left; }
           .subtle { color: var(--muted); }
-          .supp-col { padding:10px; border-radius:8px; background:#f9fafb; }
+          .supp-col { padding:10px 10px 10px 0; border-radius:8px; background:#f9fafb; }
           .supp-col--tarde { background:#f3f4f6; }
           .print-actions { margin-top: 16px; text-align: right; display:flex; gap:8px; justify-content:flex-end; }
           .btn { display:inline-block; padding:8px 12px; border:1px solid var(--border); border-radius:8px; text-decoration:none; color: var(--fg); background: #fff; cursor:pointer; }
@@ -291,18 +291,19 @@ export default function MyFormulaPurchaseReport() {
 
           <div className="section">
             <h2>Plano</h2>
-            <div className="grid-3" style={{ gridTemplateColumns: "2fr 0.8fr 0.8fr" }}>
-              <div>
-                <div className="label">PLANO:</div>
-                <div
-                  className="value"
-                  data-mf-editable="true"
-                  data-mf-key="plan_name"
-                  contentEditable
-                  suppressContentEditableWarning
-                  dangerouslySetInnerHTML={{ __html: reportData?.plan_name ?? "" }}
-                />
-              </div>
+            <div>
+              <div className="label">PLANO:</div>
+              <div
+                className="value"
+                data-mf-editable="true"
+                data-mf-key="plan_name"
+                contentEditable
+                suppressContentEditableWarning
+                dangerouslySetInnerHTML={{ __html: reportData?.plan_name ?? "" }}
+              />
+            </div>
+
+            <div className="grid-3" style={{ marginTop: 10, gridTemplateColumns: "1.2fr 0.8fr 0.8fr" }}>
               <div>
                 <div className="label">N.º DE CÁPSULAS POR DIA:</div>
                 <div
@@ -318,11 +319,10 @@ export default function MyFormulaPurchaseReport() {
                 <div className="label">Cor Capas</div>
                 <div className="value" data-mf-editable="true" data-mf-key="cover_color" contentEditable suppressContentEditableWarning />
               </div>
-            </div>
-
-            <div style={{ marginTop: 10 }}>
-              <div className="label">PESO LÍQUIDO:</div>
-              <div className="value">{reportData?.net_weight ?? ""}</div>
+              <div>
+                <div className="label">PESO LÍQUIDO:</div>
+                <div className="value">{reportData?.net_weight ?? ""}</div>
+              </div>
             </div>
 
             <div style={{ marginTop: 10 }}>
@@ -353,7 +353,7 @@ export default function MyFormulaPurchaseReport() {
                 <div key={group.title} className={"supp-col " + (group.title === "Tarde" ? "supp-col--tarde" : "")}>
                   <strong>{group.title}</strong>
                   {group.items?.length ? (
-                    <ul style={{ margin: "6px 0 0 18px", padding: 0 }}>
+                    <ul style={{ margin: "6px 0 0 0", padding: 0 }}>
                       {group.items.map((item, idx) => (
                         <li key={item.slug ?? `${item.name}-${idx}`}>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
