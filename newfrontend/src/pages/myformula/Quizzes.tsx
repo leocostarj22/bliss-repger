@@ -64,6 +64,8 @@ export default function Quizzes() {
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "incomplete">("all")
   const [planFilter, setPlanFilter] = useState<string>("all")
+  const [perPage, setPerPage] = useState(10)
+  const [page, setPage] = useState(1)
 
   const [viewOpen, setViewOpen] = useState(false)
   const [viewing, setViewing] = useState<MyFormulaQuiz | null>(null)
@@ -122,6 +124,13 @@ export default function Quizzes() {
     })
   }, [rows, search, statusFilter, planFilter])
 
+  const total = filtered.length
+  const totalPages = Math.max(1, Math.ceil(total / perPage))
+  const pageSafe = Math.min(page, totalPages)
+  const startIdx = (pageSafe - 1) * perPage
+  const endIdx = Math.min(total, startIdx + perPage)
+  const paged = filtered.slice(startIdx, endIdx)
+
   return (
     <div className="space-y-6 animate-slide-up">
       <div className="page-header">
@@ -161,10 +170,10 @@ export default function Quizzes() {
         <div className="grid gap-3 md:grid-cols-4">
           <div className="relative md:col-span-2">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar..." className="pl-9" />
+            <Input value={search} onChange={(e) => { setPage(1); setSearch(e.target.value) }} placeholder="Pesquisar..." className="pl-9" />
           </div>
 
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+          <Select value={statusFilter} onValueChange={(v) => { setPage(1); setStatusFilter(v as any) }}>
             <SelectTrigger>
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
@@ -175,7 +184,7 @@ export default function Quizzes() {
             </SelectContent>
           </Select>
 
-          <Select value={planFilter} onValueChange={setPlanFilter}>
+          <Select value={planFilter} onValueChange={(v) => { setPage(1); setPlanFilter(v) }}>
             <SelectTrigger>
               <SelectValue placeholder="Plano" />
             </SelectTrigger>
@@ -193,9 +202,9 @@ export default function Quizzes() {
 
       <div className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border/60">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40">
+              <tr className="text-left">
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">ID</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Nome</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Email</th>
@@ -229,7 +238,7 @@ export default function Quizzes() {
                       </td>
                     </tr>
                   ))
-                : filtered.map((r) => {
+                : paged.map((r) => {
                     const post = r.post ?? {}
                     const name = String(post.name ?? "—")
                     const email = String(post.email ?? "—")
@@ -283,7 +292,33 @@ export default function Quizzes() {
         {!loading && !filtered.length && <div className="p-6 text-sm text-muted-foreground">Sem resultados.</div>}
       </div>
 
-      {viewOpen && viewing && (
+      <div className="flex flex-col gap-3 border-t border-border/60 p-4 md:flex-row md:items-center md:justify-between">
+        <div className="text-sm text-muted-foreground">
+          Showing {total === 0 ? 0 : startIdx + 1} to {endIdx} of {total} results
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="text-sm text-muted-foreground">Per page</div>
+          <div className="w-24">
+            <Select value={String(perPage)} onValueChange={(v) => { setPage(1); setPerPage(Number(v)) }}>
+              <SelectTrigger>
+                <SelectValue placeholder={String(perPage)} />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 20, 50].map((n) => (
+                  <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))}>Anterior</Button>
+          <div className="text-xs text-muted-foreground">Página {pageSafe} de {totalPages}</div>
+          <Button variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Próxima</Button>
+        </div>
+      </div>
+
+      {viewOpen && !!viewing && (
         <ViewModal
           quiz={viewing}
           onClose={() => {
