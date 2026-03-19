@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Eye, Search } from "lucide-react"
+import { Eye, Search, ListChecks, CheckCircle2, AlertTriangle, TrendingUp } from "lucide-react"
 
 import type { MyFormulaQuiz } from "@/types"
 import { fetchMyFormulaQuizzes } from "@/services/myFormulaApi"
@@ -126,17 +126,14 @@ export default function Quizzes() {
     return Array.from(values)
   }, [rows])
 
-  const filtered = useMemo(() => {
+  const baseFiltered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return rows.filter((r) => {
       const post = r.post ?? {}
       const step = String(post.step ?? "")
       const improve = String(post.improve_health ?? "")
       const primaryPlanCode = getPrimaryPlanCode(improve)
-      const completed = step === "plans"
 
-      if (statusFilter === "completed" && !completed) return false
-      if (statusFilter === "incomplete" && completed) return false
       if (stepFilter !== "all" && step !== stepFilter) return false
       if (planFilter !== "all" && primaryPlanCode !== planFilter) return false
 
@@ -144,7 +141,22 @@ export default function Quizzes() {
       const hay = `${r.quiz_id} ${String(post.name ?? "")} ${String(post.email ?? "")}`.toLowerCase()
       return hay.includes(q)
     })
-  }, [rows, search, statusFilter, stepFilter, planFilter])
+  }, [rows, search, stepFilter, planFilter])
+
+  const statsTotal = baseFiltered.length
+  const statsCompleted = baseFiltered.filter((r) => String((r.post ?? {}).step ?? "") === "plans").length
+  const statsNotCompleted = statsTotal - statsCompleted
+  const statsRate = statsTotal > 0 ? Math.round((statsCompleted / statsTotal) * 100) : 0
+
+  const filtered = useMemo(() => {
+    return baseFiltered.filter((r) => {
+      const step = String((r.post ?? {}).step ?? "")
+      const completed = step === "plans"
+      if (statusFilter === "completed" && !completed) return false
+      if (statusFilter === "incomplete" && completed) return false
+      return true
+    })
+  }, [baseFiltered, statusFilter])
 
   const total = filtered.length
   const totalPages = Math.max(1, Math.ceil(total / perPage))
@@ -165,6 +177,44 @@ export default function Quizzes() {
         </div>
       </div>
 
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <button type="button" onClick={() => { setPage(1); setStatusFilter("all") }} className={`glass-card p-5 text-left transition-all duration-300 border-t-cyan-500/20 ${statusFilter === "all" ? "ring-1 ring-cyan-400/40 shadow-[0_0_24px_rgba(34,211,238,0.2)]" : "hover:shadow-[0_0_24px_rgba(34,211,238,0.15)]"}`}>
+          <div className="text-xs text-muted-foreground">Total de Quizzes</div>
+          <div className="mt-1 flex items-center justify-between">
+            <div className="text-2xl font-semibold">{statsTotal}</div>
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center"><ListChecks className="w-5 h-5 text-cyan-400" /></div>
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">Com filtros ativos</div>
+        </button>
+
+        <button type="button" onClick={() => { setPage(1); setStatusFilter("completed") }} className={`glass-card p-5 text-left transition-all duration-300 border-t-emerald-500/20 ${statusFilter === "completed" ? "ring-1 ring-emerald-400/40 shadow-[0_0_24px_rgba(16,185,129,0.2)]" : "hover:shadow-[0_0_24px_rgba(16,185,129,0.15)]"}`}>
+          <div className="text-xs text-muted-foreground">Concluídos</div>
+          <div className="mt-1 flex items-center justify-between">
+            <div className="text-2xl font-semibold">{statsCompleted}</div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center"><CheckCircle2 className="w-5 h-5 text-emerald-400" /></div>
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">Passo final: plans</div>
+        </button>
+
+        <button type="button" onClick={() => { setPage(1); setStatusFilter("incomplete") }} className={`glass-card p-5 text-left transition-all duration-300 border-t-amber-500/20 ${statusFilter === "incomplete" ? "ring-1 ring-amber-400/40 shadow-[0_0_24px_rgba(245,158,11,0.2)]" : "hover:shadow-[0_0_24px_rgba(245,158,11,0.15)]"}`}>
+          <div className="text-xs text-muted-foreground">Não Finalizados</div>
+          <div className="mt-1 flex items-center justify-between">
+            <div className="text-2xl font-semibold">{statsNotCompleted}</div>
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-amber-400" /></div>
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">Ainda em progresso</div>
+        </button>
+
+        <button type="button" onClick={() => { setPage(1); setStatusFilter("completed") }} className="glass-card p-5 text-left transition-all duration-300 border-t-violet-500/20 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
+          <div className="text-xs text-muted-foreground">Taxa de Conclusão</div>
+          <div className="mt-1 flex items-center justify-between">
+            <div className="text-2xl font-semibold">{statsRate}%</div>
+            <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center"><TrendingUp className="w-5 h-5 text-violet-400" /></div>
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">Base: filtros atuais</div>
+        </button>
+      </div>
 
       <div className="glass-card p-4">
         <div className="grid gap-3 md:grid-cols-5">
