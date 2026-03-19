@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft, Printer } from "lucide-react"
 
 import type { MyFormulaOrder } from "@/types"
 import { fetchMyFormulaOrder } from "@/services/myFormulaApi"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
 
 function pad(num: string, size: number) {
   const s = String(num ?? "")
@@ -108,6 +105,14 @@ export default function MyFormulaPurchaseReport() {
     }
   }
 
+  const onBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1)
+      return
+    }
+    navigate("/myformula/orders")
+  }
+
   return (
     <div>
       <style>
@@ -135,22 +140,17 @@ export default function MyFormulaPurchaseReport() {
           .print-actions { margin-top: 16px; text-align: right; display:flex; gap:8px; justify-content:flex-end; }
           .btn { display:inline-block; padding:8px 12px; border:1px solid var(--border); border-radius:8px; text-decoration:none; color: var(--fg); background: #fff; cursor:pointer; }
           .btn:disabled { opacity: 0.6; cursor:not-allowed; }
-          .top-actions { display:flex; justify-content:space-between; gap:12px; margin-bottom: 12px; }
-          @media print { .top-actions, .print-actions { display: none; } .mf-page { padding: 0; } .container { max-width: unset; } }
+          .no-print { margin-bottom: 12px; display:flex; justify-content:flex-start; gap:8px; }
+          @media print { .no-print, .print-actions { display: none; } .mf-page { padding: 0; } .container { max-width: unset; } }
         `}
       </style>
 
       <div className="mf-page">
         <div className="container">
-          <div className="top-actions">
-            <Button variant="outline" onClick={() => navigate(-1)}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
+          <div className="no-print">
+            <button className="btn" type="button" onClick={onBack}>
               Voltar
-            </Button>
-            <Button variant="outline" onClick={() => window.print()} disabled={!order}>
-              <Printer className="w-4 h-4 mr-2" />
-              Imprimir
-            </Button>
+            </button>
           </div>
 
           <div className="header">
@@ -162,7 +162,7 @@ export default function MyFormulaPurchaseReport() {
 
           <div className="meta">
             {loading ? (
-              <Skeleton className="h-8 w-full" />
+              <div className="subtle">A carregar…</div>
             ) : order ? (
               <>
                 <div className="grid-3" style={{ gridTemplateColumns: "0.8fr 1.4fr 0.8fr" }}>
@@ -323,7 +323,7 @@ export default function MyFormulaPurchaseReport() {
           <div className="section">
             <h2>Produtos</h2>
             {loading ? (
-              <Skeleton className="h-8 w-full" />
+              <div className="subtle">A carregar…</div>
             ) : order?.products?.length ? (
               <table>
                 <thead>
@@ -349,8 +349,8 @@ export default function MyFormulaPurchaseReport() {
           </div>
 
           <div className="print-actions">
-            <button className="btn" id="btn-save" onClick={onSave} disabled={!order}>Gravar</button>
-            <button className="btn" onClick={() => window.print()} disabled={!order}>Imprimir</button>
+            <button className="btn" id="btn-save" type="button" onClick={onSave} disabled={!order}>Gravar</button>
+            <button className="btn" type="button" onClick={() => window.print()} disabled={!order}>Imprimir</button>
           </div>
         </div>
       </div>

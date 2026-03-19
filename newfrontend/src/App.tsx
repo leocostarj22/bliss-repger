@@ -81,6 +81,7 @@ const App = () => (
         <HashRouter>
 
           <Routes>
+            <Route path="/myformula/orders/:id/purchase-report" element={<MyFormulaPurchaseReport />} />
             <Route element={<AppLayout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/gmcentral" element={<Navigate to="/" replace />} />
@@ -150,7 +151,6 @@ const App = () => (
               <Route path="/myformula/dashboard" element={<MyFormulaDashboard />} />
               <Route path="/myformula/orders" element={<MyFormulaOrders />} />
               <Route path="/myformula/orders/:id" element={<MyFormulaOrderDetail />} />
-              <Route path="/myformula/orders/:id/purchase-report" element={<MyFormulaPurchaseReport />} />
               <Route path="/myformula/customers" element={<MyFormulaCustomers />} />
               <Route path="/myformula/products" element={<MyFormulaProducts />} />
               <Route path="/myformula/quizzes" element={<MyFormulaQuizzes />} />
