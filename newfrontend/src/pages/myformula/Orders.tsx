@@ -33,15 +33,6 @@ export default function Orders() {
     return map
   }, [statuses])
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return orders.filter((o) => {
-      if (statusFilter !== "all" && o.order_status_id !== statusFilter) return false
-      if (!q) return true
-      const hay = `${o.order_id} ${o.firstname} ${o.lastname} ${o.email} ${o.telephone ?? ""}`.toLowerCase()
-      return hay.includes(q)
-    })
-  }, [orders, search, statusFilter])
 
   const load = async () => {
     setLoading(true)
@@ -120,35 +111,29 @@ export default function Orders() {
       </div>
 
       <div className="glass-card overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="mt-3 overflow-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/40">
               <tr className="text-left">
-                <th className="p-4 text-sm font-medium text-muted-foreground">ID</th>
-                <th className="p-4 text-sm font-medium text-muted-foreground">Cliente</th>
-                <th className="p-4 text-sm font-medium text-muted-foreground">Situação</th>
-                <th className="p-4 text-sm font-medium text-muted-foreground">Pagamento</th>
-                <th className="p-4 text-sm font-medium text-muted-foreground">Aprovação</th>
-                <th className="p-4 text-sm font-medium text-muted-foreground">Total</th>
-                <th className="p-4 text-sm font-medium text-muted-foreground">Data</th>
-                <th className="p-4 text-sm font-medium text-muted-foreground w-[120px]">Ações</th>
+                <th className="p-3">ID</th>
+                <th className="p-3">Cliente</th>
+                <th className="p-3">Situação</th>
+                <th className="p-3">Pagamento</th>
+                <th className="p-3">Aprovação</th>
+                <th className="p-3">Total</th>
+                <th className="p-3">Data</th>
+                <th className="p-3 w-[80px]"></th>
               </tr>
             </thead>
             <tbody>
-              {loading
-                ? Array.from({ length: 8 }).map((_, i) => (
-                    <tr key={i} className="border-b border-border/40">
-                      <td className="p-4"><Skeleton className="h-5 w-20" /></td>
-                      <td className="p-4"><Skeleton className="h-5 w-40" /></td>
-                      <td className="p-4"><Skeleton className="h-5 w-28" /></td>
-                      <td className="p-4"><Skeleton className="h-5 w-24" /></td>
-                      <td className="p-4"><Skeleton className="h-5 w-24" /></td>
-                      <td className="p-4"><Skeleton className="h-5 w-20" /></td>
-                      <td className="p-4"><Skeleton className="h-5 w-28" /></td>
-                      <td className="p-4 text-right"><Skeleton className="h-9 w-28 ml-auto" /></td>
-                    </tr>
-                  ))
-                : orders.map((o) => {
+              {loading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={i} className="border-t border-border/50">
+                    <td className="p-3" colSpan={8}><Skeleton className="h-6 w-full" /></td>
+                  </tr>
+                ))
+              ) : orders.length ? (
+                orders.map((o) => {
                     const statusName = statusNameById[o.order_status_id] ?? o.status?.name ?? o.order_status_id
                     const payment = o.payment_method ?? o.payment_code ?? "—"
                     const approvedVal = (o as any).approved
@@ -156,41 +141,50 @@ export default function Orders() {
                       ? Boolean(approvedVal)
                       : /aprov|aprovado|approv|complet|complete/i.test(String(statusName))
                     return (
-                      <tr key={o.order_id} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
-                        <td className="p-4">{o.order_id}</td>
-                        <td className="p-4">
-                          <div className="font-medium">{o.firstname} {o.lastname}</div>
-
+                      <tr key={o.order_id} className="border-t border-border/50 hover:bg-muted/20">
+                        <td className="p-3">{o.order_id}</td>
+                        <td className="p-3">{o.firstname} {o.lastname}</td>
+                        <td className="p-3">
+                          <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs text-primary border-primary/30">
+                            {statusName}
+                          </span>
                         </td>
-                        <td className="p-4">
-                          <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs text-primary border-primary/30">{statusName}</span>
-                        </td>
-                        <td className="p-4">{payment}</td>
-                        <td className="p-4">
+                        <td className="p-3">{payment}</td>
+                        <td className="p-3">
                           <span className={"inline-flex items-center rounded-md border px-2 py-0.5 text-xs " + (approvedOk ? "text-emerald-500 border-emerald-400/30" : "text-muted-foreground border-border/60")}>
                             {approvedOk ? "Aprovado" : "Pendente"}
                           </span>
                         </td>
-                        <td className="p-4">{money.format(Number(o.total ?? 0))}</td>
-                        <td className="p-4">{o.date_added ? new Date(o.date_added).toLocaleString("pt-PT") : "—"}</td>
-                        <td className="p-4 text-right">
+                        <td className="p-3">{money.format(Number(o.total ?? 0))}</td>
+                        <td className="p-3">{o.date_added ? new Date(o.date_added).toLocaleString("pt-PT") : "—"}</td>
+                        <td className="p-3">
                           <div className="flex justify-end gap-2">
                             <Button size="sm" variant="outline" onClick={() => navigate(`/myformula/orders/${o.order_id}`)}>
                               <Pencil className="w-4 h-4" />
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => { const url = new URL(`/admin/crm/myformula/orders/${o.order_id}/purchase-report`, window.location.origin); window.open(url.toString(), '_blank') }}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                const base = `${window.location.origin}${window.location.pathname}`
+                                window.open(`${base}#/myformula/orders/${o.order_id}/purchase-report`, "_blank")
+                              }}
+                            >
                               <Printer className="w-4 h-4" />
                             </Button>
                           </div>
                         </td>
                       </tr>
                     )
-                  })}
+                  })
+              ) : (
+                <tr className="border-t border-border/50">
+                  <td className="p-6 text-center text-muted-foreground" colSpan={8}>Sem dados</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-
-        {!loading && !orders.length && <div className="p-6 text-sm text-muted-foreground">Sem resultados.</div>}
 
         <div className="mt-4">
           <Pagination>
