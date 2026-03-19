@@ -47,12 +47,20 @@ function calcAge(birthdate?: string | null) {
   return age
 }
 
-function planFromImproveHealth(improve?: string | null) {
-  const parts = String(improve ?? "")
+function getPlanCodes(improve?: string | null) {
+  return String(improve ?? "")
     .split(",")
     .map((x) => x.trim())
     .filter(Boolean)
-  return parts[0] ?? null
+}
+
+function getPlanLabels(improve?: string | null) {
+  const codes = getPlanCodes(improve)
+  return codes.map((code) => PLAN_LABELS[code] ?? code)
+}
+
+function statusLabel(step?: string | null) {
+  return step === "plans" ? "Concluído" : `Não finalizado (passo: ${step || "—"})`
 }
 
 export default function Quizzes() {
@@ -72,7 +80,7 @@ export default function Quizzes() {
   const load = async () => {
     setLoading(true)
     try {
-      const params = { search, status: statusFilter, plan: planFilter }
+      const params = { search }
       const list = await fetchMyFormulaQuizzes(params)
       const data = Array.isArray(list.data) ? list.data : []
       setRows(data)
@@ -94,12 +102,12 @@ export default function Quizzes() {
       const post = r.post ?? {}
       const step = String(post.step ?? "")
       const improve = String(post.improve_health ?? "")
-      const plan = planFromImproveHealth(improve)
+      const selectedPlans = getPlanCodes(improve)
       const completed = step === "plans"
 
       if (statusFilter === "completed" && !completed) return false
       if (statusFilter === "incomplete" && completed) return false
-      if (planFilter !== "all" && plan !== planFilter) return false
+      if (planFilter !== "all" && !selectedPlans.includes(planFilter)) return false
 
       if (!q) return true
       const hay = `${r.quiz_id} ${String(post.name ?? "")} ${String(post.email ?? "")}`.toLowerCase()
@@ -153,7 +161,7 @@ export default function Quizzes() {
               <SelectItem value="all">Todos</SelectItem>
               {Object.entries(PLAN_LABELS).map(([k, v]) => (
                 <SelectItem key={k} value={k}>
-                  {k} — {v}
+                  {v}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -206,11 +214,11 @@ export default function Quizzes() {
                     const age = calcAge(post.birthdate ? String(post.birthdate) : null)
                     const gender = String(post.gender ?? "")
                     const improve = String(post.improve_health ?? "")
-                    const plan = planFromImproveHealth(improve)
+                    const planLabels = getPlanLabels(improve)
                     const step = String(post.step ?? "")
                     const completed = step === "plans"
 
-                    const planLabel = plan ? (PLAN_LABELS[plan] ?? plan) : "—"
+                    const planLabel = planLabels.length ? planLabels.join(", ") : "—"
                     const genderLabel = gender === "male" ? "Masculino" : gender === "female" ? "Feminino" : (gender || "—")
 
                     return (
@@ -227,7 +235,7 @@ export default function Quizzes() {
                         </td>
                         <td className="p-4">
                           <span className={`text-xs px-2 py-1 rounded-full ${completed ? "bg-emerald-500/10 text-emerald-300" : "bg-amber-500/10 text-amber-300"}`}>
-                            {completed ? "Concluído" : `Não finalizado (passo: ${step || "—"})`}
+                            {statusLabel(step)}
                           </span>
                         </td>
                         <td className="p-4">{r.date_added ? new Date(r.date_added).toLocaleString("pt-PT") : "—"}</td>
@@ -293,22 +301,50 @@ export default function Quizzes() {
 }
 
 function ViewModal({ quiz, onClose }: { quiz: MyFormulaQuiz; onClose: () => void }) {
+  const post = quiz.post ?? {}
+  const step = String(post.step ?? "")
+  const plans = getPlanLabels(String(post.improve_health ?? ""))
+  const entries = Object.entries(post)
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className="glass-card w-full max-w-3xl p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="glass-card w-full max-w-4xl p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-lg font-semibold">Quiz</div>
-            <div className="text-sm text-muted-foreground">{quiz.quiz_id}</div>
+            <div className="text-lg font-semibold">Visualização do Quiz</div>
+            <div className="text-sm text-muted-foreground">ID {quiz.quiz_id}</div>
           </div>
-          <Button variant="outline" onClick={onClose}>
-            Fechar
-          </Button>
+          <Button variant="outline" onClick={onClose}>Fechar</Button>
         </div>
 
-        <pre className="mt-5 max-h-[70vh] overflow-auto rounded-lg border border-border/60 p-4 text-xs bg-black/20">
-{JSON.stringify(quiz.post ?? {}, null, 2)}
-        </pre>
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <div className="rounded-lg border border-border/60 p-4">
+            <div className="text-sm font-medium">Cliente</div>
+            <div className="mt-2 text-sm text-muted-foreground">Nome: {String(post.name ?? "—")}</div>
+            <div className="text-sm text-muted-foreground">Email: {String(post.email ?? "—")}</div>
+            <div className="text-sm text-muted-foreground">Telefone: {String(post.telephone ?? "—")}</div>
+            <div className="text-sm text-muted-foreground">Status: {statusLabel(step)}</div>
+          </div>
+
+          <div className="rounded-lg border border-border/60 p-4">
+            <div className="text-sm font-medium">Plano selecionado</div>
+            <div className="mt-2 text-sm text-muted-foreground">{plans.length ? plans.join(", ") : "Sem plano selecionado"}</div>
+            <div className="mt-4 text-sm font-medium">Relatório</div>
+            <div className="mt-2 text-sm text-muted-foreground">Em breve: relatório personalizado do cliente.</div>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-lg border border-border/60 p-4">
+          <div className="text-sm font-medium">Respostas do quiz</div>
+          <div className="mt-3 max-h-[45vh] overflow-auto space-y-2">
+            {entries.map(([key, value]) => (
+              <div key={key} className="rounded-md border border-border/40 p-2">
+                <div className="text-xs text-muted-foreground">{key}</div>
+                <div className="text-sm break-words">{typeof value === "string" ? value : JSON.stringify(value)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )
