@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
@@ -325,7 +326,17 @@ function ProductForm({
   const [model, setModel] = useState(product?.model ?? "")
   const [sku, setSku] = useState(product?.sku ?? "")
   const [name, setName] = useState(product?.description?.name ?? "")
-  const [description, setDescription] = useState(product?.description?.description ?? "")
+  const decodeHtml = (input: string) => {
+    if (typeof window === 'undefined') return input
+    const txt = document.createElement('textarea')
+    txt.innerHTML = input
+    return txt.value
+  }
+  const hasHtml = (input: string) => /<[^>]+>/.test(input)
+  const [description, setDescription] = useState(decodeHtml(product?.description?.description ?? ""))
+  const [showPreview, setShowPreview] = useState(hasHtml(description))
+  const [descriptionMode, setDescriptionMode] = useState<"visual" | "html">("visual")
+  const decodedHtml = useMemo(() => decodeHtml(description), [description])
   const [price, setPrice] = useState(String(product?.price ?? 0))
   const [quantity, setQuantity] = useState(String(product?.quantity ?? 0))
   const [status, setStatus] = useState(Boolean(product?.status ?? true))
@@ -391,8 +402,27 @@ function ProductForm({
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome público" />
           </div>
           <div className="space-y-2 md:col-span-2">
-            <div className="text-xs text-muted-foreground">Descrição</div>
-            <Textarea value={description ?? ""} onChange={(e) => setDescription(e.target.value)} placeholder="Opcional" />
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs text-muted-foreground">Descrição</div>
+              <div className="flex items-center gap-2">
+                <Button type="button" size="sm" variant={descriptionMode === "visual" ? "default" : "outline"} onClick={() => setDescriptionMode("visual")}>Editor</Button>
+                <Button type="button" size="sm" variant={descriptionMode === "html" ? "default" : "outline"} onClick={() => setDescriptionMode("html")}>HTML</Button>
+              </div>
+            </div>
+            {descriptionMode === "visual" ? (
+              <RichTextEditor value={description} onChange={setDescription} placeholder="Descrição do produto..." />
+            ) : (
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição do produto..." className="min-h-[220px] font-mono text-xs" />
+            )}
+            <div className="flex items-center justify-end gap-2">
+              <span className="text-xs text-muted-foreground">Pré-visualizar</span>
+              <Switch checked={showPreview} onCheckedChange={setShowPreview} />
+            </div>
+            {showPreview && (
+              <div className="mt-2 p-3 rounded-md border bg-background">
+                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: decodedHtml }} />
+              </div>
+            )}
           </div>
           <div className="space-y-2">
             <div className="text-xs text-muted-foreground">Preço (€)</div>
