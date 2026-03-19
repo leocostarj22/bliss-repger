@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { ChevronDown, Pencil, Plus, Search, Trash2 } from "lucide-react"
 
 import type { MyFormulaProduct } from "@/types"
 import { createMyFormulaProduct, deleteMyFormulaProduct, fetchMyFormulaProducts, updateMyFormulaProduct } from "@/services/myFormulaApi"
@@ -9,9 +9,17 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { useToast } from "@/components/ui/use-toast"
 
 const money = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" })
+
+function formatDateAdded(iso?: string | null) {
+  if (!iso) return "—"
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return "—"
+  return d.toLocaleString("pt-PT")
+}
 
 export default function Products() {
   const { toast } = useToast()
@@ -27,6 +35,10 @@ export default function Products() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<MyFormulaProduct | null>(null)
 
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
+  const [sortDir, setSortDir] = useState<"desc" | "asc">("desc")
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return rows.filter((p) => {
@@ -41,6 +53,35 @@ export default function Products() {
       return hay.includes(q)
     })
   }, [rows, search, statusFilter])
+
+  const sorted = useMemo(() => {
+    const next = filtered.slice()
+    next.sort((a, b) => {
+      const da = a.date_added ? new Date(a.date_added).getTime() : 0
+      const db = b.date_added ? new Date(b.date_added).getTime() : 0
+      return sortDir === "desc" ? db - da : da - db
+    })
+    return next
+  }, [filtered, sortDir])
+
+  const total = sorted.length
+  const totalPages = Math.max(1, Math.ceil(total / perPage))
+  const pageSafe = Math.min(page, totalPages)
+  const startIdx = (pageSafe - 1) * perPage
+  const endIdx = Math.min(total, startIdx + perPage)
+  const pageRows = sorted.slice(startIdx, endIdx)
+
+  const pageItems = useMemo(() => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const items: Array<number | "…"> = [1]
+    const left = Math.max(2, pageSafe - 1)
+    const right = Math.min(totalPages - 1, pageSafe + 1)
+    if (left > 2) items.push("…")
+    for (let p = left; p <= right; p++) items.push(p)
+    if (right < totalPages - 1) items.push("…")
+    items.push(totalPages)
+    return items
+  }, [pageSafe, totalPages])
 
   const load = async () => {
     setLoading(true)
@@ -125,6 +166,12 @@ export default function Products() {
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Preço</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Stock</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Estado</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">
+                  <button type="button" className="inline-flex items-center gap-1" onClick={() => setSortDir((d) => d === "desc" ? "asc" : "desc")}>
+                    Date added
+                    <ChevronDown className={"h-4 w-4 transition-transform " + (sortDir === "asc" ? "rotate-180" : "")} />
+                  </button>
+                </th>
                 <th className="text-right p-4 text-sm font-medium text-muted-foreground">Ações</th>
               </tr>
             </thead>
@@ -150,7 +197,7 @@ export default function Products() {
                       </td>
                     </tr>
                   ))
-                : filtered.map((p) => {
+                : pageRows.map((p) => {
                     const active = Boolean(p.status ?? true)
                     const name = p.description?.name ?? p.model
                     return (
@@ -169,6 +216,7 @@ export default function Products() {
                             {active ? "Ativo" : "Inativo"}
                           </span>
                         </td>
+                        <td className="p-4 text-sm">{formatDateAdded(p.date_added ?? null)}</td>
                         <td className="p-4 text-right">
                           <div className="flex justify-end gap-2">
                             <Button
@@ -194,6 +242,46 @@ export default function Products() {
         </div>
 
         {!loading && !filtered.length && <div className="p-6 text-sm text-muted-foreground">Sem resultados.</div>}
+      </div>
+
+      <div className="flex flex-col gap-3 border-t border-border/60 p-4 md:flex-row md:items-center md:justify-between">
+        <div className="text-sm text-muted-foreground">
+          Showing {total === 0 ? 0 : startIdx + 1} to {endIdx} of {total} results
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="text-sm text-muted-foreground">Per page</div>
+          <div className="w-24">
+            <Select value={String(perPage)} onValueChange={(v) => { setPage(1); setPerPage(Number(v)) }}>
+              <SelectTrigger>
+                <SelectValue placeholder={String(perPage)} />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 20, 50].map((n) => (<SelectItem key={n} value={String(n)}>{n}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <Pagination className="md:justify-end">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }} />
+            </PaginationItem>
+            {pageItems.map((it, idx) => it === "…" ? (
+              <PaginationItem key={`e-${idx}`}>
+                <PaginationEllipsis />
+              </PaginationItem>
+            ) : (
+              <PaginationItem key={it}>
+                <PaginationLink href="#" isActive={it === pageSafe} onClick={(e) => { e.preventDefault(); setPage(it) }}>{it}</PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages, p + 1)) }} />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
 
       {formOpen && (

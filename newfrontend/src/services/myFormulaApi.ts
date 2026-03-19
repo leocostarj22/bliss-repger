@@ -69,23 +69,11 @@ const writeMyFormulaQuizzes = (rows: MyFormulaQuiz[]) => writeStorage(MYFORMULA_
 export async function fetchMyFormulaProducts(params?: {
   search?: string
   status?: 'all' | 'active' | 'inactive'
+  page?: number
+  per_page?: number
 }): Promise<ApiResponse<MyFormulaProduct[]>> {
-  await delay()
-  const q = params?.search?.trim().toLowerCase() ?? ''
-  const status = params?.status ?? 'all'
-  const rows = readMyFormulaProducts()
-  const filtered = rows.filter((p) => {
-    if (status !== 'all') {
-      const active = Boolean(p.status ?? true)
-      if (status === 'active' && !active) return false
-      if (status === 'inactive' && active) return false
-    }
-    if (!q) return true
-    const name = p.description?.name ?? ''
-    const hay = `${p.product_id} ${p.model} ${p.sku ?? ''} ${name}`.toLowerCase()
-    return hay.includes(q)
-  })
-  return { data: filtered }
+  const res = await axios.get('/api/v1/myformula/products', { params })
+  return res.data
 }
 
 export async function createMyFormulaProduct(payload: {
@@ -97,27 +85,8 @@ export async function createMyFormulaProduct(payload: {
   name?: string | null
   description?: string | null
 }): Promise<ApiResponse<MyFormulaProduct>> {
-  await delay()
-  const rows = readMyFormulaProducts()
-  const product_id = genId('mf_p')
-  const row: MyFormulaProduct = {
-    product_id,
-    model: payload.model,
-    sku: payload.sku ?? null,
-    price: payload.price ?? null,
-    quantity: payload.quantity ?? null,
-    status: payload.status ?? true,
-    date_added: new Date().toISOString(),
-    description: {
-      product_id,
-      language_id: 2,
-      name: payload.name ?? payload.model,
-      description: payload.description ?? null,
-    },
-  }
-  const next = [row, ...rows]
-  writeMyFormulaProducts(next)
-  return { data: row }
+  const res = await axios.post('/api/v1/myformula/products', payload)
+  return res.data
 }
 
 export async function updateMyFormulaProduct(
@@ -132,36 +101,13 @@ export async function updateMyFormulaProduct(
     description: string | null
   }>
 ): Promise<ApiResponse<MyFormulaProduct>> {
-  await delay()
-  const rows = readMyFormulaProducts()
-  const idx = rows.findIndex((p) => p.product_id === product_id)
-  if (idx < 0) throw new Error('Produto não encontrado')
-  const current = rows[idx]
-  const nextRow: MyFormulaProduct = {
-    ...current,
-    model: payload.model ?? current.model,
-    sku: payload.sku !== undefined ? payload.sku : current.sku ?? null,
-    price: payload.price !== undefined ? payload.price : current.price ?? null,
-    quantity: payload.quantity !== undefined ? payload.quantity : current.quantity ?? null,
-    status: payload.status !== undefined ? payload.status : current.status ?? true,
-    description: {
-      product_id,
-      language_id: current.description?.language_id ?? 2,
-      name: payload.name ?? current.description?.name ?? current.model,
-      description: payload.description !== undefined ? payload.description : current.description?.description ?? null,
-    },
-  }
-  const next = rows.slice()
-  next[idx] = nextRow
-  writeMyFormulaProducts(next)
-  return { data: nextRow }
+  const res = await axios.put(`/api/v1/myformula/products/${product_id}`, payload)
+  return res.data
 }
 
 export async function deleteMyFormulaProduct(product_id: string): Promise<ApiResponse<{ ok: true }>> {
-  await delay()
-  const rows = readMyFormulaProducts()
-  writeMyFormulaProducts(rows.filter((p) => p.product_id !== product_id))
-  return { data: { ok: true } }
+  const res = await axios.delete(`/api/v1/myformula/products/${product_id}`)
+  return res.data
 }
 
 export async function fetchMyFormulaCustomers(params?: {
