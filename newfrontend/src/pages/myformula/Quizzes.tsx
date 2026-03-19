@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Eye, Search } from "lucide-react"
 
 import type { MyFormulaQuiz } from "@/types"
-import { fetchMyFormulaQuizzes } from "@/services/myFormulaApi"
+import { fetchMyFormulaQuizzes, fetchMyFormulaQuizStats } from "@/services/myFormulaApi"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -57,6 +57,7 @@ function planFromImproveHealth(improve?: string | null) {
 export default function Quizzes() {
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState<MyFormulaQuiz[]>([])
+  const [stats, setStats] = useState<{ total: number; completed: number; notCompleted: number; rate: number }>({ total: 0, completed: 0, notCompleted: 0, rate: 0 })
 
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "incomplete">("all")
@@ -68,8 +69,18 @@ export default function Quizzes() {
   const load = async () => {
     setLoading(true)
     try {
-      const resp = await fetchMyFormulaQuizzes({ search: "", status: "all", plan: "all" })
-      setRows(resp.data)
+      const params = { search, status: statusFilter, plan: planFilter }
+      const [list, s] = await Promise.all([
+        fetchMyFormulaQuizzes(params),
+        fetchMyFormulaQuizStats(params),
+      ])
+      setRows(list.data)
+      setStats({
+        total: s.data.total,
+        completed: s.data.completed,
+        notCompleted: s.data.not_completed,
+        rate: s.data.completion_rate,
+      })
     } finally {
       setLoading(false)
     }
@@ -77,7 +88,7 @@ export default function Quizzes() {
 
   useEffect(() => {
     load()
-  }, [])
+  }, [search, statusFilter, planFilter])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -107,6 +118,29 @@ export default function Quizzes() {
             <p className="page-subtitle">Respostas dos quizzes MyFormula</p>
             <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
           </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <div className="glass-card p-4">
+          <div className="text-sm text-muted-foreground">Total de Quizzes</div>
+          <div className="mt-1 text-2xl font-semibold">{stats.total}</div>
+          <div className="mt-1 text-xs text-muted-foreground">Registos filtrados</div>
+        </div>
+        <div className="glass-card p-4">
+          <div className="text-sm text-muted-foreground">Concluídos</div>
+          <div className="mt-1 text-2xl font-semibold">{stats.completed}</div>
+          <div className="mt-1 text-xs text-muted-foreground">Chegaram ao fim</div>
+        </div>
+        <div className="glass-card p-4">
+          <div className="text-sm text-muted-foreground">Não Finalizados</div>
+          <div className="mt-1 text-2xl font-semibold">{stats.notCompleted}</div>
+          <div className="mt-1 text-xs text-muted-foreground">Abandonaram a meio</div>
+        </div>
+        <div className="glass-card p-4">
+          <div className="text-sm text-muted-foreground">Taxa de Conclusão</div>
+          <div className="mt-1 text-2xl font-semibold">{stats.rate}%</div>
+          <div className="mt-1 h-1 w-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600" />
         </div>
       </div>
 
@@ -149,9 +183,13 @@ export default function Quizzes() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/60">
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Pessoa</th>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Objetivo</th>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Estado</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">ID</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Nome</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Email</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Género</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Idade</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Plano</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Status</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Data</th>
                 <th className="text-right p-4 text-sm font-medium text-muted-foreground">Ações</th>
               </tr>
@@ -189,26 +227,24 @@ export default function Quizzes() {
                     const step = String(post.step ?? "")
                     const completed = step === "plans"
 
-                    const planLabel = plan ? `${plan} — ${PLAN_LABELS[plan] ?? "Plano"}` : "—"
-
-                    const genderLabel =
-                      gender === "male" ? "Masculino" : gender === "female" ? "Feminino" : gender ? gender : "—"
+                    const planLabel = plan ? (PLAN_LABELS[plan] ?? plan) : "—"
+                    const genderLabel = gender === "male" ? "Masculino" : gender === "female" ? "Feminino" : (gender || "—")
 
                     return (
                       <tr key={r.quiz_id} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
+                        <td className="p-4 text-sm">{r.quiz_id}</td>
+                        <td className="p-4">{name}</td>
+                        <td className="p-4">{email}</td>
+                        <td className="p-4">{genderLabel}</td>
+                        <td className="p-4">{age ?? "—"}</td>
                         <td className="p-4">
-                          <div className="font-medium">{name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {email} · {genderLabel}
-                            {age !== null ? ` · ${age} anos` : ""}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="text-sm">{planLabel}</div>
+                          <span className="text-xs px-2 py-1 rounded-full bg-info/10 text-info-foreground">
+                            {planLabel}
+                          </span>
                         </td>
                         <td className="p-4">
                           <span className={`text-xs px-2 py-1 rounded-full ${completed ? "bg-emerald-500/10 text-emerald-300" : "bg-amber-500/10 text-amber-300"}`}>
-                            {completed ? "Concluído" : `Incompleto (${step || "—"})`}
+                            {completed ? "Concluído" : `Não finalizado (passo: ${step || "—"})`}
                           </span>
                         </td>
                         <td className="p-4">{r.date_added ? new Date(r.date_added).toLocaleString("pt-PT") : "—"}</td>

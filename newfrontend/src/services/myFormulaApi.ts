@@ -272,35 +272,17 @@ export async function fetchMyFormulaQuizzes(params?: {
   status?: 'all' | 'completed' | 'incomplete'
   plan?: string | 'all'
 }): Promise<ApiResponse<MyFormulaQuiz[]>> {
-  await delay()
-  const q = params?.search?.trim().toLowerCase() ?? ''
-  const status = params?.status ?? 'all'
-  const plan = params?.plan ?? 'all'
+  const res = await axios.get('/api/v1/myformula/quizzes', { params })
+  return res.data
+}
 
-  const rows = readMyFormulaQuizzes()
-  const filtered = rows.filter((r) => {
-    const post = r.post ?? {}
-    const email = post.email ? normalizeEmail(String(post.email)) : ''
-    const name = post.name ? String(post.name) : ''
-    const step = post.step ? String(post.step) : ''
-    const improve = post.improve_health ? String(post.improve_health) : ''
-
-    const completed = step === 'plans'
-    if (status === 'completed' && !completed) return false
-    if (status === 'incomplete' && completed) return false
-
-    if (plan !== 'all') {
-      const parts = improve.split(',').map((x) => x.trim()).filter(Boolean)
-      if (!parts.includes(plan)) return false
-    }
-
-    if (!q) return true
-    const hay = `${r.quiz_id} ${name} ${email}`.toLowerCase()
-    return hay.includes(q)
-  })
-
-  const sorted = filtered.slice().sort((a, b) => String(b.date_added ?? '').localeCompare(String(a.date_added ?? '')))
-  return { data: sorted }
+export async function fetchMyFormulaQuizStats(params?: {
+  search?: string
+  status?: 'all' | 'completed' | 'incomplete'
+  plan?: string | 'all'
+}): Promise<ApiResponse<{ total: number; completed: number; not_completed: number; completion_rate: number }>> {
+  const res = await axios.get('/api/v1/myformula/quizzes/stats', { params })
+  return res.data
 }
 
 export interface MyFormulaDashboardData {

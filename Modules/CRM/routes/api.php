@@ -18,6 +18,7 @@ use Modules\CRM\Http\Controllers\Api\MyFormulaOrderController;
 use Modules\CRM\Http\Controllers\Api\MyFormulaOrderStatusController;
 use Modules\CRM\Http\Controllers\Api\MyFormulaCustomerController;
 use Modules\CRM\Http\Controllers\Api\MyFormulaProductController;
+use Modules\CRM\Http\Controllers\Api\MyFormulaQuizController;
 use Modules\CRM\Http\Controllers\CRMController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -213,5 +214,8 @@ Route::prefix('v1')->group(function () {
         Route::get('orders/{id}', [MyFormulaOrderController::class, 'show']);
         Route::get('orders/{id}/purchase-report', [MyFormulaOrderController::class, 'purchaseReport']);
         Route::get('order-statuses', [MyFormulaOrderStatusController::class, 'index']);
+
+        Route::get('quizzes', [MyFormulaQuizController::class, 'index']);
+        Route::get('quizzes/stats', [MyFormulaQuizController::class, 'stats']);
     });
 });
