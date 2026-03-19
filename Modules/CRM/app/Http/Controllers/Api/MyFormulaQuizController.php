@@ -34,7 +34,10 @@ class MyFormulaQuizController extends Controller
                 $x->where('post->step', 'plans')->orWhereNull('post->step');
             });
         } elseif ($status === 'incomplete') {
-            $q->where('post->step', 'NOT LIKE', 'plans');
+            $q->where(function ($x) {
+                $x->where('post->step', '!=', 'plans')
+                  ->orWhereNull('post->step');
+            });
         }
 
         if ($gender) {
@@ -62,7 +65,7 @@ class MyFormulaQuizController extends Controller
         }
 
         if ($plan !== 'all') {
-            $q->where('post->improve_health', 'like', $plan . '%');
+            $q->where('post->improve_health', 'like', '%' . $plan . '%');
         }
 
         return $q->orderByDesc('date_added');
