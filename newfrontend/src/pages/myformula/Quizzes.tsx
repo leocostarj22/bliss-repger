@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/components/ui/use-toast"
 
 const PLAN_LABELS: Record<string, string> = {
   A: "Aumento de energia",
@@ -55,6 +56,7 @@ function planFromImproveHealth(improve?: string | null) {
 }
 
 export default function Quizzes() {
+  const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState<MyFormulaQuiz[]>([])
   const [stats, setStats] = useState<{ total: number; completed: number; notCompleted: number; rate: number }>({ total: 0, completed: 0, notCompleted: 0, rate: 0 })
@@ -74,13 +76,17 @@ export default function Quizzes() {
         fetchMyFormulaQuizzes(params),
         fetchMyFormulaQuizStats(params),
       ])
-      setRows(list.data)
+      setRows(Array.isArray(list.data) ? list.data : [])
       setStats({
-        total: s.data.total,
-        completed: s.data.completed,
-        notCompleted: s.data.not_completed,
-        rate: s.data.completion_rate,
+        total: Number(s.data?.total ?? 0),
+        completed: Number(s.data?.completed ?? 0),
+        notCompleted: Number(s.data?.not_completed ?? 0),
+        rate: Number(s.data?.completion_rate ?? 0),
       })
+    } catch (e: any) {
+      toast({ title: "Erro", description: e?.message ?? "Não foi possível carregar quizzes", variant: "destructive" })
+      setRows([])
+      setStats({ total: 0, completed: 0, notCompleted: 0, rate: 0 })
     } finally {
       setLoading(false)
     }

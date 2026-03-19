@@ -272,7 +272,7 @@ export async function fetchMyFormulaQuizzes(params?: {
   status?: 'all' | 'completed' | 'incomplete'
   plan?: string | 'all'
 }): Promise<ApiResponse<MyFormulaQuiz[]>> {
-  const res = await axios.get('/api/v1/myformula/quizzes', { params })
+  const res = await axios.get('/api/v1/myformula/quizzes', { params, withCredentials: true })
   return res.data
 }
 
@@ -281,7 +281,7 @@ export async function fetchMyFormulaQuizStats(params?: {
   status?: 'all' | 'completed' | 'incomplete'
   plan?: string | 'all'
 }): Promise<ApiResponse<{ total: number; completed: number; not_completed: number; completion_rate: number }>> {
-  const res = await axios.get('/api/v1/myformula/quizzes/stats', { params })
+  const res = await axios.get('/api/v1/myformula/quizzes/stats', { params, withCredentials: true })
   return res.data
 }
 
