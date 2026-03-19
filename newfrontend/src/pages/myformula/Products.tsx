@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { ChevronDown, Pencil, Plus, Search, Trash2 } from "lucide-react"
 
 import type { MyFormulaProduct } from "@/types"
@@ -24,6 +25,7 @@ function formatDateAdded(iso?: string | null) {
 
 export default function Products() {
   const { toast } = useToast()
+  const navigate = useNavigate()
   const [rows, setRows] = useState<MyFormulaProduct[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -223,10 +225,7 @@ export default function Products() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => {
-                                setEditing(p)
-                                setFormOpen(true)
-                              }}
+                              onClick={() => navigate(`/myformula/products/${p.product_id}/edit`)}
                             >
                               <Pencil className="w-4 h-4" />
                             </Button>

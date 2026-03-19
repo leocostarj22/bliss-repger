@@ -54,6 +54,7 @@ import MyFormulaOrderDetail from "@/pages/myformula/OrderDetail";
 import MyFormulaPurchaseReport from "@/pages/myformula/PurchaseReport";
 import MyFormulaCustomers from "@/pages/myformula/Customers";
 import MyFormulaProducts from "@/pages/myformula/Products";
+import MyFormulaProductEdit from "@/pages/myformula/ProductEdit";
 import MyFormulaQuizzes from "@/pages/myformula/Quizzes";
 import Profile from "@/pages/account/Profile";
 
@@ -153,6 +154,7 @@ const App = () => (
               <Route path="/myformula/orders/:id" element={<MyFormulaOrderDetail />} />
               <Route path="/myformula/customers" element={<MyFormulaCustomers />} />
               <Route path="/myformula/products" element={<MyFormulaProducts />} />
+              <Route path="/myformula/products/:id/edit" element={<MyFormulaProductEdit />} />
               <Route path="/myformula/quizzes" element={<MyFormulaQuizzes />} />
 
               <Route path="/reports" element={<Navigate to="/reports/system-logs" replace />} />
