@@ -113,7 +113,8 @@ export default function Customers() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-xs text-muted-foreground">My Formula Customers &nbsp;&rsaquo;&nbsp; List</div>
-            <h1 className="page-title">My Formula Customers</h1>
+            <h1 className="page-title">Clientes</h1>
+            <p className="page-subtitle">Base de clientes MyFormula</p>
             <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
           </div>
           <Button
@@ -128,7 +129,7 @@ export default function Customers() {
         </div>
       </div>
 
-      <div className="glass-card overflow-hidden">
+      <div className="glass-card p-0 overflow-hidden">
         <div className="flex items-center justify-between gap-3 border-b border-border/60 p-4">
           <div className="flex items-center gap-2">
             <Button variant="outline" disabled={!selectedIds.length} onClick={exportSelected}>
@@ -143,16 +144,16 @@ export default function Customers() {
                 setPage(1)
                 setSearch(e.target.value)
               }}
-              placeholder="Search"
+              placeholder="Pesquisar..."
               className="pl-9"
             />
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border/60">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40">
+              <tr className="text-left">
                 <th className="w-10 p-4">
                   <Checkbox
                     checked={allOnPageSelected || (someOnPageSelected ? "indeterminate" : false)}
@@ -213,6 +214,7 @@ export default function Customers() {
                         </td>
                         <td className="p-4">
                           <div className="font-medium">{c.firstname} {c.lastname}</div>
+                          <div className="text-xs text-muted-foreground">{c.customer_id}</div>
                         </td>
                         <td className="p-4">
                           <div className="flex items-center gap-2 text-sm">
@@ -227,9 +229,7 @@ export default function Customers() {
                           </div>
                         </td>
                         <td className="p-4">
-                          <span className={"inline-flex items-center rounded-md border px-2 py-0.5 text-xs " + (active ? "text-emerald-500 border-emerald-400/30 bg-emerald-500/10" : "text-muted-foreground border-border/60")}>
-                            {active ? "Ativo" : "Inativo"}
-                          </span>
+                          <span className={active ? "text-emerald-400" : "text-muted-foreground"}>{active ? "Ativo" : "Inativo"}</span>
                         </td>
                         <td className="p-4 text-sm">{formatDateAdded(c.date_added ?? null)}</td>
                         <td className="p-4 text-right">
