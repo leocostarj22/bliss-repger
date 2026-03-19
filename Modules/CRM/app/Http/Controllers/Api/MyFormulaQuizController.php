@@ -12,66 +12,9 @@ class MyFormulaQuizController extends Controller
 {
     private function buildQuery(Request $request)
     {
-        $search   = trim((string) $request->query('search', ''));
-        $status   = (string) $request->query('status', 'all');
-        $plan     = (string) $request->query('plan', 'all');
-        $gender   = $request->query('gender');
-        $ageRange = $request->query('age_range');
-        $from     = $request->query('from');
-        $to       = $request->query('to');
-
-        $q = Quiz::query()->betweenDates($from, $to);
-
-        if ($search !== '') {
-            $q->where(function ($x) use ($search) {
-                $like = "%{$search}%";
-                $x->where('quiz_id', 'like', $like)
-                  ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(post, '$.name')) LIKE ?", [$like])
-                  ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(post, '$.email')) LIKE ?", [$like]);
-            });
-        }
-
-        if ($status === 'completed') {
-            $q->where(function ($x) {
-                $x->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(post, '$.step')) = 'plans'")
-                  ->orWhereRaw("JSON_EXTRACT(post, '$.step') IS NULL");
-            });
-        } elseif ($status === 'incomplete') {
-            $q->where(function ($x) {
-                $x->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(post, '$.step')) <> 'plans'")
-                  ->orWhereRaw("JSON_EXTRACT(post, '$.step') IS NULL");
-            });
-        }
-
-        if ($gender) {
-            $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(post, '$.gender')) = ?", [$gender]);
-        }
-
-        if ($ageRange) {
-            $now = Carbon::now();
-            if ($ageRange === '18-29') {
-                $start = $now->copy()->subYears(30)->addDay()->format('Y-m-d');
-                $end   = $now->copy()->subYears(18)->format('Y-m-d');
-                $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(post, '$.birthdate')) BETWEEN ? AND ?", [$start, $end]);
-            } elseif ($ageRange === '30-39') {
-                $start = $now->copy()->subYears(40)->addDay()->format('Y-m-d');
-                $end   = $now->copy()->subYears(30)->format('Y-m-d');
-                $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(post, '$.birthdate')) BETWEEN ? AND ?", [$start, $end]);
-            } elseif ($ageRange === '40-49') {
-                $start = $now->copy()->subYears(50)->addDay()->format('Y-m-d');
-                $end   = $now->copy()->subYears(40)->format('Y-m-d');
-                $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(post, '$.birthdate')) BETWEEN ? AND ?", [$start, $end]);
-            } elseif ($ageRange === '50+') {
-                $end = $now->copy()->subYears(50)->format('Y-m-d');
-                $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(post, '$.birthdate')) <= ?", [$end]);
-            }
-        }
-
-        if ($plan !== 'all') {
-            $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(post, '$.improve_health')) LIKE ?", ['%' . $plan . '%']);
-        }
-
-        return $q->orderByDesc('date_added');
+        $from = $request->query('from');
+        $to   = $request->query('to');
+        return Quiz::query()->betweenDates($from, $to)->orderByDesc('date_added');
     }
 
     public function index(Request $request)

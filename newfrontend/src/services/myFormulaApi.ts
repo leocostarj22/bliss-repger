@@ -116,7 +116,7 @@ export async function fetchMyFormulaCustomers(params?: {
   page?: number
   per_page?: number
 }): Promise<ApiResponse<MyFormulaCustomer[]>> {
-  const res = await axios.get('/api/v1/myformula/customers', { params })
+  const res = await axios.get('/api/v1/myformula/customers', { params, withCredentials: true })
   return res.data
 }
 
@@ -186,7 +186,7 @@ export async function deleteMyFormulaCustomer(customer_id: string): Promise<ApiR
 }
 
 export async function exportCustomersToContacts(customer_ids: string[]): Promise<ApiResponse<{ created_count: number; updated_count: number; contact_ids: number[] }>> {
-  const res = await axios.post('/api/v1/myformula/customers/export-contacts', { customer_ids })
+  const res = await axios.post('/api/v1/myformula/customers/export-contacts', { customer_ids }, { withCredentials: true })
   return { data: res.data?.data }
 }
 
