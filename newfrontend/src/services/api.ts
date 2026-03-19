@@ -3551,6 +3551,43 @@ const parseIsoMs = (v: string) => {
   return Number.isFinite(ms) ? ms : 0;
 };
 
+export interface EspacoAbsolutoOverviewCard {
+  key: string;
+  title: string;
+  description: string;
+  count: number;
+}
+
+export async function fetchEspacoAbsolutoOverview(): Promise<ApiResponse<{ cards: EspacoAbsolutoOverviewCard[] }>> {
+  const response = await apiFetch('/api/v1/espacoabsoluto/overview', {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let msg = `Falha ao carregar resumo Espaço Absoluto: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  const cards = Array.isArray(json?.data?.cards) ? json.data.cards : [];
+  return {
+    data: {
+      cards: cards.map((c: any) => ({
+        key: String(c?.key ?? ''),
+        title: String(c?.title ?? ''),
+        description: String(c?.description ?? ''),
+        count: Number(c?.count ?? 0),
+      })),
+    },
+  };
+}
+
 export async function fetchEspacoAbsolutoCustomers(params?: {
   search?: string;
   status?: 'all' | 'active' | 'inactive';
@@ -3558,34 +3595,27 @@ export async function fetchEspacoAbsolutoCustomers(params?: {
   registered_from?: string;
   registered_until?: string;
 }): Promise<ApiResponse<EspacoAbsolutoCustomer[]>> {
-  await delay();
-  const rows = readEspacoAbsolutoCustomers();
+  const qs = new URLSearchParams();
+  if (params?.search?.trim()) qs.set('search', params.search.trim());
 
-  const q = (params?.search ?? '').trim().toLowerCase();
-  const status = params?.status ?? 'all';
-  const origin = (params?.origin ?? '').trim().toLowerCase();
-  const fromMs = params?.registered_from ? parseIsoMs(params.registered_from) : null;
-  const untilMs = params?.registered_until ? parseIsoMs(params.registered_until) : null;
-
-  const filtered = rows.filter((c) => {
-    if (status !== 'all') {
-      if (status === 'active' && !Boolean(c.status)) return false;
-      if (status === 'inactive' && Boolean(c.status)) return false;
-    }
-
-    if (origin && origin !== 'all' && (c.origin ?? '').trim().toLowerCase() !== origin) return false;
-
-    const regMs = parseIsoMs(c.registered_at);
-    if (fromMs !== null && regMs < fromMs) return false;
-    if (untilMs !== null && regMs > untilMs) return false;
-
-    if (!q) return true;
-    const hay = `${c.id} ${c.name} ${c.email} ${c.phone} ${c.origin}`.toLowerCase();
-    return hay.includes(q);
+  const response = await apiFetch(`/api/v1/espacoabsoluto/customers${qs.toString() ? `?${qs.toString()}` : ''}`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
   });
 
-  filtered.sort((a, b) => parseIsoMs(b.registered_at) - parseIsoMs(a.registered_at));
-  return { data: filtered };
+  if (!response.ok) {
+    let msg = `Falha ao carregar clientes Espaço Absoluto: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  const rows = Array.isArray(json?.data) ? json.data : [];
+  return { data: rows as EspacoAbsolutoCustomer[] };
 }
 
 export async function createEspacoAbsolutoCustomer(payload: Pick<EspacoAbsolutoCustomer, 'name' | 'email' | 'phone' | 'origin' | 'status'>): Promise<ApiResponse<EspacoAbsolutoCustomer>> {
@@ -3644,26 +3674,69 @@ export async function deleteEspacoAbsolutoCustomer(id: number): Promise<void> {
 }
 
 export async function fetchEspacoAbsolutoUserGroups(): Promise<ApiResponse<EspacoAbsolutoUserGroup[]>> {
-  await delay();
-  return { data: readEspacoAbsolutoUserGroups() };
+  const response = await apiFetch('/api/v1/espacoabsoluto/user-groups', {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let msg = `Falha ao carregar grupos Espaço Absoluto: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as EspacoAbsolutoUserGroup[]) : [] };
 }
 
 export async function fetchEspacoAbsolutoUserMessages(params?: { user_id?: number }): Promise<ApiResponse<EspacoAbsolutoUserMessage[]>> {
-  await delay();
-  const rows = readEspacoAbsolutoUserMessages();
-  const userId = params?.user_id;
-  const filtered = typeof userId === 'number' ? rows.filter((m) => m.user_id === userId) : rows;
-  filtered.sort((a, b) => parseIsoMs(b.date) - parseIsoMs(a.date));
-  return { data: filtered };
+  const qs = new URLSearchParams();
+  if (typeof params?.user_id === 'number') qs.set('user_id', String(params.user_id));
+
+  const response = await apiFetch(`/api/v1/espacoabsoluto/user-messages${qs.toString() ? `?${qs.toString()}` : ''}`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let msg = `Falha ao carregar mensagens Espaço Absoluto: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as EspacoAbsolutoUserMessage[]) : [] };
 }
 
 export async function fetchEspacoAbsolutoAppointments(params?: { customer_id?: number }): Promise<ApiResponse<EspacoAbsolutoAppointment[]>> {
-  await delay();
-  const rows = readEspacoAbsolutoAppointments();
-  const customerId = params?.customer_id;
-  const filtered = typeof customerId === 'number' ? rows.filter((a) => a.customer_id === customerId) : rows;
-  filtered.sort((a, b) => parseIsoMs(b.scheduled_at) - parseIsoMs(a.scheduled_at));
-  return { data: filtered };
+  const qs = new URLSearchParams();
+  if (typeof params?.customer_id === 'number') qs.set('customer_id', String(params.customer_id));
+
+  const response = await apiFetch(`/api/v1/espacoabsoluto/appointments${qs.toString() ? `?${qs.toString()}` : ''}`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let msg = `Falha ao carregar agendamentos Espaço Absoluto: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as EspacoAbsolutoAppointment[]) : [] };
 }
 
 // ── Users (Admin) ──

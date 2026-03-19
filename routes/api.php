@@ -26,6 +26,10 @@ use Modules\Finance\Models\FinanceBankAccount;
 use Modules\Finance\Models\FinanceCategory;
 use Modules\Finance\Models\FinanceCostCenter;
 use Modules\Finance\Models\FinanceTransaction;
+use Modules\CRM\Models\EspacoAbsolutoAppointment;
+use Modules\CRM\Models\EspacoAbsolutoCustomer;
+use Modules\CRM\Models\EspacoAbsolutoUserGroup;
+use Modules\CRM\Models\EspacoAbsolutoUserMessage;
 
 Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
     Route::get('dashboard', function () {
@@ -301,6 +305,149 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
             ->all();
 
         return response()->json(['data' => $data]);
+    });
+
+    Route::prefix('espacoabsoluto')->group(function () {
+        Route::get('overview', function () {
+            $totalMessages = EspacoAbsolutoUserMessage::query()->where(function ($q) {
+                $q->whereNull('apaga')->orWhere('apaga', 0);
+            })->count();
+
+            $groups = EspacoAbsolutoUserGroup::query()
+                ->where('dashboard', 1)
+                ->where(function ($q) {
+                    $q->whereNull('apaga')->orWhere('apaga', 0);
+                })
+                ->orderBy('nome')
+                ->get();
+
+            $cards = collect([[
+                'key' => 'Mensagens',
+                'title' => 'Mensagens',
+                'description' => 'Total de mensagens',
+                'count' => (int) $totalMessages,
+            ]]);
+
+            foreach ($groups as $group) {
+                $count = EspacoAbsolutoCustomer::query()
+                    ->whereHas('groups', fn ($q) => $q->where('user_groups.idgrupo', $group->idgrupo))
+                    ->count();
+
+                $cards->push([
+                    'key' => (string) $group->idgrupo,
+                    'title' => (string) $group->nome,
+                    'description' => 'Origem',
+                    'count' => (int) $count,
+                ]);
+            }
+
+            return response()->json(['data' => ['cards' => $cards->values()->all()]]);
+        });
+
+        Route::get('customers', function () {
+            $search = trim((string) request('search', ''));
+
+            $rows = EspacoAbsolutoCustomer::query()
+                ->with(['groups:idgrupo,nome', 'messages:id,iduser,subject,data_added'])
+                ->when($search !== '', function ($q) use ($search) {
+                    $q->where(function ($w) use ($search) {
+                        $w->where('iduser', 'like', "%{$search}%")
+                            ->orWhere('nome', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%")
+                            ->orWhere('telefone', 'like', "%{$search}%");
+                    });
+                })
+                ->orderByDesc('data_added')
+                ->limit(500)
+                ->get();
+
+            $data = $rows->map(function (EspacoAbsolutoCustomer $c) {
+                $origin = 'Desconhecido';
+                $group = $c->groups->first();
+                if ($group && is_string($group->nome) && $group->nome !== '') {
+                    $origin = $group->nome;
+                } else {
+                    $msg = $c->messages->sortBy('data_added')->first();
+                    if ($msg && is_string($msg->subject)) {
+                        $subject = $msg->subject;
+                        if (stripos($subject, 'Pergunta') !== false) $origin = 'Pergunta Grátis';
+                        elseif (stripos($subject, 'Oração') !== false || stripos($subject, 'Orações') !== false) $origin = 'CTA Orações';
+                        elseif (stripos($subject, 'E-book') !== false) $origin = 'CTA E-book';
+                        elseif (stripos($subject, 'Tarot') !== false) $origin = 'Tarot do Dia';
+                        elseif (stripos($subject, 'Pedido') !== false || stripos($subject, 'Ligação') !== false) $origin = 'Nós ligamos!';
+                        elseif (stripos($subject, 'Newsletter') !== false) $origin = 'Newsletter';
+                        elseif (stripos($subject, 'Notícias') !== false) $origin = 'Notícias';
+                        else $origin = 'Mensagens';
+                    }
+                }
+
+                return [
+                    'id' => (int) $c->iduser,
+                    'name' => (string) ($c->nome ?? ''),
+                    'email' => (string) ($c->email ?? ''),
+                    'phone' => (string) ($c->telefone ?? ''),
+                    'origin' => $origin,
+                    'status' => true,
+                    'registered_at' => $c->data_added?->toIso8601String(),
+                    'last_seen_at' => $c->data_login?->toIso8601String(),
+                    'created_at' => $c->data_added?->toIso8601String(),
+                    'updated_at' => $c->data_edited?->toIso8601String(),
+                ];
+            })->values();
+
+            return response()->json(['data' => $data]);
+        });
+
+        Route::get('user-groups', function () {
+            $rows = EspacoAbsolutoUserGroup::query()->orderBy('nome')->get();
+            $data = $rows->map(fn (EspacoAbsolutoUserGroup $g) => [
+                'id' => (int) $g->idgrupo,
+                'name' => (string) ($g->nome ?? ''),
+                'dashboard' => (bool) $g->dashboard,
+                'is_active' => ! ((bool) $g->apaga),
+                'created_at' => null,
+                'updated_at' => null,
+            ])->values();
+            return response()->json(['data' => $data]);
+        });
+
+        Route::get('user-messages', function () {
+            $userId = request('user_id');
+            $rows = EspacoAbsolutoUserMessage::query()
+                ->when($userId !== null && $userId !== '', fn ($q) => $q->where('iduser', $userId))
+                ->orderByDesc('data_added')
+                ->limit(500)
+                ->get();
+
+            $data = $rows->map(fn (EspacoAbsolutoUserMessage $m) => [
+                'id' => (int) $m->id,
+                'user_id' => (int) $m->iduser,
+                'email' => (string) ($m->email ?? ''),
+                'subject' => (string) ($m->subject ?? ''),
+                'message' => (string) ($m->message ?? ''),
+                'note' => null,
+                'date' => $m->data_added?->toIso8601String(),
+                'created_at' => $m->data_added?->toIso8601String(),
+                'updated_at' => $m->data_added?->toIso8601String(),
+            ])->values();
+
+            return response()->json(['data' => $data]);
+        });
+
+        Route::get('appointments', function () {
+            $rows = EspacoAbsolutoAppointment::query()->orderByDesc('date_from')->limit(500)->get();
+            $data = $rows->map(fn (EspacoAbsolutoAppointment $a) => [
+                'id' => (int) $a->period_id,
+                'customer_id' => 0,
+                'treatment' => (string) ($a->type ?? ''),
+                'scheduled_at' => $a->date_from?->toIso8601String(),
+                'status' => (string) ($a->status ?? 'scheduled'),
+                'notes' => $a->observations,
+                'created_at' => $a->created_at?->toIso8601String(),
+                'updated_at' => $a->updated_at?->toIso8601String(),
+            ])->values();
+            return response()->json(['data' => $data]);
+        });
     });
 
     // Reports & Logs — System Logs API
