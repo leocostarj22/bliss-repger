@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use App\Models\Ticket;
 use App\Models\Post;
@@ -205,9 +206,100 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
                 'id' => (string) $u->id,
                 'name' => $u->name,
                 'email' => $u->email,
+                'role' => $u->role,
+                'is_admin' => (bool) $u->isAdmin(),
                 'photo_path' => $photo,
             ],
         ]);
+    });
+
+    Route::get('admin/modules', function () {
+        $me = auth()->user();
+        abort_unless($me && $me->isAdmin(), 403);
+
+        $statusPath = base_path('modules_statuses.json');
+        $savedStatuses = [];
+
+        if (File::exists($statusPath)) {
+            $decoded = json_decode((string) File::get($statusPath), true);
+            if (is_array($decoded)) {
+                $savedStatuses = $decoded;
+            }
+        }
+
+        $modules = [];
+        $modulesRoot = base_path('Modules');
+
+        if (File::isDirectory($modulesRoot)) {
+            foreach (File::directories($modulesRoot) as $dir) {
+                $fallbackName = basename($dir);
+                $moduleName = $fallbackName;
+                $metaPath = $dir . DIRECTORY_SEPARATOR . 'module.json';
+
+                if (File::exists($metaPath)) {
+                    $meta = json_decode((string) File::get($metaPath), true);
+                    if (is_array($meta) && isset($meta['name']) && is_string($meta['name']) && $meta['name'] !== '') {
+                        $moduleName = $meta['name'];
+                    }
+                }
+
+                $modules[$moduleName] = [
+                    'key' => $moduleName,
+                    'name' => $moduleName,
+                    'enabled' => (bool) ($savedStatuses[$moduleName] ?? true),
+                ];
+            }
+        }
+
+        foreach ($savedStatuses as $key => $enabled) {
+            if (! isset($modules[$key])) {
+                $modules[$key] = [
+                    'key' => (string) $key,
+                    'name' => (string) $key,
+                    'enabled' => (bool) $enabled,
+                ];
+            }
+        }
+
+        $data = collect($modules)
+            ->sortBy('name')
+            ->values()
+            ->all();
+
+        return response()->json(['data' => $data]);
+    });
+
+    Route::put('admin/modules', function () {
+        $me = auth()->user();
+        abort_unless($me && $me->isAdmin(), 403);
+
+        $validated = request()->validate([
+            'modules' => ['required', 'array', 'min:1'],
+            'modules.*.key' => ['required', 'string', 'max:120'],
+            'modules.*.enabled' => ['required', 'boolean'],
+        ]);
+
+        $statuses = [];
+        foreach ($validated['modules'] as $module) {
+            $statuses[$module['key']] = (bool) $module['enabled'];
+        }
+
+        File::put(
+            base_path('modules_statuses.json'),
+            json_encode($statuses, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+        );
+
+        $data = collect($statuses)
+            ->map(fn ($enabled, $key) => [
+                'key' => (string) $key,
+                'name' => (string) $key,
+                'enabled' => (bool) $enabled,
+            ])
+            ->sortBy('name')
+            ->values()
+            ->all();
+
+        return response()->json(['data' => $data]);
     });
 
     // Reports & Logs — System Logs API

@@ -19,6 +19,7 @@ import UserDetail from "@/pages/admin/users/UserDetail";
 import Roles from "@/pages/admin/roles/Roles";
 import RoleForm from "@/pages/admin/roles/RoleForm";
 import RoleDetail from "@/pages/admin/roles/RoleDetail";
+import Modules from "@/pages/admin/modules/Modules";
 import BankAccounts from "@/pages/finance/BankAccounts";
 import FinanceCategories from "@/pages/finance/FinanceCategories";
 import FinanceCostCenters from "@/pages/finance/FinanceCostCenters";
@@ -97,7 +98,7 @@ const App = () => (
               <Route path="/admin/departments/new" element={<DepartmentForm />} />
               <Route path="/admin/departments/:id" element={<DepartmentDetail />} />
               <Route path="/admin/departments/:id/edit" element={<DepartmentForm />} />
-              <Route path="/admin/modules" element={<ComingSoon title="Módulos" />} />
+              <Route path="/admin/modules" element={<Modules />} />
               <Route path="/admin/users" element={<Users />} />
               <Route path="/admin/users/new" element={<UserForm />} />
               <Route path="/admin/users/:id" element={<UserDetail />} />

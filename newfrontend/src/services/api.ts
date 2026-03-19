@@ -922,8 +922,14 @@ export async function deleteAutomation(id: string): Promise<void> {
   }
 }
 
+export interface AdminModule {
+  key: string;
+  name: string;
+  enabled: boolean;
+}
+
 // ── User ──
-export async function fetchUser(): Promise<ApiResponse<{ id: string; name: string; email: string; photo_path?: string | null }>> {
+export async function fetchUser(): Promise<ApiResponse<{ id: string; name: string; email: string; role?: string | null; is_admin?: boolean; photo_path?: string | null }>> {
   const response = await apiFetch('/api/v1/me', {
     method: 'GET',
     headers: {
@@ -955,6 +961,8 @@ export async function fetchUser(): Promise<ApiResponse<{ id: string; name: strin
       id: idStr,
       name: String(json?.data?.name ?? ''),
       email: String(json?.data?.email ?? ''),
+      role: json?.data?.role ?? null,
+      is_admin: Boolean(json?.data?.is_admin ?? false),
       photo_path: json?.data?.photo_path ?? null,
     },
   };
@@ -4010,6 +4018,61 @@ export async function deleteRole(id: string): Promise<void> {
     }
     throw new Error(msg);
   }
+}
+
+export async function fetchAdminModules(): Promise<ApiResponse<AdminModule[]>> {
+  const response = await apiFetch('/api/v1/admin/modules', {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let msg = `Failed to fetch modules: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  const rows = Array.isArray(json?.data) ? json.data : [];
+  return {
+    data: rows.map((r: any) => ({
+      key: String(r?.key ?? ''),
+      name: String(r?.name ?? r?.key ?? ''),
+      enabled: Boolean(r?.enabled),
+    })),
+  };
+}
+
+export async function updateAdminModules(modules: AdminModule[]): Promise<ApiResponse<AdminModule[]>> {
+  const response = await apiFetch('/api/v1/admin/modules', {
+    method: 'PUT',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ modules }),
+  });
+
+  if (!response.ok) {
+    let msg = `Failed to update modules: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  const rows = Array.isArray(json?.data) ? json.data : [];
+  return {
+    data: rows.map((r: any) => ({
+      key: String(r?.key ?? ''),
+      name: String(r?.name ?? r?.key ?? ''),
+      enabled: Boolean(r?.enabled),
+    })),
+  };
 }
 
 // ── System Logs (Reports & Logs) ──
