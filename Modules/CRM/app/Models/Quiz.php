@@ -18,11 +18,27 @@ class Quiz extends Model
     public $timestamps = false;
 
     protected $casts = [
-        'post'       => 'array',
         'date_added' => 'datetime',
     ];
 
-    // Mapeamento dos códigos de plano de saúde
+    protected function post(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value) {
+                if (is_array($value)) return $value;
+                if (is_string($value) && trim($value) !== '') {
+                    $decoded = json_decode($value, true);
+                    return is_array($decoded) ? $decoded : [];
+                }
+                if (is_object($value)) {
+                    $decoded = json_decode((string) json_encode($value), true);
+                    return is_array($decoded) ? $decoded : [];
+                }
+                return [];
+            }
+        );
+    }
+
     public const IMPROVE_HEALTH_LABELS = [
         'A' => 'Energia e memória',
         'B' => 'Ossos e articulações',

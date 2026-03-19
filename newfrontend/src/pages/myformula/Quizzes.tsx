@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Eye, Search } from "lucide-react"
 
 import type { MyFormulaQuiz } from "@/types"
-import { fetchMyFormulaQuizzes, fetchMyFormulaQuizStats } from "@/services/myFormulaApi"
+import { fetchMyFormulaQuizzes } from "@/services/myFormulaApi"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -59,7 +59,6 @@ export default function Quizzes() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState<MyFormulaQuiz[]>([])
-  const [stats, setStats] = useState<{ total: number; completed: number; notCompleted: number; rate: number }>({ total: 0, completed: 0, notCompleted: 0, rate: 0 })
 
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "incomplete">("all")
@@ -77,25 +76,9 @@ export default function Quizzes() {
       const list = await fetchMyFormulaQuizzes(params)
       const data = Array.isArray(list.data) ? list.data : []
       setRows(data)
-      try {
-        const s = await fetchMyFormulaQuizStats(params)
-        setStats({
-          total: Number(s.data?.total ?? 0),
-          completed: Number(s.data?.completed ?? 0),
-          notCompleted: Number(s.data?.not_completed ?? 0),
-          rate: Number(s.data?.completion_rate ?? 0),
-        })
-      } catch {
-        const total = data.length
-        const completed = data.filter((r) => String((r.post ?? {}).step ?? '') === 'plans').length
-        const notCompleted = total - completed
-        const rate = total > 0 ? Math.round((completed / total) * 100) : 0
-        setStats({ total, completed, notCompleted, rate })
-      }
     } catch (e: any) {
       toast({ title: "Erro", description: e?.message ?? "Não foi possível carregar quizzes", variant: "destructive" })
       setRows([])
-      setStats({ total: 0, completed: 0, notCompleted: 0, rate: 0 })
     } finally {
       setLoading(false)
     }
@@ -143,28 +126,6 @@ export default function Quizzes() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="glass-card p-4">
-          <div className="text-sm text-muted-foreground">Total de Quizzes</div>
-          <div className="mt-1 text-2xl font-semibold">{stats.total}</div>
-          <div className="mt-1 text-xs text-muted-foreground">Registos filtrados</div>
-        </div>
-        <div className="glass-card p-4">
-          <div className="text-sm text-muted-foreground">Concluídos</div>
-          <div className="mt-1 text-2xl font-semibold">{stats.completed}</div>
-          <div className="mt-1 text-xs text-muted-foreground">Chegaram ao fim</div>
-        </div>
-        <div className="glass-card p-4">
-          <div className="text-sm text-muted-foreground">Não Finalizados</div>
-          <div className="mt-1 text-2xl font-semibold">{stats.notCompleted}</div>
-          <div className="mt-1 text-xs text-muted-foreground">Abandonaram a meio</div>
-        </div>
-        <div className="glass-card p-4">
-          <div className="text-sm text-muted-foreground">Taxa de Conclusão</div>
-          <div className="mt-1 text-2xl font-semibold">{stats.rate}%</div>
-          <div className="mt-1 h-1 w-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600" />
-        </div>
-      </div>
 
       <div className="glass-card p-4">
         <div className="grid gap-3 md:grid-cols-4">

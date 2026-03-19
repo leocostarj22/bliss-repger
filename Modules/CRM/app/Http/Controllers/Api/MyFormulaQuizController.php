@@ -4,35 +4,59 @@ namespace Modules\CRM\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Modules\CRM\Models\Quiz;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class MyFormulaQuizController extends Controller
 {
     private function loadRows(Request $request)
     {
-        $from = $request->query('from');
-        $to = $request->query('to');
+        $from = (string) $request->query('from', '');
+        $to = (string) $request->query('to', '');
 
-        return Quiz::query()
-            ->when($from, fn ($q) => $q->whereDate('date_added', '>=', $from))
-            ->when($to, fn ($q) => $q->whereDate('date_added', '<=', $to))
+        return DB::connection('myformula')
+            ->table('quiz')
+            ->select(['quiz_id', 'post', 'date_added'])
+            ->when($from !== '', fn ($q) => $q->whereDate('date_added', '>=', $from))
+            ->when($to !== '', fn ($q) => $q->whereDate('date_added', '<=', $to))
             ->orderByDesc('date_added')
-            ->get();
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'quiz_id' => (string) ($row->quiz_id ?? ''),
+                    'post' => $this->safePost($row->post ?? null),
+                    'date_added' => $this->safeDate($row->date_added ?? null),
+                ];
+            });
     }
 
-    private function safePost($row): array
+    private function safePost($raw): array
     {
         try {
-            $raw = $row->getAttribute('post');
             if (is_array($raw)) return $raw;
-            if (is_string($raw) && $raw !== '') {
+            if (is_object($raw)) {
+                $encoded = json_encode($raw);
+                $decoded = json_decode((string) $encoded, true);
+                return is_array($decoded) ? $decoded : [];
+            }
+            if (is_string($raw) && trim($raw) !== '') {
                 $decoded = json_decode($raw, true);
                 return is_array($decoded) ? $decoded : [];
             }
-        } catch (\Throwable) {}
+        } catch (\Throwable) {
+        }
         return [];
+    }
+
+    private function safeDate($raw): ?string
+    {
+        if ($raw === null || $raw === '') return null;
+        try {
+            return Carbon::parse((string) $raw)->toIso8601String();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function isCompleted(array $post): bool
@@ -50,11 +74,11 @@ class MyFormulaQuizController extends Controller
         $ageRange = $request->query('age_range');
 
         return $rows->filter(function ($row) use ($search, $status, $plan, $gender, $ageRange) {
-            $post = $this->safePost($row);
+            $post = is_array($row['post'] ?? null) ? $row['post'] : [];
 
             if ($search !== '') {
                 $hay = strtolower(
-                    (string) $row->getKey() . ' ' .
+                    (string) ($row['quiz_id'] ?? '') . ' ' .
                     (string) ($post['name'] ?? '') . ' ' .
                     (string) ($post['email'] ?? '')
                 );
@@ -91,12 +115,11 @@ class MyFormulaQuizController extends Controller
         try {
             $rows = $this->applyFilters($this->loadRows($request), $request);
 
-            $data = $rows->map(function ($q) {
-                $post = $this->safePost($q);
+            $data = $rows->map(function ($row) {
                 return [
-                    'quiz_id' => (string) $q->getKey(),
-                    'date_added' => $q->date_added ? $q->date_added->toIso8601String() : null,
-                    'post' => $post,
+                    'quiz_id' => (string) ($row['quiz_id'] ?? ''),
+                    'date_added' => $row['date_added'] ?? null,
+                    'post' => is_array($row['post'] ?? null) ? $row['post'] : [],
                 ];
             })->values();
 
@@ -112,9 +135,8 @@ class MyFormulaQuizController extends Controller
         try {
             $rows = $this->applyFilters($this->loadRows($request), $request);
             $total = $rows->count();
-            $completed = $rows->filter(function ($q) {
-                $post = $this->safePost($q);
-                return $this->isCompleted($post);
+            $completed = $rows->filter(function ($row) {
+                return $this->isCompleted(is_array($row['post'] ?? null) ? $row['post'] : []);
             })->count();
             $notCompleted = $total - $completed;
             $rate = $total > 0 ? round(($completed / $total) * 100) : 0;
