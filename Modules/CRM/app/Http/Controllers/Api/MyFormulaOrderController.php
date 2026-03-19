@@ -5,6 +5,7 @@ namespace Modules\CRM\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Modules\CRM\Models\MyFormulaOrder;
 use Modules\CRM\Models\Quiz;
 
@@ -180,13 +181,24 @@ class MyFormulaOrderController extends Controller
 
         $supplementsDetails = [];
         if (! empty($planSupplements)) {
+            $hasLetter = false;
+            try {
+                $hasLetter = Schema::connection('myformula')->hasColumn('plans_supplements', 'letter');
+            } catch (\Throwable $e) {
+                $hasLetter = false;
+            }
+
+            $select = ['s.slug', 'sd.name'];
+            $select[] = $hasLetter ? 's.letter' : DB::raw('NULL as letter');
+
             $rows = DB::connection('myformula')
                 ->table('plans_supplements as s')
                 ->join('plans_supplements_description as sd', 'sd.supplement_id', '=', 's.supplement_id')
                 ->where('sd.language_id', 2)
                 ->whereIn('s.slug', array_values(array_unique(array_map('strval', $planSupplements))))
-                ->select('s.slug', 'sd.name', DB::raw('COALESCE(s.letter, NULL) as letter'))
+                ->select($select)
                 ->get();
+
             foreach ($rows as $r) {
                 $supplementsDetails[(string) $r->slug] = [
                     'name' => (string) $r->name,
@@ -211,7 +223,7 @@ class MyFormulaOrderController extends Controller
             $item = [
                 'slug' => $slug,
                 'name' => $det['name'] ?? $slug,
-                'letter' => $det['letter'] ?? null,
+                'letter' => $det['letter'] ?? strtoupper(substr($slug, 0, 1)),
             ];
 
             switch ($sel) {
