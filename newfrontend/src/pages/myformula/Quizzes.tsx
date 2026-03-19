@@ -33,10 +33,39 @@ function calcAge(birthdate?: string | null) {
   return age
 }
 
+function normKey(s: string) {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+}
+
+const LEGACY_PLAN_LABEL_TO_CODE: Record<string, string> = {
+  [normKey("Energia e memória")]: "A",
+  [normKey("Ossos e articulações")]: "B",
+  [normKey("Vida sexual")]: "C",
+  [normKey("Menopausa")]: "K",
+  [normKey("Cabelo, pele e unhas")]: "E",
+  [normKey("Sono")]: "F",
+  [normKey("Peso")]: "G",
+  [normKey("Digestivo")]: "H",
+  [normKey("Coração, circulação e açúcar")]: "I",
+  [normKey("Anti-aging")]: "J",
+}
+
+function normalizePlanToken(token: string) {
+  const t = token.trim()
+  if (!t) return ""
+  if (PLAN_LABELS[t]) return t
+  const legacy = LEGACY_PLAN_LABEL_TO_CODE[normKey(t)]
+  return legacy ?? t
+}
+
 function getPlanCodes(improve?: string | null) {
   return String(improve ?? "")
     .split(",")
-    .map((x) => x.trim())
+    .map((x) => normalizePlanToken(x))
     .filter(Boolean)
 }
 
@@ -216,7 +245,7 @@ export default function Quizzes() {
                         <td className="p-4">{age ?? "—"}</td>
                         <td className="p-4">
                           <span className="text-xs px-2 py-1 rounded-full bg-info/10 text-info-foreground">
-                            {planLabels}
+                            {planLabel}
                           </span>
                         </td>
                         <td className="p-4">
