@@ -30,6 +30,8 @@ export default function Customers() {
   const { toast } = useToast()
   const [rows, setRows] = useState<MyFormulaCustomer[]>([])
   const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
 
   const [search, setSearch] = useState("")
   const [perPage, setPerPage] = useState(10)
@@ -59,31 +61,10 @@ export default function Customers() {
     }
   }
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return rows.filter((c) => {
-      if (!q) return true
-      const hay = `${c.customer_id} ${c.firstname} ${c.lastname} ${c.email} ${c.telephone ?? ""}`.toLowerCase()
-      return hay.includes(q)
-    })
-  }, [rows, search])
-
-  const sorted = useMemo(() => {
-    const next = filtered.slice()
-    next.sort((a, b) => {
-      const da = a.date_added ? new Date(a.date_added).getTime() : 0
-      const db = b.date_added ? new Date(b.date_added).getTime() : 0
-      return sortDir === "desc" ? db - da : da - db
-    })
-    return next
-  }, [filtered, sortDir])
-
-  const total = sorted.length
-  const totalPages = Math.max(1, Math.ceil(total / perPage))
   const pageSafe = Math.min(page, totalPages)
   const startIdx = (pageSafe - 1) * perPage
   const endIdx = Math.min(total, startIdx + perPage)
-  const paged = sorted.slice(startIdx, endIdx)
+  const paged = rows
 
   const allOnPageSelected = paged.length > 0 && paged.every((c) => Boolean(selected[c.customer_id]))
   const someOnPageSelected = paged.some((c) => Boolean(selected[c.customer_id])) && !allOnPageSelected
@@ -107,10 +88,15 @@ export default function Customers() {
     setLoading(true)
     try {
       const resp = await fetchMyFormulaCustomers({ search, status: "all", per_page: perPage, page })
-      setRows(Array.isArray(resp.data) ? resp.data : [])
+      const data = Array.isArray(resp.data) ? resp.data : []
+      setRows(data)
+      setTotal(Number((resp as any).meta?.total ?? data.length))
+      setTotalPages(Number((resp as any).meta?.total_pages ?? 1))
     } catch (e: any) {
       toast({ title: "Erro", description: e?.message ?? "Não foi possível carregar clientes", variant: "destructive" })
       setRows([])
+      setTotal(0)
+      setTotalPages(1)
     } finally {
       setLoading(false)
     }

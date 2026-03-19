@@ -72,17 +72,24 @@ export default function Quizzes() {
     setLoading(true)
     try {
       const params = { search, status: statusFilter, plan: planFilter }
-      const [list, s] = await Promise.all([
-        fetchMyFormulaQuizzes(params),
-        fetchMyFormulaQuizStats(params),
-      ])
-      setRows(Array.isArray(list.data) ? list.data : [])
-      setStats({
-        total: Number(s.data?.total ?? 0),
-        completed: Number(s.data?.completed ?? 0),
-        notCompleted: Number(s.data?.not_completed ?? 0),
-        rate: Number(s.data?.completion_rate ?? 0),
-      })
+      const list = await fetchMyFormulaQuizzes(params)
+      const data = Array.isArray(list.data) ? list.data : []
+      setRows(data)
+      try {
+        const s = await fetchMyFormulaQuizStats(params)
+        setStats({
+          total: Number(s.data?.total ?? 0),
+          completed: Number(s.data?.completed ?? 0),
+          notCompleted: Number(s.data?.not_completed ?? 0),
+          rate: Number(s.data?.completion_rate ?? 0),
+        })
+      } catch {
+        const total = data.length
+        const completed = data.filter((r) => String((r.post ?? {}).step ?? '') === 'plans').length
+        const notCompleted = total - completed
+        const rate = total > 0 ? Math.round((completed / total) * 100) : 0
+        setStats({ total, completed, notCompleted, rate })
+      }
     } catch (e: any) {
       toast({ title: "Erro", description: e?.message ?? "Não foi possível carregar quizzes", variant: "destructive" })
       setRows([])
