@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { fetchAdminModules } from '@/services/api';
 
 const primaryNavItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/', color: 'cyan' },
@@ -157,7 +158,10 @@ export function AppSidebar() {
   const [espacoAbsolutoOpen, setEspacoAbsolutoOpen] = useState(true);
   const [myFormulaOpen, setMyFormulaOpen] = useState(true);
   const [reportsOpen, setReportsOpen] = useState(true);
+  const [moduleStatuses, setModuleStatuses] = useState<Record<string, boolean>>({});
   const location = useLocation();
+
+  const isModuleEnabled = (key: string) => moduleStatuses[key] !== false;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -214,6 +218,44 @@ export function AppSidebar() {
     if (location.pathname.startsWith('/myformula')) setMyFormulaOpen(true);
     if (location.pathname.startsWith('/reports')) setReportsOpen(true);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const fromStorage = () => {
+      try {
+        const raw = window.localStorage.getItem('bliss:module-statuses');
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as Record<string, boolean>;
+        setModuleStatuses(parsed);
+      } catch {
+        return;
+      }
+    };
+
+    const load = async () => {
+      try {
+        const res = await fetchAdminModules();
+        const map = res.data.reduce<Record<string, boolean>>((acc, item) => {
+          acc[item.key] = Boolean(item.enabled);
+          return acc;
+        }, {});
+        setModuleStatuses(map);
+        window.localStorage.setItem('bliss:module-statuses', JSON.stringify(map));
+      } catch {
+        fromStorage();
+      }
+    };
+
+    const onUpdated = () => fromStorage();
+
+    load();
+    window.addEventListener('bliss:modules:updated', onUpdated);
+
+    return () => {
+      window.removeEventListener('bliss:modules:updated', onUpdated);
+    };
+  }, []);
 
   return (
     <aside
@@ -286,7 +328,7 @@ export function AppSidebar() {
         </div>
 
 
-        <div className={cn('px-2', collapsed && 'px-0')}>
+        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('Administration') && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -340,7 +382,7 @@ export function AppSidebar() {
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0')}>
+        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('Support') && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -394,7 +436,7 @@ export function AppSidebar() {
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0')}>
+        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('Finance') && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -448,7 +490,7 @@ export function AppSidebar() {
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0')}>
+        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('HumanResources') && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -502,7 +544,7 @@ export function AppSidebar() {
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0')}>
+        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('Communication') && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -556,7 +598,7 @@ export function AppSidebar() {
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0')}>
+        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('CRM') && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -611,7 +653,7 @@ export function AppSidebar() {
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0')}>
+        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('Personal') && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -665,7 +707,7 @@ export function AppSidebar() {
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0')}>
+        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('Reports') && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -719,7 +761,7 @@ export function AppSidebar() {
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0')}>
+        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('BlissNatura') && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -773,7 +815,7 @@ export function AppSidebar() {
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0')}>
+        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('EspacoAbsoluto') && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -827,7 +869,7 @@ export function AppSidebar() {
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0')}>
+        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('MyFormula') && 'hidden')}>
           {!collapsed && (
             <button
               type="button"

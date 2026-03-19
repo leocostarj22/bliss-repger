@@ -9,6 +9,16 @@ import { fetchAdminModules, fetchUser, updateAdminModules, type AdminModule } fr
 export default function Modules() {
   const { toast } = useToast()
 
+  const syncModuleCache = (modules: AdminModule[]) => {
+    if (typeof window === "undefined") return
+    const map = modules.reduce<Record<string, boolean>>((acc, item) => {
+      acc[item.key] = Boolean(item.enabled)
+      return acc
+    }, {})
+    window.localStorage.setItem("bliss:module-statuses", JSON.stringify(map))
+    window.dispatchEvent(new Event("bliss:modules:updated"))
+  }
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [isAdmin, setIsAdmin] = useState<boolean>(false)
@@ -32,6 +42,7 @@ export default function Modules() {
         const r = await fetchAdminModules()
         if (!active) return
         setRows(r.data)
+        syncModuleCache(r.data)
       } catch (e: any) {
         if (!active) return
         const msg = String(e?.message ?? "")
@@ -63,6 +74,7 @@ export default function Modules() {
     try {
       const r = await updateAdminModules(rows)
       setRows(r.data)
+      syncModuleCache(r.data)
       toast({
         title: "Sucesso",
         description: "Configuração de módulos atualizada. Recarregue o painel para refletir no menu.",

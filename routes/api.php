@@ -215,53 +215,52 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
 
     Route::get('admin/modules', function () {
         $me = auth()->user();
-        abort_unless($me && $me->isAdmin(), 403);
+        abort_unless($me, 401);
+
+        $moduleLabels = [
+            'Administration' => 'Administração',
+            'Support' => 'Suporte',
+            'Finance' => 'Financeiro',
+            'HumanResources' => 'Recursos Humanos',
+            'Communication' => 'Comunicação',
+            'CRM' => 'CRM',
+            'Reports' => 'Relatórios e Logs',
+            'BlissNatura' => 'Bliss Natura',
+            'EspacoAbsoluto' => 'Espaço Absoluto',
+            'MyFormula' => 'MyFormula',
+            'Personal' => 'Pessoal',
+            'Products' => 'Produtos',
+        ];
 
         $statusPath = base_path('modules_statuses.json');
         $savedStatuses = [];
-
         if (File::exists($statusPath)) {
             $decoded = json_decode((string) File::get($statusPath), true);
-            if (is_array($decoded)) {
-                $savedStatuses = $decoded;
-            }
+            if (is_array($decoded)) $savedStatuses = $decoded;
         }
 
-        $modules = [];
+        $moduleKeys = array_keys($moduleLabels);
         $modulesRoot = base_path('Modules');
-
         if (File::isDirectory($modulesRoot)) {
             foreach (File::directories($modulesRoot) as $dir) {
-                $fallbackName = basename($dir);
-                $moduleName = $fallbackName;
+                $name = basename($dir);
                 $metaPath = $dir . DIRECTORY_SEPARATOR . 'module.json';
-
                 if (File::exists($metaPath)) {
                     $meta = json_decode((string) File::get($metaPath), true);
-                    if (is_array($meta) && isset($meta['name']) && is_string($meta['name']) && $meta['name'] !== '') {
-                        $moduleName = $meta['name'];
-                    }
+                    if (is_array($meta) && isset($meta['name']) && is_string($meta['name']) && $meta['name'] !== '') $name = $meta['name'];
                 }
-
-                $modules[$moduleName] = [
-                    'key' => $moduleName,
-                    'name' => $moduleName,
-                    'enabled' => (bool) ($savedStatuses[$moduleName] ?? true),
-                ];
+                $moduleKeys[] = $name;
             }
         }
 
-        foreach ($savedStatuses as $key => $enabled) {
-            if (! isset($modules[$key])) {
-                $modules[$key] = [
-                    'key' => (string) $key,
-                    'name' => (string) $key,
-                    'enabled' => (bool) $enabled,
-                ];
-            }
-        }
+        foreach (array_keys($savedStatuses) as $key) $moduleKeys[] = (string) $key;
 
-        $data = collect($modules)
+        $data = collect(array_values(array_unique($moduleKeys)))
+            ->map(fn ($key) => [
+                'key' => (string) $key,
+                'name' => $moduleLabels[$key] ?? (string) $key,
+                'enabled' => (bool) ($savedStatuses[$key] ?? true),
+            ])
             ->sortBy('name')
             ->values()
             ->all();
@@ -273,6 +272,13 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
         $me = auth()->user();
         abort_unless($me && $me->isAdmin(), 403);
 
+        $moduleLabels = [
+            'Administration' => 'Administração', 'Support' => 'Suporte', 'Finance' => 'Financeiro',
+            'HumanResources' => 'Recursos Humanos', 'Communication' => 'Comunicação', 'CRM' => 'CRM',
+            'Reports' => 'Relatórios e Logs', 'BlissNatura' => 'Bliss Natura', 'EspacoAbsoluto' => 'Espaço Absoluto',
+            'MyFormula' => 'MyFormula', 'Personal' => 'Pessoal', 'Products' => 'Produtos',
+        ];
+
         $validated = request()->validate([
             'modules' => ['required', 'array', 'min:1'],
             'modules.*.key' => ['required', 'string', 'max:120'],
@@ -280,19 +286,14 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
         ]);
 
         $statuses = [];
-        foreach ($validated['modules'] as $module) {
-            $statuses[$module['key']] = (bool) $module['enabled'];
-        }
+        foreach ($validated['modules'] as $module) $statuses[$module['key']] = (bool) $module['enabled'];
 
-        File::put(
-            base_path('modules_statuses.json'),
-            json_encode($statuses, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
-        );
+        File::put(base_path('modules_statuses.json'), json_encode($statuses, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
         $data = collect($statuses)
             ->map(fn ($enabled, $key) => [
                 'key' => (string) $key,
-                'name' => (string) $key,
+                'name' => $moduleLabels[$key] ?? (string) $key,
                 'enabled' => (bool) $enabled,
             ])
             ->sortBy('name')
