@@ -178,15 +178,21 @@ class MyFormulaOrderController extends Controller
         $planSupplements = $decodeArray($order->getAttribute('supplements'));
         $intakePeriods = $decodeArray($order->getAttribute('intake_periods'));
 
-        $supplementNames = [];
+        $supplementsDetails = [];
         if (! empty($planSupplements)) {
-            $supplementNames = DB::connection('myformula')
+            $rows = DB::connection('myformula')
                 ->table('plans_supplements as s')
                 ->join('plans_supplements_description as sd', 'sd.supplement_id', '=', 's.supplement_id')
                 ->where('sd.language_id', 2)
                 ->whereIn('s.slug', array_values(array_unique(array_map('strval', $planSupplements))))
-                ->pluck('sd.name', 's.slug')
-                ->toArray();
+                ->select('s.slug', 'sd.name', DB::raw('COALESCE(s.letter, NULL) as letter'))
+                ->get();
+            foreach ($rows as $r) {
+                $supplementsDetails[(string) $r->slug] = [
+                    'name' => (string) $r->name,
+                    'letter' => $r->letter !== null ? (string) $r->letter : null,
+                ];
+            }
         }
 
         $morning = [];
@@ -201,9 +207,11 @@ class MyFormulaOrderController extends Controller
                 $sel = 1;
             }
 
+            $det = $supplementsDetails[$slug] ?? null;
             $item = [
                 'slug' => $slug,
-                'name' => $supplementNames[$slug] ?? $slug,
+                'name' => $det['name'] ?? $slug,
+                'letter' => $det['letter'] ?? null,
             ];
 
             switch ($sel) {

@@ -280,7 +280,7 @@ export interface MyFormulaPurchaseReportData {
   plan_name: string
   capsules: string
   net_weight: string
-  supplements_by_period: { title: string; items: { slug: string; name: string }[] }[]
+  supplements_by_period: { title: string; items: { slug: string; name: string; letter?: string }[] }[]
   totals: { morning: number; afternoon: number; night: number }
   how_to_take: string
   birthdate: string

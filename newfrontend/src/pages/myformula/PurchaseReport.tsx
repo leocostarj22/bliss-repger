@@ -22,6 +22,7 @@ type ReportStateV2 = {
   editables: Record<string, string>
   dates: Record<string, string>
   checks: Record<string, boolean>
+  selects: Record<string, string>
 }
 
 export default function MyFormulaPurchaseReport() {
@@ -57,6 +58,7 @@ export default function MyFormulaPurchaseReport() {
     const editables: Record<string, string> = {}
     const dates: Record<string, string> = {}
     const checks: Record<string, boolean> = {}
+    const selects: Record<string, string> = {}
 
     document.querySelectorAll('[data-mf-editable="true"][data-mf-key]').forEach((el) => {
       const key = (el as HTMLElement).getAttribute("data-mf-key")
@@ -76,7 +78,13 @@ export default function MyFormulaPurchaseReport() {
       checks[key] = (el as HTMLInputElement).checked
     })
 
-    return { v: 2, editables, dates, checks }
+    document.querySelectorAll('select[data-mf-select="true"][data-mf-key]').forEach((el) => {
+      const key = (el as HTMLSelectElement).getAttribute("data-mf-key")
+      if (!key) return
+      selects[key] = (el as HTMLSelectElement).value
+    })
+
+    return { v: 2, editables, dates, checks, selects }
   }
 
   const restore = () => {
@@ -105,6 +113,13 @@ export default function MyFormulaPurchaseReport() {
         if (!key) return
         const next = s.checks?.[key]
         if (next !== undefined) (el as HTMLInputElement).checked = next
+      })
+
+      document.querySelectorAll('select[data-mf-select="true"][data-mf-key]').forEach((el) => {
+        const key = (el as HTMLSelectElement).getAttribute("data-mf-key")
+        if (!key) return
+        const next = s.selects?.[key]
+        if (next !== undefined) (el as HTMLSelectElement).value = next
       })
     } catch {
       return
@@ -150,6 +165,8 @@ export default function MyFormulaPurchaseReport() {
           .header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
           .header h1 { margin: 0; font-size: 22px; }
           .header p { margin: 4px 0 0; color: var(--muted); }
+          .header-logo { display:flex; align-items:flex-start; justify-content:flex-end; }
+          .header-logo img { max-height: 44px; width:auto; object-fit: contain; }
           .meta, .section { border:1px solid var(--border); border-radius: 8px; padding:16px; margin-top:14px; }
           .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
           .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
@@ -180,8 +197,11 @@ export default function MyFormulaPurchaseReport() {
 
           <div className="header">
             <div>
-              <h1>Departamento de Compras</h1>
-              <p>Encomendas MyFórmula</p>
+              <h1>Guia de Manipulação</h1>
+              <p>Departamento de Expedição</p>
+            </div>
+            <div className="header-logo">
+              <img src="/images/myformula-logo.png" alt="MyFórmula" />
             </div>
           </div>
 
@@ -231,6 +251,26 @@ export default function MyFormulaPurchaseReport() {
                   <div>
                     <div className="label">DATA DO RELATÓRIO:</div>
                     <div className="value">{reportData?.report_date ?? ""}</div>
+                  </div>
+                </div>
+
+                <div className="grid-3" style={{ marginTop: 10 }}>
+                  <div>
+                    <div className="label">CRM</div>
+                    <div className="value" data-mf-editable="true" data-mf-key="crm" contentEditable suppressContentEditableWarning />
+                  </div>
+                  <div>
+                    <div className="label">Número de Referência</div>
+                    <div className="value" data-mf-editable="true" data-mf-key="reference_number" contentEditable suppressContentEditableWarning />
+                  </div>
+                  <div>
+                    <div className="label">Courier (Serviço de entrega)</div>
+                    <div className="value">
+                      <select data-mf-select="true" data-mf-key="courier" defaultValue="CTT" style={{ border: 0, width: "100%", padding: 0, font: "inherit", background: "transparent" }}>
+                        <option value="CTT">CTT</option>
+                        <option value="VASP">VASP</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </>
@@ -307,7 +347,7 @@ export default function MyFormulaPurchaseReport() {
                       {group.items.map((item, idx) => (
                         <li key={item.slug ?? `${item.name}-${idx}`}>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                            <span>{item.name}</span>
+                            <span>{item.letter ? `${item.letter} - ` : ""}{item.name}</span>
                             <input
                               type="checkbox"
                               data-mf-check="true"
