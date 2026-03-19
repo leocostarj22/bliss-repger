@@ -183,7 +183,17 @@ export default function MyFormulaPurchaseReport() {
           .btn { display:inline-block; padding:8px 12px; border:1px solid var(--border); border-radius:8px; text-decoration:none; color: var(--fg); background: #fff; cursor:pointer; }
           .btn:disabled { opacity: 0.6; cursor:not-allowed; }
           .no-print { margin-bottom: 12px; display:flex; justify-content:flex-start; gap:8px; }
-          @media print { .no-print, .print-actions { display: none; } .mf-page { padding: 0; } .container { max-width: unset; } }
+          @media print {
+            .no-print, .print-actions { display: none; }
+            .mf-page { padding: 0; }
+            .container { max-width: unset; }
+            body, .container { font-size: 12px; }
+            .header h1 { font-size: 18px; }
+            .header p { font-size: 12px; }
+            h2 { font-size: 14px; }
+            th, td { font-size: 12px; }
+            .label { font-size: 11px; }
+          }
         `}
       </style>
 
