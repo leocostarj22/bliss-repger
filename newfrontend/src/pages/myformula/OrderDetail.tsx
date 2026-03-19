@@ -31,7 +31,7 @@ export default function MyFormulaOrderDetail() {
     return () => { mounted = false }
   }, [id])
 
-  const printUrl = order ? `/admin/crm/myformula/orders/${order.order_id}/purchase-report` : "#"
+  const printUrl = order ? `#/myformula/orders/${order.order_id}/purchase-report` : "#"
 
   return (
     <div className="space-y-6 animate-slide-up">

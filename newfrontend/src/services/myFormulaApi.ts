@@ -272,6 +272,31 @@ export async function fetchMyFormulaOrder(id: string): Promise<ApiResponse<MyFor
   return res.data
 }
 
+export interface MyFormulaPurchaseReportData {
+  client_code: string
+  plan_letters: string
+  plan_number: string
+  month_number: string
+  plan_name: string
+  capsules: string
+  net_weight: string
+  supplements_by_period: { title: string; items: { slug: string; name: string }[] }[]
+  totals: { morning: number; afternoon: number; night: number }
+  how_to_take: string
+  birthdate: string
+  report_date: string
+  nif: string
+  payment_method: string
+  payment_date: string
+}
+
+export async function fetchMyFormulaPurchaseReport(
+  id: string
+): Promise<ApiResponse<{ order: MyFormulaOrder; reportData: MyFormulaPurchaseReportData }>> {
+  const res = await axios.get(`/api/v1/myformula/orders/${id}/purchase-report`)
+  return res.data
+}
+
 export async function createMyFormulaOrder(payload: {
   customer_id: string
   order_status_id: string

@@ -76,37 +76,42 @@ export default function Orders() {
       </div>
 
       <div className="glass-card p-4">
-        <div className="grid gap-3 md:grid-cols-3">
-          <div className="relative md:col-span-2">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="relative md:flex-1">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input value={search} onChange={(e) => { setPage(1); setSearch(e.target.value) }} placeholder="Pesquisar por ID, cliente, email ou telefone" className="pl-9" />
           </div>
 
-          <Select value={statusFilter} onValueChange={(v) => { setPage(1); setStatusFilter(v) }}>
-            <SelectTrigger>
-              <SelectValue placeholder="Estado" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {statuses.map((s) => (
-                <SelectItem key={s.order_status_id} value={s.order_status_id}>
-                  {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="mt-3 w-44">
-          <Select value={String(perPage)} onValueChange={(v) => { setPage(1); setPerPage(Number(v)) }}>
-            <SelectTrigger>
-              <SelectValue placeholder={`${perPage} por página`} />
-            </SelectTrigger>
-            <SelectContent>
-              {[10, 20, 50].map((n) => (
-                <SelectItem key={n} value={String(n)}>{n} por página</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-3 md:w-[420px]">
+            <div className="flex-1">
+              <Select value={statusFilter} onValueChange={(v) => { setPage(1); setStatusFilter(v) }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {statuses.map((s) => (
+                    <SelectItem key={s.order_status_id} value={s.order_status_id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="w-44">
+              <Select value={String(perPage)} onValueChange={(v) => { setPage(1); setPerPage(Number(v)) }}>
+                <SelectTrigger>
+                  <SelectValue placeholder={`${perPage} por página`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {[10, 20, 50].map((n) => (
+                    <SelectItem key={n} value={String(n)}>{n} por página</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
       </div>
 

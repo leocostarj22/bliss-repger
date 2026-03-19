@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
 import type { MyFormulaOrder } from "@/types"
-import { fetchMyFormulaOrder } from "@/services/myFormulaApi"
+import { fetchMyFormulaPurchaseReport, type MyFormulaPurchaseReportData } from "@/services/myFormulaApi"
 
 function pad(num: string, size: number) {
   const s = String(num ?? "")
@@ -17,11 +17,19 @@ function formatDatePt(iso?: string | null) {
   return d.toLocaleString("pt-PT")
 }
 
+type ReportStateV2 = {
+  v: 2
+  editables: Record<string, string>
+  dates: Record<string, string>
+  checks: Record<string, boolean>
+}
+
 export default function MyFormulaPurchaseReport() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [order, setOrder] = useState<MyFormulaOrder | null>(null)
+  const [reportData, setReportData] = useState<MyFormulaPurchaseReportData | null>(null)
 
   const storageKey = useMemo(() => `mf_report_state_${id ?? ""}`, [id])
 
@@ -31,9 +39,10 @@ export default function MyFormulaPurchaseReport() {
       if (!id) return
       setLoading(true)
       try {
-        const res = await fetchMyFormulaOrder(id)
+        const res = await fetchMyFormulaPurchaseReport(id)
         if (!mounted) return
-        setOrder(res.data ?? null)
+        setOrder(res.data?.order ?? null)
+        setReportData(res.data?.reportData ?? null)
       } finally {
         if (mounted) setLoading(false)
       }
@@ -44,45 +53,61 @@ export default function MyFormulaPurchaseReport() {
     }
   }, [id])
 
-  const clientCode = useMemo(() => {
-    if (!order) return ""
-    const prefix = order.customer_id ? "C." : "O."
-    const num = order.customer_id ? String(order.customer_id) : String(order.order_id)
-    return prefix + pad(num, 7)
-  }, [order])
+  const collect = (): ReportStateV2 => {
+    const editables: Record<string, string> = {}
+    const dates: Record<string, string> = {}
+    const checks: Record<string, boolean> = {}
 
-  const planName = useMemo(() => {
-    const p = order?.products?.[0]
-    return p?.name ?? ""
-  }, [order])
+    document.querySelectorAll('[data-mf-editable="true"][data-mf-key]').forEach((el) => {
+      const key = (el as HTMLElement).getAttribute("data-mf-key")
+      if (!key) return
+      editables[key] = (el as HTMLElement).innerHTML
+    })
 
-  const collect = () => {
-    return {
-      editables: Array.from(document.querySelectorAll('[data-mf-editable="true"]')).map((el) => (el as HTMLElement).innerHTML),
-      dates: Array.from(document.querySelectorAll('input[data-mf-date="true"]')).map((el) => (el as HTMLInputElement).value),
-      checks: Array.from(document.querySelectorAll('input[data-mf-check="true"]')).map((el) => (el as HTMLInputElement).checked),
-    }
+    document.querySelectorAll('input[data-mf-date="true"][data-mf-key]').forEach((el) => {
+      const key = (el as HTMLInputElement).getAttribute("data-mf-key")
+      if (!key) return
+      dates[key] = (el as HTMLInputElement).value
+    })
+
+    document.querySelectorAll('input[data-mf-check="true"][data-mf-key]').forEach((el) => {
+      const key = (el as HTMLInputElement).getAttribute("data-mf-key")
+      if (!key) return
+      checks[key] = (el as HTMLInputElement).checked
+    })
+
+    return { v: 2, editables, dates, checks }
   }
 
   const restore = () => {
     try {
       const raw = localStorage.getItem(storageKey)
       if (!raw) return
-      const s = JSON.parse(raw)
-      const eds = document.querySelectorAll('[data-mf-editable="true"]')
-      eds.forEach((el, i) => {
-        if (s.editables && s.editables[i] !== undefined) (el as HTMLElement).innerHTML = s.editables[i]
+      const s = JSON.parse(raw) as Partial<ReportStateV2>
+      if (s.v !== 2) return
+
+      document.querySelectorAll('[data-mf-editable="true"][data-mf-key]').forEach((el) => {
+        const key = (el as HTMLElement).getAttribute("data-mf-key")
+        if (!key) return
+        const next = s.editables?.[key]
+        if (next !== undefined) (el as HTMLElement).innerHTML = next
       })
-      const dts = document.querySelectorAll('input[data-mf-date="true"]')
-      dts.forEach((el, i) => {
-        if (s.dates && s.dates[i] !== undefined) (el as HTMLInputElement).value = s.dates[i]
+
+      document.querySelectorAll('input[data-mf-date="true"][data-mf-key]').forEach((el) => {
+        const key = (el as HTMLInputElement).getAttribute("data-mf-key")
+        if (!key) return
+        const next = s.dates?.[key]
+        if (next !== undefined) (el as HTMLInputElement).value = next
       })
-      const chs = document.querySelectorAll('input[data-mf-check="true"]')
-      chs.forEach((el, i) => {
-        if (s.checks && s.checks[i] !== undefined) (el as HTMLInputElement).checked = s.checks[i]
+
+      document.querySelectorAll('input[data-mf-check="true"][data-mf-key]').forEach((el) => {
+        const key = (el as HTMLInputElement).getAttribute("data-mf-key")
+        if (!key) return
+        const next = s.checks?.[key]
+        if (next !== undefined) (el as HTMLInputElement).checked = next
       })
     } catch {
-      //
+      return
     }
   }
 
@@ -176,22 +201,36 @@ export default function MyFormulaPurchaseReport() {
                   </div>
                   <div>
                     <div className="label">CLIENTE N.º:</div>
-                    <div className="value">{clientCode}</div>
+                    <div className="value">{reportData?.client_code ?? ((order.customer_id ? "C." : "O.") + pad(order.customer_id ? String(order.customer_id) : String(order.order_id), 7))}</div>
                   </div>
                 </div>
 
                 <div className="grid-3" style={{ marginTop: 10 }}>
                   <div>
                     <div className="label">NÚMERO DO PLANO:</div>
-                    <div className="value" data-mf-editable="true" contentEditable suppressContentEditableWarning />
+                    <div
+                      className="value"
+                      data-mf-editable="true"
+                      data-mf-key="plan_number"
+                      contentEditable
+                      suppressContentEditableWarning
+                      dangerouslySetInnerHTML={{ __html: reportData?.plan_number ?? "" }}
+                    />
                   </div>
                   <div>
                     <div className="label">Número do Mês</div>
-                    <div className="value" data-mf-editable="true" contentEditable suppressContentEditableWarning />
+                    <div
+                      className="value"
+                      data-mf-editable="true"
+                      data-mf-key="month_number"
+                      contentEditable
+                      suppressContentEditableWarning
+                      dangerouslySetInnerHTML={{ __html: reportData?.month_number ?? "" }}
+                    />
                   </div>
                   <div>
                     <div className="label">DATA DO RELATÓRIO:</div>
-                    <div className="value" data-mf-editable="true" contentEditable suppressContentEditableWarning />
+                    <div className="value">{reportData?.report_date ?? ""}</div>
                   </div>
                 </div>
               </>
@@ -205,36 +244,82 @@ export default function MyFormulaPurchaseReport() {
             <div className="grid-3" style={{ gridTemplateColumns: "2fr 0.8fr 0.8fr" }}>
               <div>
                 <div className="label">PLANO:</div>
-                <div className="value" data-mf-editable="true" contentEditable suppressContentEditableWarning>{planName}</div>
+                <div
+                  className="value"
+                  data-mf-editable="true"
+                  data-mf-key="plan_name"
+                  contentEditable
+                  suppressContentEditableWarning
+                  dangerouslySetInnerHTML={{ __html: reportData?.plan_name ?? "" }}
+                />
               </div>
               <div>
                 <div className="label">N.º DE CÁPSULAS POR DIA:</div>
-                <div className="value" data-mf-editable="true" contentEditable suppressContentEditableWarning />
+                <div
+                  className="value"
+                  data-mf-editable="true"
+                  data-mf-key="capsules"
+                  contentEditable
+                  suppressContentEditableWarning
+                  dangerouslySetInnerHTML={{ __html: reportData?.capsules ?? "" }}
+                />
               </div>
               <div>
                 <div className="label">Cor Capas</div>
-                <div className="value" data-mf-editable="true" contentEditable suppressContentEditableWarning />
+                <div className="value" data-mf-editable="true" data-mf-key="cover_color" contentEditable suppressContentEditableWarning />
               </div>
             </div>
 
             <div style={{ marginTop: 10 }}>
               <div className="label">PESO LÍQUIDO:</div>
-              <div className="value" data-mf-editable="true" contentEditable suppressContentEditableWarning />
+              <div className="value">{reportData?.net_weight ?? ""}</div>
             </div>
 
             <div style={{ marginTop: 10 }}>
-              <div className="label">Como tomar MyFórmula</div>
-              <div className="value" style={{ height: 60 }} data-mf-editable="true" contentEditable suppressContentEditableWarning />
+              <div className="label">Como tomar MyFórmula {reportData?.plan_letters ?? ""}</div>
+              <div
+                className="value"
+                style={{ height: 60 }}
+                data-mf-editable="true"
+                data-mf-key="how_to_take"
+                contentEditable
+                suppressContentEditableWarning
+                dangerouslySetInnerHTML={{ __html: reportData?.how_to_take ?? "" }}
+              />
             </div>
           </div>
 
           <div className="section">
             <h2>Suplementos</h2>
             <div className="grid-3">
-              {["Manhã", "Tarde", "Noite"].map((title) => (
-                <div key={title} className={"supp-col " + (title === "Tarde" ? "supp-col--tarde" : "")}>
-                  <strong>{title}</strong>
-                  <div className="subtle" style={{ marginTop: 6 }}>—</div>
+              {(reportData?.supplements_by_period?.length
+                ? reportData.supplements_by_period
+                : [
+                    { title: "Manhã", items: [] },
+                    { title: "Tarde", items: [] },
+                    { title: "Noite", items: [] },
+                  ]
+              ).map((group) => (
+                <div key={group.title} className={"supp-col " + (group.title === "Tarde" ? "supp-col--tarde" : "")}>
+                  <strong>{group.title}</strong>
+                  {group.items?.length ? (
+                    <ul style={{ margin: "6px 0 0 18px", padding: 0 }}>
+                      {group.items.map((item, idx) => (
+                        <li key={item.slug ?? `${item.name}-${idx}`}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                            <span>{item.name}</span>
+                            <input
+                              type="checkbox"
+                              data-mf-check="true"
+                              data-mf-key={`supp:${group.title}:${item.slug ?? item.name}:${idx}`}
+                            />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="subtle" style={{ marginTop: 6 }}>—</div>
+                  )}
                 </div>
               ))}
             </div>
@@ -252,7 +337,10 @@ export default function MyFormulaPurchaseReport() {
               </thead>
               <tbody>
                 {[
-                  { item: "Blisters e Toma", details: "Como tomar MyFórmula —" },
+                  {
+                    item: "Blisters e Toma",
+                    details: `Como tomar MyFórmula ${reportData?.plan_letters ?? ""} — ${reportData?.how_to_take ?? ""}`,
+                  },
                   { item: "Etiquetas do cliente", details: "1/capa, interior" },
                   { item: "Etiqueta global", details: "1/embalagem, fundo da manga" },
                   { item: "Post-it Nome do Cliente", details: "1/embalagem, frente da manga" },
@@ -262,7 +350,9 @@ export default function MyFormulaPurchaseReport() {
                   <tr key={idx}>
                     <td>{r.item}</td>
                     <td>{r.details}</td>
-                    <td style={{ textAlign: "center" }}><input type="checkbox" data-mf-check="true" /></td>
+                    <td style={{ textAlign: "center" }}>
+                      <input type="checkbox" data-mf-check="true" data-mf-key={`checkout:${idx}`} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -274,21 +364,49 @@ export default function MyFormulaPurchaseReport() {
             <div className="grid-3">
               <div>
                 <div className="label">Data de Nascimento</div>
-                <div className="value" data-mf-editable="true" contentEditable suppressContentEditableWarning />
+                <div
+                  className="value"
+                  data-mf-editable="true"
+                  data-mf-key="birthdate"
+                  contentEditable
+                  suppressContentEditableWarning
+                  dangerouslySetInnerHTML={{ __html: reportData?.birthdate ?? "" }}
+                />
               </div>
               <div>
                 <div className="label">NIF</div>
-                <div className="value" data-mf-editable="true" contentEditable suppressContentEditableWarning />
+                <div
+                  className="value"
+                  data-mf-editable="true"
+                  data-mf-key="nif"
+                  contentEditable
+                  suppressContentEditableWarning
+                  dangerouslySetInnerHTML={{ __html: reportData?.nif ?? "" }}
+                />
               </div>
               <div>
                 <div className="label">Método de Pagamento</div>
-                <div className="value" data-mf-editable="true" contentEditable suppressContentEditableWarning>{order?.payment_method ?? ""}</div>
+                <div
+                  className="value"
+                  data-mf-editable="true"
+                  data-mf-key="payment_method"
+                  contentEditable
+                  suppressContentEditableWarning
+                  dangerouslySetInnerHTML={{ __html: reportData?.payment_method ?? order?.payment_method ?? "" }}
+                />
               </div>
             </div>
 
             <div style={{ marginTop: 10 }}>
               <div className="label">Data de Pagamento</div>
-              <div className="value" data-mf-editable="true" contentEditable suppressContentEditableWarning />
+              <div
+                className="value"
+                data-mf-editable="true"
+                data-mf-key="payment_date"
+                contentEditable
+                suppressContentEditableWarning
+                dangerouslySetInnerHTML={{ __html: reportData?.payment_date ?? "" }}
+              />
             </div>
           </div>
 
@@ -303,19 +421,29 @@ export default function MyFormulaPurchaseReport() {
               <div>
                 <div className="label">Data da Preparação</div>
                 <div className="value">
-                  <input data-mf-date="true" type="date" style={{ border: 0, width: "100%", padding: 0, font: "inherit", background: "transparent" }} />
+                  <input
+                    data-mf-date="true"
+                    data-mf-key="prep_date"
+                    type="date"
+                    style={{ border: 0, width: "100%", padding: 0, font: "inherit", background: "transparent" }}
+                  />
                 </div>
                 <div className="label" style={{ marginTop: 8 }}>Assinatura do Responsável pela Preparação</div>
-                <div className="value" style={{ height: 40 }} data-mf-editable="true" contentEditable suppressContentEditableWarning />
+                <div className="value" style={{ height: 40 }} data-mf-editable="true" data-mf-key="prep_signature" contentEditable suppressContentEditableWarning />
               </div>
 
               <div>
                 <div className="label">Data de Envio</div>
                 <div className="value">
-                  <input data-mf-date="true" type="date" style={{ border: 0, width: "100%", padding: 0, font: "inherit", background: "transparent" }} />
+                  <input
+                    data-mf-date="true"
+                    data-mf-key="shipping_date"
+                    type="date"
+                    style={{ border: 0, width: "100%", padding: 0, font: "inherit", background: "transparent" }}
+                  />
                 </div>
                 <div className="label" style={{ marginTop: 8 }}>Assinatura do Responsável pelo Envio</div>
-                <div className="value" style={{ height: 40 }} data-mf-editable="true" contentEditable suppressContentEditableWarning />
+                <div className="value" style={{ height: 40 }} data-mf-editable="true" data-mf-key="shipping_signature" contentEditable suppressContentEditableWarning />
               </div>
             </div>
           </div>
