@@ -36,6 +36,7 @@ Route::prefix('v1')->group(function () {
         Route::get('user', [UserController::class, 'me']);
         Route::get('notifications', [UserController::class, 'notifications']);
         Route::post('notifications/read', [UserController::class, 'markAsRead']);
+        Route::post('notifications/{id}/read', [UserController::class, 'markOneAsRead']);
         Route::delete('notifications', [UserController::class, 'clear']);
     });
 

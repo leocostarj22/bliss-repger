@@ -64,6 +64,21 @@ class UserController extends Controller
         return response()->json(['message' => 'Todas as notificações marcadas como lidas']);
     }
 
+    public function markOneAsRead(Request $request, string $id)
+    {
+        $notification = $request->user()->notifications()->where('id', $id)->first();
+
+        if (!$notification) {
+            return response()->json(['message' => 'Notificação não encontrada'], 404);
+        }
+
+        if (is_null($notification->read_at)) {
+            $notification->markAsRead();
+        }
+
+        return response()->json(['message' => 'Notificação marcada como lida']);
+    }
+
     public function clear(Request $request)
     {
         $request->user()->notifications()->delete();

@@ -1004,7 +1004,7 @@ export async function fetchNotifications(): Promise<ApiResponse<AppNotification[
 }
 
 export async function markNotificationsAsRead(): Promise<void> {
-  const response = await apiFetch('/api/v1/notifications/read-all', {
+  const response = await apiFetch('/api/v1/notifications/read', {
     method: 'POST',
     headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -1020,9 +1020,26 @@ export async function markNotificationsAsRead(): Promise<void> {
   }
 }
 
-export async function clearNotifications(): Promise<void> {
-  const response = await apiFetch('/api/v1/notifications/clear', {
+export async function markNotificationAsRead(id: string): Promise<void> {
+  const response = await apiFetch(`/api/v1/notifications/${encodeURIComponent(id)}/read`, {
     method: 'POST',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let msg = `Failed to mark notification as read: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {}
+    throw new Error(msg);
+  }
+}
+
+export async function clearNotifications(): Promise<void> {
+  const response = await apiFetch('/api/v1/notifications', {
+    method: 'DELETE',
     headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
     credentials: 'include',
   });
