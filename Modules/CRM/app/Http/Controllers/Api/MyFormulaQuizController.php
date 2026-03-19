@@ -75,60 +75,56 @@ class MyFormulaQuizController extends Controller
 
     public function index(Request $request)
     {
-        try {
-            $rows = $this->buildQuery($request)->get();
-        } catch (\Throwable $e) {
-            $from = $request->query('from');
-            $to   = $request->query('to');
-            $rows = Quiz::query()
-                ->when($from, fn ($q) => $q->whereDate('date_added', '>=', $from))
-                ->when($to,   fn ($q) => $q->whereDate('date_added', '<=', $to))
-                ->orderByDesc('date_added')
-                ->get();
+        $from = $request->query('from');
+        $to   = $request->query('to');
+        $rows = Quiz::query()
+            ->when($from, fn ($q) => $q->whereDate('date_added', '>=', $from))
+            ->when($to,   fn ($q) => $q->whereDate('date_added', '<=', $to))
+            ->orderByDesc('date_added')
+            ->get();
 
-            $search   = trim((string) $request->query('search', ''));
-            $status   = (string) $request->query('status', 'all');
-            $plan     = (string) $request->query('plan', 'all');
-            $gender   = $request->query('gender');
-            $ageRange = $request->query('age_range');
+        $search   = trim((string) $request->query('search', ''));
+        $status   = (string) $request->query('status', 'all');
+        $plan     = (string) $request->query('plan', 'all');
+        $gender   = $request->query('gender');
+        $ageRange = $request->query('age_range');
 
-            $rows = $rows->filter(function (Quiz $q) use ($search, $status, $plan, $gender, $ageRange) {
-                $post = (array) ($q->post ?? []);
+        $rows = $rows->filter(function (Quiz $q) use ($search, $status, $plan, $gender, $ageRange) {
+            $post = (array) ($q->post ?? []);
 
-                if ($search !== '') {
-                    $hay = strtolower((string) $q->getKey() . ' ' . (string) ($post['name'] ?? '') . ' ' . (string) ($post['email'] ?? ''));
-                    if (strpos($hay, strtolower($search)) === false) return false;
+            if ($search !== '') {
+                $hay = strtolower((string) $q->getKey() . ' ' . (string) ($post['name'] ?? '') . ' ' . (string) ($post['email'] ?? ''));
+                if (strpos($hay, strtolower($search)) === false) return false;
+            }
+
+            $step = (string) ($post['step'] ?? '');
+            $completed = $step === 'plans' || $step === '' || $step === null;
+            if ($status === 'completed' && ! $completed) return false;
+            if ($status === 'incomplete' && $completed) return false;
+
+            if ($gender && (($post['gender'] ?? null) !== $gender)) return false;
+
+            if ($ageRange) {
+                $birth = $post['birthdate'] ?? null;
+                if (! $birth) return false;
+                try {
+                    $age = \Carbon\Carbon::parse($birth)->age;
+                } catch (\Throwable) {
+                    return false;
                 }
+                if ($ageRange === '18-29' && !($age >= 18 && $age <= 29)) return false;
+                if ($ageRange === '30-39' && !($age >= 30 && $age <= 39)) return false;
+                if ($ageRange === '40-49' && !($age >= 40 && $age <= 49)) return false;
+                if ($ageRange === '50+'   && !($age >= 50)) return false;
+            }
 
-                $step = (string) ($post['step'] ?? '');
-                $completed = $step === 'plans' || $step === '' || $step === null;
-                if ($status === 'completed' && ! $completed) return false;
-                if ($status === 'incomplete' && $completed) return false;
+            if ($plan !== 'all') {
+                $codes = array_filter(array_map('trim', explode(',', (string) ($post['improve_health'] ?? ''))));
+                if (! in_array($plan, $codes, true)) return false;
+            }
 
-                if ($gender && (($post['gender'] ?? null) !== $gender)) return false;
-
-                if ($ageRange) {
-                    $birth = $post['birthdate'] ?? null;
-                    if (! $birth) return false;
-                    try {
-                        $age = \Carbon\Carbon::parse($birth)->age;
-                    } catch (\Throwable) {
-                        return false;
-                    }
-                    if ($ageRange === '18-29' && !($age >= 18 && $age <= 29)) return false;
-                    if ($ageRange === '30-39' && !($age >= 30 && $age <= 39)) return false;
-                    if ($ageRange === '40-49' && !($age >= 40 && $age <= 49)) return false;
-                    if ($ageRange === '50+'   && !($age >= 50)) return false;
-                }
-
-                if ($plan !== 'all') {
-                    $codes = array_filter(array_map('trim', explode(',', (string) ($post['improve_health'] ?? ''))));
-                    if (! in_array($plan, $codes, true)) return false;
-                }
-
-                return true;
-            });
-        }
+            return true;
+        });
 
         $data = $rows->map(function (Quiz $q) {
             return [
@@ -143,22 +139,52 @@ class MyFormulaQuizController extends Controller
 
     public function stats(Request $request)
     {
-        try {
-            $base = $this->buildQuery($request);
-            $total = (clone $base)->count();
-            $completed = (clone $base)->where(function ($x) {
-                $x->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(post, '$.step')) = 'plans'")
-                  ->orWhereRaw("JSON_EXTRACT(post, '$.step') IS NULL");
-            })->count();
-        } catch (\Throwable $e) {
-            $list = $this->index($request)->getData(true)['data'] ?? [];
-            $total = count($list);
-            $completed = 0;
-            foreach ($list as $row) {
-                $step = (string) ($row['post']['step'] ?? '');
-                $completed += ($step === 'plans' || $step === '' || $step === null) ? 1 : 0;
+        $from = $request->query('from');
+        $to   = $request->query('to');
+        $rows = Quiz::query()
+            ->when($from, fn ($q) => $q->whereDate('date_added', '>=', $from))
+            ->when($to,   fn ($q) => $q->whereDate('date_added', '<=', $to))
+            ->orderByDesc('date_added')
+            ->get();
+
+        $search   = trim((string) $request->query('search', ''));
+        $status   = (string) $request->query('status', 'all');
+        $plan     = (string) $request->query('plan', 'all');
+        $gender   = $request->query('gender');
+        $ageRange = $request->query('age_range');
+
+        $rows = $rows->filter(function (Quiz $q) use ($search, $status, $plan, $gender, $ageRange) {
+            $post = (array) ($q->post ?? []);
+            if ($search !== '') {
+                $hay = strtolower((string) $q->getKey() . ' ' . (string) ($post['name'] ?? '') . ' ' . (string) ($post['email'] ?? ''));
+                if (strpos($hay, strtolower($search)) === false) return false;
             }
-        }
+            $step = (string) ($post['step'] ?? '');
+            $completed = $step === 'plans' || $step === '' || $step === null;
+            if ($status === 'completed' && ! $completed) return false;
+            if ($status === 'incomplete' && $completed) return false;
+            if ($gender && (($post['gender'] ?? null) !== $gender)) return false;
+            if ($ageRange) {
+                $birth = $post['birthdate'] ?? null;
+                if (! $birth) return false;
+                try { $age = \Carbon\Carbon::parse($birth)->age; } catch (\Throwable) { return false; }
+                if ($ageRange === '18-29' && !($age >= 18 && $age <= 29)) return false;
+                if ($ageRange === '30-39' && !($age >= 30 && $age <= 39)) return false;
+                if ($ageRange === '40-49' && !($age >= 40 && $age <= 49)) return false;
+                if ($ageRange === '50+'   && !($age >= 50)) return false;
+            }
+            if ($plan !== 'all') {
+                $codes = array_filter(array_map('trim', explode(',', (string) ($post['improve_health'] ?? ''))));
+                if (! in_array($plan, $codes, true)) return false;
+            }
+            return true;
+        });
+
+        $total = $rows->count();
+        $completed = $rows->filter(function (Quiz $q) {
+            $step = (string) ((array) ($q->post ?? []))['step'] ?? '';
+            return $step === 'plans' || $step === '' || $step === null;
+        })->count();
         $notCompleted = $total - $completed;
         $rate = $total > 0 ? round(($completed / $total) * 100) : 0;
 
