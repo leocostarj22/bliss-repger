@@ -106,10 +106,11 @@ export default function Customers() {
   const load = async () => {
     setLoading(true)
     try {
-      const resp = await fetchMyFormulaCustomers({ search: "", status: "all" })
-      setRows(resp.data)
-    } catch {
-      toast({ title: "Erro", description: "Não foi possível carregar clientes", variant: "destructive" })
+      const resp = await fetchMyFormulaCustomers({ search, status: "all", per_page: perPage, page })
+      setRows(Array.isArray(resp.data) ? resp.data : [])
+    } catch (e: any) {
+      toast({ title: "Erro", description: e?.message ?? "Não foi possível carregar clientes", variant: "destructive" })
+      setRows([])
     } finally {
       setLoading(false)
     }
@@ -117,7 +118,7 @@ export default function Customers() {
 
   useEffect(() => {
     load()
-  }, [])
+  }, [search, perPage, page])
 
 
   return (
