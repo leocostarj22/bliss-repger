@@ -64,14 +64,19 @@ function normalizePlanToken(token: string) {
 
 function getPlanCodes(improve?: string | null) {
   return String(improve ?? "")
-    .split(",")
+    .split(/[;,|]/)
     .map((x) => normalizePlanToken(x))
     .filter(Boolean)
 }
 
-function getPlanLabels(improve?: string | null) {
+function getPrimaryPlanCode(improve?: string | null) {
   const codes = getPlanCodes(improve)
-  return codes.map((code) => PLAN_LABELS[code] ?? code)
+  return codes[0] ?? null
+}
+
+function getPrimaryPlanLabel(improve?: string | null) {
+  const code = getPrimaryPlanCode(improve)
+  return code ? (PLAN_LABELS[code] ?? code) : "—"
 }
 
 function statusLabel(step?: string | null) {
@@ -85,6 +90,7 @@ export default function Quizzes() {
 
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "incomplete">("all")
+  const [stepFilter, setStepFilter] = useState<string>("all")
   const [planFilter, setPlanFilter] = useState<string>("all")
   const [perPage, setPerPage] = useState(10)
   const [page, setPage] = useState(1)
@@ -111,24 +117,34 @@ export default function Quizzes() {
     load()
   }, [search, statusFilter, planFilter])
 
+  const stepOptions = useMemo(() => {
+    const values = new Set<string>()
+    rows.forEach((r) => {
+      const s = String((r.post ?? {}).step ?? "").trim()
+      if (s) values.add(s)
+    })
+    return Array.from(values)
+  }, [rows])
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return rows.filter((r) => {
       const post = r.post ?? {}
       const step = String(post.step ?? "")
       const improve = String(post.improve_health ?? "")
-      const selectedPlans = getPlanCodes(improve)
+      const primaryPlanCode = getPrimaryPlanCode(improve)
       const completed = step === "plans"
 
       if (statusFilter === "completed" && !completed) return false
       if (statusFilter === "incomplete" && completed) return false
-      if (planFilter !== "all" && !selectedPlans.includes(planFilter)) return false
+      if (stepFilter !== "all" && step !== stepFilter) return false
+      if (planFilter !== "all" && primaryPlanCode !== planFilter) return false
 
       if (!q) return true
       const hay = `${r.quiz_id} ${String(post.name ?? "")} ${String(post.email ?? "")}`.toLowerCase()
       return hay.includes(q)
     })
-  }, [rows, search, statusFilter, planFilter])
+  }, [rows, search, statusFilter, stepFilter, planFilter])
 
   const total = filtered.length
   const totalPages = Math.max(1, Math.ceil(total / perPage))
@@ -151,7 +167,7 @@ export default function Quizzes() {
 
 
       <div className="glass-card p-4">
-        <div className="grid gap-3 md:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-5">
           <div className="relative md:col-span-2">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input value={search} onChange={(e) => { setPage(1); setSearch(e.target.value) }} placeholder="Pesquisar..." className="pl-9" />
@@ -168,6 +184,18 @@ export default function Quizzes() {
             </SelectContent>
           </Select>
 
+          <Select value={stepFilter} onValueChange={(v) => { setPage(1); setStepFilter(v) }}>
+            <SelectTrigger>
+              <SelectValue placeholder="Passo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os passos</SelectItem>
+              {stepOptions.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select value={planFilter} onValueChange={(v) => { setPage(1); setPlanFilter(v) }}>
             <SelectTrigger>
               <SelectValue placeholder="Plano" />
@@ -175,9 +203,7 @@ export default function Quizzes() {
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               {Object.entries(PLAN_LABELS).map(([k, v]) => (
-                <SelectItem key={k} value={k}>
-                  {v}
-                </SelectItem>
+                <SelectItem key={k} value={k}>{v}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -229,11 +255,9 @@ export default function Quizzes() {
                     const age = calcAge(post.birthdate ? String(post.birthdate) : null)
                     const gender = String(post.gender ?? "")
                     const improve = String(post.improve_health ?? "")
-                    const planLabels = getPlanLabels(improve)
+                    const planLabel = getPrimaryPlanLabel(improve)
                     const step = String(post.step ?? "")
                     const completed = step === "plans"
-
-                    const planLabel = planLabels.length ? planLabels.join(", ") : "—"
                     const genderLabel = gender === "male" ? "Masculino" : gender === "female" ? "Feminino" : (gender || "—")
 
                     return (
@@ -318,7 +342,7 @@ export default function Quizzes() {
 function ViewModal({ quiz, onClose }: { quiz: MyFormulaQuiz; onClose: () => void }) {
   const post = quiz.post ?? {}
   const step = String(post.step ?? "")
-  const plans = getPlanLabels(String(post.improve_health ?? ""))
+  const plan = getPrimaryPlanLabel(String(post.improve_health ?? ""))
   const entries = Object.entries(post)
 
   return (
@@ -343,7 +367,7 @@ function ViewModal({ quiz, onClose }: { quiz: MyFormulaQuiz; onClose: () => void
 
           <div className="rounded-lg border border-border/60 p-4">
             <div className="text-sm font-medium">Plano selecionado</div>
-            <div className="mt-2 text-sm text-muted-foreground">{plans.length ? plans.join(", ") : "Sem plano selecionado"}</div>
+            <div className="mt-2 text-sm text-muted-foreground">{plan}</div>
             <div className="mt-4 text-sm font-medium">Relatório</div>
             <div className="mt-2 text-sm text-muted-foreground">Em breve: relatório personalizado do cliente.</div>
           </div>
