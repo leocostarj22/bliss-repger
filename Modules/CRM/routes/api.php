@@ -19,6 +19,7 @@ use Modules\CRM\Http\Controllers\Api\MyFormulaOrderStatusController;
 use Modules\CRM\Http\Controllers\Api\MyFormulaCustomerController;
 use Modules\CRM\Http\Controllers\Api\MyFormulaProductController;
 use Modules\CRM\Http\Controllers\Api\MyFormulaQuizController;
+use Modules\CRM\Http\Controllers\Api\EspacoAbsolutoController;
 use Modules\CRM\Http\Controllers\CRMController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -218,5 +219,13 @@ Route::prefix('v1')->group(function () {
 
         Route::get('quizzes', [MyFormulaQuizController::class, 'index']);
         Route::get('quizzes/stats', [MyFormulaQuizController::class, 'stats']);
+    });
+
+    Route::prefix('espacoabsoluto')->middleware(['web', 'auth'])->group(function () {
+        Route::get('overview', [EspacoAbsolutoController::class, 'overview']);
+        Route::get('customers', [EspacoAbsolutoController::class, 'customers']);
+        Route::get('user-groups', [EspacoAbsolutoController::class, 'userGroups']);
+        Route::get('user-messages', [EspacoAbsolutoController::class, 'userMessages']);
+        Route::get('appointments', [EspacoAbsolutoController::class, 'appointments']);
     });
 });

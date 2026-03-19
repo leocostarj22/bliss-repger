@@ -3594,9 +3594,17 @@ export async function fetchEspacoAbsolutoCustomers(params?: {
   origin?: string;
   registered_from?: string;
   registered_until?: string;
+  page?: number;
+  per_page?: number;
 }): Promise<ApiResponse<EspacoAbsolutoCustomer[]>> {
   const qs = new URLSearchParams();
   if (params?.search?.trim()) qs.set('search', params.search.trim());
+  if (params?.status && params.status !== 'all') qs.set('status', params.status);
+  if (params?.origin?.trim() && params.origin !== 'all') qs.set('origin', params.origin.trim());
+  if (params?.registered_from?.trim()) qs.set('registered_from', params.registered_from.trim());
+  if (params?.registered_until?.trim()) qs.set('registered_until', params.registered_until.trim());
+  if (params?.page && Number.isFinite(params.page)) qs.set('page', String(params.page));
+  if (params?.per_page && Number.isFinite(params.per_page)) qs.set('per_page', String(params.per_page));
 
   const response = await apiFetch(`/api/v1/espacoabsoluto/customers${qs.toString() ? `?${qs.toString()}` : ''}`, {
     method: 'GET',
@@ -3615,7 +3623,14 @@ export async function fetchEspacoAbsolutoCustomers(params?: {
 
   const json = await response.json();
   const rows = Array.isArray(json?.data) ? json.data : [];
-  return { data: rows as EspacoAbsolutoCustomer[] };
+  const meta = json?.meta && typeof json.meta === 'object' ? {
+    total: Number(json.meta.total ?? rows.length),
+    page: Number(json.meta.page ?? 1),
+    perPage: Number(json.meta.perPage ?? params?.per_page ?? rows.length),
+    totalPages: Number(json.meta.totalPages ?? 1),
+  } : undefined;
+
+  return { data: rows as EspacoAbsolutoCustomer[], meta };
 }
 
 export async function createEspacoAbsolutoCustomer(payload: Pick<EspacoAbsolutoCustomer, 'name' | 'email' | 'phone' | 'origin' | 'status'>): Promise<ApiResponse<EspacoAbsolutoCustomer>> {
