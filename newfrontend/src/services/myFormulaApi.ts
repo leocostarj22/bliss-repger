@@ -167,22 +167,11 @@ export async function deleteMyFormulaProduct(product_id: string): Promise<ApiRes
 export async function fetchMyFormulaCustomers(params?: {
   search?: string
   status?: 'all' | 'active' | 'inactive'
+  page?: number
+  per_page?: number
 }): Promise<ApiResponse<MyFormulaCustomer[]>> {
-  await delay()
-  const q = params?.search?.trim().toLowerCase() ?? ''
-  const status = params?.status ?? 'all'
-  const rows = readMyFormulaCustomers()
-  const filtered = rows.filter((c) => {
-    if (status !== 'all') {
-      const active = Boolean(c.status ?? true)
-      if (status === 'active' && !active) return false
-      if (status === 'inactive' && active) return false
-    }
-    if (!q) return true
-    const hay = `${c.customer_id} ${c.firstname} ${c.lastname} ${c.email} ${c.telephone ?? ''}`.toLowerCase()
-    return hay.includes(q)
-  })
-  return { data: filtered }
+  const res = await axios.get('/api/v1/myformula/customers', { params })
+  return res.data
 }
 
 export async function createMyFormulaCustomer(payload: {
