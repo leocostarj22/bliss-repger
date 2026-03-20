@@ -394,7 +394,7 @@ export default function Users() {
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuItem asChild>
-                                <Link to={`/support/tickets?user_id=${encodeURIComponent(u.id)}`}>
+                                <Link to={`/support/tickets?new=1&assigned_to=${encodeURIComponent(u.id)}`}>
                                   Abrir um ticket para {u.name}
                                 </Link>
                               </DropdownMenuItem>

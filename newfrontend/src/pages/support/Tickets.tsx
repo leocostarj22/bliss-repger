@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react"
+import { useSearchParams } from "react-router-dom"
 
 import type { Company, Department, SupportCategory, SupportTicket, SupportTicketPriority, SupportTicketStatus, User } from "@/types"
 import {
@@ -66,6 +67,16 @@ export default function SupportTickets() {
   const [categories, setCategories] = useState<SupportCategory[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [createPrefill, setCreatePrefill] = useState<
+    | {
+        company_id?: string
+        department_id?: string
+        assigned_to?: string
+      }
+    | null
+  >(null)
 
   const [search, setSearch] = useState("")
   const [companyFilter, setCompanyFilter] = useState<string>("all")
@@ -153,8 +164,32 @@ export default function SupportTickets() {
     return () => clearTimeout(t)
   }, [load])
 
+  useEffect(() => {
+    const wantNew = String(searchParams.get("new") ?? "") === "1"
+    if (!wantNew) return
+    if (formOpen) return
+    if (companies.length === 0) return
+
+    const assigned_to = String(searchParams.get("assigned_to") ?? "").trim()
+    const assignee = assigned_to ? users.find((u) => String(u.id) === assigned_to) : null
+
+    setEditing(null)
+    setCreatePrefill({
+      assigned_to: assigned_to || undefined,
+      company_id: assignee?.company_id ? String(assignee.company_id) : undefined,
+      department_id: assignee?.department_id ? String(assignee.department_id) : undefined,
+    })
+    setFormOpen(true)
+
+    const next = new URLSearchParams(searchParams)
+    next.delete("new")
+    next.delete("assigned_to")
+    setSearchParams(next, { replace: true })
+  }, [companies.length, formOpen, searchParams, setSearchParams, users])
+
   const openCreate = () => {
     setEditing(null)
+    setCreatePrefill(null)
     setFormOpen(true)
   }
 
@@ -494,13 +529,16 @@ export default function SupportTickets() {
           categories={categories}
           users={users}
           editing={editing}
+          prefill={createPrefill}
           onClose={() => {
             setFormOpen(false)
             setEditing(null)
+            setCreatePrefill(null)
           }}
           onSaved={() => {
             setFormOpen(false)
             setEditing(null)
+            setCreatePrefill(null)
             load()
           }}
         />
@@ -550,6 +588,7 @@ function SupportTicketFormModal({
   categories,
   users,
   editing,
+  prefill,
   onClose,
   onSaved,
 }: {
@@ -558,24 +597,44 @@ function SupportTicketFormModal({
   categories: SupportCategory[]
   users: User[]
   editing: SupportTicket | null
+  prefill?: {
+    company_id?: string
+    department_id?: string
+    assigned_to?: string
+  } | null
   onClose: () => void
   onSaved: () => void
 }) {
   const { toast } = useToast()
   const [saving, setSaving] = useState(false)
 
-  const [companyId, setCompanyId] = useState<string>(editing?.company_id ?? (companies[0]?.id ?? ""))
+  const [companyId, setCompanyId] = useState<string>(
+    String(editing?.company_id ?? prefill?.company_id ?? companies[0]?.id ?? ""),
+  )
   const [title, setTitle] = useState(editing?.title ?? "")
   const [description, setDescription] = useState(editing?.description ?? "")
   const [status, setStatus] = useState<SupportTicketStatus>(editing?.status ?? "open")
   const [priority, setPriority] = useState<SupportTicketPriority>(editing?.priority ?? "medium")
 
   const [categoryId, setCategoryId] = useState<string>(editing?.category_id ?? "none")
-  const [departmentId, setDepartmentId] = useState<string>(editing?.department_id ?? "none")
-  const [assignedTo, setAssignedTo] = useState<string>(editing?.assigned_to ?? "none")
+  const [departmentId, setDepartmentId] = useState<string>(
+    String(editing?.department_id ?? prefill?.department_id ?? "none"),
+  )
+  const [assignedTo, setAssignedTo] = useState<string>(
+    String(editing?.assigned_to ?? prefill?.assigned_to ?? "none"),
+  )
 
   const [dueDate, setDueDate] = useState<string>(toLocalInput(editing?.due_date))
   const [resolvedAt, setResolvedAt] = useState<string>(toLocalInput(editing?.resolved_at))
+
+  useEffect(() => {
+    if (editing) return
+    if (!prefill) return
+
+    if (prefill.company_id) setCompanyId(String(prefill.company_id))
+    if (prefill.department_id) setDepartmentId(String(prefill.department_id))
+    if (prefill.assigned_to) setAssignedTo(String(prefill.assigned_to))
+  }, [editing, prefill])
 
   const categoriesForCompany = useMemo(() => categories.filter((c) => c.company_id === companyId), [categories, companyId])
   const departmentsForCompany = useMemo(() => departments.filter((d) => d.company_id === companyId), [departments, companyId])
