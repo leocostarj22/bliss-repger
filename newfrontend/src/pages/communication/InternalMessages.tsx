@@ -126,6 +126,16 @@ export default function InternalMessages() {
     }
   }
 
+  const onReply = (m: InternalMessage) => {
+    const otherId = m.from_user_id === meId ? m.to_user_id : m.from_user_id
+    setToUserId(String(otherId))
+
+    const rawSubject = String(m.subject ?? "").trim()
+    const nextSubject = rawSubject && !/^re\s*:/i.test(rawSubject) ? `Re: ${rawSubject}` : rawSubject || "(Sem assunto)"
+    setSubject(nextSubject)
+    setBody("")
+  }
+
   const onSend = async () => {
     if (!toUserId) {
       toast({ title: "Validação", description: "Seleciona o destinatário", variant: "destructive" })
@@ -220,8 +230,10 @@ export default function InternalMessages() {
               rows={rows}
               users={userById}
               me={meId}
+              selected={selected}
               selectedId={selected?.id || null}
               onOpen={onOpen}
+              onReply={onReply}
             />
           </TabsContent>
           <TabsContent value="sent">
@@ -230,36 +242,13 @@ export default function InternalMessages() {
               rows={rows}
               users={userById}
               me={meId}
+              selected={selected}
               selectedId={selected?.id || null}
               onOpen={onOpen}
+              onReply={onReply}
             />
           </TabsContent>
         </Tabs>
-
-        {selected ? (
-          <div className="mt-5 rounded-lg border border-border/60 bg-background/40 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold">{selected.subject}</div>
-                <div className="text-xs text-muted-foreground">
-                  {userById.get(selected.from_user_id)?.name || selected.from_user_id} →{" "}
-                  {userById.get(selected.to_user_id)?.name || selected.to_user_id}
-                  {" · "}
-                  {fmtDateTime(selected.sent_at || selected.createdAt)}
-                </div>
-              </div>
-              {selected.read_at ? (
-                <div className="text-xs text-muted-foreground">Lida: {fmtDateTime(selected.read_at)}</div>
-              ) : (
-                <div className="text-xs text-muted-foreground">Não lida</div>
-              )}
-            </div>
-            <div
-              className="mt-3 text-sm tiptap ProseMirror min-h-0 p-0"
-              dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.body) }}
-            />
-          </div>
-        ) : null}
       </div>
     </div>
   )
@@ -270,8 +259,10 @@ function MessageList(props: {
   rows: InternalMessage[]
   users: Map<string, CommunicationRecipient>
   me: string
+  selected: InternalMessage | null
   selectedId: string | null
   onOpen: (m: InternalMessage) => void
+  onReply: (m: InternalMessage) => void
 }) {
   if (props.loading) return <div className="text-sm text-muted-foreground">A carregar…</div>
   if (props.rows.length === 0) return <div className="text-sm text-muted-foreground">Sem mensagens.</div>
@@ -282,19 +273,19 @@ function MessageList(props: {
         const fromName = props.users.get(m.from_user_id)?.name || m.from_user_id
         const toName = props.users.get(m.to_user_id)?.name || m.to_user_id
         const unread = m.to_user_id === props.me && !m.read_at
+        const opened = props.selectedId === m.id
+        const openedMessage = opened && props.selected?.id === m.id ? props.selected : m
 
         return (
-          <button
+          <div
             key={m.id}
-            type="button"
-            onClick={() => props.onOpen(m)}
             className={cn(
-              "w-full text-left rounded-lg border border-border/60 bg-background/40 p-3 hover:bg-muted/20 transition-colors",
-              props.selectedId === m.id && "ring-1 ring-cyan-400/30",
+              "rounded-lg border border-border/60 bg-background/40",
+              opened && "ring-1 ring-cyan-400/30",
             )}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
+            <div className="flex items-start justify-between gap-3 p-3 hover:bg-muted/20 transition-colors">
+              <button type="button" onClick={() => props.onOpen(m)} className="min-w-0 flex-1 text-left">
                 <div className="flex items-center gap-2">
                   <div className={cn("text-sm truncate", unread ? "font-semibold" : "font-medium")}>{m.subject}</div>
                   {unread ? (
@@ -306,10 +297,51 @@ function MessageList(props: {
                 <div className="text-xs text-muted-foreground truncate">
                   {fromName} → {toName}
                 </div>
+              </button>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="text-[11px] text-muted-foreground">{fmtDateTime(m.sent_at || m.createdAt)}</div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    props.onReply(m)
+                  }}
+                >
+                  Responder
+                </Button>
               </div>
-              <div className="text-[11px] text-muted-foreground shrink-0">{fmtDateTime(m.sent_at || m.createdAt)}</div>
             </div>
-          </button>
+
+            {opened ? (
+              <div className="border-t border-border/60 bg-background/30 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold">{openedMessage.subject}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {props.users.get(openedMessage.from_user_id)?.name || openedMessage.from_user_id} →{" "}
+                      {props.users.get(openedMessage.to_user_id)?.name || openedMessage.to_user_id}
+                      {" · "}
+                      {fmtDateTime(openedMessage.sent_at || openedMessage.createdAt)}
+                    </div>
+                  </div>
+                  {openedMessage.read_at ? (
+                    <div className="text-xs text-muted-foreground">Lida: {fmtDateTime(openedMessage.read_at)}</div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground">Não lida</div>
+                  )}
+                </div>
+
+                <div
+                  className="mt-3 text-sm tiptap ProseMirror min-h-0 p-0"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(openedMessage.body) }}
+                />
+              </div>
+            ) : null}
+          </div>
         )
       })}
     </div>
