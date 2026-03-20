@@ -210,7 +210,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="space-y-6 animate-fade-in">
-        <div className="page-header">
+        <div className="page-header lg:col-span-3 order-0">
           <h1 className="page-title">Dashboard</h1>
           <p className="page-subtitle">Resumo de suporte, mensagens e comunicados</p>
           <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500"></div>
@@ -251,7 +251,7 @@ export default function Dashboard() {
   const maxHeat = Math.max(1, ...(heatData.map((d: any) => Number(d?.value) || 0)));
 
   return (
-    <div className="flex flex-col gap-6 animate-slide-up">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-slide-up">
       <div className="page-header">
         <h1 className="page-title">Dashboard</h1>
         <p className="page-subtitle">Resumo de suporte, mensagens e comunicados</p>
@@ -259,7 +259,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="order-1 lg:col-span-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {statConfig.map((s, i) => {
           const raw = (dashboard.tickets as any)[s.key];
 
@@ -293,7 +293,7 @@ export default function Dashboard() {
         })}
       </div>
 
-      <div className="order-3 grid grid-cols-1 gap-6">
+      <div className="order-2 lg:col-span-3">
         <div className="glass-card p-6 bg-gradient-to-b from-cyan-500/5 via-background to-background border-t-cyan-500/20 hover:shadow-[0_0_30px_hsl(var(--ring)/0.25)] hover:border-cyan-400/40 transition-all duration-300 hover:-translate-y-1">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -323,7 +323,7 @@ export default function Dashboard() {
       {showLegacyEmailWidgets ? (
         <>
           {/* Charts */}
-          <div className="order-2 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="order-5 lg:col-span-1 grid grid-cols-1 gap-6">
         {/* Email Performance Over Time */}
         <div className="glass-card p-6 bg-gradient-to-b from-cyan-500/5 via-background to-background border-t-cyan-500/20">
           <div className="flex items-center justify-between mb-6">
@@ -465,7 +465,7 @@ export default function Dashboard() {
         </>
       ) : null}
 
-      <div className="order-1 glass-card p-6 bg-gradient-to-b from-fuchsia-500/5 via-background to-background border-t-fuchsia-500/20 hover:shadow-[0_0_30px_hsl(var(--ring)/0.25)] hover:border-fuchsia-400/40 transition-all duration-300">
+      <div className="order-4 lg:col-span-2 glass-card p-6 bg-gradient-to-b from-fuchsia-500/5 via-background to-background border-t-fuchsia-500/20 hover:shadow-[0_0_30px_hsl(var(--ring)/0.25)] hover:border-fuchsia-400/40 transition-all duration-300">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-base font-semibold">Posts Administrativos</h3>
@@ -476,7 +476,8 @@ export default function Dashboard() {
         {posts.length === 0 ? (
           <div className="text-sm text-muted-foreground">Sem posts.</div>
         ) : (
-          <div className="space-y-3">
+          <div className="relative space-y-4">
+            <div className="absolute left-5 top-2 bottom-2 w-px bg-border/60" />
             {posts.slice(0, 10).map((p) => {
               const busy = !!busyPostIds[p.id];
               const expanded = !!expandedPostIds[p.id];
@@ -491,7 +492,8 @@ export default function Dashboard() {
               const tooLong = text.length > 420;
 
               return (
-                <div key={p.id} className="rounded-lg border border-border/60 bg-background/40 p-4">
+                <div key={p.id} className="relative rounded-lg border border-border/60 bg-background/40 p-4 pl-10">
+                  <span className="absolute left-4 top-6 h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.45)]" />
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">
                       <Avatar className="w-9 h-9 border border-border">
@@ -608,7 +610,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="order-4 glass-card p-6 bg-gradient-to-b from-violet-500/5 via-background to-background border-t-violet-500/20 hover:shadow-[0_0_30px_hsl(var(--ring)/0.25)] hover:border-violet-400/40 transition-all duration-300">
+      <div className="order-6 lg:col-span-3 glass-card p-6 bg-gradient-to-b from-violet-500/5 via-background to-background border-t-violet-500/20 hover:shadow-[0_0_30px_hsl(var(--ring)/0.25)] hover:border-violet-400/40 transition-all duration-300">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-base font-semibold">Heatmap de Atividade</h3>
