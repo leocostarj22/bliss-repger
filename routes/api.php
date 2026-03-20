@@ -14,6 +14,7 @@ use App\Models\VideoCall;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\User;
+use App\Models\SystemLog;
 use App\Models\Role;
 use App\Models\Category;
 use App\Models\Employee;
@@ -127,6 +128,33 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
             ->where('is_starred', true)
             ->count();
 
+        $now = now();
+        $onlineWindowMinutes = 15;
+        $onlineCutoff = $now->copy()->subMinutes($onlineWindowMinutes);
+
+        $onlineUsers = User::query()
+            ->where('is_active', true)
+            ->whereNotNull('last_login_at')
+            ->where('last_login_at', '>=', $onlineCutoff)
+            ->count();
+
+        $accessesToday = 0;
+        try {
+            $accessesToday = (int) SystemLog::query()
+                ->where('action', 'login')
+                ->whereDate('created_at', $now->toDateString())
+                ->count();
+        } catch (\Throwable $e) {
+            $accessesToday = 0;
+        }
+
+        if ($accessesToday <= 0) {
+            $accessesToday = (int) User::query()
+                ->whereNotNull('last_login_at')
+                ->whereDate('last_login_at', $now->toDateString())
+                ->count();
+        }
+
         $posts = Post::published()
             ->when($user->department_id, function ($query) use ($user) {
                 $query->forDepartment($user->department_id);
@@ -163,6 +191,11 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
                     'drafts' => (int) $drafts,
                     'starred' => (int) $starred,
                     'month_label' => now()->format('M/Y'),
+                ],
+                'activity' => [
+                    'online_users' => (int) $onlineUsers,
+                    'accesses_today' => (int) $accessesToday,
+                    'online_window_minutes' => (int) $onlineWindowMinutes,
                 ],
                 'posts' => $posts->map(function (Post $p) use ($likedSet) {
                     $photo = $p->author?->photo_path;

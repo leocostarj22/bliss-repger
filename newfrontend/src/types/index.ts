@@ -133,9 +133,16 @@ export interface MainDashboardPost {
   };
 }
 
+export interface MainDashboardActivityStats {
+  online_users: number;
+  accesses_today: number;
+  online_window_minutes: number;
+}
+
 export interface MainDashboardData {
   tickets: MainDashboardTicketStats;
   messages: MainDashboardMessageStats;
+  activity?: MainDashboardActivityStats;
   posts: MainDashboardPost[];
   dailyMetrics?: DailyMetric[];
   topCampaigns?: CampaignMetric[];
