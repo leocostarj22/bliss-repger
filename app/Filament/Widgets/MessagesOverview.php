@@ -12,6 +12,8 @@ use App\Filament\Resources\InternalMessageResource;
 
 class MessagesOverview extends BaseWidget
 {
+    protected $listeners = ['refreshComponent' => '$refresh'];
+
     protected function getStats(): array
     {
         $userId = Auth::id();

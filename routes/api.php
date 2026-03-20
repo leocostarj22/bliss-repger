@@ -631,6 +631,17 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
                 'is_starred' => false,
             ]);
 
+            $recipientUser = User::find($validated['to_user_id']);
+            if ($recipientUser && (int) $recipientUser->id !== (int) $user->id) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Nova Mensagem!')
+                    ->info()
+                    ->body('Você recebeu uma nova mensagem interna')
+                    ->sendToDatabase($recipientUser);
+
+                $recipientUser->notify(new \App\Notifications\MessageSentNotification($message, $user, false));
+            }
+
             return response()->json([
                 'data' => [
                     'id' => (string) $recipient->id,
