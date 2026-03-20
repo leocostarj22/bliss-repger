@@ -1,20 +1,224 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { Link } from "react-router-dom"
-import { ArrowUpDown, Eye, Pencil, Plus, Search, Trash2, User as UserIcon } from "lucide-react"
+import {
+  ArrowUpDown, Eye, Pencil, Plus, Search, Trash2, User as UserIcon,
+  MessageSquare, TicketCheck, MessageCircle, X, Send, ChevronDown, ChevronUp,
+} from "lucide-react"
 
-import type { Company, Department, User } from "@/types"
-import { deleteUser, fetchCompanies, fetchDepartments, fetchUsers } from "@/services/api"
+import type { Company, Department, InternalMessage, User } from "@/types"
+import {
+  deleteUser, fetchCompanies, fetchDepartments, fetchUsers,
+  fetchUser, sendInternalMessage, createSupportTicket, fetchInternalMessages,
+} from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 
 const ONLINE_WINDOW_MINUTES = 15
+const PRIVILEGED_ROLES = ["admin", "manager", "supervisor"]
 
 type SortKey = "name" | "company" | "department" | "role" | "active" | "online"
 type SortDir = "asc" | "desc"
 
+// ── Floating Chat Panel ───────────────────────────────────────────────────────
+function FloatingChat({
+  target,
+  currentUserId,
+  onClose,
+}: {
+  target: User
+  currentUserId: string
+  onClose: () => void
+}) {
+  const { toast } = useToast()
+  const [minimized, setMinimized] = useState(false)
+  const [messages, setMessages] = useState<InternalMessage[]>([])
+  const [input, setInput] = useState("")
+  const [sending, setSending] = useState(false)
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    Promise.all([
+      fetchInternalMessages({ folder: "inbox" }),
+      fetchInternalMessages({ folder: "sent" }),
+    ])
+      .then(([inbox, sent]) => {
+        const all = [...inbox.data, ...sent.data]
+        const seen = new Set<string>()
+        const unique = all.filter((m) => (seen.has(m.id) ? false : (seen.add(m.id), true)))
+        const thread = unique
+          .filter(
+            (m) =>
+              (m.from_user_id === currentUserId && m.to_user_id === target.id) ||
+              (m.from_user_id === target.id && m.to_user_id === currentUserId),
+          )
+          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        setMessages(thread)
+      })
+      .catch(() => setMessages([]))
+  }, [target.id, currentUserId])
+
+  useEffect(() => {
+    if (!minimized) bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages, minimized])
+
+  const handleSend = async () => {
+    const body = input.trim()
+    if (!body) return
+    setSending(true)
+    try {
+      const res = await sendInternalMessage({
+        to_user_id: target.id,
+        subject: `Chat com ${target.name}`,
+        body,
+      })
+      setMessages((prev) => [...prev, res.data])
+      setInput("")
+    } catch {
+      toast({ title: "Erro", description: "Falha ao enviar mensagem", variant: "destructive" })
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return createPortal(
+    <div className="fixed bottom-4 right-4 z-[300] w-80 flex flex-col shadow-2xl rounded-xl overflow-hidden border border-border bg-background">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/20 border-b border-border">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="h-7 w-7 rounded-full bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center flex-shrink-0">
+            <UserIcon className="h-3.5 w-3.5 text-white" />
+          </div>
+          <span className="text-sm font-semibold truncate">{target.name}</span>
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => setMinimized((v) => !v)}
+            className="p-1 rounded hover:bg-secondary/60 transition-colors text-muted-foreground"
+          >
+            {minimized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded hover:bg-secondary/60 transition-colors text-muted-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {!minimized && (
+        <>
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-2 max-h-64 bg-background/80">
+            {messages.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-6">
+                Nenhuma mensagem. Comece a conversa!
+              </p>
+            ) : (
+              messages.map((m) => {
+                const isMine = m.from_user_id === currentUserId
+                return (
+                  <div
+                    key={m.id}
+                    className={["flex", isMine ? "justify-end" : "justify-start"].join(" ")}
+                  >
+                    <div
+                      className={[
+                        "max-w-[80%] rounded-lg px-3 py-1.5 text-xs",
+                        isMine
+                          ? "bg-cyan-500/20 text-cyan-100 rounded-br-none"
+                          : "bg-secondary text-foreground rounded-bl-none",
+                      ].join(" ")}
+                    >
+                      {m.body}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          {/* Input */}
+          <div className="flex items-center gap-2 p-2 border-t border-border bg-background">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Escreva uma mensagem…"
+              className="h-8 text-xs"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSend()
+                }
+              }}
+            />
+            <Button
+              size="sm"
+              className="h-8 w-8 p-0 flex-shrink-0"
+              disabled={sending || !input.trim()}
+              onClick={handleSend}
+            >
+              <Send className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </>
+      )}
+    </div>,
+    document.body,
+  )
+}
+
+// ── Quick Action Popover ──────────────────────────────────────────────────────
+function QuickActionMenu({
+  user,
+  onMessage,
+  onTicket,
+  onChat,
+}: {
+  user: User
+  onMessage: (u: User) => void
+  onTicket: (u: User) => void
+  onChat: (u: User) => void
+}) {
+  return (
+    <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 z-50 flex items-center gap-1 bg-background border border-border rounded-lg px-2 py-1.5 shadow-lg animate-in fade-in slide-in-from-right-2 duration-150">
+      <button
+        type="button"
+        title="Enviar mensagem"
+        onClick={() => onMessage(user)}
+        className="p-1.5 rounded-md hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors text-muted-foreground"
+      >
+        <MessageSquare className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        title="Criar ticket"
+        onClick={() => onTicket(user)}
+        className="p-1.5 rounded-md hover:bg-fuchsia-500/10 hover:text-fuchsia-400 transition-colors text-muted-foreground"
+      >
+        <TicketCheck className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        title="Abrir chat"
+        onClick={() => onChat(user)}
+        className="p-1.5 rounded-md hover:bg-emerald-500/10 hover:text-emerald-400 transition-colors text-muted-foreground"
+      >
+        <MessageCircle className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────────
 export default function Users() {
   const { toast } = useToast()
   const [rows, setRows] = useState<User[]>([])
@@ -32,6 +236,34 @@ export default function Users() {
 
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<User | null>(null)
+
+  // Current logged-in user info
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
+
+  // Hover state
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null)
+
+  // Send Message modal
+  const [msgOpen, setMsgOpen] = useState(false)
+  const [msgTarget, setMsgTarget] = useState<User | null>(null)
+  const [msgSubject, setMsgSubject] = useState("")
+  const [msgBody, setMsgBody] = useState("")
+  const [msgSending, setMsgSending] = useState(false)
+
+  // Create Ticket modal
+  const [ticketOpen, setTicketOpen] = useState(false)
+  const [ticketTarget, setTicketTarget] = useState<User | null>(null)
+  const [ticketTitle, setTicketTitle] = useState("")
+  const [ticketDesc, setTicketDesc] = useState("")
+  const [ticketPriority, setTicketPriority] = useState<"low" | "medium" | "high" | "urgent">("medium")
+  const [ticketCreating, setTicketCreating] = useState(false)
+
+  // Floating Chat
+  const [chatTarget, setChatTarget] = useState<User | null>(null)
+
+  const canUseQuickActions =
+    currentUserRole && PRIVILEGED_ROLES.includes(currentUserRole.toLowerCase())
 
   const companyNameById = useMemo(() => {
     const map: Record<string, string> = {}
@@ -108,6 +340,16 @@ export default function Users() {
     return base
   }, [rows, sortKey, sortDir, companyNameById, departmentNameById])
 
+  // Fetch current user role once on mount
+  useEffect(() => {
+    fetchUser()
+      .then((r) => {
+        setCurrentUserId(r.data.id)
+        setCurrentUserRole(r.data.role ?? null)
+      })
+      .catch(() => {})
+  }, [])
+
   useEffect(() => {
     if (companyFilter !== "all" && departmentFilter !== "all") {
       const dep = departments.find((d) => d.id === departmentFilter)
@@ -160,6 +402,71 @@ export default function Users() {
       toast({ title: "Sucesso", description: "Utilizador eliminado" })
     } catch {
       toast({ title: "Erro", description: "Falha ao eliminar", variant: "destructive" })
+    }
+  }
+
+  // Quick actions
+  const openMessage = (u: User) => {
+    setMsgTarget(u)
+    setMsgSubject("")
+    setMsgBody("")
+    setMsgOpen(true)
+  }
+
+  const openTicket = (u: User) => {
+    setTicketTarget(u)
+    setTicketTitle("")
+    setTicketDesc("")
+    setTicketPriority("medium")
+    setTicketOpen(true)
+  }
+
+  const openChat = (u: User) => {
+    setChatTarget(u)
+  }
+
+  const sendMessage = async () => {
+    if (!msgTarget || !msgSubject.trim() || !msgBody.trim()) return
+    setMsgSending(true)
+    try {
+      await sendInternalMessage({
+        to_user_id: msgTarget.id,
+        subject: msgSubject.trim(),
+        body: msgBody.trim(),
+      })
+      toast({ title: "Mensagem enviada", description: `Mensagem enviada a ${msgTarget.name}` })
+      setMsgOpen(false)
+    } catch {
+      toast({ title: "Erro", description: "Falha ao enviar mensagem", variant: "destructive" })
+    } finally {
+      setMsgSending(false)
+    }
+  }
+
+  const submitTicket = async () => {
+    if (!ticketTarget || !ticketTitle.trim()) return
+    setTicketCreating(true)
+    try {
+      await createSupportTicket({
+        company_id: ticketTarget.company_id ?? "",
+        title: ticketTitle.trim(),
+        description: ticketDesc.trim(),
+        status: "open",
+        priority: ticketPriority,
+        user_id: ticketTarget.id,
+        user_type: "user",
+        category_id: null,
+        department_id: ticketTarget.department_id ?? null,
+        assigned_to: null,
+        resolved_at: null,
+        due_date: null,
+      })
+      toast({ title: "Ticket criado", description: `Ticket criado para ${ticketTarget.name}` })
+      setTicketOpen(false)
+    } catch {
+      toast({ title: "Erro", description: "Falha ao criar ticket", variant: "destructive" })
+    } finally {
+      setTicketCreating(false)
     }
   }
 
@@ -346,11 +653,28 @@ export default function Users() {
                 </tr>
               ) : (
                 sortedRows.map((u) => (
-                  <tr key={u.id} className="border-b border-border/60 hover:bg-secondary/30 transition-colors">
+                  <tr
+                    key={u.id}
+                    className="border-b border-border/60 hover:bg-secondary/30 transition-colors"
+                    onMouseEnter={() => setHoveredRow(u.id)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                  >
+                    {/* Utilizador cell — with hover quick-action menu */}
                     <td className="py-4 pr-4">
-                      <div className="min-w-0">
-                        <div className="font-semibold truncate">{u.name}</div>
-                        <div className="text-xs text-muted-foreground truncate">{u.email}</div>
+                      <div className="relative flex items-center gap-2 min-w-0">
+                        {/* Quick-action popover (hover, privileged roles only) */}
+                        {canUseQuickActions && hoveredRow === u.id && (
+                          <QuickActionMenu
+                            user={u}
+                            onMessage={openMessage}
+                            onTicket={openTicket}
+                            onChat={openChat}
+                          />
+                        )}
+                        <div className="min-w-0">
+                          <div className="font-semibold truncate">{u.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{u.email}</div>
+                        </div>
                       </div>
                     </td>
                     <td className="py-4 pr-4">{u.company_id ? companyNameById[u.company_id] ?? u.company_id : "—"}</td>
@@ -422,6 +746,7 @@ export default function Users() {
         </div>
       </div>
 
+      {/* ── Delete Confirm ─────────────────────────────────────────────────── */}
       {deleteOpen && (
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
@@ -434,7 +759,7 @@ export default function Users() {
             <div className="space-y-2">
               <div className="text-lg font-semibold">Eliminar utilizador?</div>
               <div className="text-sm text-muted-foreground">
-                {pendingDelete ? `Deseja eliminar “${pendingDelete.name}”?` : "Deseja eliminar este utilizador?"}
+                {pendingDelete ? `Deseja eliminar "${pendingDelete.name}"?` : "Deseja eliminar este utilizador?"}
               </div>
             </div>
 
@@ -455,6 +780,143 @@ export default function Users() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Send Message Modal ─────────────────────────────────────────────── */}
+      {msgOpen && msgTarget && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setMsgOpen(false)}
+        >
+          <div className="glass-card w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-lg font-semibold">Enviar mensagem</div>
+                <div className="text-sm text-muted-foreground">Para: {msgTarget.name}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMsgOpen(false)}
+                className="p-1 rounded hover:bg-secondary/60 transition-colors text-muted-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Assunto</label>
+                <Input
+                  value={msgSubject}
+                  onChange={(e) => setMsgSubject(e.target.value)}
+                  placeholder="Assunto da mensagem"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Mensagem</label>
+                <Textarea
+                  value={msgBody}
+                  onChange={(e) => setMsgBody(e.target.value)}
+                  placeholder="Escreva a sua mensagem…"
+                  rows={4}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setMsgOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={sendMessage}
+                disabled={msgSending || !msgSubject.trim() || !msgBody.trim()}
+              >
+                <Send className="h-4 w-4" />
+                Enviar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Create Ticket Modal ────────────────────────────────────────────── */}
+      {ticketOpen && ticketTarget && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setTicketOpen(false)}
+        >
+          <div className="glass-card w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-lg font-semibold">Criar ticket</div>
+                <div className="text-sm text-muted-foreground">Para: {ticketTarget.name}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTicketOpen(false)}
+                className="p-1 rounded hover:bg-secondary/60 transition-colors text-muted-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Título</label>
+                <Input
+                  value={ticketTitle}
+                  onChange={(e) => setTicketTitle(e.target.value)}
+                  placeholder="Título do ticket"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Descrição</label>
+                <Textarea
+                  value={ticketDesc}
+                  onChange={(e) => setTicketDesc(e.target.value)}
+                  placeholder="Descreva o problema ou pedido…"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Prioridade</label>
+                <Select value={ticketPriority} onValueChange={(v) => setTicketPriority(v as any)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Baixa</SelectItem>
+                    <SelectItem value="medium">Média</SelectItem>
+                    <SelectItem value="high">Alta</SelectItem>
+                    <SelectItem value="urgent">Urgente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setTicketOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={submitTicket}
+                disabled={ticketCreating || !ticketTitle.trim()}
+              >
+                <TicketCheck className="h-4 w-4" />
+                Criar ticket
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Floating Chat ──────────────────────────────────────────────────── */}
+      {chatTarget && currentUserId && (
+        <FloatingChat
+          target={chatTarget}
+          currentUserId={currentUserId}
+          onClose={() => setChatTarget(null)}
+        />
       )}
     </div>
   )
