@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Mail, Send } from "lucide-react"
+import { useSearchParams } from "react-router-dom"
 
 import type { InternalMessage } from "@/types"
 import { fetchCommunicationRecipients, fetchInternalMessages, fetchUser, markInternalMessageRead, sendInternalMessage, type CommunicationRecipient } from "@/services/api"
@@ -64,6 +65,8 @@ export default function InternalMessages() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
 
+  const [searchParams] = useSearchParams()
+
   const [meId, setMeId] = useState<string>("")
   const [users, setUsers] = useState<CommunicationRecipient[]>([])
   const [folder, setFolder] = useState<"inbox" | "sent">("inbox")
@@ -111,6 +114,18 @@ export default function InternalMessages() {
     if (!meId) return []
     return users.filter((u) => u.id !== meId && u.is_active)
   }, [users, meId])
+
+  useEffect(() => {
+    const to = String(searchParams.get("to_user_id") ?? "").trim()
+    if (!to) return
+
+    if (meId && to === meId) {
+      setToUserId("")
+      return
+    }
+
+    setToUserId(to)
+  }, [meId, searchParams])
 
   const onOpen = async (m: InternalMessage) => {
     setSelected(m)
