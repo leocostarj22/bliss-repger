@@ -3,8 +3,14 @@ import { Link } from "react-router-dom"
 import { ArrowUpDown, Eye, Pencil, Plus, Search, Trash2, User as UserIcon } from "lucide-react"
 
 import type { Company, Department, User } from "@/types"
-import { deleteUser, fetchCompanies, fetchDepartments, fetchUsers } from "@/services/api"
+import { deleteUser, fetchCompanies, fetchDepartments, fetchUser, fetchUsers } from "@/services/api"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -21,6 +27,8 @@ export default function Users() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
+
+  const [canQuickActions, setCanQuickActions] = useState(false)
 
   const [sortKey, setSortKey] = useState<SortKey>("name")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
@@ -107,6 +115,26 @@ export default function Users() {
 
     return base
   }, [rows, sortKey, sortDir, companyNameById, departmentNameById])
+
+  useEffect(() => {
+    let alive = true
+
+    fetchUser()
+      .then((r) => {
+        const role = String(r.data.role ?? "").toLowerCase().trim()
+        const allowed = Boolean(r.data.is_admin) || ["admin", "manager", "supervisor"].includes(role)
+        if (!alive) return
+        setCanQuickActions(allowed)
+      })
+      .catch(() => {
+        if (!alive) return
+        setCanQuickActions(false)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [])
 
   useEffect(() => {
     if (companyFilter !== "all" && departmentFilter !== "all") {
@@ -349,7 +377,33 @@ export default function Users() {
                   <tr key={u.id} className="border-b border-border/60 hover:bg-secondary/30 transition-colors">
                     <td className="py-4 pr-4">
                       <div className="min-w-0">
-                        <div className="font-semibold truncate">{u.name}</div>
+                        {canQuickActions ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className="font-semibold truncate hover:underline underline-offset-4 text-left"
+                              >
+                                {u.name}
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-72">
+                              <DropdownMenuItem asChild>
+                                <Link to={`/communication/messages?to_user_id=${encodeURIComponent(u.id)}`}>
+                                  Enviar mensagem para {u.name}
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to={`/support/tickets?user_id=${encodeURIComponent(u.id)}`}>
+                                  Abrir um ticket para {u.name}
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem disabled>Ir ao chat com {u.name}</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : (
+                          <div className="font-semibold truncate">{u.name}</div>
+                        )}
                         <div className="text-xs text-muted-foreground truncate">{u.email}</div>
                       </div>
                     </td>
