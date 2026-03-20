@@ -95,15 +95,31 @@ export default function Customers() {
         fetchEspacoAbsolutoUserMessages(),
         fetchEspacoAbsolutoOverview(),
       ])
-      setRows(c.data)
+      const serverMeta = c.meta
+
+      if (serverMeta) {
+        setRows(c.data)
+        setMeta({
+          total: Number(serverMeta.total ?? c.data.length),
+          page: Number(serverMeta.page ?? page),
+          perPage: Number(serverMeta.perPage ?? perPage),
+          totalPages: Number(serverMeta.totalPages ?? 1),
+        })
+      } else {
+        const total = c.data.length
+        const totalPages = Math.max(1, Math.ceil(total / perPage))
+        const pageSafe = Math.min(page, totalPages)
+        const start = (pageSafe - 1) * perPage
+        const sliced = c.data.slice(start, start + perPage)
+
+        setRows(sliced)
+        setMeta({ total, page: pageSafe, perPage, totalPages })
+
+        if (pageSafe !== page) setPage(pageSafe)
+      }
+
       setMessages(m.data)
       setOverviewCards(o.data.cards)
-      setMeta({
-        total: Number(c.meta?.total ?? c.data.length),
-        page: Number(c.meta?.page ?? page),
-        perPage: Number(c.meta?.perPage ?? perPage),
-        totalPages: Number(c.meta?.totalPages ?? 1),
-      })
     } catch {
       toast({ title: "Erro", description: "Não foi possível carregar clientes", variant: "destructive" })
     } finally {
