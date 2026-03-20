@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, Fragment } from 'react';
 import { addAdminPostComment, fetchAdminPostComments, fetchMainDashboard, toggleAdminPostLike, fetchAnalytics } from '@/services/api';
 import type { AdminPostComment, MainDashboardData, DashboardStats } from '@/types';
-import { Ticket, FolderOpen, BadgeCheck, Flame, TrendingUp, Clock, Mail, Send, FileText, Star, Heart, Loader2, MessageCircle } from 'lucide-react';
+import { Ticket, FolderOpen, BadgeCheck, Flame, TrendingUp, Clock, Mail, Send, FileText, Star, Users, LogIn, Heart, Loader2, MessageCircle } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell,
@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { cn, getInitials, resolvePhotoUrl } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Link } from 'react-router-dom';
 
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
@@ -74,12 +75,6 @@ const statConfig = [
   { key: 'avg_time_formatted', label: 'Tempo Médio', icon: Clock, format: (v: string) => v, suffix: '' },
 ] as const;
 
-const messageConfig = [
-  { key: 'unread', label: 'Não lidas', icon: Mail },
-  { key: 'sent_this_month', label: 'Enviadas', icon: Send },
-  { key: 'drafts', label: 'Rascunhos', icon: FileText },
-  { key: 'starred', label: 'Com estrela', icon: Star },
-] as const;
 
 const showLegacyEmailWidgets = true;
 
@@ -250,6 +245,70 @@ export default function Dashboard() {
 
   const maxHeat = Math.max(1, ...(heatData.map((d: any) => Number(d?.value) || 0)));
 
+  const activity = (dashboard as any)?.activity ?? null;
+  const onlineUsers = Number(activity?.online_users ?? 0);
+  const accessesToday = Number(activity?.accesses_today ?? 0);
+  const onlineWindowMinutes = Number(activity?.online_window_minutes ?? 15);
+
+  const unread = Number(dashboard.messages?.unread ?? 0);
+
+  const messageCards = [
+    {
+      key: 'unread',
+      label: 'Não lidas',
+      icon: Mail,
+      value: unread,
+      to: '/communication/messages',
+      tone: 'rose',
+      meta: unread > 0 ? 'Novas mensagens' : 'Caixa de entrada',
+    },
+    {
+      key: 'sent_this_month',
+      label: 'Enviadas',
+      icon: Send,
+      value: Number((dashboard.messages as any)?.sent_this_month ?? 0),
+      to: '/communication/messages',
+      tone: 'cyan',
+      meta: 'Este mês',
+    },
+    {
+      key: 'drafts',
+      label: 'Rascunhos',
+      icon: FileText,
+      value: Number((dashboard.messages as any)?.drafts ?? 0),
+      to: '/communication/messages',
+      tone: 'amber',
+      meta: 'Por enviar',
+    },
+    {
+      key: 'starred',
+      label: 'Com estrela',
+      icon: Star,
+      value: Number((dashboard.messages as any)?.starred ?? 0),
+      to: '/communication/messages',
+      tone: 'fuchsia',
+      meta: 'Importantes',
+    },
+    {
+      key: 'online_users',
+      label: 'Utilizadores online',
+      icon: Users,
+      value: onlineUsers,
+      to: '/admin/users',
+      tone: 'emerald',
+      meta: `Últimos ${onlineWindowMinutes} min`,
+    },
+    {
+      key: 'accesses_today',
+      label: 'Acessos hoje',
+      icon: LogIn,
+      value: accessesToday,
+      to: '/reports/system-logs',
+      tone: 'violet',
+      meta: 'Atividade do dia',
+    },
+  ] as const;
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-slide-up">
       <div className="page-header">
@@ -271,7 +330,8 @@ export default function Dashboard() {
           }
 
           return (
-            <div
+            <Link
+              to="/support/tickets"
               key={s.key}
               className="group stat-card relative overflow-hidden animate-fade-in hover:shadow-[0_0_30px_hsl(var(--ring)/0.25)] hover:border-cyan-400/40 transition-all duration-300 hover:-translate-y-1"
               style={{ animationDelay: `${i * 60}ms` }}
@@ -288,7 +348,7 @@ export default function Dashboard() {
               <div className="relative z-10 text-2xl font-bold tracking-tight animate-count bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70 group-hover:from-cyan-400 group-hover:to-fuchsia-400 transition-all duration-300">
                 {formatted}{s.suffix}
               </div>
-            </div>
+            </Link>
           );
         })}
       </div>
@@ -300,20 +360,83 @@ export default function Dashboard() {
               <h3 className="text-base font-semibold">Mensagens</h3>
               <p className="text-xs text-muted-foreground">{dashboard.messages.month_label}</p>
             </div>
+
+            <div className="flex items-center gap-2">
+              {unread > 0 ? (
+                <Badge className="border border-rose-500/30 bg-rose-500/15 text-rose-300">
+                  {unread === 1 ? '1 nova' : `${formatNumber(unread)} novas`}
+                </Badge>
+              ) : null}
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/communication/messages">Abrir</Link>
+              </Button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {messageConfig.map((m) => {
-              const Icon = m.icon;
-              const v = Number((dashboard.messages as any)[m.key] ?? 0);
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {messageCards.map((c, i) => {
+              const Icon = c.icon;
+              const isUnread = c.key === 'unread';
+              const emphasize = isUnread && unread > 0;
+
+              const tone = c.tone;
+              const toneClasses =
+                tone === 'rose'
+                  ? 'group-hover:from-rose-400 group-hover:to-orange-400'
+                  : tone === 'cyan'
+                    ? 'group-hover:from-cyan-400 group-hover:to-sky-400'
+                    : tone === 'amber'
+                      ? 'group-hover:from-amber-400 group-hover:to-yellow-400'
+                      : tone === 'fuchsia'
+                        ? 'group-hover:from-fuchsia-400 group-hover:to-pink-400'
+                        : tone === 'emerald'
+                          ? 'group-hover:from-emerald-400 group-hover:to-teal-400'
+                          : 'group-hover:from-violet-400 group-hover:to-indigo-400';
+
+              const iconTone =
+                tone === 'rose'
+                  ? 'text-rose-400'
+                  : tone === 'cyan'
+                    ? 'text-cyan-400'
+                    : tone === 'amber'
+                      ? 'text-amber-400'
+                      : tone === 'fuchsia'
+                        ? 'text-fuchsia-400'
+                        : tone === 'emerald'
+                          ? 'text-emerald-400'
+                          : 'text-violet-400';
+
               return (
-                <div key={m.key} className="rounded-lg border border-border/60 bg-background/40 p-4">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Icon className="w-4 h-4" />
-                    {m.label}
+                <Link
+                  key={c.key}
+                  to={c.to}
+                  className={cn(
+                    'group stat-card relative overflow-hidden animate-fade-in hover:shadow-[0_0_30px_hsl(var(--ring)/0.25)] transition-all duration-300 hover:-translate-y-1',
+                    emphasize && 'ring-1 ring-rose-400/40 border-rose-400/30 shadow-[0_0_25px_rgba(244,63,94,0.18)]'
+                  )}
+                  style={{ animationDelay: `${i * 60}ms` }}
+                >
+                  <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-gradient-to-br from-cyan-500/10 to-transparent rounded-full blur-2xl transition-all duration-500" />
+
+                  {emphasize ? (
+                    <>
+                      <span className="absolute top-3 right-3 h-2.5 w-2.5 rounded-full bg-rose-400" />
+                      <span className="absolute top-3 right-3 h-2.5 w-2.5 rounded-full bg-rose-400 animate-ping" />
+                    </>
+                  ) : null}
+
+                  <div className="relative z-10 flex items-center gap-3 mb-3">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/20 to-fuchsia-500/20 ring-1 ring-white/10 shadow-sm transition-all duration-300">
+                      <Icon className={cn('w-5 h-5 transition-transform duration-300 group-hover:scale-110', iconTone)} />
+                    </span>
+                    <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">{c.label}</span>
                   </div>
-                  <div className="mt-2 text-2xl font-bold tracking-tight">{formatNumber(v)}</div>
-                </div>
+
+                  <div className={cn('relative z-10 text-2xl font-bold tracking-tight animate-count bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70 transition-all duration-300', toneClasses)}>
+                    {formatNumber(c.value)}
+                  </div>
+                  <div className="relative z-10 mt-1 text-[11px] text-muted-foreground">{c.meta}</div>
+                </Link>
               );
             })}
           </div>
