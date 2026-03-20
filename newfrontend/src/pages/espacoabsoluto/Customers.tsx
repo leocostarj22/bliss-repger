@@ -149,30 +149,30 @@ export default function Customers() {
           return (
             <div
               key={loading ? idx : card.key}
-              className="group stat-card p-3 h-[102px] relative overflow-hidden animate-fade-in hover:shadow-[0_0_30px_hsl(var(--ring)/0.25)] hover:border-cyan-400/40 transition-all duration-300"
+              className="group stat-card p-4 h-[120px] relative overflow-hidden animate-fade-in hover:shadow-[0_0_30px_hsl(var(--ring)/0.25)] hover:border-cyan-400/40 transition-all duration-300"
               style={{ animationDelay: `${idx * 60}ms` }}
             >
-              <div className="absolute top-0 right-0 -mt-5 -mr-5 w-20 h-20 bg-gradient-to-br from-cyan-500/10 to-transparent rounded-full blur-2xl group-hover:from-cyan-400/20 transition-all duration-500" />
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-gradient-to-br from-cyan-500/10 to-transparent rounded-full blur-2xl group-hover:from-cyan-400/20 transition-all duration-500" />
               {loading ? (
-                <div className="relative z-10 space-y-2">
-                  <Skeleton className="h-3 w-1/3" />
-                  <Skeleton className="h-7 w-20" />
-                  <Skeleton className="h-3 w-2/3" />
+                <div className="relative z-10 space-y-3">
+                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-8 w-20" />
+                  <Skeleton className="h-4 w-2/3" />
                 </div>
               ) : (
                 <div className="relative z-10 flex h-full flex-col justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400/20 to-fuchsia-500/20 ring-1 ring-white/10 group-hover:ring-cyan-400/50 shadow-sm group-hover:shadow-[0_0_12px_rgba(34,211,238,0.25)] transition-all duration-300">
-                      <Icon className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform duration-300" />
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/20 to-fuchsia-500/20 ring-1 ring-white/10 group-hover:ring-cyan-400/50 shadow-sm group-hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] transition-all duration-300">
+                      <Icon className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform duration-300" />
                     </span>
-                    <span className="text-[10px] font-medium leading-4 text-muted-foreground group-hover:text-foreground transition-colors line-clamp-1">{toOriginLabel(card.title)}</span>
+                    <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors line-clamp-1">{toOriginLabel(card.title)}</span>
                   </div>
 
-                  <div className="flex items-end justify-between gap-2">
-                    <div className="text-xl font-bold leading-none tracking-tight tabular-nums bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70 group-hover:from-cyan-400 group-hover:to-fuchsia-400 transition-all duration-300">
+                  <div className="flex items-end justify-between gap-3">
+                    <div className="text-2xl font-bold leading-none tracking-tight tabular-nums bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70 group-hover:from-cyan-400 group-hover:to-fuchsia-400 transition-all duration-300">
                       {card.count}
                     </div>
-                    <div className="text-[10px] leading-4 text-muted-foreground text-right line-clamp-2">{card.description}</div>
+                    <div className="text-xs text-muted-foreground text-right leading-4 line-clamp-2">{card.description}</div>
                   </div>
                 </div>
               )}
