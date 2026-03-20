@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { ArrowUpDown, Eye, Pencil, Plus, Search, Trash2, User as UserIcon } from "lucide-react"
+import { ArrowUpDown, Eye, Pencil, Plus, Search, Send, Trash2, User as UserIcon, X } from "lucide-react"
 
 import type { Company, Department, User } from "@/types"
 import { deleteUser, fetchCompanies, fetchDepartments, fetchUser, fetchUsers } from "@/services/api"
@@ -29,6 +29,47 @@ export default function Users() {
   const [loading, setLoading] = useState(true)
 
   const [canQuickActions, setCanQuickActions] = useState(false)
+
+  type ChatMessage = { id: string; from: "me" | "them"; text: string; at: number }
+
+  const [chatOpen, setChatOpen] = useState(false)
+  const [chatUser, setChatUser] = useState<User | null>(null)
+  const [chatDraft, setChatDraft] = useState("")
+  const [chatByUserId, setChatByUserId] = useState<Record<string, ChatMessage[]>>({})
+
+  const openChat = (u: User) => {
+    setChatUser(u)
+    setChatOpen(true)
+  }
+
+  const closeChat = () => {
+    setChatOpen(false)
+  }
+
+  const activeChat = chatUser ? chatByUserId[String(chatUser.id)] ?? [] : []
+
+  const makeId = () => {
+    const c: any = typeof crypto !== "undefined" ? crypto : null
+    if (c && typeof c.randomUUID === "function") return c.randomUUID()
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+  }
+
+  const sendChat = () => {
+    const u = chatUser
+    if (!u) return
+
+    const text = chatDraft.trim()
+    if (!text) return
+
+    const uid = String(u.id)
+    const msg: ChatMessage = { id: makeId(), from: "me", text, at: Date.now() }
+
+    setChatByUserId((prev) => ({
+      ...prev,
+      [uid]: [...(prev[uid] ?? []), msg],
+    }))
+    setChatDraft("")
+  }
 
   const [sortKey, setSortKey] = useState<SortKey>("name")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
@@ -398,7 +439,14 @@ export default function Users() {
                                   Abrir um ticket para {u.name}
                                 </Link>
                               </DropdownMenuItem>
-                              <DropdownMenuItem disabled>Ir ao chat com {u.name}</DropdownMenuItem>
+                              <DropdownMenuItem
+                                onSelect={(e) => {
+                                  e.preventDefault()
+                                  openChat(u)
+                                }}
+                              >
+                                Ir ao chat com {u.name}
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         ) : (
@@ -510,6 +558,59 @@ export default function Users() {
           </div>
         </div>
       )}
+
+      {chatOpen && chatUser ? (
+        <div className="fixed bottom-4 right-4 z-[210] w-[360px] max-w-[calc(100vw-2rem)]">
+          <div className="glass-card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold truncate">Chat com {chatUser.name}</div>
+                <div className="text-xs text-muted-foreground truncate">{chatUser.email}</div>
+              </div>
+              <Button type="button" variant="ghost" size="icon" onClick={closeChat}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="mt-3 h-[260px] overflow-y-auto rounded-md border border-border/60 bg-background/40 p-3 space-y-2">
+              {activeChat.length === 0 ? (
+                <div className="text-xs text-muted-foreground">Sem mensagens ainda.</div>
+              ) : (
+                activeChat.map((m) => (
+                  <div key={m.id} className={"flex " + (m.from === "me" ? "justify-end" : "justify-start")}>
+                    <div
+                      className={
+                        "max-w-[80%] rounded-lg px-3 py-2 text-sm border " +
+                        (m.from === "me"
+                          ? "bg-cyan-500/10 text-foreground border-cyan-500/20"
+                          : "bg-muted text-foreground border-border")
+                      }
+                    >
+                      {m.text}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="mt-3 flex items-center gap-2">
+              <Input
+                value={chatDraft}
+                onChange={(e) => setChatDraft(e.target.value)}
+                placeholder={chatUser ? `Mensagem para ${chatUser.name}…` : "Mensagem…"}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return
+                  e.preventDefault()
+                  sendChat()
+                }}
+              />
+              <Button type="button" onClick={sendChat} disabled={!chatDraft.trim()}>
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
