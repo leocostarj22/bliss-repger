@@ -39,6 +39,7 @@ import HrTimesheets from "@/pages/hr/Timesheets";
 import HrTimesheetForm from "@/pages/hr/TimesheetDetail";
 import CommVideoCall from "@/pages/communication/VideoCall";
 import CommInternalMessages from "@/pages/communication/InternalMessages";
+import CommChat from "@/pages/communication/Chat";
 import CommAdminPosts from "@/pages/communication/AdminPosts";
 import BlissNaturaDashboard from "@/pages/blissnatura/Dashboard";
 import BlissNaturaOrders from "@/pages/blissnatura/Orders";
@@ -136,6 +137,7 @@ const App = () => (
               <Route path="/communication" element={<Navigate to="/communication/video-call" replace />} />
               <Route path="/communication/video-call" element={<CommVideoCall />} />
               <Route path="/communication/messages" element={<CommInternalMessages />} />
+              <Route path="/communication/chat" element={<CommChat />} />
               <Route path="/communication/posts" element={<CommAdminPosts />} />
 
               <Route path="/blissnatura" element={<Navigate to="/blissnatura/dashboard" replace />} />
