@@ -10,6 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 
+const ONLINE_WINDOW_MINUTES = 15
+
 export default function Users() {
   const { toast } = useToast()
   const [rows, setRows] = useState<User[]>([])
@@ -183,6 +185,7 @@ export default function Users() {
                 <th className="py-3 pr-4">Departamento</th>
                 <th className="py-3 pr-4">Role</th>
                 <th className="py-3 pr-4">Ativo</th>
+                <th className="py-3 pr-4">Online</th>
                 <th className="py-3 text-right">Ações</th>
               </tr>
             </thead>
@@ -209,6 +212,9 @@ export default function Users() {
                     <td className="py-4 pr-4">
                       <Skeleton className="h-4 w-16" />
                     </td>
+                    <td className="py-4 pr-4">
+                      <Skeleton className="h-4 w-16" />
+                    </td>
                     <td className="py-4 text-right">
                       <Skeleton className="h-9 w-28 ml-auto" />
                     </td>
@@ -216,7 +222,7 @@ export default function Users() {
                 ))
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-muted-foreground">
+                  <td colSpan={7} className="py-10 text-center text-muted-foreground">
                     Nenhum utilizador encontrado
                   </td>
                 </tr>
@@ -245,6 +251,32 @@ export default function Users() {
                       >
                         {u.is_active ? "Sim" : "Não"}
                       </span>
+                    </td>
+                    <td className="py-4 pr-4">
+                      {(() => {
+                        const ts = u.last_login_at ? Date.parse(u.last_login_at) : NaN
+                        const online =
+                          u.is_active && Number.isFinite(ts) && ts >= Date.now() - ONLINE_WINDOW_MINUTES * 60 * 1000
+
+                        return (
+                          <span
+                            className={[
+                              "inline-flex items-center gap-2 rounded-full px-2 py-1 text-xs font-medium border",
+                              online
+                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                : "bg-muted text-muted-foreground border-border",
+                            ].join(" ")}
+                          >
+                            <span
+                              className={[
+                                "h-2 w-2 rounded-full",
+                                online ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground/40",
+                              ].join(" ")}
+                            />
+                            {online ? "Online" : "Offline"}
+                          </span>
+                        )
+                      })()}
                     </td>
                     <td className="py-4 text-right">
                       <div className="inline-flex items-center gap-2">
