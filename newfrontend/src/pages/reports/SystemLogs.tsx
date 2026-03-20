@@ -42,7 +42,12 @@ export default function SystemLogs() {
 
   const actionOptions = useMemo(() => {
     const set = new Set<string>()
-    rows.forEach((r) => set.add(r.action))
+    rows.forEach((r) => {
+      const a = String(r.action || "")
+      if (!a) return
+      if (a === "login" || a === "logout") return
+      set.add(a)
+    })
     return Array.from(set).sort()
   }, [rows])
 
@@ -136,6 +141,8 @@ export default function SystemLogs() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as ações</SelectItem>
+                <SelectItem value="login">login</SelectItem>
+                <SelectItem value="logout">logout</SelectItem>
                 {actionOptions.map((a) => (
                   <SelectItem key={a} value={a}>
                     {a}

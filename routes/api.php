@@ -32,6 +32,7 @@ use Modules\CRM\Models\EspacoAbsolutoCustomer;
 use Modules\CRM\Models\EspacoAbsolutoUserGroup;
 use Modules\CRM\Models\EspacoAbsolutoUserMessage;
 
+
 Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
     Route::get('dashboard', function () {
         $user = auth()->user();

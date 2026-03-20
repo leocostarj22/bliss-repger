@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use App\Models\SystemLog;
 use App\Http\Controllers\TicketAttachmentController;
 use App\Http\Controllers\SystemLogController;
 use App\Filament\Pages\HelpArticleView;
@@ -74,6 +75,33 @@ Route::post('/newadmin/login', function (Request $request) {
 
     if (Auth::attempt($credentials, $remember)) {
         $request->session()->regenerate();
+
+        $u = Auth::user();
+        if ($u instanceof User) {
+            try {
+                $u->updateLastLogin();
+            } catch (\Throwable $e) {
+            }
+
+            try {
+                SystemLog::create([
+                    'user_id' => $u->id,
+                    'action' => 'login',
+                    'model_type' => User::class,
+                    'model_id' => $u->id,
+                    'description' => 'Login efetuado',
+                    'ip_address' => (string) $request->ip(),
+                    'user_agent' => (string) $request->userAgent(),
+                    'level' => 'info',
+                    'context' => [
+                        'path' => (string) $request->path(),
+                        'remember' => $remember,
+                    ],
+                ]);
+            } catch (\Throwable $e) {
+            }
+        }
+
         return redirect()->intended('/admin');
     }
 
@@ -81,10 +109,59 @@ Route::post('/newadmin/login', function (Request $request) {
 });
 
 Route::post('/newadmin/logout', function (Request $request) {
+    $u = Auth::user();
+    if ($u instanceof User) {
+        try {
+            SystemLog::create([
+                'user_id' => $u->id,
+                'action' => 'logout',
+                'model_type' => User::class,
+                'model_id' => $u->id,
+                'description' => 'Logout efetuado',
+                'ip_address' => (string) $request->ip(),
+                'user_agent' => (string) $request->userAgent(),
+                'level' => 'info',
+                'context' => [
+                    'path' => (string) $request->path(),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+        }
+    }
+
     Auth::logout();
     $request->session()->invalidate();
     $request->session()->regenerateToken();
     return redirect('/newadmin/login');
+});
+
+Route::post('/logout', function (Request $request) {
+    $u = Auth::user();
+    if ($u instanceof User) {
+        try {
+            SystemLog::create([
+                'user_id' => $u->id,
+                'action' => 'logout',
+                'model_type' => User::class,
+                'model_id' => $u->id,
+                'description' => 'Logout efetuado',
+                'ip_address' => (string) $request->ip(),
+                'user_agent' => (string) $request->userAgent(),
+                'level' => 'info',
+                'context' => [
+                    'path' => (string) $request->path(),
+                    'source' => 'newfrontend',
+                ],
+            ]);
+        } catch (\Throwable $e) {
+        }
+    }
+
+    Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return response()->json(['ok' => true]);
 });
 
 // CRM SPA (rota específica, antes do catch-all)
