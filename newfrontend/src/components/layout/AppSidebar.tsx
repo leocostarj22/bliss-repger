@@ -161,9 +161,32 @@ export function AppSidebar() {
   const [myFormulaOpen, setMyFormulaOpen] = useState(true);
   const [reportsOpen, setReportsOpen] = useState(true);
   const [moduleStatuses, setModuleStatuses] = useState<Record<string, boolean>>({});
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const location = useLocation();
 
   const isModuleEnabled = (key: string) => moduleStatuses[key] !== false;
+
+  useEffect(() => {
+    const onUnread = (ev: Event) => {
+      const e = ev as CustomEvent<{ count?: number }>;
+      const raw = Number(e?.detail?.count ?? 0);
+      setChatUnreadCount(Number.isFinite(raw) ? Math.max(0, raw) : 0);
+    };
+
+    window.addEventListener('gmcentral:chat:unread', onUnread as EventListener);
+    return () => window.removeEventListener('gmcentral:chat:unread', onUnread as EventListener);
+  }, []);
+
+  useEffect(() => {
+    const onUnread = (ev: Event) => {
+      const e = ev as CustomEvent<{ count?: number }>
+      const raw = Number(e?.detail?.count ?? 0)
+      setChatUnreadCount(Number.isFinite(raw) ? Math.max(0, raw) : 0)
+    }
+
+    window.addEventListener('gmcentral:chat:unread', onUnread as EventListener)
+    return () => window.removeEventListener('gmcentral:chat:unread', onUnread as EventListener)
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -582,6 +605,11 @@ export function AppSidebar() {
                         {item.label}
                       </span>
                     )}
+                    {item.path === '/communication/chat' && chatUnreadCount > 0 ? (
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 h-5 min-w-5 px-1 rounded-full bg-rose-500/20 text-rose-200 border border-rose-500/30 text-[11px] leading-5 text-center">
+                        {chatUnreadCount > 99 ? '99+' : chatUnreadCount}
+                      </span>
+                    ) : null}
                   </Link>
                 );
 

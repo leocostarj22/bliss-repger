@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MessageSquare, Send, X } from 'lucide-react';
 
-import type { InternalMessage } from '@/types';
+import type { InternalMessage, User as AppUser } from '@/types';
 import {
+  fetchAdminUser,
   fetchCommunicationRecipients,
   fetchInternalMessages,
   fetchUser,
@@ -10,15 +11,12 @@ import {
   sendInternalMessage,
   type CommunicationRecipient,
 } from '@/services/api';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { cn, playSound } from '@/lib/utils';
+import { cn, getInitials, playSound, resolvePhotoUrl } from '@/lib/utils';
 
-type ChatOpenEventDetail = {
-  userId: string;
-  name?: string;
-  email?: string;
-};
+type ChatOpenEventDetail = { userId: string; name?: string; email?: string };
 
 const getAny = (m: any, key: string) => (m && Object.prototype.hasOwnProperty.call(m, key) ? m[key] : undefined);
 
@@ -53,64 +51,88 @@ const plainTextFromHtml = (html: string) => {
 export function ChatDock() {
   const [ready, setReady] = useState(false);
 
-  const [meId, setMeId] = useState<string>('');
-  const [users, setUsers] = useState<CommunicationRecipient[]>([]);
+  const [me, setMe] = useState<Pick<AppUser, 'id' | 'name' | 'email' | 'photo_path'>>({
+    id: '',
+    name: '',
+    email: '',
+    photo_path: null,
+  });
 
+  const [users, setUsers] = useState<CommunicationRecipient[]>([]);
   const [inbox, setInbox] = useState<InternalMessage[]>([]);
   const [sent, setSent] = useState<InternalMessage[]>([]);
 
   const [open, setOpen] = useState(false);
   const [activeUserId, setActiveUserId] = useState<string>('');
   const [activeMeta, setActiveMeta] = useState<{ name?: string; email?: string }>({});
+
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const inboxRef = useRef<InternalMessage[]>([]);
-  const sentRef = useRef<InternalMessage[]>([]);
+  const userDetailsRef = useRef<Record<string, { name?: string; email?: string; photo_path?: string | null }>>({});
+  const prevInboxIdsRef = useRef<Set<string>>(new Set());
+  const audioUnlockedRef = useRef(false);
+
+  const [userDetailsById, setUserDetailsById] = useState<Record<string, { name?: string; email?: string; photo_path?: string | null }>>({});
 
   useEffect(() => {
     inboxRef.current = inbox;
   }, [inbox]);
 
   useEffect(() => {
-    sentRef.current = sent;
-  }, [sent]);
+    userDetailsRef.current = userDetailsById;
+  }, [userDetailsById]);
 
   const userById = useMemo(() => {
     const map = new Map<string, CommunicationRecipient>();
-    for (const u of users) map.set(String((u as any).id ?? u.id), u);
+    users.forEach((u) => map.set(String(u.id), u));
     return map;
   }, [users]);
 
+  const unreadCount = useMemo(() => inbox.reduce((acc, m: any) => (msgReadAt(m) ? acc : acc + 1), 0), [inbox]);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('gmcentral:chat:unread', { detail: { count: unreadCount } }));
+  }, [unreadCount]);
+
   const activeUser = useMemo(() => {
-    const fromMap = userById.get(String(activeUserId));
-    if (fromMap) return { name: fromMap.name, email: fromMap.email };
-    if (activeUserId) return { name: activeMeta.name ?? activeUserId, email: activeMeta.email ?? '' };
-    return { name: 'Chat', email: '' };
-  }, [activeMeta.email, activeMeta.name, activeUserId, userById]);
+    const id = String(activeUserId || '').trim();
+    if (!id) return { name: 'Chat', email: '' };
 
-  const unreadCount = useMemo(() => {
-    return inbox.reduce((acc, m: any) => (msgReadAt(m) ? acc : acc + 1), 0);
-  }, [inbox]);
+    const cached = userDetailsById[id];
+    if (cached?.name || cached?.email) return { name: cached.name ?? id, email: cached.email ?? '' };
 
-  const conversation = useMemo(() => {
-    if (!meId || !activeUserId) return [];
-    const other = String(activeUserId);
+    const fromRecipients = userById.get(id);
+    if (fromRecipients) return { name: fromRecipients.name, email: fromRecipients.email };
 
-    const all = [...inbox, ...sent].filter((m: any) => {
-      const from = msgFromId(m);
-      const to = msgToId(m);
-      return (from === other && to === meId) || (from === meId && to === other);
-    });
+    return { name: activeMeta.name ?? id, email: activeMeta.email ?? '' };
+  }, [activeMeta.email, activeMeta.name, activeUserId, userById, userDetailsById]);
 
-    return all.sort((a: any, b: any) => {
-      const aw = msgWhenIso(a);
-      const bw = msgWhenIso(b);
-      if (aw && bw) return aw.localeCompare(bw);
-      return msgId(a).localeCompare(msgId(b));
-    });
-  }, [activeUserId, inbox, meId, sent]);
+  const ensureUserDetails = async (id: string) => {
+    const uid = String(id || '').trim();
+    if (!uid || uid === me.id) return;
+
+    const current = userDetailsRef.current[uid];
+    if (current && (current.photo_path !== undefined || current.name || current.email)) return;
+
+    try {
+      const resp = await fetchAdminUser(uid);
+      const u: any = resp?.data;
+      if (!u) return;
+      setUserDetailsById((prev) => ({
+        ...prev,
+        [uid]: {
+          name: String(u.name ?? prev[uid]?.name ?? '').trim(),
+          email: String(u.email ?? prev[uid]?.email ?? '').trim(),
+          photo_path: (u.photo_path ?? prev[uid]?.photo_path ?? null) as any,
+        },
+      }));
+    } catch {
+      return;
+    }
+  };
 
   const scrollToBottom = () => {
     const el = listRef.current;
@@ -118,73 +140,83 @@ export function ChatDock() {
     el.scrollTop = el.scrollHeight;
   };
 
-  useEffect(() => {
-    if (!open) return;
-    scrollToBottom();
-  }, [open, conversation.length]);
+  const conversation = useMemo(() => {
+    const other = String(activeUserId || '').trim();
+    if (!me.id || !other) return [];
+    const all = [...inbox, ...sent].filter((m: any) => {
+      const from = msgFromId(m);
+      const to = msgToId(m);
+      return (from === other && to === me.id) || (from === me.id && to === other);
+    });
 
-  const loadUsers = async () => {
-    const res = await fetchCommunicationRecipients();
-    setUsers(res?.data ?? []);
-  };
-
-  const loadInbox = async () => {
-    const res = await fetchInternalMessages({ folder: 'inbox' });
-    setInbox(res?.data ?? []);
-  };
-
-  const loadSent = async () => {
-    const res = await fetchInternalMessages({ folder: 'sent' });
-    setSent(res?.data ?? []);
-  };
-
-  const ensureBoot = async () => {
-    try {
-      const me = await fetchUser();
-      const id = String((me as any)?.data?.id ?? '').trim();
-      if (id) setMeId(id);
-    } finally {
-      setReady(true);
-    }
-  };
+    return all.sort((a: any, b: any) => {
+      const ta = Date.parse(msgWhenIso(a)) || 0;
+      const tb = Date.parse(msgWhenIso(b)) || 0;
+      if (ta !== tb) return ta - tb;
+      return msgId(a).localeCompare(msgId(b));
+    });
+  }, [activeUserId, inbox, me.id, sent]);
 
   useEffect(() => {
-    ensureBoot();
+    if (!ready) return;
+
+    const onPointerDown = () => {
+      if (audioUnlockedRef.current) return;
+      audioUnlockedRef.current = true;
+      try {
+        const audio = new Audio('/sounds/message.mp3');
+        audio.volume = 0;
+        audio.play().then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+        }).catch(() => {});
+      } catch {
+        // ignore
+      }
+    };
+
+    window.addEventListener('pointerdown', onPointerDown, { once: true });
+    return () => window.removeEventListener('pointerdown', onPointerDown);
+  }, [ready]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const meResp = await fetchUser();
+        const nextMe: any = meResp?.data;
+        setMe({
+          id: String(nextMe?.id ?? '').trim(),
+          name: String(nextMe?.name ?? '').trim(),
+          email: String(nextMe?.email ?? '').trim(),
+          photo_path: (nextMe?.photo_path ?? null) as any,
+        });
+      } finally {
+        setReady(true);
+      }
+    })();
   }, []);
 
   useEffect(() => {
     if (!ready) return;
-    loadUsers().catch(() => {});
-    loadInbox().catch(() => {});
-    loadSent().catch(() => {});
+
+    fetchCommunicationRecipients()
+      .then((res) => setUsers(res?.data ?? []))
+      .catch(() => {});
   }, [ready]);
 
   useEffect(() => {
-    const onOpen = (ev: Event) => {
-      const e = ev as CustomEvent<ChatOpenEventDetail>;
-      const detail = e?.detail;
-      const id = String(detail?.userId ?? '').trim();
-      if (!id) return;
-
-      setActiveUserId(id);
-      setActiveMeta({ name: detail?.name, email: detail?.email });
-      setOpen(true);
-      setTimeout(() => scrollToBottom(), 0);
-    };
-
-    window.addEventListener('gmcentral:chat:open', onOpen as EventListener);
-    return () => window.removeEventListener('gmcentral:chat:open', onOpen as EventListener);
-  }, []);
-
-  useEffect(() => {
-    if (!meId) return;
+    if (!me.id) return;
 
     const tick = async () => {
       try {
         const res = await fetchInternalMessages({ folder: 'inbox' });
         const next = res?.data ?? [];
+        setInbox(next);
 
-        const prevIds = new Set(inboxRef.current.map((m: any) => msgId(m)));
+        const prevIds = prevInboxIdsRef.current;
+        const nextIds = new Set(next.map((m: any) => msgId(m)).filter(Boolean));
+        prevInboxIdsRef.current = nextIds;
+
         const newUnread = next.filter((m: any) => {
           const id = msgId(m);
           if (!id) return false;
@@ -192,16 +224,16 @@ export function ChatDock() {
           return !msgReadAt(m);
         });
 
-        setInbox(next);
-
-        const last = newUnread[newUnread.length - 1];
+        const last = newUnread[newUnread.length - 1] as any;
         if (last) {
           const from = msgFromId(last);
           if (from) {
             setActiveUserId(from);
             setActiveMeta({});
             setOpen(true);
-            playSound('/sounds/message.mp3', { volume: 0.35 });
+            ensureUserDetails(from);
+            playSound('/sounds/message.mp3', { volume: 0.6 });
+            setTimeout(scrollToBottom, 0);
           }
         }
       } catch {
@@ -209,12 +241,14 @@ export function ChatDock() {
       }
     };
 
-    const id = window.setInterval(tick, 5000);
+    tick();
+    const id = window.setInterval(tick, 4000);
     return () => window.clearInterval(id);
-  }, [meId]);
+  }, [me.id]);
 
   useEffect(() => {
-    if (!meId || !open) return;
+    if (!me.id) return;
+    if (!open) return;
 
     const tick = async () => {
       try {
@@ -225,20 +259,33 @@ export function ChatDock() {
       }
     };
 
+    tick();
     const id = window.setInterval(tick, 7000);
     return () => window.clearInterval(id);
-  }, [meId, open]);
+  }, [me.id, open]);
 
   useEffect(() => {
-    if (!open || !activeUserId) return;
+    const onOpen = (ev: Event) => {
+      const e = ev as CustomEvent<ChatOpenEventDetail>;
+      const id = String(e?.detail?.userId ?? '').trim();
+      if (!id) return;
 
-    const unreadFromThisUser = inbox.filter((m: any) => {
-      return msgFromId(m) === String(activeUserId) && !msgReadAt(m);
-    });
+      setActiveUserId(id);
+      setActiveMeta({ name: e?.detail?.name, email: e?.detail?.email });
+      setOpen(true);
+      ensureUserDetails(id);
+      setTimeout(scrollToBottom, 0);
+    };
 
+    window.addEventListener('gmcentral:chat:open', onOpen as EventListener);
+    return () => window.removeEventListener('gmcentral:chat:open', onOpen as EventListener);
+  }, [me.id]);
+
+  useEffect(() => {
+    if (!open || !activeUserId || !me.id) return;
+
+    const unreadFromThisUser = inbox.filter((m: any) => msgFromId(m) === String(activeUserId) && !msgReadAt(m));
     if (unreadFromThisUser.length === 0) return;
-
-    let cancelled = false;
 
     (async () => {
       for (const m of unreadFromThisUser as any[]) {
@@ -250,16 +297,13 @@ export function ChatDock() {
           // ignore
         }
       }
-      if (!cancelled) {
-        loadInbox().catch(() => {});
-        loadSent().catch(() => {});
-      }
     })();
+  }, [activeUserId, inbox, me.id, open]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [activeUserId, inbox, open]);
+  useEffect(() => {
+    if (!open) return;
+    setTimeout(scrollToBottom, 0);
+  }, [open, conversation.length]);
 
   const onSend = async () => {
     const to = String(activeUserId || '').trim();
@@ -278,29 +322,27 @@ export function ChatDock() {
       const created = res?.data as any;
       if (created) setSent((prev) => [...prev, created]);
       setDraft('');
-      setTimeout(() => scrollToBottom(), 0);
-      loadInbox().catch(() => {});
+      setTimeout(scrollToBottom, 0);
     } finally {
       setSending(false);
     }
   };
 
-  const minimized = !open;
+  const isMinimized = !open;
 
   return (
     <div className="fixed bottom-4 right-4 z-[220]">
-      {minimized ? (
+      {isMinimized ? (
         <Button
           type="button"
           onClick={() => setOpen(true)}
           variant="default"
-          className="h-12 w-12 rounded-full p-0 relative"
-          disabled={!activeUserId && unreadCount === 0}
+          className={cn('h-12 w-12 rounded-full p-0 relative', unreadCount > 0 && 'ring-2 ring-rose-500/30')}
           title="Abrir chat"
         >
           <MessageSquare className="h-5 w-5" />
           {unreadCount > 0 ? (
-            <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-destructive text-destructive-foreground text-[11px] leading-5 text-center">
+            <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-rose-500/20 text-rose-200 border border-rose-500/30 text-[11px] leading-5 text-center">
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           ) : null}
@@ -310,8 +352,8 @@ export function ChatDock() {
           <div className="glass-card p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-sm font-semibold truncate">Chat com {activeUser.name}</div>
-                <div className="text-xs text-muted-foreground truncate">{activeUser.email}</div>
+                <div className="text-sm font-semibold truncate">{activeUserId ? `Chat com ${activeUser.name}` : 'Chat'}</div>
+                <div className="text-xs text-muted-foreground truncate">{activeUserId ? activeUser.email : ''}</div>
               </div>
               <Button type="button" variant="ghost" size="icon" onClick={() => setOpen(false)}>
                 <X className="h-4 w-4" />
@@ -322,23 +364,44 @@ export function ChatDock() {
               ref={listRef}
               className="mt-3 h-[260px] overflow-y-auto rounded-md border border-border/60 bg-background/40 p-3 space-y-2"
             >
-              {conversation.length === 0 ? (
+              {!activeUserId ? (
+                <div className="text-xs text-muted-foreground">Abre um chat a partir de Utilizadores ou responde a uma mensagem recebida.</div>
+              ) : conversation.length === 0 ? (
                 <div className="text-xs text-muted-foreground">Sem mensagens ainda.</div>
               ) : (
                 conversation.map((m: any) => {
-                  const mine = msgFromId(m) === meId;
+                  const from = msgFromId(m);
+                  const mine = from === me.id;
                   const text = plainTextFromHtml(String(m?.body ?? ''));
                   const time = fmtTime(msgWhenIso(m));
                   const read = mine ? Boolean(msgReadAt(m)) : false;
 
+                  const meta = mine
+                    ? { name: me.name || 'Eu', photo_path: me.photo_path }
+                    : {
+                        name:
+                          userDetailsById[from]?.name ||
+                          userById.get(from)?.name ||
+                          activeUser.name ||
+                          'Utilizador',
+                        photo_path: userDetailsById[from]?.photo_path ?? null,
+                      };
+
+                  const img = resolvePhotoUrl(meta.photo_path) || '';
+
                   return (
-                    <div key={msgId(m)} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
+                    <div key={msgId(m)} className={cn('flex items-end gap-2', mine ? 'justify-end' : 'justify-start')}>
+                      {!mine ? (
+                        <Avatar className="w-8 h-8 border border-border shrink-0">
+                          <AvatarImage src={img} alt={meta.name} />
+                          <AvatarFallback className="text-[11px] font-semibold">{getInitials(meta.name)}</AvatarFallback>
+                        </Avatar>
+                      ) : null}
+
                       <div
                         className={cn(
-                          'max-w-[80%] rounded-lg px-3 py-2 text-sm border',
-                          mine
-                            ? 'bg-cyan-500/10 text-foreground border-cyan-500/20'
-                            : 'bg-muted text-foreground border-border',
+                          'max-w-[78%] rounded-lg px-3 py-2 text-sm border',
+                          mine ? 'bg-cyan-500/10 text-foreground border-cyan-500/20' : 'bg-muted text-foreground border-border',
                         )}
                       >
                         <div className="whitespace-pre-wrap break-words">{text}</div>
@@ -347,27 +410,52 @@ export function ChatDock() {
                           {mine ? <span>{read ? '✓✓' : '✓'}</span> : null}
                         </div>
                       </div>
+
+                      {mine ? (
+                        <Avatar className="w-8 h-8 border border-border shrink-0">
+                          <AvatarImage src={resolvePhotoUrl(me.photo_path) || ''} alt={me.name || 'Eu'} />
+                          <AvatarFallback className="text-[11px] font-semibold">{getInitials(me.name || 'Eu')}</AvatarFallback>
+                        </Avatar>
+                      ) : null}
                     </div>
                   );
                 })
               )}
             </div>
 
-            <div className="mt-3 flex items-center gap-2">
-              <Input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder={activeUserId ? `Mensagem para ${activeUser.name}…` : 'Mensagem…'}
-                onKeyDown={(e) => {
-                  if (e.key !== 'Enter') return;
-                  e.preventDefault();
-                  onSend();
-                }}
-                disabled={!activeUserId || sending}
-              />
-              <Button type="button" onClick={onSend} disabled={!activeUserId || !draft.trim() || sending}>
-                <Send className="w-4 h-4" />
-              </Button>
+            <div className="mt-3 space-y-2">
+              <div className="flex flex-wrap gap-1">
+                {['😀', '😂', '😍', '👍', '🙏', '🎉', '🔥', '😢'].map((emo) => (
+                  <Button
+                    key={emo}
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2"
+                    disabled={!activeUserId || sending}
+                    onClick={() => setDraft((prev) => `${prev}${emo}`)}
+                  >
+                    <span className="text-base leading-none">{emo}</span>
+                  </Button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Input
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder={activeUserId ? `Mensagem para ${activeUser.name}…` : 'Mensagem…'}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+                    onSend();
+                  }}
+                  disabled={!activeUserId || sending}
+                />
+                <Button type="button" onClick={onSend} disabled={!activeUserId || !draft.trim() || sending}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>

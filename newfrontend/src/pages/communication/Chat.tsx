@@ -4,6 +4,7 @@ import { MessageSquare, Send } from "lucide-react"
 
 import type { InternalMessage } from "@/types"
 import {
+  fetchAdminUser,
   fetchCommunicationRecipients,
   fetchInternalMessages,
   fetchUser,
@@ -11,11 +12,12 @@ import {
   sendInternalMessage,
   type CommunicationRecipient,
 } from "@/services/api"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
-import { cn, playSound } from "@/lib/utils"
+import { cn, getInitials, playSound, resolvePhotoUrl } from "@/lib/utils"
 
 const getAny = (m: any, key: string) => (m && Object.prototype.hasOwnProperty.call(m, key) ? m[key] : undefined)
 
@@ -50,8 +52,13 @@ export default function Chat() {
 
   const [loading, setLoading] = useState(true)
   const [meId, setMeId] = useState<string>("")
+  const [meName, setMeName] = useState("")
+  const [mePhotoPath, setMePhotoPath] = useState<string | null>(null)
   const [users, setUsers] = useState<CommunicationRecipient[]>([])
   const [all, setAll] = useState<InternalMessage[]>([])
+
+  const [userDetailsById, setUserDetailsById] = useState<Record<string, { name?: string; email?: string; photo_path?: string | null }>>({})
+  const userDetailsRef = useRef<Record<string, { name?: string; email?: string; photo_path?: string | null }>>({})
 
   const [activeUserId, setActiveUserId] = useState<string>("")
   const [draft, setDraft] = useState("")
@@ -106,6 +113,35 @@ export default function Chat() {
     return map
   }, [all, meId])
 
+  useEffect(() => {
+    userDetailsRef.current = userDetailsById
+  }, [userDetailsById])
+
+  const ensureUserDetails = async (id: string) => {
+    const uid = String(id || "").trim()
+    if (!uid) return
+    if (uid === meId) return
+
+    const current = userDetailsRef.current[uid]
+    if (current && (current.photo_path !== undefined || current.name || current.email)) return
+
+    try {
+      const resp = await fetchAdminUser(uid)
+      const u: any = resp?.data
+      if (!u) return
+      setUserDetailsById((prev) => ({
+        ...prev,
+        [uid]: {
+          name: String(u.name ?? prev[uid]?.name ?? "").trim(),
+          email: String(u.email ?? prev[uid]?.email ?? "").trim(),
+          photo_path: (u.photo_path ?? prev[uid]?.photo_path ?? null) as any,
+        },
+      }))
+    } catch {
+      return
+    }
+  }
+
   const loadAll = async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true)
     try {
@@ -118,7 +154,23 @@ export default function Chat() {
 
       const nextMeId = String(meResp.data.id)
       setMeId(nextMeId)
+      setMeName(String((meResp as any)?.data?.name ?? "").trim())
+      setMePhotoPath(((meResp as any)?.data?.photo_path ?? null) as any)
+
       setUsers(recResp.data)
+      setUserDetailsById((prev) => {
+        const next = { ...prev }
+        recResp.data.forEach((u: any) => {
+          const id = String(u?.id ?? "").trim()
+          if (!id) return
+          next[id] = {
+            name: String(u?.name ?? next[id]?.name ?? "").trim(),
+            email: String(u?.email ?? next[id]?.email ?? "").trim(),
+            photo_path: (next[id]?.photo_path ?? null) as any,
+          }
+        })
+        return next
+      })
 
       const map = new Map<string, InternalMessage>()
       ;[...inboxResp.data, ...sentResp.data].forEach((m: any) => map.set(String(m.id), m))
@@ -144,10 +196,26 @@ export default function Chat() {
 
   useEffect(() => {
     if (!activeUserId) return
+    ensureUserDetails(activeUserId)
     const id = window.setInterval(() => loadAll({ silent: true }), 4000)
     return () => window.clearInterval(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeUserId])
+
+  useEffect(() => {
+    if (!meId) return
+    const ids = new Set<string>()
+
+    for (const m of conversation as any[]) {
+      const from = String(m?.from_user_id ?? "").trim()
+      const to = String(m?.to_user_id ?? "").trim()
+      if (from && from !== meId) ids.add(from)
+      if (to && to !== meId) ids.add(to)
+    }
+
+    ids.forEach((id) => ensureUserDetails(id))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversation, meId])
 
   useEffect(() => {
     const other = String(activeUserId || "").trim()
@@ -276,8 +344,29 @@ export default function Chat() {
                 const time = fmtTime(msgWhenIso(m))
                 const text = plainTextFromHtml(String(m?.body ?? ""))
 
+                const meta = mine
+                  ? { name: meName || "Eu", photo_path: mePhotoPath }
+                  : {
+                      name:
+                        userDetailsById[from]?.name ||
+                        userById.get(from)?.name ||
+                        activeUser?.name ||
+                        "Utilizador",
+                      photo_path: userDetailsById[from]?.photo_path ?? null,
+                    }
+
+                const img = resolvePhotoUrl(meta.photo_path) ||
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(meta.name || "User")}&background=random`
+
                 return (
-                  <div key={String(m.id)} className={cn("flex", mine ? "justify-end" : "justify-start")}>
+                  <div key={String(m.id)} className={cn("flex items-end gap-2", mine ? "justify-end" : "justify-start")}>
+                    {!mine ? (
+                      <Avatar className="w-8 h-8 border border-border shrink-0">
+                        <AvatarImage src={img} alt={meta.name} />
+                        <AvatarFallback className="text-[11px] font-semibold">{getInitials(meta.name)}</AvatarFallback>
+                      </Avatar>
+                    ) : null}
+
                     <div className="max-w-[82%]">
                       <div
                         className={cn(
@@ -299,13 +388,42 @@ export default function Chat() {
                         ) : null}
                       </div>
                     </div>
+
+                    {mine ? (
+                      <Avatar className="w-8 h-8 border border-border shrink-0">
+                        <AvatarImage
+                          src={
+                            resolvePhotoUrl(mePhotoPath) ||
+                            `https://ui-avatars.com/api/?name=${encodeURIComponent(meName || "Eu")}&background=random`
+                          }
+                          alt={meName || "Eu"}
+                        />
+                        <AvatarFallback className="text-[11px] font-semibold">{getInitials(meName || "Eu")}</AvatarFallback>
+                      </Avatar>
+                    ) : null}
                   </div>
                 )
               })
             )}
           </div>
 
-          <div className="p-3 border-t border-border/60">
+          <div className="p-3 border-t border-border/60 space-y-2">
+            <div className="flex flex-wrap gap-1">
+              {["😀", "😂", "😍", "👍", "🙏", "🎉", "🔥", "😢"].map((emo) => (
+                <Button
+                  key={emo}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2"
+                  disabled={!activeUserId || sending}
+                  onClick={() => setDraft((prev) => `${prev}${emo}`)}
+                >
+                  <span className="text-base leading-none">{emo}</span>
+                </Button>
+              ))}
+            </div>
+
             <div className="flex items-center gap-2">
               <Input
                 value={draft}
