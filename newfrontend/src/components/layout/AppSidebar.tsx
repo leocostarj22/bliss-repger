@@ -23,6 +23,7 @@ import {
   Clock,
   Video,
   Mail,
+  MessageSquare,
   Megaphone,
   Package,
   ShoppingCart,
@@ -65,6 +66,7 @@ const humanResourcesNavItems = [
 
 const communicationNavItems = [
   { label: 'Video Call', icon: Video, path: '/communication/video-call', color: 'fuchsia' },
+  { label: 'Chat', icon: MessageSquare, path: '/communication/chat', color: 'cyan' },
   { label: 'Mensagens Internas', icon: Mail, path: '/communication/messages', color: 'emerald' },
   { label: 'Posts Administrativos', icon: Megaphone, path: '/communication/posts', color: 'amber' },
 ] as const;

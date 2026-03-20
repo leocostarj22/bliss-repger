@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom';
+import { ChatDock } from '@/components/communication/ChatDock';
 import { AppSidebar } from './AppSidebar';
 import { Topbar } from './Topbar';
 
@@ -12,6 +13,8 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      <ChatDock />
     </div>
   );
 }

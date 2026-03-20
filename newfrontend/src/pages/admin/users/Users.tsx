@@ -398,10 +398,21 @@ export default function Users() {
                                   Abrir um ticket para {u.name}
                                 </Link>
                               </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
-                                <Link to={`/communication/chat?with_user_id=${encodeURIComponent(u.id)}`}>
-                                  Ir ao chat com {u.name}
-                                </Link>
+                              <DropdownMenuItem
+                                onSelect={(e) => {
+                                  e.preventDefault()
+                                  window.dispatchEvent(
+                                    new CustomEvent("gmcentral:chat:open", {
+                                      detail: {
+                                        userId: String(u.id),
+                                        name: u.name,
+                                        email: u.email,
+                                      },
+                                    }),
+                                  )
+                                }}
+                              >
+                                Ir ao chat com {u.name}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
