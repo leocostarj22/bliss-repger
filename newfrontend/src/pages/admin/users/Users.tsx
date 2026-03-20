@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { Eye, Pencil, Plus, Search, Trash2, User as UserIcon } from "lucide-react"
+import { ArrowUpDown, Eye, Pencil, Plus, Search, Trash2, User as UserIcon } from "lucide-react"
 
 import type { Company, Department, User } from "@/types"
 import { deleteUser, fetchCompanies, fetchDepartments, fetchUsers } from "@/services/api"
@@ -12,12 +12,18 @@ import { useToast } from "@/components/ui/use-toast"
 
 const ONLINE_WINDOW_MINUTES = 15
 
+type SortKey = "name" | "company" | "department" | "role" | "active" | "online"
+type SortDir = "asc" | "desc"
+
 export default function Users() {
   const { toast } = useToast()
   const [rows, setRows] = useState<User[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
+
+  const [sortKey, setSortKey] = useState<SortKey>("name")
+  const [sortDir, setSortDir] = useState<SortDir>("asc")
 
   const [search, setSearch] = useState("")
   const [companyFilter, setCompanyFilter] = useState<string>("all")
@@ -43,6 +49,64 @@ export default function Users() {
     if (companyFilter === "all") return departments
     return departments.filter((d) => d.company_id === companyFilter)
   }, [companyFilter, departments])
+
+  const sortBy = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+      return
+    }
+    setSortKey(key)
+    setSortDir("asc")
+  }
+
+  const isOnline = (u: User) => {
+    const ts = u.last_login_at ? Date.parse(u.last_login_at) : NaN
+    return u.is_active && Number.isFinite(ts) && ts >= Date.now() - ONLINE_WINDOW_MINUTES * 60 * 1000
+  }
+
+  const sortedRows = useMemo(() => {
+    const dir = sortDir === "asc" ? 1 : -1
+
+    const norm = (v: unknown) => String(v ?? "").toLowerCase().trim()
+    const cmpStr = (a: unknown, b: unknown) => {
+      const av = norm(a)
+      const bv = norm(b)
+      if (av < bv) return -1
+      if (av > bv) return 1
+      return 0
+    }
+
+    const base = [...rows]
+    base.sort((a, b) => {
+      if (sortKey === "name") return cmpStr(a.name, b.name) * dir
+      if (sortKey === "role") return cmpStr(a.role ?? "", b.role ?? "") * dir
+      if (sortKey === "company") {
+        const an = a.company_id ? companyNameById[a.company_id] ?? a.company_id : ""
+        const bn = b.company_id ? companyNameById[b.company_id] ?? b.company_id : ""
+        return cmpStr(an, bn) * dir
+      }
+      if (sortKey === "department") {
+        const an = a.department_id ? departmentNameById[a.department_id] ?? a.department_id : ""
+        const bn = b.department_id ? departmentNameById[b.department_id] ?? b.department_id : ""
+        return cmpStr(an, bn) * dir
+      }
+      if (sortKey === "active") {
+        const av = a.is_active ? 1 : 0
+        const bv = b.is_active ? 1 : 0
+        if (av !== bv) return (av - bv) * dir
+        return cmpStr(a.name, b.name) * dir
+      }
+      if (sortKey === "online") {
+        const av = isOnline(a) ? 1 : 0
+        const bv = isOnline(b) ? 1 : 0
+        if (av !== bv) return (av - bv) * dir
+        return cmpStr(a.name, b.name) * dir
+      }
+      return 0
+    })
+
+    return base
+  }, [rows, sortKey, sortDir, companyNameById, departmentNameById])
 
   useEffect(() => {
     if (companyFilter !== "all" && departmentFilter !== "all") {
@@ -180,12 +244,66 @@ export default function Users() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-muted-foreground border-b border-border">
-                <th className="py-3 pr-4">Utilizador</th>
-                <th className="py-3 pr-4">Empresa</th>
-                <th className="py-3 pr-4">Departamento</th>
-                <th className="py-3 pr-4">Role</th>
-                <th className="py-3 pr-4">Ativo</th>
-                <th className="py-3 pr-4">Online</th>
+                <th className="py-3 pr-4">
+                  <button
+                    type="button"
+                    onClick={() => sortBy("name")}
+                    className="inline-flex items-center gap-2 hover:text-foreground transition-colors"
+                  >
+                    Utilizador
+                    <ArrowUpDown className={"w-4 h-4 opacity-60" + (sortKey === "name" ? " opacity-100" : "")} />
+                  </button>
+                </th>
+                <th className="py-3 pr-4">
+                  <button
+                    type="button"
+                    onClick={() => sortBy("company")}
+                    className="inline-flex items-center gap-2 hover:text-foreground transition-colors"
+                  >
+                    Empresa
+                    <ArrowUpDown className={"w-4 h-4 opacity-60" + (sortKey === "company" ? " opacity-100" : "")} />
+                  </button>
+                </th>
+                <th className="py-3 pr-4">
+                  <button
+                    type="button"
+                    onClick={() => sortBy("department")}
+                    className="inline-flex items-center gap-2 hover:text-foreground transition-colors"
+                  >
+                    Departamento
+                    <ArrowUpDown className={"w-4 h-4 opacity-60" + (sortKey === "department" ? " opacity-100" : "")} />
+                  </button>
+                </th>
+                <th className="py-3 pr-4">
+                  <button
+                    type="button"
+                    onClick={() => sortBy("role")}
+                    className="inline-flex items-center gap-2 hover:text-foreground transition-colors"
+                  >
+                    Role
+                    <ArrowUpDown className={"w-4 h-4 opacity-60" + (sortKey === "role" ? " opacity-100" : "")} />
+                  </button>
+                </th>
+                <th className="py-3 pr-4">
+                  <button
+                    type="button"
+                    onClick={() => sortBy("active")}
+                    className="inline-flex items-center gap-2 hover:text-foreground transition-colors"
+                  >
+                    Ativo
+                    <ArrowUpDown className={"w-4 h-4 opacity-60" + (sortKey === "active" ? " opacity-100" : "")} />
+                  </button>
+                </th>
+                <th className="py-3 pr-4">
+                  <button
+                    type="button"
+                    onClick={() => sortBy("online")}
+                    className="inline-flex items-center gap-2 hover:text-foreground transition-colors"
+                  >
+                    Online
+                    <ArrowUpDown className={"w-4 h-4 opacity-60" + (sortKey === "online" ? " opacity-100" : "")} />
+                  </button>
+                </th>
                 <th className="py-3 text-right">Ações</th>
               </tr>
             </thead>
@@ -227,7 +345,7 @@ export default function Users() {
                   </td>
                 </tr>
               ) : (
-                rows.map((u) => (
+                sortedRows.map((u) => (
                   <tr key={u.id} className="border-b border-border/60 hover:bg-secondary/30 transition-colors">
                     <td className="py-4 pr-4">
                       <div className="min-w-0">
@@ -254,9 +372,7 @@ export default function Users() {
                     </td>
                     <td className="py-4 pr-4">
                       {(() => {
-                        const ts = u.last_login_at ? Date.parse(u.last_login_at) : NaN
-                        const online =
-                          u.is_active && Number.isFinite(ts) && ts >= Date.now() - ONLINE_WINDOW_MINUTES * 60 * 1000
+                        const online = isOnline(u)
 
                         return (
                           <span
