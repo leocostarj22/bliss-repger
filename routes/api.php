@@ -647,6 +647,39 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
             ], 201);
         });
 
+        Route::get('recipients', function () {
+            $me = auth()->user();
+            abort_unless($me, 401);
+
+            $search = trim((string) request('search', ''));
+
+            $q = User::query()
+                ->where('is_active', true)
+                ->whereKeyNot($me->id);
+
+            if (! $me->isAdmin() && $me->company_id) {
+                $q->where('company_id', $me->company_id);
+            }
+
+            if ($search !== '') {
+                $q->where(function ($w) use ($search) {
+                    $w->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            }
+
+            $rows = $q->orderBy('name')->limit(200)->get(['id', 'name', 'email', 'is_active']);
+
+            $data = $rows->map(fn (User $u) => [
+                'id' => (string) $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'is_active' => (bool) $u->is_active,
+            ])->values();
+
+            return response()->json(['data' => $data]);
+        });
+
         Route::post('messages/{recipient}/read', function (MessageRecipient $recipient) {
             $user = auth()->user();
             abort_unless($user, 401);

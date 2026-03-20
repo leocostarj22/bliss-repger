@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { Mail, Send } from "lucide-react"
 
-import type { InternalMessage, User } from "@/types"
-import { fetchInternalMessages, fetchUser, fetchUsers, markInternalMessageRead, sendInternalMessage } from "@/services/api"
+import type { InternalMessage } from "@/types"
+import { fetchCommunicationRecipients, fetchInternalMessages, fetchUser, markInternalMessageRead, sendInternalMessage, type CommunicationRecipient } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
@@ -65,7 +65,7 @@ export default function InternalMessages() {
   const [loading, setLoading] = useState(true)
 
   const [meId, setMeId] = useState<string>("")
-  const [users, setUsers] = useState<User[]>([])
+  const [users, setUsers] = useState<CommunicationRecipient[]>([])
   const [folder, setFolder] = useState<"inbox" | "sent">("inbox")
   const [rows, setRows] = useState<InternalMessage[]>([])
   const [selected, setSelected] = useState<InternalMessage | null>(null)
@@ -76,7 +76,7 @@ export default function InternalMessages() {
   const [sending, setSending] = useState(false)
 
   const userById = useMemo(() => {
-    const m = new Map<string, User>()
+    const m = new Map<string, CommunicationRecipient>()
     users.forEach((u) => m.set(u.id, u))
     return m
   }, [users])
@@ -84,18 +84,20 @@ export default function InternalMessages() {
   const load = async (nextFolder: "inbox" | "sent") => {
     setLoading(true)
     try {
-      const [meResp, uResp, mResp] = await Promise.all([
-        fetchUser(),
-        fetchUsers(),
-        fetchInternalMessages({ folder: nextFolder }),
-      ])
+      const [meResp, mResp] = await Promise.all([fetchUser(), fetchInternalMessages({ folder: nextFolder })])
       const nextMeId = String(meResp.data.id)
       setMeId(nextMeId)
-      setUsers(uResp.data)
       setRows(mResp.data)
       setSelected(null)
-    } catch {
-      toast({ title: "Erro", description: "Não foi possível carregar mensagens", variant: "destructive" })
+
+      try {
+        const r = await fetchCommunicationRecipients()
+        setUsers(r.data)
+      } catch {
+        setUsers([])
+      }
+    } catch (e: any) {
+      toast({ title: "Erro", description: e?.message || "Não foi possível carregar mensagens", variant: "destructive" })
     } finally {
       setLoading(false)
     }
@@ -147,8 +149,8 @@ export default function InternalMessages() {
       setBody("")
       toast({ title: "Sucesso", description: "Mensagem enviada" })
       setFolder("sent")
-    } catch {
-      toast({ title: "Erro", description: "Não foi possível enviar", variant: "destructive" })
+    } catch (e: any) {
+      toast({ title: "Erro", description: e?.message || "Não foi possível enviar", variant: "destructive" })
     } finally {
       setSending(false)
     }
@@ -266,7 +268,7 @@ export default function InternalMessages() {
 function MessageList(props: {
   loading: boolean
   rows: InternalMessage[]
-  users: Map<string, User>
+  users: Map<string, CommunicationRecipient>
   me: string
   selectedId: string | null
   onOpen: (m: InternalMessage) => void

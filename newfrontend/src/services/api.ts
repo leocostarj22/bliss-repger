@@ -2603,6 +2603,42 @@ export async function fetchInternalMessages(params?: {
   return { data: Array.isArray(json?.data) ? (json.data as InternalMessage[]) : [] };
 }
 
+export type CommunicationRecipient = {
+  id: string;
+  name: string;
+  email: string;
+  is_active: boolean;
+};
+
+export async function fetchCommunicationRecipients(params?: { search?: string }): Promise<ApiResponse<CommunicationRecipient[]>> {
+  const qs = new URLSearchParams();
+  const search = (params?.search ?? '').trim();
+  if (search) qs.set('search', search);
+
+  const url = `/api/v1/communication/recipients${qs.toString() ? `?${qs.toString()}` : ''}`;
+  const response = await apiFetch(url, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let msg = `Failed to fetch recipients: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as CommunicationRecipient[]) : [] };
+}
+
 export async function fetchInternalMessage(id: string): Promise<ApiResponse<InternalMessage>> {
   await delay();
   const found = readCommMessages().find((m) => m.id === id);
