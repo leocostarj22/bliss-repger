@@ -27,7 +27,7 @@ export function AppLayout() {
       </div>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="p-0 w-[85vw] sm:w-[360px]">
+        <SheetContent side="left" className="p-0 w-screen h-svh max-w-none sm:w-[360px] sm:h-auto">
           <AppSidebar />
         </SheetContent>
       </Sheet>
