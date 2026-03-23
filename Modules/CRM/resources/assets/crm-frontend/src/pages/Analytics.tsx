@@ -768,7 +768,7 @@ export default function Analytics() {
         <div className="glass-card p-6 order-3 lg:col-span-6 flex flex-col bg-gradient-to-b from-primary/5 via-background to-background">
           <h3 className="text-sm font-semibold mb-2">Comparação de Campanhas</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
-          <div className="mb-3 space-y-2">
+          <div className="mb-2 space-y-2">
           <div className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2">
             <input
               value={campaignSearch}
@@ -801,7 +801,7 @@ export default function Analytics() {
             ))}
           </div>
         </div>
-          <div className="max-h-96 overflow-y-auto pr-2 scrollbar-modern">
+          <div className="flex-1 min-h-0 overflow-y-auto pr-2 scrollbar-modern">
             <div className="divide-y divide-border rounded-md border bg-card/30 overflow-hidden">
             {(campaignList.length ? campaignList.map(c => ({
               id: c.id,
