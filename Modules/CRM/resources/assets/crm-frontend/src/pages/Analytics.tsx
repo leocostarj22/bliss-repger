@@ -514,7 +514,7 @@ export default function Analytics() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Line Chart */}
         <div ref={deliveryRef} className="glass-card p-6 lg:col-span-2 bg-gradient-to-b from-cyan-500/5 via-background to-background border-t border-cyan-500/20">
           <h3 className="text-sm font-semibold mb-2">Desempenho de Entrega</h3>
@@ -773,7 +773,7 @@ export default function Analytics() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background">
+        <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background lg:col-span-2">
           <h3 className="text-sm font-semibold mb-2">Heatmap de Engajamento</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
           {(() => {
