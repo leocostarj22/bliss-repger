@@ -336,7 +336,7 @@ export default function Analytics() {
           <h1 className="page-title">Analítica</h1>
           <p className="page-subtitle">Análise detalhada do desempenho dos seus emails</p>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <Skeleton className="h-96 rounded-lg" />
           <Skeleton className="h-96 rounded-lg" />
         </div>
@@ -398,11 +398,8 @@ export default function Analytics() {
   };
 
   const handlePrintPdf = () => {
-    const w = window.open('', '_blank', 'noopener,noreferrer,width=1100,height=900');
-    if (!w) {
-      toast({ title: 'Pop-up bloqueado', description: 'Permita pop-ups para imprimir/exportar PDF.', variant: 'destructive' });
-      return;
-    }
+    const w = window.open('about:blank', '_blank', 'width=1100,height=900');
+    const canUsePopup = !!w && !!w.document;
 
     const today = new Date();
     const dateLabel = today.toISOString().slice(0, 10);
@@ -512,10 +509,54 @@ export default function Analytics() {
 </body>
 </html>`;
 
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    w.focus();
+    if (canUsePopup && w) {
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+      w.focus();
+      return;
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.opacity = '0';
+    iframe.style.pointerEvents = 'none';
+
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    const win = iframe.contentWindow;
+
+    if (!doc || !win) {
+      iframe.remove();
+      toast({ title: 'Falha ao imprimir', description: 'Não foi possível inicializar a impressão no navegador.', variant: 'destructive' });
+      return;
+    }
+
+    const cleanup = () => {
+      try { iframe.remove(); } catch {}
+    };
+
+    win.onafterprint = cleanup;
+
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    setTimeout(() => {
+      try {
+        win.focus();
+        win.print();
+      } finally {
+        setTimeout(cleanup, 500);
+      }
+    }, 250);
   };
 
   return (
@@ -564,7 +605,7 @@ export default function Analytics() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Line Chart */}
-        <div ref={deliveryRef} className="glass-card p-6 lg:col-span-2 bg-gradient-to-b from-cyan-500/5 via-background to-background border-t border-cyan-500/20">
+        <div ref={deliveryRef} className="glass-card p-6 lg:col-span-12 bg-gradient-to-b from-cyan-500/5 via-background to-background border-t border-cyan-500/20">
           <h3 className="text-sm font-semibold mb-2">Desempenho de Entrega</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
           {(selectedCampaignIds.length > 1 && avgSeries?.length) ? (
@@ -678,7 +719,7 @@ export default function Analytics() {
         </div>
 
         {/* Pie Chart */}
-        <div ref={engagementRef} className="glass-card p-6 bg-gradient-to-b from-fuchsia-500/5 via-background to-background border-t border-fuchsia-500/20">
+        <div ref={engagementRef} className="glass-card p-6 bg-gradient-to-b from-fuchsia-500/5 via-background to-background border-t border-fuchsia-500/20 lg:col-span-5">
           <h3 className="text-sm font-semibold mb-2">Detalhamento de Engajamento</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
           <ResponsiveContainer width="100%" height={250}>
@@ -724,7 +765,7 @@ export default function Analytics() {
         </div>
 
         {/* Campaign Comparison */}
-        <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background">
+        <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background lg:col-span-7">
           <h3 className="text-sm font-semibold mb-2">Comparação de Campanhas</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
         <div className="mb-3 space-y-2">
@@ -817,7 +858,7 @@ export default function Analytics() {
         </div>
       </div>
 
-        <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background order-last lg:col-span-2">
+        <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background order-last lg:col-span-12">
           <h3 className="text-sm font-semibold mb-2">Heatmap de Engajamento</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
           {(() => {
@@ -930,7 +971,7 @@ export default function Analytics() {
           })()}
         </div>
 
-        <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background">
+        <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background lg:col-span-6">
           <h3 className="text-sm font-semibold mb-2">Ranking de Assuntos</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
           {(() => {
@@ -958,7 +999,7 @@ export default function Analytics() {
           })()}
         </div>
 
-        <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background">
+        <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background lg:col-span-6">
           <h3 className="text-sm font-semibold mb-2">Funil</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
           {(() => {
