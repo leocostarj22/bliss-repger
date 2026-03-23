@@ -31,6 +31,8 @@ class User extends Authenticatable implements UserInterface, FilamentUser
         'phone',
         'bio',
         'photo_path', // Adicionar esta linha
+        'permissions_allow',
+        'permissions_deny',
         'is_active',
         'last_login_at',
     ];
@@ -43,6 +45,8 @@ class User extends Authenticatable implements UserInterface, FilamentUser
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'permissions_allow' => 'array',
+        'permissions_deny' => 'array',
         'is_active' => 'boolean',
         'last_login_at' => 'datetime',
     ];

@@ -5,7 +5,7 @@ import { ArrowUpDown, Eye, Mail, MessageSquare, Pencil, Plus, Search, Ticket, Tr
 import type { Company, Department, User } from "@/types"
 import { deleteUser, fetchCompanies, fetchDepartments, fetchMyAccess, fetchUsers } from "@/services/api"
 import { Button } from "@/components/ui/button"
-import { hasPermission } from "@/lib/utils"
+import { hasEffectivePermission } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -117,7 +117,9 @@ export default function Users() {
     fetchMyAccess()
       .then((r) => {
         if (!alive) return
-        const allowed = Boolean(r.data.isAdmin) || hasPermission(r.data.permissions, "admin.users.write")
+        const allowed =
+          Boolean(r.data.isAdmin) ||
+          hasEffectivePermission(r.data.permissions, r.data.permissionsDeny, "admin.users.write")
         setCanQuickActions(allowed)
       })
       .catch(() => {

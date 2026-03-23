@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/use-toast"
 import { fetchAdminModules, fetchMyAccess, updateAdminModules, type AdminModule } from "@/services/api"
-import { hasPermission } from "@/lib/utils"
+import { hasEffectivePermission } from "@/lib/utils"
 
 export default function Modules() {
   const { toast } = useToast()
@@ -32,7 +32,9 @@ export default function Modules() {
       setLoading(true)
       try {
         const me = await fetchMyAccess()
-        const allowed = Boolean(me.data.isAdmin) || hasPermission(me.data.permissions, "admin.modules.manage")
+        const allowed =
+          Boolean(me.data.isAdmin) ||
+          hasEffectivePermission(me.data.permissions, me.data.permissionsDeny, "admin.modules.manage")
 
         if (!active) return
         setIsAdmin(allowed)

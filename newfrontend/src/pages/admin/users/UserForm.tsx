@@ -24,7 +24,22 @@ type FormState = {
   phone: string
   bio: string
   photo_path: string
+  permissions_allow_text: string
+  permissions_deny_text: string
   is_active: boolean
+}
+
+const parsePermissions = (value: string) => {
+  const raw = value
+    .split(/[\n,]+/g)
+    .map((s) => s.trim())
+    .filter(Boolean)
+
+  const uniq: string[] = []
+  raw.forEach((p) => {
+    if (!uniq.includes(p)) uniq.push(p)
+  })
+  return uniq
 }
 
 export default function UserForm() {
@@ -56,6 +71,8 @@ export default function UserForm() {
     phone: "",
     bio: "",
     photo_path: "",
+    permissions_allow_text: "",
+    permissions_deny_text: "",
     is_active: true,
   })
 
@@ -151,6 +168,8 @@ export default function UserForm() {
             phone: u.phone ?? "",
             bio: u.bio ?? "",
             photo_path: u.photo_path ?? "",
+            permissions_allow_text: Array.isArray(u.permissions_allow) ? u.permissions_allow.join("\n") : "",
+            permissions_deny_text: Array.isArray(u.permissions_deny) ? u.permissions_deny.join("\n") : "",
             is_active: Boolean(u.is_active),
           })
           return
@@ -216,6 +235,8 @@ export default function UserForm() {
           phone: form.phone.trim() || null,
           bio: form.bio.trim() || null,
           photo_path: form.photo_path.trim() || null,
+          permissions_allow: parsePermissions(form.permissions_allow_text),
+          permissions_deny: parsePermissions(form.permissions_deny_text),
           is_active: form.is_active,
         }
 
@@ -237,6 +258,8 @@ export default function UserForm() {
           phone: form.phone.trim() || null,
           bio: form.bio.trim() || null,
           photo_path: form.photo_path.trim() || null,
+          permissions_allow: parsePermissions(form.permissions_allow_text),
+          permissions_deny: parsePermissions(form.permissions_deny_text),
           is_active: form.is_active,
           last_login_at: null,
         } as Omit<User, "id" | "createdAt" | "updatedAt">)
@@ -432,6 +455,37 @@ export default function UserForm() {
           <div className="space-y-2 lg:col-span-2">
             <label className="text-sm font-medium">Bio</label>
             <Textarea value={form.bio} onChange={(e) => setField("bio", e.target.value)} placeholder="Descrição/observações" />
+          </div>
+
+          <div className="space-y-4 rounded-lg border border-border p-4 lg:col-span-2">
+            <div>
+              <div className="text-sm font-medium">Permissões individuais</div>
+              <div className="text-xs text-muted-foreground">Exceções ao cargo: negar tem prioridade sobre permitir.</div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Permitir (adicionais)</label>
+                <Textarea
+                  value={form.permissions_allow_text}
+                  onChange={(e) => setField("permissions_allow_text", e.target.value)}
+                  placeholder={'Uma por linha (ou separadas por vírgula)\ncrm.*\nhr.employees.read'}
+                  className="min-h-[120px]"
+                />
+                <div className="text-xs text-muted-foreground">Guarda em permissions_allow (array).</div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Negar</label>
+                <Textarea
+                  value={form.permissions_deny_text}
+                  onChange={(e) => setField("permissions_deny_text", e.target.value)}
+                  placeholder={'Uma por linha (ou separadas por vírgula)\nhr.*'}
+                  className="min-h-[120px]"
+                />
+                <div className="text-xs text-muted-foreground">Guarda em permissions_deny (array). Deny substitui o cargo.</div>
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center justify-between rounded-lg border border-border p-4 lg:col-span-2">

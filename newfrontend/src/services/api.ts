@@ -929,7 +929,18 @@ export interface AdminModule {
 }
 
 // ── User ──
-export async function fetchUser(): Promise<ApiResponse<{ id: string; name: string; email: string; role?: string | null; is_admin?: boolean; photo_path?: string | null }>> {
+export async function fetchUser(): Promise<
+  ApiResponse<{
+    id: string
+    name: string
+    email: string
+    role?: string | null
+    is_admin?: boolean
+    photo_path?: string | null
+    permissions_allow?: string[] | null
+    permissions_deny?: string[] | null
+  }>
+> {
   const response = await apiFetch('/api/v1/me', {
     method: 'GET',
     headers: {
@@ -964,6 +975,8 @@ export async function fetchUser(): Promise<ApiResponse<{ id: string; name: strin
       role: json?.data?.role ?? null,
       is_admin: Boolean(json?.data?.is_admin ?? false),
       photo_path: json?.data?.photo_path ?? null,
+      permissions_allow: Array.isArray(json?.data?.permissions_allow) ? (json.data.permissions_allow as string[]) : null,
+      permissions_deny: Array.isArray(json?.data?.permissions_deny) ? (json.data.permissions_deny as string[]) : null,
     },
   };
 }
@@ -973,6 +986,8 @@ export type MyAccessSnapshot = {
   role: string | null
   isAdmin: boolean
   permissions: string[]
+  permissionsAllow: string[]
+  permissionsDeny: string[]
 }
 
 let myAccessCache: { key: string; value: MyAccessSnapshot; ts: number } | null = null
@@ -985,7 +1000,23 @@ export async function fetchMyAccess(opts?: { force?: boolean }): Promise<ApiResp
   const roleRaw = String(me.data.role ?? '').trim()
   const role = roleRaw || null
 
-  const key = `${userId}|${roleRaw}`
+  const normalize = (v: unknown) => String(v ?? '').trim()
+  const normalizeList = (value: unknown) => {
+    const raw = Array.isArray(value) ? (value as unknown[]) : []
+    const uniq: string[] = []
+    raw
+      .map((p) => normalize(p))
+      .filter(Boolean)
+      .forEach((p) => {
+        if (!uniq.includes(p)) uniq.push(p)
+      })
+    return uniq
+  }
+
+  const permissionsAllow = normalizeList(me.data.permissions_allow)
+  const permissionsDeny = normalizeList(me.data.permissions_deny)
+
+  const key = `${userId}|${roleRaw}|a:${permissionsAllow.join(',')}|d:${permissionsDeny.join(',')}`
   if (!force && myAccessCache && myAccessCache.key === key && Date.now() - myAccessCache.ts < 2 * 60 * 1000) {
     return { data: myAccessCache.value }
   }
@@ -994,23 +1025,51 @@ export async function fetchMyAccess(opts?: { force?: boolean }): Promise<ApiResp
   const isAdmin = Boolean(me.data.is_admin) || roleName === 'admin'
 
   if (isAdmin) {
-    const value: MyAccessSnapshot = { userId, role, isAdmin: true, permissions: ['*'] }
+    const value: MyAccessSnapshot = {
+      userId,
+      role,
+      isAdmin: true,
+      permissions: ['*'],
+      permissionsAllow,
+      permissionsDeny,
+    }
     myAccessCache = { key, value, ts: Date.now() }
     return { data: value }
   }
 
-  const normalize = (v: unknown) => String(v ?? '').trim().toLowerCase()
+  const normalizeCmp = (v: unknown) => normalize(v).toLowerCase()
 
   try {
     const rolesResp = await fetchRoles()
-    const found = rolesResp.data.find((r) => normalize(r.name) === roleName || normalize(r.display_name) === roleName)
-    const permissions = Array.isArray(found?.permissions) ? found!.permissions.map((p) => String(p).trim()).filter(Boolean) : []
+    const found = rolesResp.data.find((r) => normalizeCmp(r.name) === roleName || normalizeCmp(r.display_name) === roleName)
+    const rolePermissions = Array.isArray(found?.permissions)
+      ? found!.permissions.map((p) => normalize(p)).filter(Boolean)
+      : []
 
-    const value: MyAccessSnapshot = { userId, role, isAdmin: false, permissions }
+    const merged: string[] = []
+    ;[...rolePermissions, ...permissionsAllow].forEach((p) => {
+      if (!merged.includes(p)) merged.push(p)
+    })
+
+    const value: MyAccessSnapshot = {
+      userId,
+      role,
+      isAdmin: false,
+      permissions: merged,
+      permissionsAllow,
+      permissionsDeny,
+    }
     myAccessCache = { key, value, ts: Date.now() }
     return { data: value }
   } catch {
-    const value: MyAccessSnapshot = { userId, role, isAdmin: false, permissions: [] }
+    const value: MyAccessSnapshot = {
+      userId,
+      role,
+      isAdmin: false,
+      permissions: permissionsAllow,
+      permissionsAllow,
+      permissionsDeny,
+    }
     myAccessCache = { key, value, ts: Date.now() }
     return { data: value }
   }

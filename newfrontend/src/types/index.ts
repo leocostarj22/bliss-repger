@@ -218,6 +218,8 @@ export interface User {
   phone?: string | null;
   bio?: string | null;
   photo_path?: string | null;
+  permissions_allow?: string[] | null;
+  permissions_deny?: string[] | null;
   is_active: boolean;
   last_login_at?: string | null;
   createdAt: string;

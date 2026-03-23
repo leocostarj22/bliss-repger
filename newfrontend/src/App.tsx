@@ -9,7 +9,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { ShieldAlert } from "lucide-react";
 import { fetchMyAccess } from "@/services/api";
-import { hasPermission } from "@/lib/utils";
+import { hasEffectivePermission } from "@/lib/utils";
 import { ThemeProvider } from "@/hooks/use-theme";
 import Dashboard from "@/pages/Dashboard";
 import NotFound from "./pages/NotFound";
@@ -120,7 +120,9 @@ function RequirePermission(props: { permission: string | string[]; children: Rea
     fetchMyAccess()
       .then((r) => {
         if (!alive) return
-        const ok = Boolean(r.data.isAdmin) || hasPermission(r.data.permissions, permission)
+        const ok =
+          Boolean(r.data.isAdmin) ||
+          hasEffectivePermission(r.data.permissions, r.data.permissionsDeny, permission)
         setAllowed(ok)
       })
       .catch(() => {

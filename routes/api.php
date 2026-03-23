@@ -247,6 +247,8 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
                 'role' => $u->role,
                 'is_admin' => (bool) $u->isAdmin(),
                 'photo_path' => $photo,
+                'permissions_allow' => is_array($u->permissions_allow) ? array_values($u->permissions_allow) : [],
+                'permissions_deny' => is_array($u->permissions_deny) ? array_values($u->permissions_deny) : [],
             ],
         ]);
     });
@@ -4015,6 +4017,8 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
                 'phone' => $user->phone,
                 'bio' => $user->bio,
                 'photo_path' => $photo,
+                'permissions_allow' => is_array($user->permissions_allow) ? array_values($user->permissions_allow) : [],
+                'permissions_deny' => is_array($user->permissions_deny) ? array_values($user->permissions_deny) : [],
                 'is_active' => (bool) $user->is_active,
                 'last_login_at' => $user->last_login_at?->toIso8601String(),
                 'createdAt' => $user->created_at?->toIso8601String(),
@@ -4038,8 +4042,15 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
             'phone' => ['nullable', 'string', 'max:255'],
             'bio' => ['nullable', 'string'],
             'photo_path' => ['nullable', 'string'],
+            'permissions_allow' => ['nullable', 'array'],
+            'permissions_allow.*' => ['string'],
+            'permissions_deny' => ['nullable', 'array'],
+            'permissions_deny.*' => ['string'],
             'is_active' => ['required', 'boolean'],
         ]);
+
+        $validated['permissions_allow'] = collect($validated['permissions_allow'] ?? [])->map(fn ($v) => trim((string) $v))->filter()->values()->all();
+        $validated['permissions_deny'] = collect($validated['permissions_deny'] ?? [])->map(fn ($v) => trim((string) $v))->filter()->values()->all();
 
         if (array_key_exists('photo_path', $validated)) {
             $incoming = $validated['photo_path'];
@@ -4094,6 +4105,8 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
                 'phone' => $user->phone,
                 'bio' => $user->bio,
                 'photo_path' => $photoOut,
+                'permissions_allow' => is_array($user->permissions_allow) ? array_values($user->permissions_allow) : [],
+                'permissions_deny' => is_array($user->permissions_deny) ? array_values($user->permissions_deny) : [],
                 'is_active' => (bool) $user->is_active,
                 'last_login_at' => $user->last_login_at?->toIso8601String(),
                 'createdAt' => $user->created_at?->toIso8601String(),
@@ -4117,8 +4130,19 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
             'phone' => ['nullable', 'string', 'max:255'],
             'bio' => ['nullable', 'string'],
             'photo_path' => ['nullable', 'string'],
+            'permissions_allow' => ['nullable', 'array'],
+            'permissions_allow.*' => ['string'],
+            'permissions_deny' => ['nullable', 'array'],
+            'permissions_deny.*' => ['string'],
             'is_active' => ['sometimes', 'required', 'boolean'],
         ]);
+
+        if (array_key_exists('permissions_allow', $validated)) {
+            $validated['permissions_allow'] = collect($validated['permissions_allow'] ?? [])->map(fn ($v) => trim((string) $v))->filter()->values()->all();
+        }
+        if (array_key_exists('permissions_deny', $validated)) {
+            $validated['permissions_deny'] = collect($validated['permissions_deny'] ?? [])->map(fn ($v) => trim((string) $v))->filter()->values()->all();
+        }
 
         if (array_key_exists('photo_path', $validated)) {
             $incoming = $validated['photo_path'];
@@ -4184,6 +4208,8 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
                 'phone' => $user->phone,
                 'bio' => $user->bio,
                 'photo_path' => $photoOut,
+                'permissions_allow' => is_array($user->permissions_allow) ? array_values($user->permissions_allow) : [],
+                'permissions_deny' => is_array($user->permissions_deny) ? array_values($user->permissions_deny) : [],
                 'is_active' => (bool) $user->is_active,
                 'last_login_at' => $user->last_login_at?->toIso8601String(),
                 'createdAt' => $user->created_at?->toIso8601String(),

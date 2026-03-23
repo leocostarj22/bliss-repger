@@ -29,7 +29,7 @@ import {
   ShoppingCart,
   Beaker,
 } from 'lucide-react';
-import { cn, hasPermission } from '@/lib/utils';
+import { cn, hasEffectivePermission } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { fetchAdminModules, fetchMyAccess } from '@/services/api';
 
@@ -171,6 +171,7 @@ export function AppSidebar({
 
   const [accessLoading, setAccessLoading] = useState(true);
   const [accessPermissions, setAccessPermissions] = useState<string[]>([]);
+  const [accessPermissionsDeny, setAccessPermissionsDeny] = useState<string[]>([]);
   const [accessIsAdmin, setAccessIsAdmin] = useState(false);
   const location = useLocation();
 
@@ -300,11 +301,13 @@ export function AppSidebar({
         if (!alive) return;
         setAccessIsAdmin(Boolean(r.data.isAdmin));
         setAccessPermissions(Array.isArray(r.data.permissions) ? r.data.permissions : []);
+        setAccessPermissionsDeny(Array.isArray(r.data.permissionsDeny) ? r.data.permissionsDeny : []);
       })
       .catch(() => {
         if (!alive) return;
         setAccessIsAdmin(false);
         setAccessPermissions([]);
+        setAccessPermissionsDeny([]);
       })
       .finally(() => {
         if (!alive) return;
@@ -316,7 +319,7 @@ export function AppSidebar({
     };
   }, []);
 
-  const can = (perm: string | string[]) => accessIsAdmin || hasPermission(accessPermissions, perm);
+  const can = (perm: string | string[]) => accessIsAdmin || hasEffectivePermission(accessPermissions, accessPermissionsDeny, perm);
 
   const filterNavItems = <T extends { path: string }>(
     items: readonly T[],

@@ -80,3 +80,20 @@ export function hasPermission(grantedList: string[] | undefined | null, required
 
   return requiredList.some((req) => granted.some((g) => permissionMatches(g, req)))
 }
+
+export function hasEffectivePermission(
+  grantedList: string[] | undefined | null,
+  deniedList: string[] | undefined | null,
+  required: string | string[],
+) {
+  const granted = Array.isArray(grantedList) ? grantedList : []
+  const denied = Array.isArray(deniedList) ? deniedList : []
+  const requiredList = Array.isArray(required) ? required : [required]
+
+  if (requiredList.length === 0) return true
+
+  const isDenied = (req: string) => denied.some((d) => permissionMatches(d, req))
+  const isGranted = (req: string) => granted.some((g) => permissionMatches(g, req))
+
+  return requiredList.some((req) => !isDenied(req) && isGranted(req))
+}
