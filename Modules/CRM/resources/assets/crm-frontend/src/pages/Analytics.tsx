@@ -261,6 +261,27 @@ export default function Analytics() {
     ];
   }, [avgSeries, data?.bounceRate, data?.clickRate, data?.openRate, selectedCampaign, selectedCampaignIds.length]);
 
+  const deliveryChartData = useMemo(() => {
+    if (selectedCampaignIds.length > 1) {
+      const ids = selectedCampaignIds.slice(0, 3);
+      const base = avgSeries ?? [];
+      if (!base.length) return [];
+
+      return base.map((row, i) => {
+        const out: any = { date: row.date, avg_opened: row.opened };
+        for (const id of ids) {
+          const s = selectedSeries[id];
+          const idx = s?.length ? s.length - base.length + i : -1;
+          const aligned = idx >= 0 ? s?.[idx] : null;
+          out[`opened_${id}`] = Number((aligned as any)?.opened) || 0;
+        }
+        return out;
+      });
+    }
+
+    return seriesMetrics ?? data?.dailyMetrics ?? [];
+  }, [avgSeries, data?.dailyMetrics, selectedCampaignIds, selectedSeries, seriesMetrics]);
+
   useEffect(() => {
     load(days);
   }, [days]);
@@ -604,12 +625,12 @@ export default function Analytics() {
             </div>
           ))}
           <ResponsiveContainer width="100%" height={350}>
-            <LineChart data={seriesMetrics ?? data.dailyMetrics}>
+            <LineChart data={deliveryChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.6)" />
               <XAxis
                 dataKey="date"
                 tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                tickFormatter={v => v.slice(5)}
+                tickFormatter={v => String(v).slice(5, 10)}
                 axisLine={false}
                 tickLine={false}
               />
@@ -635,16 +656,14 @@ export default function Analytics() {
               <Legend />
               {selectedCampaignIds.length > 1 ? (
                 <>
-                  {Object.keys(selectedSeries).map((id, i) => {
+                  {selectedCampaignIds.slice(0, 3).map((id, i) => {
                     const camp = campaignList.find(c => c.id === id);
                     const name = camp?.name || id;
                     return (
-                      <Line key={id} type="monotone" name={`${name} • Aberto`} dataKey="opened" data={selectedSeries[id]} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={false} />
+                      <Line key={id} type="monotone" name={`${name} • Aberto`} dataKey={`opened_${id}`} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={false} />
                     );
                   })}
-                  {avgSeries && (
-                    <Line type="monotone" name="Média • Aberto" dataKey="opened" data={avgSeries} stroke="hsl(220, 15%, 50%)" strokeDasharray="4 4" strokeWidth={2} dot={false} />
-                  )}
+                  <Line type="monotone" name="Média • Aberto" dataKey="avg_opened" stroke="hsl(220, 15%, 50%)" strokeDasharray="4 4" strokeWidth={2} dot={false} />
                 </>
               ) : (
                 <>
