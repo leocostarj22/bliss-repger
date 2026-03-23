@@ -318,19 +318,96 @@ export function AppSidebar({
 
   const can = (perm: string | string[]) => accessIsAdmin || hasPermission(accessPermissions, perm);
 
-  const adminPermissionByPath: Record<string, string> = {
-    '/admin/companies': 'admin.companies.read',
-    '/admin/departments': 'admin.departments.read',
+  const filterNavItems = <T extends { path: string }>(
+    items: readonly T[],
+    requiredByPath: Record<string, string | string[]>,
+    fallback: string | string[],
+  ) => (accessLoading ? [] : items.filter((it) => can(requiredByPath[it.path] ?? fallback)));
+
+  const adminPermissionByPath: Record<string, string | string[]> = {
+    '/admin/companies': ['admin.companies.read', 'admin.companies.write'],
+    '/admin/departments': ['admin.departments.read', 'admin.departments.write'],
     '/admin/modules': 'admin.modules.manage',
-    '/admin/users': 'admin.users.read',
-    '/admin/roles': 'admin.roles.read',
+    '/admin/users': ['admin.users.read', 'admin.users.write'],
+    '/admin/roles': ['admin.roles.read', 'admin.roles.write'],
   };
 
-  const adminItems = accessLoading
-    ? []
-    : adminNavItems.filter((it) => can(adminPermissionByPath[it.path] ?? 'admin.access'));
+  const supportPermissionByPath: Record<string, string | string[]> = {
+    '/support/categories': ['support.categories.read', 'support.categories.write'],
+    '/support/tickets': ['support.tickets.read', 'support.tickets.write'],
+  };
+
+  const financePermissionByPath: Record<string, string | string[]> = {
+    '/finance/bank-accounts': ['finance.bank-accounts.read', 'finance.bank-accounts.write'],
+    '/finance/categories': ['finance.categories.read', 'finance.categories.write'],
+    '/finance/cost-centers': ['finance.cost-centers.read', 'finance.cost-centers.write'],
+    '/finance/transactions': ['finance.transactions.read', 'finance.transactions.write'],
+  };
+
+  const humanResourcesPermissionByPath: Record<string, string | string[]> = {
+    '/hr/employees': ['hr.employees.read', 'hr.employees.write'],
+    '/hr/payrolls': ['hr.payrolls.read', 'hr.payrolls.write'],
+    '/hr/vacations': ['hr.vacations.read', 'hr.vacations.write'],
+    '/hr/timesheets': ['hr.timesheets.read', 'hr.timesheets.write'],
+  };
+
+  const communicationPermissionByPath: Record<string, string | string[]> = {
+    '/communication/video-call': 'communication.video-call.access',
+    '/communication/chat': 'communication.chat.access',
+    '/communication/messages': ['communication.messages.read', 'communication.messages.write'],
+    '/communication/posts': ['communication.posts.read', 'communication.posts.write'],
+  };
+
+  const personalPermissionByPath: Record<string, string | string[]> = {
+    '/personal/tasks': ['personal.tasks.read', 'personal.tasks.write'],
+    '/personal/notes': ['personal.notes.read', 'personal.notes.write'],
+  };
+
+  const reportsPermissionByPath: Record<string, string | string[]> = {
+    '/reports/system-logs': 'reports.system-logs.read',
+  };
+
+  const blissNaturaPermissionByPath: Record<string, string | string[]> = {
+    '/blissnatura/dashboard': 'blissnatura.dashboard.read',
+    '/blissnatura/orders': 'blissnatura.orders.read',
+    '/blissnatura/customers': 'blissnatura.customers.read',
+    '/blissnatura/products': ['blissnatura.products.read', 'blissnatura.products.write'],
+  };
+
+  const espacoAbsolutoPermissionByPath: Record<string, string | string[]> = {
+    '/espacoabsoluto/customers': 'espacoabsoluto.customers.read',
+  };
+
+  const myFormulaPermissionByPath: Record<string, string | string[]> = {
+    '/myformula/dashboard': 'myformula.dashboard.read',
+    '/myformula/orders': 'myformula.orders.read',
+    '/myformula/customers': 'myformula.customers.read',
+    '/myformula/products': ['myformula.products.read', 'myformula.products.write'],
+    '/myformula/quizzes': ['myformula.quizzes.read', 'myformula.quizzes.write'],
+  };
+
+  const adminItems = filterNavItems(adminNavItems, adminPermissionByPath, 'admin.access');
+  const supportItems = filterNavItems(supportNavItems, supportPermissionByPath, 'support.access');
+  const financeItems = filterNavItems(financeNavItems, financePermissionByPath, 'finance.access');
+  const humanResourcesItems = filterNavItems(humanResourcesNavItems, humanResourcesPermissionByPath, 'hr.access');
+  const communicationItems = filterNavItems(communicationNavItems, communicationPermissionByPath, 'communication.access');
+  const personalItems = filterNavItems(personalNavItems, personalPermissionByPath, 'personal.access');
+  const reportsItems = filterNavItems(reportsNavItems, reportsPermissionByPath, 'reports.access');
+  const blissNaturaItems = filterNavItems(blissNaturaNavItems, blissNaturaPermissionByPath, 'blissnatura.access');
+  const espacoAbsolutoItems = filterNavItems(espacoAbsolutoNavItems, espacoAbsolutoPermissionByPath, 'espacoabsoluto.access');
+  const myFormulaItems = filterNavItems(myFormulaNavItems, myFormulaPermissionByPath, 'myformula.access');
 
   const showAdminGroup = isModuleEnabled('Administration') && adminItems.length > 0;
+  const showSupportGroup = isModuleEnabled('Support') && supportItems.length > 0;
+  const showFinanceGroup = isModuleEnabled('Finance') && financeItems.length > 0;
+  const showHumanResourcesGroup = isModuleEnabled('HumanResources') && humanResourcesItems.length > 0;
+  const showCommunicationGroup = isModuleEnabled('Communication') && communicationItems.length > 0;
+  const showCrmGroup = isModuleEnabled('CRM') && !accessLoading && can('crm.access');
+  const showPersonalGroup = isModuleEnabled('Personal') && personalItems.length > 0;
+  const showReportsGroup = isModuleEnabled('Reports') && reportsItems.length > 0;
+  const showBlissNaturaGroup = isModuleEnabled('BlissNatura') && blissNaturaItems.length > 0;
+  const showEspacoAbsolutoGroup = isModuleEnabled('EspacoAbsoluto') && espacoAbsolutoItems.length > 0;
+  const showMyFormulaGroup = isModuleEnabled('MyFormula') && myFormulaItems.length > 0;
 
   return (
     <aside
@@ -462,7 +539,7 @@ export function AppSidebar({
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('Support') && 'hidden')}>
+        <div className={cn('px-2', collapsed && 'px-0', !showSupportGroup && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -475,7 +552,7 @@ export function AppSidebar({
           )}
           {(collapsed || supportOpen) && (
             <div className="space-y-1">
-              {supportNavItems.map((item) => {
+              {supportItems.map((item) => {
                 const active = location.pathname === item.path || location.pathname.startsWith(item.path);
                 const c = colorStyles[item.color];
 
@@ -516,7 +593,7 @@ export function AppSidebar({
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('Finance') && 'hidden')}>
+        <div className={cn('px-2', collapsed && 'px-0', !showFinanceGroup && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -529,7 +606,7 @@ export function AppSidebar({
           )}
           {(collapsed || financeOpen) && (
             <div className="space-y-1">
-              {financeNavItems.map((item) => {
+              {financeItems.map((item) => {
               const active = location.pathname === item.path || location.pathname.startsWith(item.path);
               const c = colorStyles[item.color];
 
@@ -570,7 +647,7 @@ export function AppSidebar({
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('HumanResources') && 'hidden')}>
+        <div className={cn('px-2', collapsed && 'px-0', !showHumanResourcesGroup && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -583,7 +660,7 @@ export function AppSidebar({
           )}
           {(collapsed || humanResourcesOpen) && (
             <div className="space-y-1">
-              {humanResourcesNavItems.map((item) => {
+              {humanResourcesItems.map((item) => {
                 const active = location.pathname === item.path || location.pathname.startsWith(item.path);
                 const c = colorStyles[item.color];
 
@@ -624,7 +701,7 @@ export function AppSidebar({
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('Communication') && 'hidden')}>
+        <div className={cn('px-2', collapsed && 'px-0', !showCommunicationGroup && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -637,7 +714,7 @@ export function AppSidebar({
           )}
           {(collapsed || communicationOpen) && (
             <div className="space-y-1">
-              {communicationNavItems.map((item) => {
+              {communicationItems.map((item) => {
                 const active = location.pathname === item.path || location.pathname.startsWith(item.path);
                 const c = colorStyles[item.color];
 
@@ -683,7 +760,7 @@ export function AppSidebar({
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('CRM') && 'hidden')}>
+        <div className={cn('px-2', collapsed && 'px-0', !showCrmGroup && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -738,7 +815,7 @@ export function AppSidebar({
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('Personal') && 'hidden')}>
+        <div className={cn('px-2', collapsed && 'px-0', !showPersonalGroup && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -751,7 +828,7 @@ export function AppSidebar({
           )}
           {(collapsed || personalOpen) && (
             <div className="space-y-1">
-              {personalNavItems.map((item) => {
+              {personalItems.map((item) => {
                 const active = location.pathname === item.path || location.pathname.startsWith(item.path);
                 const c = colorStyles[item.color];
 
@@ -792,7 +869,7 @@ export function AppSidebar({
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('Reports') && 'hidden')}>
+        <div className={cn('px-2', collapsed && 'px-0', !showReportsGroup && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -805,7 +882,7 @@ export function AppSidebar({
           )}
           {(collapsed || reportsOpen) && (
             <div className="space-y-1">
-              {reportsNavItems.map((item) => {
+              {reportsItems.map((item) => {
                 const active = location.pathname === item.path || location.pathname.startsWith(item.path);
                 const c = colorStyles[item.color];
 
@@ -846,7 +923,7 @@ export function AppSidebar({
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('BlissNatura') && 'hidden')}>
+        <div className={cn('px-2', collapsed && 'px-0', !showBlissNaturaGroup && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -859,7 +936,7 @@ export function AppSidebar({
           )}
           {(collapsed || blissNaturaOpen) && (
             <div className="space-y-1">
-              {blissNaturaNavItems.map((item) => {
+              {blissNaturaItems.map((item) => {
                 const active = location.pathname === item.path || location.pathname.startsWith(item.path);
                 const c = colorStyles[item.color];
 
@@ -900,7 +977,7 @@ export function AppSidebar({
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('EspacoAbsoluto') && 'hidden')}>
+        <div className={cn('px-2', collapsed && 'px-0', !showEspacoAbsolutoGroup && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -913,7 +990,7 @@ export function AppSidebar({
           )}
           {(collapsed || espacoAbsolutoOpen) && (
             <div className="space-y-1">
-              {espacoAbsolutoNavItems.map((item) => {
+              {espacoAbsolutoItems.map((item) => {
                 const active = location.pathname === item.path || location.pathname.startsWith(item.path);
                 const c = colorStyles[item.color];
 
@@ -954,7 +1031,7 @@ export function AppSidebar({
           )}
         </div>
 
-        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('MyFormula') && 'hidden')}>
+        <div className={cn('px-2', collapsed && 'px-0', !showMyFormulaGroup && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -967,7 +1044,7 @@ export function AppSidebar({
           )}
           {(collapsed || myFormulaOpen) && (
             <div className="space-y-1">
-              {myFormulaNavItems.map((item) => {
+              {myFormulaItems.map((item) => {
                 const active = location.pathname === item.path || location.pathname.startsWith(item.path);
                 const c = colorStyles[item.color];
 

@@ -308,65 +308,492 @@ const App = () => (
                 }
               />
 
-              <Route path="/support" element={<Navigate to="/support/tickets" replace />} />
-              <Route path="/support/categories" element={<SupportCategories />} />
-              <Route path="/support/tickets" element={<SupportTickets />} />
+              <Route
+                path="/support"
+                element={
+                  <RequirePermission
+                    permission={[
+                      "support.tickets.read",
+                      "support.tickets.write",
+                      "support.categories.read",
+                      "support.categories.write",
+                      "support.*",
+                    ]}
+                  >
+                    <Navigate to="/support/tickets" replace />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/support/categories"
+                element={
+                  <RequirePermission permission={["support.categories.read", "support.categories.write"]}>
+                    <SupportCategories />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/support/tickets"
+                element={
+                  <RequirePermission permission={["support.tickets.read", "support.tickets.write"]}>
+                    <SupportTickets />
+                  </RequirePermission>
+                }
+              />
 
-              <Route path="/finance" element={<Navigate to="/finance/bank-accounts" replace />} />
-              <Route path="/finance/bank-accounts" element={<BankAccounts />} />
-              <Route path="/finance/categories" element={<FinanceCategories />} />
-              <Route path="/finance/cost-centers" element={<FinanceCostCenters />} />
-              <Route path="/finance/transactions" element={<FinanceTransactions />} />
+              <Route
+                path="/finance"
+                element={
+                  <RequirePermission
+                    permission={[
+                      "finance.bank-accounts.read",
+                      "finance.bank-accounts.write",
+                      "finance.categories.read",
+                      "finance.categories.write",
+                      "finance.cost-centers.read",
+                      "finance.cost-centers.write",
+                      "finance.transactions.read",
+                      "finance.transactions.write",
+                      "finance.*",
+                    ]}
+                  >
+                    <Navigate to="/finance/bank-accounts" replace />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/finance/bank-accounts"
+                element={
+                  <RequirePermission permission={["finance.bank-accounts.read", "finance.bank-accounts.write"]}>
+                    <BankAccounts />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/finance/categories"
+                element={
+                  <RequirePermission permission={["finance.categories.read", "finance.categories.write"]}>
+                    <FinanceCategories />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/finance/cost-centers"
+                element={
+                  <RequirePermission permission={["finance.cost-centers.read", "finance.cost-centers.write"]}>
+                    <FinanceCostCenters />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/finance/transactions"
+                element={
+                  <RequirePermission permission={["finance.transactions.read", "finance.transactions.write"]}>
+                    <FinanceTransactions />
+                  </RequirePermission>
+                }
+              />
 
-              <Route path="/hr" element={<Navigate to="/hr/employees" replace />} />
-              <Route path="/hr/employees" element={<HrEmployees />} />
-              <Route path="/hr/employees/new" element={<HrEmployeeForm />} />
-              <Route path="/hr/employees/:id" element={<HrEmployeeDetail />} />
-              <Route path="/hr/employees/:id/edit" element={<HrEmployeeForm />} />
-              <Route path="/hr/payrolls" element={<HrPayrolls />} />
-              <Route path="/hr/payrolls/new" element={<HrPayrollForm />} />
-              <Route path="/hr/payrolls/:id/edit" element={<HrPayrollForm />} />
-              <Route path="/hr/vacations" element={<HrVacations />} />
-              <Route path="/hr/vacations/new" element={<HrVacationForm />} />
-              <Route path="/hr/vacations/:id/edit" element={<HrVacationForm />} />
-              <Route path="/hr/timesheets" element={<HrTimesheets />} />
-              <Route path="/hr/timesheets/new" element={<HrTimesheetForm />} />
-              <Route path="/hr/timesheets/:id/edit" element={<HrTimesheetForm />} />
+              <Route
+                path="/hr"
+                element={
+                  <RequirePermission
+                    permission={[
+                      "hr.employees.read",
+                      "hr.employees.write",
+                      "hr.payrolls.read",
+                      "hr.payrolls.write",
+                      "hr.vacations.read",
+                      "hr.vacations.write",
+                      "hr.timesheets.read",
+                      "hr.timesheets.write",
+                      "hr.*",
+                    ]}
+                  >
+                    <Navigate to="/hr/employees" replace />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/hr/employees"
+                element={
+                  <RequirePermission permission={["hr.employees.read", "hr.employees.write"]}>
+                    <HrEmployees />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/hr/employees/new"
+                element={
+                  <RequirePermission permission="hr.employees.write">
+                    <HrEmployeeForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/hr/employees/:id"
+                element={
+                  <RequirePermission permission={["hr.employees.read", "hr.employees.write"]}>
+                    <HrEmployeeDetail />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/hr/employees/:id/edit"
+                element={
+                  <RequirePermission permission="hr.employees.write">
+                    <HrEmployeeForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/hr/payrolls"
+                element={
+                  <RequirePermission permission={["hr.payrolls.read", "hr.payrolls.write"]}>
+                    <HrPayrolls />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/hr/payrolls/new"
+                element={
+                  <RequirePermission permission="hr.payrolls.write">
+                    <HrPayrollForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/hr/payrolls/:id/edit"
+                element={
+                  <RequirePermission permission="hr.payrolls.write">
+                    <HrPayrollForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/hr/vacations"
+                element={
+                  <RequirePermission permission={["hr.vacations.read", "hr.vacations.write"]}>
+                    <HrVacations />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/hr/vacations/new"
+                element={
+                  <RequirePermission permission="hr.vacations.write">
+                    <HrVacationForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/hr/vacations/:id/edit"
+                element={
+                  <RequirePermission permission="hr.vacations.write">
+                    <HrVacationForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/hr/timesheets"
+                element={
+                  <RequirePermission permission={["hr.timesheets.read", "hr.timesheets.write"]}>
+                    <HrTimesheets />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/hr/timesheets/new"
+                element={
+                  <RequirePermission permission="hr.timesheets.write">
+                    <HrTimesheetForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/hr/timesheets/:id/edit"
+                element={
+                  <RequirePermission permission="hr.timesheets.write">
+                    <HrTimesheetForm />
+                  </RequirePermission>
+                }
+              />
 
-              <Route path="/communication" element={<Navigate to="/communication/video-call" replace />} />
-              <Route path="/communication/video-call" element={<CommVideoCall />} />
-              <Route path="/communication/messages" element={<CommInternalMessages />} />
-              <Route path="/communication/chat" element={<CommChat />} />
-              <Route path="/communication/posts" element={<CommAdminPosts />} />
+              <Route
+                path="/communication"
+                element={
+                  <RequirePermission
+                    permission={[
+                      "communication.video-call.access",
+                      "communication.chat.access",
+                      "communication.messages.read",
+                      "communication.messages.write",
+                      "communication.posts.read",
+                      "communication.posts.write",
+                      "communication.*",
+                    ]}
+                  >
+                    <Navigate to="/communication/video-call" replace />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/communication/video-call"
+                element={
+                  <RequirePermission permission="communication.video-call.access">
+                    <CommVideoCall />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/communication/messages"
+                element={
+                  <RequirePermission permission={["communication.messages.read", "communication.messages.write"]}>
+                    <CommInternalMessages />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/communication/chat"
+                element={
+                  <RequirePermission permission="communication.chat.access">
+                    <CommChat />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/communication/posts"
+                element={
+                  <RequirePermission permission={["communication.posts.read", "communication.posts.write"]}>
+                    <CommAdminPosts />
+                  </RequirePermission>
+                }
+              />
 
-              <Route path="/blissnatura" element={<Navigate to="/blissnatura/dashboard" replace />} />
-              <Route path="/blissnatura/dashboard" element={<BlissNaturaDashboard />} />
-              <Route path="/blissnatura/orders" element={<BlissNaturaOrders />} />
-              <Route path="/blissnatura/orders/:id" element={<BlissNaturaOrderDetail />} />
-              <Route path="/blissnatura/customers" element={<BlissNaturaCustomers />} />
-              <Route path="/blissnatura/products" element={<BlissNaturaProducts />} />
-              <Route path="/blissnatura/products/:id/edit" element={<BlissNaturaProductEdit />} />
+              <Route
+                path="/blissnatura"
+                element={
+                  <RequirePermission
+                    permission={[
+                      "blissnatura.dashboard.read",
+                      "blissnatura.orders.read",
+                      "blissnatura.customers.read",
+                      "blissnatura.products.read",
+                      "blissnatura.products.write",
+                      "blissnatura.*",
+                    ]}
+                  >
+                    <Navigate to="/blissnatura/dashboard" replace />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/blissnatura/dashboard"
+                element={
+                  <RequirePermission permission="blissnatura.dashboard.read">
+                    <BlissNaturaDashboard />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/blissnatura/orders"
+                element={
+                  <RequirePermission permission="blissnatura.orders.read">
+                    <BlissNaturaOrders />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/blissnatura/orders/:id"
+                element={
+                  <RequirePermission permission="blissnatura.orders.read">
+                    <BlissNaturaOrderDetail />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/blissnatura/customers"
+                element={
+                  <RequirePermission permission="blissnatura.customers.read">
+                    <BlissNaturaCustomers />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/blissnatura/products"
+                element={
+                  <RequirePermission permission={["blissnatura.products.read", "blissnatura.products.write"]}>
+                    <BlissNaturaProducts />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/blissnatura/products/:id/edit"
+                element={
+                  <RequirePermission permission="blissnatura.products.write">
+                    <BlissNaturaProductEdit />
+                  </RequirePermission>
+                }
+              />
 
-              <Route path="/espacoabsoluto" element={<Navigate to="/espacoabsoluto/customers" replace />} />
-              <Route path="/espacoabsoluto/customers" element={<EspacoAbsolutoCustomers />} />
+              <Route
+                path="/espacoabsoluto"
+                element={
+                  <RequirePermission permission={["espacoabsoluto.customers.read", "espacoabsoluto.*"]}>
+                    <Navigate to="/espacoabsoluto/customers" replace />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/espacoabsoluto/customers"
+                element={
+                  <RequirePermission permission="espacoabsoluto.customers.read">
+                    <EspacoAbsolutoCustomers />
+                  </RequirePermission>
+                }
+              />
 
-              <Route path="/myformula" element={<Navigate to="/myformula/dashboard" replace />} />
-              <Route path="/myformula/dashboard" element={<MyFormulaDashboard />} />
-              <Route path="/myformula/orders" element={<MyFormulaOrders />} />
-              <Route path="/myformula/orders/:id" element={<MyFormulaOrderDetail />} />
-              <Route path="/myformula/customers" element={<MyFormulaCustomers />} />
-              <Route path="/myformula/products" element={<MyFormulaProducts />} />
-              <Route path="/myformula/products/:id/edit" element={<MyFormulaProductEdit />} />
-              <Route path="/myformula/quizzes" element={<MyFormulaQuizzes />} />
+              <Route
+                path="/myformula"
+                element={
+                  <RequirePermission
+                    permission={[
+                      "myformula.dashboard.read",
+                      "myformula.orders.read",
+                      "myformula.customers.read",
+                      "myformula.products.read",
+                      "myformula.products.write",
+                      "myformula.quizzes.read",
+                      "myformula.quizzes.write",
+                      "myformula.*",
+                    ]}
+                  >
+                    <Navigate to="/myformula/dashboard" replace />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/myformula/dashboard"
+                element={
+                  <RequirePermission permission="myformula.dashboard.read">
+                    <MyFormulaDashboard />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/myformula/orders"
+                element={
+                  <RequirePermission permission="myformula.orders.read">
+                    <MyFormulaOrders />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/myformula/orders/:id"
+                element={
+                  <RequirePermission permission="myformula.orders.read">
+                    <MyFormulaOrderDetail />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/myformula/customers"
+                element={
+                  <RequirePermission permission="myformula.customers.read">
+                    <MyFormulaCustomers />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/myformula/products"
+                element={
+                  <RequirePermission permission={["myformula.products.read", "myformula.products.write"]}>
+                    <MyFormulaProducts />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/myformula/products/:id/edit"
+                element={
+                  <RequirePermission permission="myformula.products.write">
+                    <MyFormulaProductEdit />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/myformula/quizzes"
+                element={
+                  <RequirePermission permission={["myformula.quizzes.read", "myformula.quizzes.write"]}>
+                    <MyFormulaQuizzes />
+                  </RequirePermission>
+                }
+              />
 
-              <Route path="/reports" element={<Navigate to="/reports/system-logs" replace />} />
-              <Route path="/reports/system-logs" element={<SystemLogs />} />
+              <Route
+                path="/reports"
+                element={
+                  <RequirePermission permission={["reports.system-logs.read", "reports.*"]}>
+                    <Navigate to="/reports/system-logs" replace />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/reports/system-logs"
+                element={
+                  <RequirePermission permission="reports.system-logs.read">
+                    <SystemLogs />
+                  </RequirePermission>
+                }
+              />
 
-              <Route path="/personal" element={<Navigate to="/personal/tasks" replace />} />
-              <Route path="/personal/tasks" element={<MyTasks />} />
-              <Route path="/personal/tasks/new" element={<TaskForm />} />
-              <Route path="/personal/tasks/:id/edit" element={<TaskForm />} />
-              <Route path="/personal/notes" element={<MyNotes />} />
+              <Route
+                path="/personal"
+                element={
+                  <RequirePermission
+                    permission={[
+                      "personal.tasks.read",
+                      "personal.tasks.write",
+                      "personal.notes.read",
+                      "personal.notes.write",
+                      "personal.*",
+                    ]}
+                  >
+                    <Navigate to="/personal/tasks" replace />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/personal/tasks"
+                element={
+                  <RequirePermission permission={["personal.tasks.read", "personal.tasks.write"]}>
+                    <MyTasks />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/personal/tasks/new"
+                element={
+                  <RequirePermission permission="personal.tasks.write">
+                    <TaskForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/personal/tasks/:id/edit"
+                element={
+                  <RequirePermission permission="personal.tasks.write">
+                    <TaskForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/personal/notes"
+                element={
+                  <RequirePermission permission={["personal.notes.read", "personal.notes.write"]}>
+                    <MyNotes />
+                  </RequirePermission>
+                }
+              />
               <Route path="/admin/profile" element={<Profile />} />
             </Route>
             <Route path="*" element={<NotFound />} />
