@@ -64,6 +64,33 @@ function computeCompare(curr: any[], prev: any[]) {
   return { current: computeTotals(curr), prev: computeTotals(prev) };
 }
 
+function normalizeDailyMetrics(rows: DashboardStats['dailyMetrics']) {
+  const byDate = new Map<string, DashboardStats['dailyMetrics'][number]>();
+  for (const r of Array.isArray(rows) ? rows : []) {
+    const date = String((r as any)?.date ?? '').trim();
+    if (!date) continue;
+    const prev = byDate.get(date);
+    if (!prev) {
+      byDate.set(date, {
+        date,
+        sent: Number((r as any)?.sent) || 0,
+        opened: Number((r as any)?.opened) || 0,
+        clicked: Number((r as any)?.clicked) || 0,
+        bounced: Number((r as any)?.bounced) || 0,
+      } as any);
+      continue;
+    }
+    byDate.set(date, {
+      ...prev,
+      sent: (prev.sent || 0) + (Number((r as any)?.sent) || 0),
+      opened: (prev.opened || 0) + (Number((r as any)?.opened) || 0),
+      clicked: (prev.clicked || 0) + (Number((r as any)?.clicked) || 0),
+      bounced: (prev.bounced || 0) + (Number((r as any)?.bounced) || 0),
+    });
+  }
+  return Array.from(byDate.values()).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+}
+
 export default function Analytics() {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -160,7 +187,7 @@ export default function Analytics() {
       setRefreshing(true);
       if (campaignId) {
         const r = await fetchAnalytics({ days: nextDays * 2, campaignId });
-        const all = Array.isArray(r.data.dailyMetrics) ? r.data.dailyMetrics : [];
+        const all = normalizeDailyMetrics(Array.isArray(r.data.dailyMetrics) ? r.data.dailyMetrics : []);
         const prev = all.slice(0, Math.max(0, all.length - nextDays));
         const curr = all.slice(-nextDays);
         setSeriesMetrics(curr);
@@ -171,7 +198,7 @@ export default function Analytics() {
       if (!data) setLoading(true);
 
       const r = await fetchAnalytics({ days: nextDays * 2 });
-      const all = Array.isArray(r.data.dailyMetrics) ? r.data.dailyMetrics : [];
+      const all = normalizeDailyMetrics(Array.isArray(r.data.dailyMetrics) ? r.data.dailyMetrics : []);
       const truncated = all.slice(-nextDays);
       setData({ ...r.data, dailyMetrics: truncated });
       setCompare(computeCompare(truncated, all.slice(0, Math.max(0, all.length - nextDays))));
@@ -187,7 +214,7 @@ export default function Analytics() {
       const mock = m.mockDashboardStats;
       setData({
         ...mock,
-        dailyMetrics: Array.isArray(mock.dailyMetrics) ? mock.dailyMetrics.slice(-nextDays) : [],
+        dailyMetrics: normalizeDailyMetrics(Array.isArray(mock.dailyMetrics) ? mock.dailyMetrics.slice(-nextDays) : []),
       });
     } finally {
       setLoading(false);
@@ -251,7 +278,7 @@ export default function Analytics() {
         const results: Record<string, DashboardStats['dailyMetrics']> = {};
         await Promise.all(ids.map(async id => {
           const r = await fetchAnalytics({ days, campaignId: id });
-          results[id] = Array.isArray(r.data.dailyMetrics) ? r.data.dailyMetrics : [];
+          results[id] = normalizeDailyMetrics(Array.isArray(r.data.dailyMetrics) ? r.data.dailyMetrics : []);
         }));
         setSelectedSeries(results);
         const keys = Object.keys(results);
@@ -776,41 +803,89 @@ export default function Analytics() {
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
           {(() => {
             const rows = Array.isArray(data.heatmapData) ? data.heatmapData : [];
-            const max = Math.max(1, ...rows.map(r => Number(r.value) || 0));
-            const map = new Map(rows.map(r => [`${r.day}-${r.hour}`, Number(r.value) || 0]));
+            if (!rows.length) {
+              return <div className="text-sm text-muted-foreground">Sem dados suficientes para montar o heatmap.</div>;
+            }
+
             const dayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            const map = new Map(rows.map(r => [`${r.day}-${r.hour}`, Number(r.value) || 0] as const));
+            const values = rows.map(r => Number(r.value) || 0);
+            const max = Math.max(1, ...values);
+
+            const alphaByLevel = [0.06, 0.16, 0.28, 0.44, 0.62, 0.82];
+            const levelFor = (v: number) => {
+              if (!v) return 0;
+              const ratio = v / max;
+              return Math.max(1, Math.min(alphaByLevel.length - 1, Math.ceil(ratio * (alphaByLevel.length - 1))));
+            };
+
             return (
-              <div className="grid grid-cols-[auto_1fr] gap-3">
-                <div className="grid grid-rows-7 gap-1 pt-5">
-                  {dayLabels.map(d => (
-                    <div key={d} className="h-3 flex items-center text-[10px] text-muted-foreground">{d}</div>
-                  ))}
-                </div>
-                <div>
-                  <div className="grid grid-cols-24 gap-1 text-[10px] text-muted-foreground mb-2">
-                    {Array.from({ length: 24 }, (_, h) => (
-                      <div key={h} className="h-3 flex items-center justify-center">{h % 6 === 0 ? h : ''}</div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                  <span>Menos</span>
+                  <div className="flex items-center gap-1">
+                    {alphaByLevel.map((a, i) => (
+                      <div
+                        key={i}
+                        className="h-3 w-5 rounded-[4px] border"
+                        style={{
+                          backgroundColor: `hsl(var(--primary) / ${a})`,
+                          borderColor: 'hsl(var(--border) / 0.7)',
+                        }}
+                      />
                     ))}
                   </div>
-                  <div className="grid grid-rows-7 gap-1">
-                    {Array.from({ length: 7 }, (_, day) => (
-                      <div key={day} className="grid grid-cols-24 gap-1">
-                        {Array.from({ length: 24 }, (_, hour) => {
-                          const v = map.get(`${day}-${hour}`) ?? 0;
-                          const a = Math.min(1, 0.08 + (v / max) * 0.92);
-                          return (
-                            <div
-                              key={hour}
-                              className="h-3 rounded-[3px] bg-primary"
-                              style={{ opacity: a }}
-                              title={`${dayLabels[day]} ${hour}h: ${v}`}
-                            />
-                          );
-                        })}
+                  <span>Mais</span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <div className="min-w-[820px]">
+                    <div className="grid grid-cols-[auto_1fr] gap-3">
+                      <div className="grid grid-rows-7 gap-1 pt-6">
+                        {dayLabels.map(d => (
+                          <div key={d} className="h-4 flex items-center text-[11px] text-muted-foreground">{d}</div>
+                        ))}
                       </div>
-                    ))}
+
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-24 gap-1 text-[10px] text-muted-foreground">
+                          {Array.from({ length: 24 }, (_, h) => (
+                            <div key={h} className="h-4 flex items-center justify-center">
+                              {h % 3 === 0 ? String(h).padStart(2, '0') : ''}
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="grid grid-rows-7 gap-1">
+                          {Array.from({ length: 7 }, (_, day) => (
+                            <div key={day} className="grid grid-cols-24 gap-1">
+                              {Array.from({ length: 24 }, (_, hour) => {
+                                const v = map.get(`${day}-${hour}`) ?? 0;
+                                const a = alphaByLevel[levelFor(v)];
+                                return (
+                                  <div
+                                    key={hour}
+                                    className={cn(
+                                      'h-4 rounded-[4px] border transition-colors',
+                                      v > 0 ? 'hover:border-primary/60' : 'hover:border-border',
+                                    )}
+                                    style={{
+                                      backgroundColor: `hsl(var(--primary) / ${a})`,
+                                      borderColor: 'hsl(var(--border) / 0.7)',
+                                    }}
+                                    title={`${dayLabels[day]} • ${String(hour).padStart(2, '0')}h: ${v.toLocaleString()}`}
+                                  />
+                                );
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
+
+                <div className="text-[11px] text-muted-foreground">Passe o mouse nas células para ver o valor por dia/hora.</div>
               </div>
             );
           })()}
