@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { MessageSquare, Send, X } from 'lucide-react';
 
 import type { InternalMessage, User as AppUser } from '@/types';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   fetchAdminUser,
   fetchCommunicationRecipients,
@@ -14,6 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn, getInitials, playSound, resolvePhotoUrl } from '@/lib/utils';
 
 type ChatOpenEventDetail = { userId: string; name?: string; email?: string };
@@ -91,7 +93,56 @@ export function ChatDock() {
     return map;
   }, [users]);
 
+  const isMobile = useIsMobile();
+
   const unreadCount = useMemo(() => inbox.reduce((acc, m: any) => (msgReadAt(m) ? acc : acc + 1), 0), [inbox]);
+
+  const unreadByUserId = useMemo(() => {
+    const map: Record<string, number> = {};
+    const meId = String(me.id || '').trim();
+    if (!meId) return map;
+
+    inbox.forEach((m: any) => {
+      const from = msgFromId(m);
+      if (!from || from === meId) return;
+      if (msgReadAt(m)) return;
+      map[from] = (map[from] ?? 0) + 1;
+    });
+
+    return map;
+  }, [inbox, me.id]);
+
+  const conversations = useMemo(() => {
+    const meId = String(me.id || '').trim();
+    if (!meId) return [] as Array<{ userId: string; name: string; email: string; lastTs: number; unread: number }>;
+
+    const latestByUser = new Map<string, number>();
+    const all = [...inbox, ...sent];
+
+    all.forEach((m: any) => {
+      const from = msgFromId(m);
+      const to = msgToId(m);
+      if (!from || !to) return;
+
+      const other = from === meId ? to : to === meId ? from : '';
+      if (!other || other === meId) return;
+
+      const ts = Date.parse(msgWhenIso(m)) || 0;
+      const prev = latestByUser.get(other) ?? 0;
+      if (ts > prev) latestByUser.set(other, ts);
+    });
+
+    const rows = Array.from(latestByUser.entries()).map(([userId, lastTs]) => {
+      const cached = userDetailsById[userId];
+      const rec = userById.get(userId);
+      const name = String(cached?.name || rec?.name || userId).trim();
+      const email = String(cached?.email || rec?.email || '').trim();
+      const unread = unreadByUserId[userId] ?? 0;
+      return { userId, name, email, lastTs, unread };
+    });
+
+    return rows.sort((a, b) => b.lastTs - a.lastTs);
+  }, [inbox, sent, me.id, unreadByUserId, userById, userDetailsById]);
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('gmcentral:chat:unread', { detail: { count: unreadCount } }));
@@ -133,6 +184,13 @@ export function ChatDock() {
       return;
     }
   };
+
+  useEffect(() => {
+    if (!open) return;
+    conversations.slice(0, 10).forEach((c) => {
+      ensureUserDetails(c.userId);
+    });
+  }, [conversations, open]);
 
   const scrollToBottom = () => {
     const el = listRef.current;
@@ -331,7 +389,7 @@ export function ChatDock() {
   const isMinimized = !open;
 
   return (
-    <div className="fixed bottom-4 right-4 z-[220]">
+    <div className={cn('fixed z-[220]', !open || !isMobile ? 'bottom-4 right-4' : 'inset-0')}>
       {isMinimized ? (
         <Button
           type="button"
@@ -348,12 +406,37 @@ export function ChatDock() {
           ) : null}
         </Button>
       ) : (
-        <div className="w-[360px] max-w-[calc(100vw-2rem)]">
-          <div className="glass-card p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
+        <div className={cn('w-[360px] max-w-[calc(100vw-2rem)]', isMobile && 'w-screen max-w-none h-svh')}>
+          <div className={cn('glass-card p-4', isMobile && 'h-svh w-screen max-w-none rounded-none p-0 flex flex-col')}>
+            <div className={cn('flex items-start justify-between gap-3', isMobile && 'p-4 border-b border-border/60 shrink-0')}>
+              <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold truncate">{activeUserId ? `Chat com ${activeUser.name}` : 'Chat'}</div>
                 <div className="text-xs text-muted-foreground truncate">{activeUserId ? activeUser.email : ''}</div>
+                {conversations.length > 0 ? (
+                  <div className="mt-2">
+                    <Select
+                      value={activeUserId}
+                      onValueChange={(id) => {
+                        setActiveUserId(String(id));
+                        setActiveMeta({});
+                        setOpen(true);
+                        ensureUserDetails(String(id));
+                        setTimeout(scrollToBottom, 0);
+                      }}
+                    >
+                      <SelectTrigger className="h-9 bg-background/40 border-border/60">
+                        <SelectValue placeholder="Selecionar conversa…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {conversations.map((c) => (
+                          <SelectItem key={c.userId} value={c.userId}>
+                            {c.name}{c.email ? ` (${c.email})` : ''}{c.unread > 0 ? ` · ${c.unread} nova(s)` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
               </div>
               <Button type="button" variant="ghost" size="icon" onClick={() => setOpen(false)}>
                 <X className="h-4 w-4" />
@@ -362,7 +445,10 @@ export function ChatDock() {
 
             <div
               ref={listRef}
-              className="mt-3 h-[260px] overflow-y-auto rounded-md border border-border/60 bg-background/40 p-3 space-y-2"
+              className={cn(
+                'mt-3 h-[260px] overflow-y-auto rounded-md border border-border/60 bg-background/40 p-3 space-y-2',
+                isMobile && 'mt-0 flex-1 min-h-0 rounded-none border-0 bg-background/40 p-4',
+              )}
             >
               {!activeUserId ? (
                 <div className="text-xs text-muted-foreground">Abre um chat a partir de Utilizadores ou responde a uma mensagem recebida.</div>
@@ -423,7 +509,12 @@ export function ChatDock() {
               )}
             </div>
 
-            <div className="mt-3 space-y-2">
+            <div
+              className={cn(
+                'mt-3 space-y-2',
+                isMobile && 'mt-0 shrink-0 border-t border-border/60 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]',
+              )}
+            >
               <div className="flex flex-wrap gap-1">
                 {['😀', '😂', '😍', '👍', '🙏', '🎉', '🔥', '😢'].map((emo) => (
                   <Button
