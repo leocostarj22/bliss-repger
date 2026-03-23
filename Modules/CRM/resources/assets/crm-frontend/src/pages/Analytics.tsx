@@ -9,6 +9,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,6 +57,10 @@ export default function Analytics() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  const selectedCampaign = useMemo(() => {
+    return data?.topCampaigns.find(c => c.campaignId === selectedCampaignId) ?? null;
+  }, [data?.topCampaigns, selectedCampaignId]);
 
   const load = async (nextDays: number) => {
     try {
@@ -79,17 +84,27 @@ export default function Analytics() {
   };
 
   const pieData = useMemo(() => {
+    if (selectedCampaign) {
+      const openRate = selectedCampaign.sent > 0 ? (selectedCampaign.opened / selectedCampaign.sent) * 100 : 0;
+      const clickRate = selectedCampaign.sent > 0 ? (selectedCampaign.clicked / selectedCampaign.sent) * 100 : 0;
+      const bounceRate = selectedCampaign.sent > 0 ? (selectedCampaign.bounced / selectedCampaign.sent) * 100 : 0;
+      return [
+        { name: 'Aberto', value: openRate },
+        { name: 'Clicado', value: clickRate },
+        { name: 'Rejeitado', value: bounceRate },
+        { name: 'Ignorado', value: Math.max(0, 100 - openRate - clickRate - bounceRate) },
+      ];
+    }
     const openRate = data?.openRate ?? 0;
     const clickRate = data?.clickRate ?? 0;
     const bounceRate = data?.bounceRate ?? 0;
-
     return [
       { name: 'Aberto', value: openRate },
       { name: 'Clicado', value: clickRate },
       { name: 'Rejeitado', value: bounceRate },
       { name: 'Ignorado', value: Math.max(0, 100 - openRate - clickRate - bounceRate) },
     ];
-  }, [data?.bounceRate, data?.clickRate, data?.openRate]);
+  }, [data?.bounceRate, data?.clickRate, data?.openRate, selectedCampaign]);
 
   useEffect(() => {
     load(days);
@@ -203,6 +218,15 @@ export default function Analytics() {
         <div className="glass-card p-6 lg:col-span-2 bg-gradient-to-b from-cyan-500/5 via-background to-background border-t border-cyan-500/20">
           <h3 className="text-sm font-semibold mb-2">Desempenho de Entrega</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
+          {selectedCampaign && (
+            <div className="mb-4 grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+              <div className="rounded-md border p-2 bg-card/50"><div className="text-muted-foreground">Enviado</div><div className="font-semibold font-mono">{selectedCampaign.sent.toLocaleString()}</div></div>
+              <div className="rounded-md border p-2 bg-card/50"><div className="text-muted-foreground">Aberto</div><div className="font-semibold font-mono">{selectedCampaign.opened.toLocaleString()}</div></div>
+              <div className="rounded-md border p-2 bg-card/50"><div className="text-muted-foreground">Clicado</div><div className="font-semibold font-mono">{selectedCampaign.clicked.toLocaleString()}</div></div>
+              <div className="rounded-md border p-2 bg-card/50"><div className="text-muted-foreground">Rejeitado</div><div className="font-semibold font-mono">{selectedCampaign.bounced.toLocaleString()}</div></div>
+              <div className="rounded-md border p-2 bg-card/50"><div className="text-muted-foreground">Abertura</div><div className="font-semibold font-mono">{(selectedCampaign.sent > 0 ? (selectedCampaign.opened / selectedCampaign.sent) * 100 : 0).toFixed(1)}%</div></div>
+            </div>
+          )}
           <ResponsiveContainer width="100%" height={350}>
             <LineChart data={data.dailyMetrics}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.6)" />
@@ -292,31 +316,34 @@ export default function Analytics() {
       <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background">
         <h3 className="text-sm font-semibold mb-2">Comparação de Campanhas</h3>
         <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-3 px-4 font-medium text-muted-foreground">Campanha</th>
-                <th className="text-right py-3 px-4 font-medium text-muted-foreground">Enviado</th>
-                <th className="text-right py-3 px-4 font-medium text-muted-foreground">Aberto</th>
-                <th className="text-right py-3 px-4 font-medium text-muted-foreground">Clicado</th>
-                <th className="text-right py-3 px-4 font-medium text-muted-foreground">Rejeitado</th>
-                <th className="text-right py-3 px-4 font-medium text-muted-foreground">Taxa de Abertura</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.topCampaigns.map(c => (
-                <tr key={c.campaignId} className="border-b border-border/50 table-row-hover">
-                  <td className="py-3 px-4 font-medium">{c.campaignName}</td>
-                  <td className="py-3 px-4 text-right font-mono">{c.sent.toLocaleString()}</td>
-                  <td className="py-3 px-4 text-right font-mono">{c.opened.toLocaleString()}</td>
-                  <td className="py-3 px-4 text-right font-mono">{c.clicked.toLocaleString()}</td>
-                  <td className="py-3 px-4 text-right font-mono">{c.bounced.toLocaleString()}</td>
-                  <td className="py-3 px-4 text-right font-mono text-primary">{(c.sent > 0 ? (c.opened / c.sent) * 100 : 0).toFixed(1)}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="max-h-96 overflow-y-auto pr-1">
+          <div className="divide-y divide-border rounded-md border">
+            {data.topCampaigns.map(c => {
+              const rate = c.sent > 0 ? (c.opened / c.sent) * 100 : 0;
+              const active = selectedCampaignId === c.campaignId;
+              return (
+                <button
+                  key={c.campaignId}
+                  onClick={() => setSelectedCampaignId(active ? null : c.campaignId)}
+                  className={cn(
+                    'w-full flex items-center justify-between gap-3 p-3 text-left hover:bg-muted/50 transition-colors',
+                    active && 'bg-primary/5 ring-1 ring-primary/30'
+                  )}
+                >
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{c.campaignName}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      Enviado {c.sent.toLocaleString()} • Aberto {c.opened.toLocaleString()} • Clique {c.clicked.toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-mono">{rate.toFixed(1)}%</div>
+                    <div className="text-xs text-muted-foreground">abertura</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
