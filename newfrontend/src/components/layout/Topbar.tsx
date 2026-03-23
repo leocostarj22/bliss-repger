@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Bell, Search, X, Sun, Moon, CheckCheck, Trash2, Cloud, CloudRain, CloudSnow, Wind, Menu } from 'lucide-react';
-import { fetchNotifications, fetchUser, markNotificationsAsRead, markNotificationAsRead, clearNotifications, fetchWeatherData } from '@/services/api';
+import { fetchMyAccess, fetchNotifications, fetchUser, markNotificationsAsRead, markNotificationAsRead, clearNotifications, fetchWeatherData } from '@/services/api';
 import { useTheme } from '@/hooks/use-theme';
 import type { AppNotification } from '@/types';
-import { cn, getInitials, playSound, resolvePhotoUrl } from '@/lib/utils';
+import { cn, getInitials, hasEffectivePermission, playSound, resolvePhotoUrl } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link, useNavigate } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -77,6 +77,16 @@ export function Topbar() {
   const [weather, setWeather] = useState<WeatherView>({ temp: 0, condition: '', icon: 'cloud', loading: true, error: false });
   const unreadRef = useRef<number | null>(null);
 
+  const [moduleStatuses, setModuleStatuses] = useState<Record<string, boolean>>({});
+
+  const [accessLoading, setAccessLoading] = useState(true);
+  const [accessIsAdmin, setAccessIsAdmin] = useState(false);
+  const [accessPermissions, setAccessPermissions] = useState<string[]>([]);
+  const [accessPermissionsDeny, setAccessPermissionsDeny] = useState<string[]>([]);
+
+  const isModuleEnabled = (key: string) => moduleStatuses[key] !== false;
+  const can = (perm: string | string[]) => accessIsAdmin || hasEffectivePermission(accessPermissions, accessPermissionsDeny, perm);
+
   const loadNotifications = async (withSound = true) => {
     try {
       const r = await fetchNotifications();
@@ -104,6 +114,56 @@ export function Topbar() {
     return () => clearInterval(t);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const read = () => {
+      try {
+        const raw = window.localStorage.getItem('bliss:module-statuses');
+        if (!raw) {
+          setModuleStatuses({});
+          return;
+        }
+        const parsed = JSON.parse(raw) as Record<string, boolean>;
+        setModuleStatuses(parsed && typeof parsed === 'object' ? parsed : {});
+      } catch {
+        setModuleStatuses({});
+      }
+    };
+
+    const onUpdated = () => read();
+
+    read();
+    window.addEventListener('bliss:modules:updated', onUpdated);
+    return () => window.removeEventListener('bliss:modules:updated', onUpdated);
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    setAccessLoading(true);
+    fetchMyAccess()
+      .then((r) => {
+        if (!alive) return;
+        setAccessIsAdmin(Boolean(r.data.isAdmin));
+        setAccessPermissions(Array.isArray(r.data.permissions) ? r.data.permissions : []);
+        setAccessPermissionsDeny(Array.isArray((r.data as any).permissionsDeny) ? (r.data as any).permissionsDeny : []);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setAccessIsAdmin(false);
+        setAccessPermissions([]);
+        setAccessPermissionsDeny([]);
+      })
+      .finally(() => {
+        if (!alive) return;
+        setAccessLoading(false);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const fetchWeather = async () => {
     try {
       const data = await fetchWeatherData();
@@ -114,29 +174,127 @@ export function Topbar() {
   };
 
   const allSearchSuggestions = useMemo<SearchSuggestion[]>(() => {
-    const pick = (group: string, items: readonly any[]) =>
-      items.map((it: any) => ({
-        key: `${group}:${String(it.path)}`,
-        label: String(it.label),
-        path: String(it.path),
-        group,
-        icon: it.icon,
-      }));
+    if (accessLoading) return [];
+
+    const pick = (
+      group: string,
+      items: readonly any[],
+      requiredByPath: Record<string, string | string[]>,
+      fallback: string | string[],
+      moduleKey?: string,
+    ) =>
+      items
+        .filter((it: any) => {
+          const path = String(it.path);
+          if (moduleKey && !isModuleEnabled(moduleKey)) return false;
+          return can(requiredByPath[path] ?? fallback);
+        })
+        .map((it: any) => ({
+          key: `${group}:${String(it.path)}`,
+          label: String(it.label),
+          path: String(it.path),
+          group,
+          icon: it.icon,
+        }));
+
+    const adminPermissionByPath: Record<string, string | string[]> = {
+      '/admin/companies': ['admin.companies.read', 'admin.companies.write'],
+      '/admin/departments': ['admin.departments.read', 'admin.departments.write'],
+      '/admin/modules': 'admin.modules.manage',
+      '/admin/users': ['admin.users.read', 'admin.users.write'],
+      '/admin/roles': ['admin.roles.read', 'admin.roles.write'],
+    };
+
+    const supportPermissionByPath: Record<string, string | string[]> = {
+      '/support/categories': ['support.categories.read', 'support.categories.write'],
+      '/support/tickets': ['support.tickets.read', 'support.tickets.write'],
+    };
+
+    const financePermissionByPath: Record<string, string | string[]> = {
+      '/finance/bank-accounts': ['finance.bank-accounts.read', 'finance.bank-accounts.write'],
+      '/finance/categories': ['finance.categories.read', 'finance.categories.write'],
+      '/finance/cost-centers': ['finance.cost-centers.read', 'finance.cost-centers.write'],
+      '/finance/transactions': ['finance.transactions.read', 'finance.transactions.write'],
+    };
+
+    const humanResourcesPermissionByPath: Record<string, string | string[]> = {
+      '/hr/employees': ['hr.employees.read', 'hr.employees.write'],
+      '/hr/payrolls': ['hr.payrolls.read', 'hr.payrolls.write'],
+      '/hr/vacations': ['hr.vacations.read', 'hr.vacations.write'],
+      '/hr/timesheets': ['hr.timesheets.read', 'hr.timesheets.write'],
+    };
+
+    const communicationPermissionByPath: Record<string, string | string[]> = {
+      '/communication/video-call': 'communication.video-call.access',
+      '/communication/chat': 'communication.chat.access',
+      '/communication/messages': ['communication.messages.read', 'communication.messages.write'],
+      '/communication/posts': ['communication.posts.read', 'communication.posts.write'],
+    };
+
+    const reportsPermissionByPath: Record<string, string | string[]> = {
+      '/reports/system-logs': 'reports.system-logs.read',
+    };
+
+    const blissNaturaPermissionByPath: Record<string, string | string[]> = {
+      '/blissnatura/dashboard': 'blissnatura.dashboard.read',
+      '/blissnatura/orders': 'blissnatura.orders.read',
+      '/blissnatura/customers': 'blissnatura.customers.read',
+      '/blissnatura/products': ['blissnatura.products.read', 'blissnatura.products.write'],
+    };
+
+    const espacoAbsolutoPermissionByPath: Record<string, string | string[]> = {
+      '/espacoabsoluto/customers': 'espacoabsoluto.customers.read',
+    };
+
+    const myFormulaPermissionByPath: Record<string, string | string[]> = {
+      '/myformula/dashboard': 'myformula.dashboard.read',
+      '/myformula/orders': 'myformula.orders.read',
+      '/myformula/customers': 'myformula.customers.read',
+      '/myformula/products': ['myformula.products.read', 'myformula.products.write'],
+      '/myformula/quizzes': ['myformula.quizzes.read', 'myformula.quizzes.write'],
+    };
+
+    const personalPermissionByPath: Record<string, string | string[]> = {
+      '/personal/tasks': ['personal.tasks.read', 'personal.tasks.write'],
+      '/personal/notes': ['personal.notes.read', 'personal.notes.write'],
+    };
+
+    const extraScreens: Array<{ label: string; path: string; group: string; moduleKey?: string; permission: string | string[] }> = [
+      { label: 'Suporte (Visão Geral)', path: '/support', group: 'Telas', moduleKey: 'Support', permission: ['support.tickets.read', 'support.tickets.write'] },
+      { label: 'Finanças (Visão Geral)', path: '/finance', group: 'Telas', moduleKey: 'Finance', permission: ['finance.transactions.read', 'finance.transactions.write'] },
+      { label: 'Comunicação (Visão Geral)', path: '/communication', group: 'Telas', moduleKey: 'Communication', permission: ['communication.messages.read', 'communication.messages.write', 'communication.chat.access', 'communication.video-call.access', 'communication.posts.read', 'communication.posts.write'] },
+      { label: 'Bliss Natura (Visão Geral)', path: '/blissnatura', group: 'Telas', moduleKey: 'BlissNatura', permission: ['blissnatura.dashboard.read', 'blissnatura.orders.read', 'blissnatura.customers.read', 'blissnatura.products.read', 'blissnatura.products.write'] },
+      { label: 'Espaço Absoluto (Visão Geral)', path: '/espacoabsoluto', group: 'Telas', moduleKey: 'EspacoAbsoluto', permission: 'espacoabsoluto.customers.read' },
+      { label: 'MyFormula (Visão Geral)', path: '/myformula', group: 'Telas', moduleKey: 'MyFormula', permission: ['myformula.dashboard.read', 'myformula.orders.read', 'myformula.customers.read', 'myformula.products.read', 'myformula.products.write', 'myformula.quizzes.read', 'myformula.quizzes.write'] },
+      { label: 'Relatórios (Visão Geral)', path: '/reports', group: 'Telas', moduleKey: 'Reports', permission: 'reports.system-logs.read' },
+      { label: 'Novo utilizador', path: '/admin/users/new', group: 'Telas', moduleKey: 'Administration', permission: 'admin.users.write' },
+      { label: 'Novo cargo', path: '/admin/roles/new', group: 'Telas', moduleKey: 'Administration', permission: 'admin.roles.write' },
+      { label: 'Novo funcionário', path: '/hr/employees/new', group: 'Telas', moduleKey: 'HumanResources', permission: 'hr.employees.write' },
+      { label: 'Novo holerite', path: '/hr/payrolls/new', group: 'Telas', moduleKey: 'HumanResources', permission: 'hr.payrolls.write' },
+      { label: 'Nova férias', path: '/hr/vacations/new', group: 'Telas', moduleKey: 'HumanResources', permission: 'hr.vacations.write' },
+      { label: 'Nova marcação de ponto', path: '/hr/timesheets/new', group: 'Telas', moduleKey: 'HumanResources', permission: 'hr.timesheets.write' },
+      { label: 'Nova tarefa', path: '/personal/tasks/new', group: 'Telas', moduleKey: 'Personal', permission: 'personal.tasks.write' },
+    ];
+
+    const extraAllowed: SearchSuggestion[] = extraScreens
+      .filter((it) => (!it.moduleKey || isModuleEnabled(it.moduleKey)) && can(it.permission))
+      .map((it) => ({ key: `screen:${it.path}`, label: it.label, path: it.path, group: it.group }));
 
     return [
-      ...pick('Dashboard', primaryNavItems),
-      ...pick('Administração', adminNavItems),
-      ...pick('Suporte', supportNavItems),
-      ...pick('Finanças', financeNavItems),
-      ...pick('Recursos Humanos', humanResourcesNavItems),
-      ...pick('Comunicação', communicationNavItems),
-      ...pick('Bliss Natura', blissNaturaNavItems),
-      ...pick('Espaço Absoluto', espacoAbsolutoNavItems),
-      ...pick('MyFormula', myFormulaNavItems),
-      ...pick('Relatórios', reportsNavItems),
-      ...pick('Pessoal', personalNavItems),
+      ...pick('Dashboard', primaryNavItems, {}, '*'),
+      ...pick('Administração', adminNavItems, adminPermissionByPath, 'admin.access', 'Administration'),
+      ...pick('Suporte', supportNavItems, supportPermissionByPath, 'support.access', 'Support'),
+      ...pick('Finanças', financeNavItems, financePermissionByPath, 'finance.access', 'Finance'),
+      ...pick('Recursos Humanos', humanResourcesNavItems, humanResourcesPermissionByPath, 'hr.access', 'HumanResources'),
+      ...pick('Comunicação', communicationNavItems, communicationPermissionByPath, 'communication.access', 'Communication'),
+      ...pick('Bliss Natura', blissNaturaNavItems, blissNaturaPermissionByPath, 'blissnatura.access', 'BlissNatura'),
+      ...pick('Espaço Absoluto', espacoAbsolutoNavItems, espacoAbsolutoPermissionByPath, 'espacoabsoluto.access', 'EspacoAbsoluto'),
+      ...pick('MyFormula', myFormulaNavItems, myFormulaPermissionByPath, 'myformula.access', 'MyFormula'),
+      ...pick('Relatórios', reportsNavItems, reportsPermissionByPath, 'reports.access', 'Reports'),
+      ...pick('Pessoal', personalNavItems, personalPermissionByPath, 'personal.access', 'Personal'),
+      ...extraAllowed,
     ];
-  }, []);
+  }, [accessLoading, accessIsAdmin, accessPermissions, accessPermissionsDeny, moduleStatuses]);
 
   const q = normalizeHay(searchQuery);
 
@@ -196,11 +354,7 @@ export function Topbar() {
         .map((r) => {
           const path = String(r?.path ?? '');
           const hit = allSearchSuggestions.find((s) => s.path === path);
-          if (hit) return hit;
-          const label = String(r?.label ?? path);
-          const group = String(r?.group ?? '');
-          if (!path) return null;
-          return { key: `recent:${path}`, path, label, group } as SearchSuggestion;
+          return hit ?? null;
         })
         .filter(Boolean) as SearchSuggestion[];
 
