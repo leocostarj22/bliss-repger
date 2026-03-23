@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, Search, X, Sun, Moon, CheckCheck, Trash2, Cloud, CloudRain, CloudSnow, Wind } from 'lucide-react';
+import { Bell, Search, X, Sun, Moon, CheckCheck, Trash2, Cloud, CloudRain, CloudSnow, Wind, Menu } from 'lucide-react';
 import { fetchNotifications, fetchUser, markNotificationsAsRead, clearNotifications, fetchWeatherData } from '@/services/api';
 import { useTheme } from '@/hooks/use-theme';
 import type { AppNotification } from '@/types';
@@ -28,7 +28,11 @@ const WeatherIcon = ({ type }: { type: string }) => {
   }
 };
 
-export function Topbar() {
+export function Topbar({
+  onOpenMobileMenu,
+}: {
+  onOpenMobileMenu?: () => void;
+}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -73,8 +77,18 @@ export function Topbar() {
 
   return (
     <header className="h-14 border-b border-border bg-card/60 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-20">
-      {/* Left: search */}
+      {/* Left: mobile menu + search */}
       <div className="flex items-center gap-3 w-full max-w-md">
+        <button
+          type="button"
+          className="md:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          aria-label="Abrir menu"
+          title="Menu"
+          onClick={() => onOpenMobileMenu?.()}
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
         <div className="relative w-full">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input

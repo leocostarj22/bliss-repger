@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import {
   LayoutDashboard,
   Send,
@@ -67,18 +68,57 @@ const colorStyles: Record<NavColor, { icon: string; glow: string; hover: string 
   },
 };
 
-export function AppSidebar() {
+export function AppSidebar({
+  mobileOpen,
+  onMobileOpenChange,
+}: {
+  mobileOpen: boolean;
+  onMobileOpenChange: (open: boolean) => void;
+}) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
 
-  return (
-    <aside
-      className={cn(
-        'h-screen sticky top-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 z-30',
-        collapsed ? 'w-16' : 'w-60'
-      )}
-    >
-      {/* Logo */}
+  const content = useMemo(() => {
+    const renderLink = (item: (typeof navItems)[number], opts?: { collapsed?: boolean; onNavigate?: () => void }) => {
+      const active = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
+      const c = colorStyles[item.color];
+
+      const linkEl = (
+        <Link
+          key={item.path}
+          to={item.path}
+          onClick={() => opts?.onNavigate?.()}
+          className={cn('nav-item group relative overflow-hidden', opts?.collapsed && 'justify-center', active && 'active')}
+        >
+          {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+          <item.icon
+            className={cn(
+              'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
+              c.icon,
+              active ? c.glow : c.hover,
+            )}
+          />
+          {!opts?.collapsed && (
+            <span className={cn('transition-colors duration-200', active ? 'font-semibold' : 'group-hover:text-foreground')}>
+              {item.label}
+            </span>
+          )}
+        </Link>
+      );
+
+      if (!opts?.collapsed) return linkEl;
+
+      return (
+        <Tooltip key={item.path}>
+          <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
+          <TooltipContent side="right" align="center">
+            {item.label}
+          </TooltipContent>
+        </Tooltip>
+      );
+    };
+
+    const Logo = ({ collapsed }: { collapsed: boolean }) => (
       <div className="flex items-center gap-3 px-4 h-14 border-b border-sidebar-border shrink-0 relative overflow-hidden group">
         <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
         <div className="w-9 h-9 rounded-xl p-[2px] bg-gradient-to-br from-cyan-400 to-fuchsia-500 shrink-0 shadow-[0_0_15px_rgba(34,211,238,0.3)] group-hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] transition-shadow duration-300">
@@ -92,82 +132,77 @@ export function AppSidebar() {
           </span>
         )}
       </div>
+    );
 
-      {/* Navigation */}
+    const Nav = ({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) => (
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const active = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
-          const c = colorStyles[item.color];
-
-          const link = (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
-            >
-              {active && (
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />
-              )}
-              <item.icon
-                className={cn(
-                  'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
-                  c.icon,
-                  active ? c.glow : c.hover,
-                )}
-              />
-              {!collapsed && (
-                <span
-                  className={cn(
-                    'transition-colors duration-200',
-                    active ? 'font-semibold' : 'group-hover:text-foreground',
-                  )}
-                >
-                  {item.label}
-                </span>
-              )}
-            </Link>
-          );
-
-          if (!collapsed) return link;
-
-          return (
-            <Tooltip key={item.path}>
-              <TooltipTrigger asChild>{link}</TooltipTrigger>
-              <TooltipContent side="right" align="center">
-                {item.label}
-              </TooltipContent>
-            </Tooltip>
-          );
-        })}
+        {navItems.map((item) => renderLink(item, { collapsed, onNavigate }))}
       </nav>
+    );
 
-      {/* Footer: Admin Link & Collapse Toggle */}
+    const Footer = ({ collapsed }: { collapsed: boolean }) => (
       <div className="flex h-12 border-t border-sidebar-border shrink-0">
         <a
           href="/admin"
           className={cn(
-            "flex-1 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent hover:shadow-[0_0_15px_rgba(34,211,238,0.1)] transition-all",
-            collapsed && "px-0"
+            'flex-1 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent hover:shadow-[0_0_15px_rgba(34,211,238,0.1)] transition-all',
+            collapsed && 'px-0',
           )}
           title="Voltar ao Painel Admin"
         >
           <ArrowLeft className="w-4 h-4" />
           {!collapsed && <span className="ml-2 text-sm font-medium">Voltar</span>}
         </a>
-        
+
         <div className="w-[1px] bg-sidebar-border" />
-        
+
         <button
           onClick={() => setCollapsed(!collapsed)}
           className={cn(
-            "flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors",
-            collapsed ? "flex-1" : "w-12"
+            'flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors',
+            collapsed ? 'flex-1' : 'w-12',
           )}
-          title={collapsed ? "Expandir" : "Recolher"}
+          title={collapsed ? 'Expandir' : 'Recolher'}
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
       </div>
-    </aside>
+    );
+
+    return { Logo, Nav, Footer };
+  }, [collapsed, location.pathname]);
+
+  return (
+    <>
+      <aside
+        className={cn(
+          'hidden md:flex h-screen sticky top-0 flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 z-30',
+          collapsed ? 'w-16' : 'w-60',
+        )}
+      >
+        <content.Logo collapsed={collapsed} />
+        <content.Nav collapsed={collapsed} />
+        <content.Footer collapsed={collapsed} />
+      </aside>
+
+      <Sheet open={mobileOpen} onOpenChange={onMobileOpenChange}>
+        <SheetContent side="left" className="w-[18rem] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden">
+          <div className="flex h-full w-full flex-col">
+            <content.Logo collapsed={false} />
+            <content.Nav collapsed={false} onNavigate={() => onMobileOpenChange(false)} />
+            <div className="border-t border-sidebar-border">
+              <a
+                href="/admin"
+                className="flex h-12 items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+                title="Voltar ao Painel Admin"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="ml-2 text-sm font-medium">Voltar</span>
+              </a>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }

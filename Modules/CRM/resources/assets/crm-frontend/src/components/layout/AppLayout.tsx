@@ -1,13 +1,16 @@
+import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { Topbar } from './Topbar';
 
 export function AppLayout() {
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
   return (
     <div className="flex min-h-screen w-full bg-background">
-      <AppSidebar />
+      <AppSidebar mobileOpen={mobileSidebarOpen} onMobileOpenChange={setMobileSidebarOpen} />
       <div className="flex-1 flex flex-col min-w-0">
-        <Topbar />
+        <Topbar onOpenMobileMenu={() => setMobileSidebarOpen(true)} />
         <main className="flex-1 p-6 overflow-auto">
           <Outlet />
         </main>
