@@ -33,11 +33,11 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { fetchAdminModules } from '@/services/api';
 
-const primaryNavItems = [
+export const primaryNavItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/', color: 'cyan' },
 ] as const;
 
-const adminNavItems = [
+export const adminNavItems = [
   { label: 'Empresas', icon: Building2, path: '/admin/companies', color: 'amber' },
   { label: 'Departamentos', icon: Layers, path: '/admin/departments', color: 'violet' },
   { label: 'Módulos', icon: Puzzle, path: '/admin/modules', color: 'fuchsia' },
@@ -45,44 +45,44 @@ const adminNavItems = [
   { label: 'Cargos', icon: BadgeCheck, path: '/admin/roles', color: 'sky' },
 ] as const;
 
-const supportNavItems = [
+export const supportNavItems = [
   { label: 'Categorias', icon: Tags, path: '/support/categories', color: 'violet' },
   { label: 'Tickets', icon: Ticket, path: '/support/tickets', color: 'cyan' },
 ] as const;
 
-const financeNavItems = [
+export const financeNavItems = [
   { label: 'Contas Bancárias', icon: Landmark, path: '/finance/bank-accounts', color: 'amber' },
   { label: 'Categorias', icon: Tags, path: '/finance/categories', color: 'violet' },
   { label: 'Centros de Custo', icon: Target, path: '/finance/cost-centers', color: 'emerald' },
   { label: 'Lançamentos', icon: Receipt, path: '/finance/transactions', color: 'sky' },
 ] as const;
 
-const humanResourcesNavItems = [
+export const humanResourcesNavItems = [
   { label: 'Funcionários', icon: Users, path: '/hr/employees', color: 'emerald' },
   { label: 'Holerites', icon: Receipt, path: '/hr/payrolls', color: 'amber' },
   { label: 'Férias', icon: CalendarDays, path: '/hr/vacations', color: 'violet' },
   { label: 'Marcação de Ponto', icon: Clock, path: '/hr/timesheets', color: 'sky' },
 ] as const;
 
-const communicationNavItems = [
+export const communicationNavItems = [
   { label: 'Video Call', icon: Video, path: '/communication/video-call', color: 'fuchsia' },
   { label: 'Chat', icon: MessageSquare, path: '/communication/chat', color: 'cyan' },
   { label: 'Mensagens Internas', icon: Mail, path: '/communication/messages', color: 'emerald' },
   { label: 'Posts Administrativos', icon: Megaphone, path: '/communication/posts', color: 'amber' },
 ] as const;
 
-const blissNaturaNavItems = [
+export const blissNaturaNavItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/blissnatura/dashboard', color: 'cyan' },
   { label: 'Pedidos', icon: ShoppingCart, path: '/blissnatura/orders', color: 'amber' },
   { label: 'Clientes', icon: Users, path: '/blissnatura/customers', color: 'emerald' },
   { label: 'Produtos', icon: Package, path: '/blissnatura/products', color: 'fuchsia' },
 ] as const;
 
-const espacoAbsolutoNavItems = [
+export const espacoAbsolutoNavItems = [
   { label: 'Clientes', icon: Users, path: '/espacoabsoluto/customers', color: 'emerald' },
 ] as const;
 
-const myFormulaNavItems = [
+export const myFormulaNavItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/myformula/dashboard', color: 'cyan' },
   { label: 'Pedidos', icon: ShoppingCart, path: '/myformula/orders', color: 'amber' },
   { label: 'Clientes', icon: Users, path: '/myformula/customers', color: 'emerald' },
@@ -90,11 +90,11 @@ const myFormulaNavItems = [
   { label: 'Quizzes', icon: Beaker, path: '/myformula/quizzes', color: 'violet' },
 ] as const;
 
-const reportsNavItems = [
+export const reportsNavItems = [
   { label: 'Logs do Sistema', icon: ScrollText, path: '/reports/system-logs', color: 'fuchsia' },
 ] as const;
 
-const personalNavItems = [
+export const personalNavItems = [
   { label: 'Minhas Tarefas', icon: ListTodo, path: '/personal/tasks', color: 'emerald' },
   { label: 'Minhas Anotações', icon: NotebookPen, path: '/personal/notes', color: 'amber' },
 ] as const;

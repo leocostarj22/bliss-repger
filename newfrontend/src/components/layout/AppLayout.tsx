@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { ChatDock } from '@/components/communication/ChatDock';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { AppSidebar } from './AppSidebar';
@@ -7,6 +7,7 @@ import { Topbar } from './Topbar';
 
 export function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const onOpen = () => setMobileOpen(true);
@@ -18,6 +19,11 @@ export function AppLayout() {
       window.removeEventListener('gmcentral:sidebar:close', onClose);
     };
   }, []);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    setMobileOpen(false);
+  }, [location.pathname]);
 
   return (
     <div className="flex min-h-screen w-full bg-background">

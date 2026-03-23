@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Bell, Search, X, Sun, Moon, CheckCheck, Trash2, Cloud, CloudRain, CloudSnow, Wind, Menu } from 'lucide-react';
 import { fetchNotifications, fetchUser, markNotificationsAsRead, markNotificationAsRead, clearNotifications, fetchWeatherData } from '@/services/api';
 import { useTheme } from '@/hooks/use-theme';
@@ -10,6 +10,19 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { logout } from "@/services/api";
 
 import { Input } from "@/components/ui/input";
+import {
+  adminNavItems,
+  blissNaturaNavItems,
+  communicationNavItems,
+  espacoAbsolutoNavItems,
+  financeNavItems,
+  humanResourcesNavItems,
+  myFormulaNavItems,
+  personalNavItems,
+  primaryNavItems,
+  reportsNavItems,
+  supportNavItems,
+} from './AppSidebar';
 
 interface WeatherView {
   temp: number;
@@ -31,8 +44,32 @@ const WeatherIcon = ({ type }: { type: string }) => {
   }
 };
 
+type SearchSuggestion = {
+  key: string;
+  label: string;
+  path: string;
+  group: string;
+  icon?: any;
+};
+
+const TOPBAR_RECENT_SEARCH_KEY = 'gmcentral:topbar:recent_search';
+
+const normalizeHay = (v: string) =>
+  v
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+
 export function Topbar() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchSelectedIndex, setSearchSelectedIndex] = useState(0);
+  const [recentSearches, setRecentSearches] = useState<SearchSuggestion[]>([]);
+  const searchBoxRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const activeItemRef = useRef<HTMLButtonElement | null>(null);
+
   const navigate = useNavigate();
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -74,6 +111,135 @@ export function Topbar() {
     } catch (e) {
       setWeather({ temp: 0, condition: 'Erro', icon: 'cloud', loading: false, error: true });
     }
+  };
+
+  const allSearchSuggestions = useMemo<SearchSuggestion[]>(() => {
+    const pick = (group: string, items: readonly any[]) =>
+      items.map((it: any) => ({
+        key: `${group}:${String(it.path)}`,
+        label: String(it.label),
+        path: String(it.path),
+        group,
+        icon: it.icon,
+      }));
+
+    return [
+      ...pick('Dashboard', primaryNavItems),
+      ...pick('Administração', adminNavItems),
+      ...pick('Suporte', supportNavItems),
+      ...pick('Finanças', financeNavItems),
+      ...pick('Recursos Humanos', humanResourcesNavItems),
+      ...pick('Comunicação', communicationNavItems),
+      ...pick('Bliss Natura', blissNaturaNavItems),
+      ...pick('Espaço Absoluto', espacoAbsolutoNavItems),
+      ...pick('MyFormula', myFormulaNavItems),
+      ...pick('Relatórios', reportsNavItems),
+      ...pick('Pessoal', personalNavItems),
+    ];
+  }, []);
+
+  const q = normalizeHay(searchQuery);
+
+  const filteredSuggestions = useMemo(() => {
+    if (!q) return [];
+    return allSearchSuggestions
+      .filter((s) => normalizeHay(`${s.label} ${s.group} ${s.path}`).includes(q))
+      .slice(0, 12);
+  }, [allSearchSuggestions, q]);
+
+  const visibleSuggestions = q ? filteredSuggestions : recentSearches;
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    activeItemRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [searchOpen, searchSelectedIndex, q]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const key = String(e.key || '').toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  useEffect(() => {
+    const onDown = (ev: PointerEvent) => {
+      const el = searchBoxRef.current;
+      if (!el) return;
+      const target = ev.target as Node | null;
+      if (target && el.contains(target)) return;
+      setSearchOpen(false);
+    };
+
+    window.addEventListener('pointerdown', onDown);
+    return () => window.removeEventListener('pointerdown', onDown);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const raw = window.localStorage.getItem(TOPBAR_RECENT_SEARCH_KEY);
+      if (!raw) {
+        setRecentSearches([]);
+        return;
+      }
+      const parsed = JSON.parse(raw) as Array<{ path?: string; label?: string; group?: string }>;
+      const rows = Array.isArray(parsed) ? parsed : [];
+
+      const hydrated = rows
+        .map((r) => {
+          const path = String(r?.path ?? '');
+          const hit = allSearchSuggestions.find((s) => s.path === path);
+          if (hit) return hit;
+          const label = String(r?.label ?? path);
+          const group = String(r?.group ?? '');
+          if (!path) return null;
+          return { key: `recent:${path}`, path, label, group } as SearchSuggestion;
+        })
+        .filter(Boolean) as SearchSuggestion[];
+
+      setRecentSearches(hydrated.slice(0, 8));
+    } catch {
+      setRecentSearches([]);
+    }
+  }, [allSearchSuggestions]);
+
+  const pushRecent = (it: SearchSuggestion) => {
+    setRecentSearches((prev) => {
+      const next = [it, ...prev.filter((p) => p.path !== it.path)].slice(0, 8);
+      try {
+        window.localStorage.setItem(
+          TOPBAR_RECENT_SEARCH_KEY,
+          JSON.stringify(next.map((x) => ({ path: x.path, label: x.label, group: x.group }))),
+        );
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
+  const clearRecent = () => {
+    setRecentSearches([]);
+    try {
+      window.localStorage.removeItem(TOPBAR_RECENT_SEARCH_KEY);
+    } catch {
+      // ignore
+    }
+  };
+
+  const goToSuggestion = (it: SearchSuggestion) => {
+    pushRecent(it);
+    setSearchQuery('');
+    setSearchSelectedIndex(0);
+    setSearchOpen(false);
+    navigate(it.path);
   };
 
   const { theme, toggle } = useTheme();
@@ -120,15 +286,112 @@ export function Topbar() {
         >
           <Menu className="w-5 h-5" />
         </button>
-        <div className="relative w-full">
+        <div ref={searchBoxRef} className="relative w-full">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
+            ref={searchInputRef}
             type="search"
             placeholder="Pesquisar..."
             className="w-full pl-9 bg-secondary/50 border-transparent focus:bg-background focus:border-input transition-all"
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onFocus={() => setSearchOpen(true)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setSearchSelectedIndex(0);
+              setSearchOpen(true);
+            }}
+            onKeyDown={(e) => {
+              const max = visibleSuggestions.length - 1;
+
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setSearchOpen(true);
+                setSearchSelectedIndex((i) => (max < 0 ? 0 : Math.min(max, i + 1)));
+                return;
+              }
+
+              if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setSearchOpen(true);
+                setSearchSelectedIndex((i) => (max < 0 ? 0 : Math.max(0, i - 1)));
+                return;
+              }
+
+              if (e.key === 'Enter') {
+                if (!searchOpen) {
+                  setSearchOpen(true);
+                  return;
+                }
+                const hit = visibleSuggestions[searchSelectedIndex];
+                if (hit) goToSuggestion(hit);
+                return;
+              }
+
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                if (searchQuery.trim()) {
+                  setSearchQuery('');
+                  setSearchSelectedIndex(0);
+                } else {
+                  setSearchOpen(false);
+                }
+              }
+            }}
           />
+
+          {searchOpen && (q || recentSearches.length > 0) ? (
+            <div className="absolute left-0 right-0 top-full mt-2 z-50 rounded-lg border border-border bg-popover shadow-xl overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border/60">
+                <div className="text-xs font-semibold text-muted-foreground">
+                  {q ? 'Resultados' : 'Recentes'}
+                </div>
+                {!q && recentSearches.length > 0 ? (
+                  <button
+                    type="button"
+                    className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={clearRecent}
+                  >
+                    Limpar
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="max-h-[60vh] overflow-y-auto p-1">
+                {visibleSuggestions.length === 0 ? (
+                  <div className="px-3 py-6 text-sm text-muted-foreground text-center">Sem resultados</div>
+                ) : (
+                  visibleSuggestions.map((it, idx) => {
+                    const active = idx === searchSelectedIndex;
+                    const Icon = it.icon as any;
+
+                    return (
+                      <button
+                        key={it.key}
+                        ref={active ? activeItemRef : undefined}
+                        type="button"
+                        onMouseEnter={() => setSearchSelectedIndex(idx)}
+                        onClick={() => goToSuggestion(it)}
+                        className={cn(
+                          'w-full flex items-center gap-2 rounded-md px-2 py-2 text-sm text-left transition-colors',
+                          active
+                            ? 'bg-secondary text-foreground'
+                            : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                        )}
+                      >
+                        {Icon ? <Icon className="w-4 h-4 shrink-0" /> : <Search className="w-4 h-4 shrink-0" />}
+                        <span className="truncate">{it.label}</span>
+                        <span className="ml-auto text-[11px] text-muted-foreground">{it.group}</span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="border-t border-border/60 px-3 py-2 text-[11px] text-muted-foreground">
+                ↑↓ navegar · Enter abrir · Esc fechar · Ctrl/Cmd+K
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -259,7 +522,6 @@ export function Topbar() {
                 try {
                   await logout();
                 } catch {
-                  // ignore
                 } finally {
                   window.location.href = '/';
                 }
