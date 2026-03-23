@@ -1,17 +1,17 @@
 {
   "resources/assets/crm-frontend/src/main.css": {
-    "file": "assets/main-f79a0eaf.css",
+    "file": "assets/main-16c20da2.css",
     "src": "resources/assets/crm-frontend/src/main.css"
   },
   "resources/assets/crm-frontend/src/main.tsx": {
     "css": [
-      "assets/main-f79a0eaf.css"
+      "assets/main-16c20da2.css"
     ],
     "dynamicImports": [
       "resources/assets/crm-frontend/src/services/mockData.ts",
       "resources/assets/crm-frontend/src/services/mockData.ts"
     ],
-    "file": "assets/main-4013e3c0.js",
+    "file": "assets/main-656a7a89.js",
     "isEntry": true,
     "src": "resources/assets/crm-frontend/src/main.tsx"
   },

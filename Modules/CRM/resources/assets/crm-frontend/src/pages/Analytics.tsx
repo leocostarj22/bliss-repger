@@ -827,8 +827,28 @@ export default function Analytics() {
             }
 
             const dayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-            const map = new Map(rows.map(r => [`${r.day}-${r.hour}`, Number(r.value) || 0] as const));
-            const values = rows.map(r => Number(r.value) || 0);
+            const bucketSize = 3;
+            const bucketCount = 8;
+            const bucketLabels = Array.from({ length: bucketCount }, (_, b) => {
+              const start = b * bucketSize;
+              const end = Math.min(23, start + bucketSize - 1);
+              return `${String(start).padStart(2, '0')}-${String(end).padStart(2, '0')}`;
+            });
+
+            const map = new Map<string, number>();
+            for (const r of rows) {
+              const day = Number((r as any)?.day);
+              const hour = Number((r as any)?.hour);
+              const value = Number((r as any)?.value) || 0;
+              if (!Number.isFinite(day) || !Number.isFinite(hour)) continue;
+              const d = Math.min(6, Math.max(0, Math.floor(day)));
+              const h = Math.min(23, Math.max(0, Math.floor(hour)));
+              const b = Math.min(bucketCount - 1, Math.max(0, Math.floor(h / bucketSize)));
+              const key = `${d}-${b}`;
+              map.set(key, (map.get(key) ?? 0) + value);
+            }
+
+            const values = Array.from(map.values());
             const max = Math.max(1, ...values);
 
             const alphaByLevel = [0.06, 0.16, 0.28, 0.44, 0.62, 0.82];
@@ -858,7 +878,7 @@ export default function Analytics() {
                 </div>
 
                 <div className="overflow-x-auto">
-                  <div className="min-w-[820px]">
+                  <div className="min-w-0">
                     <div className="grid grid-cols-[auto_1fr] gap-3">
                       <div className="grid grid-rows-7 gap-1 pt-6">
                         {dayLabels.map(d => (
@@ -867,23 +887,23 @@ export default function Analytics() {
                       </div>
 
                       <div className="space-y-2">
-                        <div className="grid grid-cols-24 gap-1 text-[10px] text-muted-foreground">
-                          {Array.from({ length: 24 }, (_, h) => (
-                            <div key={h} className="h-4 flex items-center justify-center">
-                              {h % 3 === 0 ? String(h).padStart(2, '0') : ''}
+                        <div className="grid grid-cols-8 gap-1 text-[10px] text-muted-foreground">
+                          {bucketLabels.map((label, b) => (
+                            <div key={b} className="h-4 flex items-center justify-center">
+                              {label}
                             </div>
                           ))}
                         </div>
 
                         <div className="grid grid-rows-7 gap-1">
                           {Array.from({ length: 7 }, (_, day) => (
-                            <div key={day} className="grid grid-cols-24 gap-1">
-                              {Array.from({ length: 24 }, (_, hour) => {
-                                const v = map.get(`${day}-${hour}`) ?? 0;
+                            <div key={day} className="grid grid-cols-8 gap-1">
+                              {Array.from({ length: bucketCount }, (_, b) => {
+                                const v = map.get(`${day}-${b}`) ?? 0;
                                 const a = alphaByLevel[levelFor(v)];
                                 return (
                                   <div
-                                    key={hour}
+                                    key={b}
                                     className={cn(
                                       'h-4 rounded-[4px] border transition-colors',
                                       v > 0 ? 'hover:border-primary/60' : 'hover:border-border',
@@ -892,7 +912,7 @@ export default function Analytics() {
                                       backgroundColor: `hsl(var(--primary) / ${a})`,
                                       borderColor: 'hsl(var(--border) / 0.7)',
                                     }}
-                                    title={`${dayLabels[day]} • ${String(hour).padStart(2, '0')}h: ${v.toLocaleString()}`}
+                                    title={`${dayLabels[day]} • ${bucketLabels[b]}h: ${v.toLocaleString()}`}
                                   />
                                 );
                               })}
@@ -904,7 +924,7 @@ export default function Analytics() {
                   </div>
                 </div>
 
-                <div className="text-[11px] text-muted-foreground">Passe o mouse nas células para ver o valor por dia/hora.</div>
+                <div className="text-[11px] text-muted-foreground">Passe o mouse nas células para ver o valor por dia e faixa horária (3h).</div>
               </div>
             );
           })()}
