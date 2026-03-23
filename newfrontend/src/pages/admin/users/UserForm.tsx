@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
+import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -81,6 +82,66 @@ export default function UserForm() {
   const setField = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
   }, [])
+
+  const allowPermissions = useMemo(() => parsePermissions(form.permissions_allow_text), [form.permissions_allow_text])
+  const denyPermissions = useMemo(() => parsePermissions(form.permissions_deny_text), [form.permissions_deny_text])
+
+  const [allowInput, setAllowInput] = useState("")
+  const [denyInput, setDenyInput] = useState("")
+
+  const setPermText = useCallback(
+    (key: "permissions_allow_text" | "permissions_deny_text", perms: string[]) => {
+      setField(key as any, perms.join("\n") as any)
+    },
+    [setField],
+  )
+
+  const addPerm = useCallback(
+    (key: "permissions_allow_text" | "permissions_deny_text", current: string[], rawValue: string) => {
+      const p = rawValue.trim()
+      if (!p) return
+
+      setForm((prev) => {
+        const list = parsePermissions(prev[key])
+
+        if (p === "*") {
+          return { ...prev, [key]: list.includes("*") ? "" : "*" }
+        }
+
+        if (list.includes("*")) {
+          return prev
+        }
+
+        if (list.includes(p)) {
+          return prev
+        }
+
+        const next = [...list, p]
+        return { ...prev, [key]: next.join("\n") }
+      })
+    },
+    [],
+  )
+
+  const removePerm = useCallback(
+    (key: "permissions_allow_text" | "permissions_deny_text", perm: string) => {
+      const p = perm.trim()
+      if (!p) return
+      setForm((prev) => {
+        const list = parsePermissions(prev[key])
+        const next = list.filter((x) => x !== p)
+        return { ...prev, [key]: next.join("\n") }
+      })
+    },
+    [],
+  )
+
+  const clearPerms = useCallback(
+    (key: "permissions_allow_text" | "permissions_deny_text") => {
+      setField(key as any, "" as any)
+    },
+    [setField],
+  )
 
   const filteredDepartments = useMemo(() => {
     if (!form.company_id) return departments
@@ -464,26 +525,124 @@ export default function UserForm() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Permitir (adicionais)</label>
-                <Textarea
-                  value={form.permissions_allow_text}
-                  onChange={(e) => setField("permissions_allow_text", e.target.value)}
-                  placeholder={'Uma por linha (ou separadas por vírgula)\ncrm.*\nhr.employees.read'}
-                  className="min-h-[120px]"
-                />
-                <div className="text-xs text-muted-foreground">Guarda em permissions_allow (array).</div>
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium">Permitir (adicionais)</div>
+                    <div className="text-xs text-muted-foreground">Guarda em permissions_allow (array).</div>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={() => clearPerms("permissions_allow_text")} disabled={allowPermissions.length === 0}>
+                    Limpar
+                  </Button>
+                </div>
+
+                {allowPermissions.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">—</div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {allowPermissions.map((p) => (
+                      <Badge key={p} variant="secondary" className="gap-1">
+                        <span className="font-mono text-[11px]">{p}</span>
+                        <button
+                          type="button"
+                          className="ml-1 inline-flex items-center justify-center rounded-full hover:bg-background/60"
+                          onClick={() => removePerm("permissions_allow_text", p)}
+                          aria-label={`Remover ${p}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={allowInput}
+                    onChange={(e) => setAllowInput(e.target.value)}
+                    placeholder="Adicionar permissão e Enter (ou vírgula)"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === ",") {
+                        e.preventDefault()
+                        addPerm("permissions_allow_text", allowPermissions, allowInput)
+                        setAllowInput("")
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      addPerm("permissions_allow_text", allowPermissions, allowInput)
+                      setAllowInput("")
+                    }}
+                    disabled={!allowInput.trim()}
+                  >
+                    Adicionar
+                  </Button>
+                </div>
+
+                <div className="text-xs text-muted-foreground">Use * para permitir tudo (apenas no allow).</div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Negar</label>
-                <Textarea
-                  value={form.permissions_deny_text}
-                  onChange={(e) => setField("permissions_deny_text", e.target.value)}
-                  placeholder={'Uma por linha (ou separadas por vírgula)\nhr.*'}
-                  className="min-h-[120px]"
-                />
-                <div className="text-xs text-muted-foreground">Guarda em permissions_deny (array). Deny substitui o cargo.</div>
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium">Negar</div>
+                    <div className="text-xs text-muted-foreground">Guarda em permissions_deny (array). Deny substitui o cargo.</div>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={() => clearPerms("permissions_deny_text")} disabled={denyPermissions.length === 0}>
+                    Limpar
+                  </Button>
+                </div>
+
+                {denyPermissions.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">—</div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {denyPermissions.map((p) => (
+                      <Badge key={p} variant="destructive" className="gap-1">
+                        <span className="font-mono text-[11px]">{p}</span>
+                        <button
+                          type="button"
+                          className="ml-1 inline-flex items-center justify-center rounded-full hover:bg-background/30"
+                          onClick={() => removePerm("permissions_deny_text", p)}
+                          aria-label={`Remover ${p}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={denyInput}
+                    onChange={(e) => setDenyInput(e.target.value)}
+                    placeholder="Adicionar permissão e Enter (ou vírgula)"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === ",") {
+                        e.preventDefault()
+                        addPerm("permissions_deny_text", denyPermissions, denyInput)
+                        setDenyInput("")
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      addPerm("permissions_deny_text", denyPermissions, denyInput)
+                      setDenyInput("")
+                    }}
+                    disabled={!denyInput.trim()}
+                  >
+                    Adicionar
+                  </Button>
+                </div>
+
+                <div className="text-xs text-muted-foreground">Ex.: hr.* nega RH todo para este utilizador.</div>
               </div>
             </div>
           </div>
