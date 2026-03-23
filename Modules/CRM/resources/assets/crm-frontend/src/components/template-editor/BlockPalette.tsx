@@ -17,11 +17,15 @@ const PALETTE_ITEMS: { type: BlockType; label: string; icon: React.ElementType }
 
 export function BlockPalette() {
   return (
-    <div className="w-56 shrink-0 border-r border-border bg-card p-4 space-y-3 overflow-y-auto">
+    <div className="w-full md:w-56 shrink-0 border-b md:border-b-0 md:border-r border-border bg-card p-4 space-y-3 overflow-x-auto md:overflow-y-auto">
       <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Blocos</h3>
       <Droppable droppableId="palette" isDropDisabled>
         {(provided) => (
-          <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2">
+          <div
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+            className="flex gap-2 overflow-x-auto pb-1 md:pb-0 md:flex-col md:overflow-x-visible"
+          >
             {PALETTE_ITEMS.map((item, index) => (
               <Draggable key={item.type} draggableId={`palette-${item.type}`} index={index}>
                 {(prov, snap) => (
@@ -29,7 +33,7 @@ export function BlockPalette() {
                     ref={prov.innerRef}
                     {...prov.draggableProps}
                     {...prov.dragHandleProps}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-secondary/50 cursor-grab text-sm font-medium transition-all hover:border-primary/40 hover:bg-primary/5 ${snap.isDragging ? 'shadow-lg ring-2 ring-primary/30' : ''}`}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-secondary/50 cursor-grab text-sm font-medium transition-all hover:border-primary/40 hover:bg-primary/5 whitespace-nowrap shrink-0 ${snap.isDragging ? 'shadow-lg ring-2 ring-primary/30' : ''}`}
                   >
                     <item.icon className="w-4 h-4 text-primary shrink-0" />
                     <span>{item.label}</span>

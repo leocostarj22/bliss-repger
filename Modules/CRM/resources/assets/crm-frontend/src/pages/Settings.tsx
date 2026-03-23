@@ -9,7 +9,7 @@ export default function SettingsPage() {
         <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
       </div>
 
-      <div className="glass-card p-12 flex flex-col items-center justify-center text-center bg-gradient-to-b from-primary/5 via-background to-background">
+      <div className="glass-card p-6 md:p-12 flex flex-col items-center justify-center text-center bg-gradient-to-b from-primary/5 via-background to-background">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-400/15 to-fuchsia-500/15 border border-primary/20 flex items-center justify-center shadow-[0_0_24px_hsl(var(--ring)/0.10)] mb-4">
           <SettingsIcon className="w-8 h-8 text-primary" />
         </div>

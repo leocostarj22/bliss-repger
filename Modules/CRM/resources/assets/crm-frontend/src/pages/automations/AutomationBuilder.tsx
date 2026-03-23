@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Save, Play, Plus, Trash2, Settings, Zap, Mail, Clock, CheckCircle, Split } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { AutomationNode } from '@/types';
 import { fetchAutomation, createAutomation, updateAutomation } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
@@ -11,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 const initialNodes: AutomationNode[] = [];
 
 export default function AutomationBuilder() {
+  const isMobile = useIsMobile();
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -81,9 +83,9 @@ export default function AutomationBuilder() {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col -m-6">
+    <div className="h-[calc(100vh-4rem)] flex flex-col -m-4 md:-m-6">
       {/* Header */}
-      <div className="border-b border-border p-4 flex items-center justify-between bg-card z-10">
+      <div className="border-b border-border p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-card z-10">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/automations')}>
             <ArrowLeft className="w-5 h-5" />
@@ -93,7 +95,7 @@ export default function AutomationBuilder() {
               type="text" 
               value={name} 
               onChange={(e) => setName(e.target.value)}
-              className="text-lg font-semibold bg-transparent border-none focus:outline-none focus:ring-0 p-0"
+              className="text-lg font-semibold bg-transparent border-none focus:outline-none focus:ring-0 p-0 w-full max-w-[16rem] sm:max-w-none"
             />
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className={cn("w-2 h-2 rounded-full", status === 'active' ? "bg-green-500" : "bg-yellow-500")}></span>
@@ -101,29 +103,29 @@ export default function AutomationBuilder() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleSave} disabled={loading}>
+        <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-center">
+          <Button variant="outline" size="sm" onClick={handleSave} disabled={loading} className="w-full sm:w-auto">
             <Save className="w-4 h-4 mr-2" />
             {loading ? 'Salvando...' : 'Salvar'}
           </Button>
-          <Button size="sm" onClick={() => setStatus(status === 'active' ? 'paused' : 'active')}>
+          <Button size="sm" onClick={() => setStatus(status === 'active' ? 'paused' : 'active')} className="w-full sm:w-auto">
             <Play className="w-4 h-4 mr-2" />
             {status === 'active' ? 'Pausar' : 'Ativar'}
           </Button>
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Sidebar (Tools) */}
-        <div className="w-64 border-r border-border bg-card/50 p-4 overflow-y-auto flex flex-col gap-6">
-          <div>
+        <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-border bg-card/50 p-4 overflow-x-auto md:overflow-y-auto flex flex-row md:flex-col gap-6">
+          <div className="min-w-56">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Gatilhos</h3>
             <div className="space-y-2">
               <ToolButton icon={Zap} label="Novo Contacto" onClick={() => addNode('trigger', 'Novo Contacto')} />
               <ToolButton icon={Zap} label="Tag Adicionada" onClick={() => addNode('trigger', 'Tag Adicionada')} />
             </div>
           </div>
-          <div>
+          <div className="min-w-56">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Ações</h3>
             <div className="space-y-2">
               <ToolButton icon={Mail} label="Enviar Email" onClick={() => addNode('action', 'Enviar Email', 'send_email')} />
@@ -131,7 +133,7 @@ export default function AutomationBuilder() {
               <ToolButton icon={Trash2} label="Remover Tag" onClick={() => addNode('action', 'Remover Tag', 'remove_tag')} />
             </div>
           </div>
-          <div>
+          <div className="min-w-56">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Lógica</h3>
             <div className="space-y-2">
               <ToolButton icon={Clock} label="Esperar" onClick={() => addNode('delay', 'Esperar')} />
@@ -141,7 +143,7 @@ export default function AutomationBuilder() {
         </div>
 
         {/* Canvas Area */}
-        <div className="flex-1 bg-muted/30 p-8 overflow-auto relative flex flex-col items-center gap-8">
+        <div className="flex-1 bg-muted/30 p-4 sm:p-8 overflow-auto relative flex flex-col items-center gap-8">
             {nodes.length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
                     <p>Adicione um gatilho para começar</p>
@@ -159,7 +161,7 @@ export default function AutomationBuilder() {
                     <div 
                         onClick={() => setSelectedNode(node.id)}
                         className={cn(
-                            "w-80 p-4 rounded-xl border bg-card shadow-sm cursor-pointer transition-all hover:border-primary/50 hover:shadow-md relative",
+                            "w-full max-w-sm p-4 rounded-xl border bg-card shadow-sm cursor-pointer transition-all hover:border-primary/50 hover:shadow-md relative",
                             selectedNode === node.id ? "border-primary ring-1 ring-primary" : "border-border"
                         )}
                     >
@@ -180,7 +182,7 @@ export default function AutomationBuilder() {
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="ml-auto opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
+                                className="ml-auto opacity-100 md:opacity-0 md:group-hover:opacity-100 text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setNodes(nodes.filter(n => n.id !== node.id));
@@ -193,7 +195,7 @@ export default function AutomationBuilder() {
                     </div>
 
                     {/* Add Button between nodes (Visual hint) */}
-                    <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary cursor-pointer z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary cursor-pointer z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         <Plus className="w-3 h-3" />
                     </div>
                 </div>
@@ -214,7 +216,7 @@ export default function AutomationBuilder() {
             };
 
             return (
-            <div className="w-80 border-l border-border bg-card p-4 overflow-y-auto animate-slide-in-right shadow-xl z-20 h-full fixed right-0 top-0 bottom-0 pt-20">
+            <div className="w-full sm:w-80 border-l border-border bg-card p-4 overflow-y-auto animate-slide-in-right shadow-xl z-20 h-full fixed inset-y-0 right-0 left-0 sm:left-auto pt-20">
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="font-semibold text-lg">Configurações</h3>
                     <Button variant="ghost" size="icon" onClick={() => setSelectedNode(null)}>

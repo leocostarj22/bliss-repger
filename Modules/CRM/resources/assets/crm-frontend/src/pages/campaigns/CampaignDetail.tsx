@@ -76,12 +76,12 @@ export default function CampaignDetail() {
             <p className="text-muted-foreground">{campaign.subject}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-           <Button variant="outline" size="sm" onClick={loadData} title="Atualizar">
+        <div className="flex flex-col gap-2 w-full md:w-auto sm:flex-row sm:items-center">
+           <Button variant="outline" size="sm" onClick={loadData} title="Atualizar" className="w-full sm:w-auto">
              <RefreshCw className="w-4 h-4" />
            </Button>
            {campaign.channel === 'email' && (campaign.status === 'draft' || campaign.status === 'scheduled') && (
-             <Button size="sm" className="gap-2" onClick={async () => {
+             <Button size="sm" className="gap-2 w-full sm:w-auto" onClick={async () => {
                try {
                  const r = await sendCampaignNow(campaign.id);
                  toast({ title: 'Envio iniciado', description: `${r.queued ?? 0} e-mails em processamento` });
@@ -93,7 +93,7 @@ export default function CampaignDetail() {
                <Send className="w-4 h-4" /> Enviar agora
              </Button>
            )}
-           <Button onClick={() => navigate(`/campaigns/${id}/edit`)} className="gap-2">
+           <Button onClick={() => navigate(`/campaigns/${id}/edit`)} className="gap-2 w-full sm:w-auto">
              <Edit className="w-4 h-4" /> Editar Campanha
            </Button>
         </div>
@@ -102,10 +102,10 @@ export default function CampaignDetail() {
       <Tabs defaultValue="overview" className="space-y-4" onValueChange={(val) => {
         if (val === 'logs' && logs.length === 0) loadLogs();
       }}>
-        <TabsList>
-          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="content">Conteúdo & Config</TabsTrigger>
-          <TabsTrigger value="logs">Logs de Envio</TabsTrigger>
+        <TabsList className="w-full overflow-x-auto justify-start">
+          <TabsTrigger className="whitespace-nowrap" value="overview">Visão Geral</TabsTrigger>
+          <TabsTrigger className="whitespace-nowrap" value="content">Conteúdo & Config</TabsTrigger>
+          <TabsTrigger className="whitespace-nowrap" value="logs">Logs de Envio</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -181,7 +181,7 @@ export default function CampaignDetail() {
           <div className="glass-card p-6 border rounded-lg bg-card shadow-sm space-y-6">
             <div>
               <h3 className="text-lg font-semibold mb-4">Pré-visualização do Conteúdo</h3>
-              <div className="prose max-w-none dark:prose-invert bg-white dark:bg-gray-900 p-4 rounded-md border min-h-[300px] [&_p]:mb-3 [&_p]:mt-3 [&_div]:mb-3 [&_div]:mt-3 [&_table]:mb-3 [&_table]:mt-3">
+              <div className="prose max-w-none dark:prose-invert bg-white dark:bg-gray-900 p-4 rounded-md border min-h-[300px] overflow-x-auto [&_p]:mb-3 [&_p]:mt-3 [&_div]:mb-3 [&_div]:mt-3 [&_table]:mb-3 [&_table]:mt-3">
                 {campaign.content ? (
                   <div dangerouslySetInnerHTML={{ __html: campaign.content }} />
                 ) : (
@@ -233,7 +233,7 @@ export default function CampaignDetail() {
         </TabsContent>
 
         <TabsContent value="logs">
-          <div className="rounded-md border bg-card shadow-sm">
+          <div className="rounded-md border bg-card shadow-sm overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

@@ -12,6 +12,8 @@ import type { TemplateBlock, BlockType } from '@/types/template';
 import { DEFAULT_BLOCK_PROPS } from '@/types/template';
 import { cn, playSound } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { createTemplate, updateTemplate, fetchTemplate } from '@/services/api';
 import {
   Dialog,
@@ -41,7 +43,9 @@ export default function TemplateEditor() {
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [panelWidth, setPanelWidth] = useState<number>(320);
+  const [propsOpen, setPropsOpen] = useState(false);
 
   const startResize = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -272,7 +276,7 @@ export default function TemplateEditor() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card shrink-0">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-2 border-b border-border bg-card shrink-0">
         <div className="flex items-center gap-3">
           <Link to="/templates">
             <Button variant="ghost" size="sm" className="gap-1.5">
@@ -283,12 +287,12 @@ export default function TemplateEditor() {
           <Input
             value={templateName}
             onChange={(e) => setTemplateName(e.target.value)}
-            className="h-8 w-64 bg-transparent border-transparent hover:border-input focus:border-input transition-colors"
+            className="h-8 w-full max-w-[16rem] sm:w-64 bg-transparent border-transparent hover:border-input focus:border-input transition-colors"
             placeholder="Nome do Template"
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
           {/* Preview toggle */}
           <div className="flex items-center bg-secondary rounded-lg p-0.5">
             <button
@@ -313,6 +317,15 @@ export default function TemplateEditor() {
             </button>
           </div>
 
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 md:hidden"
+            onClick={() => setPropsOpen(true)}
+            disabled={!selectedBlock}
+          >
+            <Eye className="w-4 h-4" /> Propriedades
+          </Button>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setJsonOpen(true)}>
             <Code2 className="w-4 h-4" /> JSON
           </Button>
@@ -333,31 +346,52 @@ export default function TemplateEditor() {
 
       {/* Editor body */}
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
           <BlockPalette />
           <EditorCanvas
             blocks={blocks}
             selectedId={selectedId}
             previewMode={previewMode}
-            onSelect={setSelectedId}
+            onSelect={(nextId) => {
+              setSelectedId(nextId);
+              if (isMobile) setPropsOpen(true);
+            }}
             onDelete={handleDelete}
           />
+
           <div
-            className="w-1 cursor-col-resize bg-transparent hover:bg-primary/30 active:bg-primary/40"
+            className="hidden md:block w-1 cursor-col-resize bg-transparent hover:bg-primary/30 active:bg-primary/40"
             onMouseDown={startResize}
             title="Arraste para ajustar a largura"
           />
-          {selectedBlock ? (
-            <div style={{ width: panelWidth }} className="shrink-0 h-full">
-              <PropertiesPanel block={selectedBlock} onChange={handlePropsChange} onUpdateBlock={handleUpdateSelectedBlock} />
-            </div>
-          ) : (
-            <div style={{ width: panelWidth }} className="shrink-0 h-full border-l border-border bg-card p-4 flex items-center justify-center">
-              <p className="text-sm text-muted-foreground text-center">
-                <Eye className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                Selecione um bloco para editar suas propriedades
-              </p>
-            </div>
+
+          <div className="hidden md:block">
+            {selectedBlock ? (
+              <div style={{ width: panelWidth }} className="shrink-0 h-full">
+                <PropertiesPanel block={selectedBlock} onChange={handlePropsChange} onUpdateBlock={handleUpdateSelectedBlock} />
+              </div>
+            ) : (
+              <div style={{ width: panelWidth }} className="shrink-0 h-full border-l border-border bg-card p-4 flex items-center justify-center">
+                <p className="text-sm text-muted-foreground text-center">
+                  <Eye className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  Selecione um bloco para editar suas propriedades
+                </p>
+              </div>
+            )}
+          </div>
+
+          {isMobile && (
+            <Sheet open={propsOpen} onOpenChange={setPropsOpen}>
+              <SheetContent side="right" className="w-full sm:max-w-md bg-card p-0">
+                <div className="h-full overflow-y-auto p-4">
+                  {selectedBlock ? (
+                    <PropertiesPanel block={selectedBlock} onChange={handlePropsChange} onUpdateBlock={handleUpdateSelectedBlock} />
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center">Selecione um bloco para editar</p>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
           )}
         </div>
       </DragDropContext>

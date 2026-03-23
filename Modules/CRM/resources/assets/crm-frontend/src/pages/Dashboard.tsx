@@ -1,5 +1,6 @@
 import { useEffect, useState, Fragment } from 'react';
 import { fetchDashboard } from '@/services/api';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { DashboardStats } from '@/types';
 import { Mail, MousePointerClick, Eye, AlertTriangle, Users, TrendingUp } from 'lucide-react';
 import {
@@ -32,6 +33,7 @@ const CHART_COLORS = [
 ];
 
 export default function Dashboard() {
+  const isMobile = useIsMobile();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -104,12 +106,12 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Email Performance Over Time */}
         <div className="glass-card p-6 bg-gradient-to-b from-cyan-500/5 via-background to-background border-t-cyan-500/20">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
             <div>
               <h3 className="text-base font-semibold">Email Performance</h3>
               <p className="text-xs text-muted-foreground">Last 30 days activity</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2 sm:justify-end">
                <span className="flex items-center text-xs text-cyan-400"><div className="w-2 h-2 rounded-full bg-cyan-400 mr-1 shadow-[0_0_8px_rgba(34,211,238,0.5)]"></div> Sent</span>
                <span className="flex items-center text-xs text-emerald-400"><div className="w-2 h-2 rounded-full bg-emerald-400 mr-1 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div> Opened</span>
             </div>
@@ -187,7 +189,7 @@ export default function Dashboard() {
           </div>
           
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={stats.topCampaigns} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }} barSize={24}>
+            <BarChart data={stats.topCampaigns} layout="vertical" margin={{ top: 0, right: isMobile ? 12 : 30, left: 0, bottom: 0 }} barSize={isMobile ? 18 : 24}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
               <XAxis
                 type="number"
@@ -202,7 +204,7 @@ export default function Dashboard() {
                 tick={{ fontSize: 11, fill: '#94a3b8' }}
                 axisLine={false}
                 tickLine={false}
-                width={120}
+                width={isMobile ? 80 : 120}
               />
               <Tooltip
                 cursor={{ fill: 'hsl(var(--foreground) / 0.03)' }}

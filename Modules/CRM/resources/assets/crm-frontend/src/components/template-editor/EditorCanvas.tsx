@@ -14,7 +14,7 @@ interface Props {
 
 export function EditorCanvas({ blocks, selectedId, previewMode, onSelect, onDelete }: Props) {
   return (
-    <div className="flex-1 overflow-auto p-6 bg-muted/30">
+    <div className="flex-1 overflow-auto p-4 md:p-6 bg-muted/30">
       <div
         className={cn(
           'mx-auto bg-white rounded-lg shadow-lg transition-all duration-300 min-h-[600px]',
@@ -33,7 +33,7 @@ export function EditorCanvas({ blocks, selectedId, previewMode, onSelect, onDele
               ref={provided.innerRef}
               {...provided.droppableProps}
               className={cn(
-                'p-6 space-y-4 min-h-[400px] transition-colors',
+                'p-4 md:p-6 space-y-4 min-h-[400px] transition-colors',
                 snap.isDraggingOver && 'bg-primary/5'
               )}
             >
@@ -62,7 +62,7 @@ export function EditorCanvas({ blocks, selectedId, previewMode, onSelect, onDele
                       {/* Grip handle */}
                       <div
                         {...prov.dragHandleProps}
-                        className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 cursor-grab"
+                        className="absolute left-2 top-2 md:-left-8 md:top-1/2 md:-translate-y-1/2 translate-y-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 cursor-grab"
                       >
                         <GripVertical className="w-4 h-4" />
                       </div>
@@ -70,7 +70,7 @@ export function EditorCanvas({ blocks, selectedId, previewMode, onSelect, onDele
                       {/* Delete button */}
                       <button
                         onClick={(e) => { e.stopPropagation(); onDelete(block.id); }}
-                        className="absolute -right-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
+                        className="absolute right-2 top-2 md:-right-8 md:top-1/2 md:-translate-y-1/2 translate-y-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

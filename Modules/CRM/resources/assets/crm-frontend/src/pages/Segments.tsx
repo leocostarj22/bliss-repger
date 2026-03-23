@@ -127,7 +127,7 @@ export default function Segments() {
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="page-header">
           <h1 className="page-title">Segmentos</h1>
           <p className="page-subtitle">
@@ -135,18 +135,18 @@ export default function Segments() {
           </p>
           <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-center">
           {selectedIds.size > 0 && (
             <Button
               variant="destructive"
-              className="gap-2"
+              className="gap-2 w-full sm:w-auto"
               size="sm"
               onClick={handleBulkDelete}
             >
               <Trash2 className="w-4 h-4" /> Apagar Selecionados
             </Button>
           )}
-          <Button variant="outline" onClick={loadSegments} className="gap-2 hover:shadow-[0_0_14px_hsl(var(--ring)/0.14)]">
+          <Button variant="outline" onClick={loadSegments} className="gap-2 w-full sm:w-auto hover:shadow-[0_0_14px_hsl(var(--ring)/0.14)]">
             <RefreshCw className="w-4 h-4" /> Atualizar
           </Button>
         </div>

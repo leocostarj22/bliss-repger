@@ -60,25 +60,25 @@ export default function ContactDetail() {
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate('/contacts')}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{contact.name}</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold">{contact.name}</h1>
             <Badge variant={contact.status === 'subscribed' ? 'default' : 'secondary'}>
               {contact.status}
             </Badge>
           </div>
           <p className="text-muted-foreground">{contact.email}</p>
         </div>
-        <Button onClick={() => navigate(`/contacts/${id}/edit`)}>Editar</Button>
+        <Button className="w-full sm:w-auto" onClick={() => navigate(`/contacts/${id}/edit`)}>Editar</Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Info Card */}
-        <div className="glass-card p-6 space-y-6 col-span-2">
+        <div className="glass-card p-6 space-y-6 md:col-span-2">
           <h2 className="text-lg font-semibold mb-4">Informações Pessoais</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="space-y-1">
@@ -136,12 +136,12 @@ export default function ContactDetail() {
               {contact.tags.length === 0 && <span className="text-sm text-muted-foreground">Sem tags</span>}
             </div>
             
-            <div className="flex gap-2 items-center max-w-xs">
+            <div className="flex gap-2 items-center w-full sm:max-w-xs">
               <Input 
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
                 placeholder="Nova tag..."
-                className="h-8 text-sm"
+                className="h-8 text-sm flex-1"
                 onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
               />
               <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={handleAddTag} disabled={!newTag.trim()}>

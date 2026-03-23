@@ -141,7 +141,7 @@ export default function Campaigns() {
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="page-header">
           <h1 className="page-title">Campanhas</h1>
           <p className="page-subtitle">Crie, gira e acompanhe as suas campanhas de e-mail</p>
@@ -153,11 +153,11 @@ export default function Campaigns() {
             </div>
           )}
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2" asChild>
+        <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row">
+          <Button variant="outline" className="gap-2 w-full sm:w-auto" asChild>
             <Link to="/templates"><FileEdit className="w-4 h-4" /> Editor de Template</Link>
           </Button>
-          <Button className="gap-2" asChild>
+          <Button className="gap-2 w-full sm:w-auto" asChild>
             <Link to="/campaigns/new">
               <Plus className="w-4 h-4" /> Nova Campanha
             </Link>
@@ -176,7 +176,7 @@ export default function Campaigns() {
             className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground w-full"
           />
         </div>
-        <div className="flex items-center gap-1 bg-secondary rounded-lg p-1">
+        <div className="flex items-center gap-1 bg-secondary rounded-lg p-1 overflow-x-auto">
           {statusFilters.map(s => (
             <button
               key={s}

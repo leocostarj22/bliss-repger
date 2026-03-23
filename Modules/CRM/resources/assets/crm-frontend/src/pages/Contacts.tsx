@@ -264,28 +264,28 @@ export default function Contacts() {
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="page-header">
           <h1 className="page-title">Contactos</h1>
           <p className="page-subtitle">Gerencie as suas listas de e-mail e subscritores</p>
           <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500"></div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2" onClick={openImportDialog}>
+        <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row">
+          <Button variant="outline" className="gap-2 w-full sm:w-auto" onClick={openImportDialog}>
             <Upload className="w-4 h-4" /> Importar
           </Button>
-          <Button className="gap-2" onClick={() => navigate('/contacts/new')}>
+          <Button className="gap-2 w-full sm:w-auto" onClick={() => navigate('/contacts/new')}>
             <Plus className="w-4 h-4" /> Novo Contacto
           </Button>
         </div>
       </div>
 
       {selectedIds.size > 0 && (
-        <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-primary">{selectedIds.size} contactos selecionados</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-center">
             {sourceFilter.trim() && (sourceTotal ?? 0) > 0 && (
               <Button size="sm" variant="destructive" onClick={handleBulkDeleteBySource} className="gap-2">
                 <Trash className="w-4 h-4" /> Apagar todos ({sourceTotal})
@@ -315,7 +315,7 @@ export default function Contacts() {
             className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground w-full"
           />
         </div>
-        <div className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2 w-48">
+        <div className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2 w-full sm:w-48">
           <input
             value={sourceFilter}
             onChange={e => {

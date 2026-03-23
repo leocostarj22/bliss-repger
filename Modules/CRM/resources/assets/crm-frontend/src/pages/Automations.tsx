@@ -31,13 +31,13 @@ export default function Automations() {
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="page-header">
           <h1 className="page-title">Automações</h1>
           <p className="page-subtitle">Crie fluxos de trabalho e sequências de e-mail automatizadas</p>
           <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
         </div>
-        <Button className="gap-2" onClick={() => navigate('/automations/new')}>
+        <Button className="gap-2 w-full sm:w-auto" onClick={() => navigate('/automations/new')}>
           <Plus className="w-4 h-4" /> Nova Automação
         </Button>
       </div>
