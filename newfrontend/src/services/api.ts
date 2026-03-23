@@ -4163,7 +4163,7 @@ export async function fetchRole(id: string): Promise<ApiResponse<Role>> {
 }
 
 export async function createRole(payload: Omit<Role, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<Role>> {
-  const response = await fetch('/api/v1/roles', {
+  const response = await apiFetch('/api/v1/roles', {
     method: 'POST',
     headers: {
       'Accept': 'application/json',
@@ -4198,7 +4198,7 @@ export async function updateRole(
   id: string,
   payload: Partial<Omit<Role, 'id' | 'createdAt'>>
 ): Promise<ApiResponse<Role>> {
-  const response = await fetch(`/api/v1/roles/${encodeURIComponent(id)}`, {
+  const response = await apiFetch(`/api/v1/roles/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: {
       'Accept': 'application/json',
@@ -4230,7 +4230,7 @@ export async function updateRole(
 }
 
 export async function deleteRole(id: string): Promise<void> {
-  const response = await fetch(`/api/v1/roles/${encodeURIComponent(id)}`, {
+  const response = await apiFetch(`/api/v1/roles/${encodeURIComponent(id)}`, {
     method: 'DELETE',
     headers: {
       'Accept': 'application/json',
