@@ -807,9 +807,10 @@ export async function removeTag(id: string, tag: string): Promise<ApiResponse<Co
 }
 
 // ── Analytics: /api/v1/email/analytics ──
-export async function fetchAnalytics(params?: { days?: number }): Promise<ApiResponse<DashboardStats>> {
+export async function fetchAnalytics(params?: { days?: number; campaignId?: string }): Promise<ApiResponse<DashboardStats>> {
   const query = new URLSearchParams();
   if (params?.days) query.append('days', params.days.toString());
+  if (params?.campaignId) query.append('campaignId', params.campaignId);
 
   const url = query.toString()
     ? `/api/v1/email/analytics?${query.toString()}`
@@ -821,7 +822,7 @@ export async function fetchAnalytics(params?: { days?: number }): Promise<ApiRes
       'Accept': 'application/json',
       'Content-Type': 'application/json',
     },
-    credentials: 'include', // Important: Send cookies/session with the request
+    credentials: 'include',
   });
 
   if (!response.ok) {
