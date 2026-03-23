@@ -290,7 +290,11 @@ export function AppSidebar() {
       )}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 h-14 border-b border-sidebar-border shrink-0 relative overflow-hidden group">
+      <Link
+        to="/"
+        className="flex items-center gap-3 px-4 h-14 border-b border-sidebar-border shrink-0 relative overflow-hidden group"
+        aria-label="Ir para a Dashboard"
+      >
         <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
         <div className="w-9 h-9 rounded-xl p-[2px] bg-gradient-to-br from-cyan-400 to-fuchsia-500 shrink-0 shadow-[0_0_15px_rgba(34,211,238,0.3)] group-hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] transition-shadow duration-300">
           <div className="w-full h-full rounded-[10px] bg-sidebar flex items-center justify-center backdrop-blur-sm overflow-hidden">
@@ -307,7 +311,7 @@ export function AppSidebar() {
             GMCentral
           </span>
         )}
-      </div>
+      </Link>
 
       {/* Navigation */}
       <ScrollArea className="flex-1">

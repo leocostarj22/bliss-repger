@@ -1,16 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { ArrowUpDown, Eye, Pencil, Plus, Search, Trash2, User as UserIcon } from "lucide-react"
+import { ArrowUpDown, Eye, Mail, MessageSquare, Pencil, Plus, Search, Ticket, Trash2, User as UserIcon } from "lucide-react"
 
 import type { Company, Department, User } from "@/types"
 import { deleteUser, fetchCompanies, fetchDepartments, fetchUser, fetchUsers } from "@/services/api"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -378,29 +372,47 @@ export default function Users() {
                     <td className="py-4 pr-4">
                       <div className="min-w-0">
                         {canQuickActions ? (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="font-semibold truncate">{u.name}</div>
+                            <div className="inline-flex items-center gap-1 shrink-0">
+                              <Button
                                 type="button"
-                                className="font-semibold truncate hover:underline underline-offset-4 text-left"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                asChild
                               >
-                                {u.name}
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-72">
-                              <DropdownMenuItem asChild>
-                                <Link to={`/communication/messages?to_user_id=${encodeURIComponent(u.id)}`}>
-                                  Enviar mensagem para {u.name}
+                                <Link
+                                  to={`/communication/messages?to_user_id=${encodeURIComponent(u.id)}`}
+                                  aria-label={`Enviar mensagem para ${u.name}`}
+                                  title="Mensagem"
+                                >
+                                  <Mail className="w-4 h-4 text-emerald-400" />
                                 </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
-                                <Link to={`/support/tickets?new=1&assigned_to=${encodeURIComponent(u.id)}`}>
-                                  Abrir um ticket para {u.name}
+                              </Button>
+
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                asChild
+                              >
+                                <Link
+                                  to={`/support/tickets?new=1&assigned_to=${encodeURIComponent(u.id)}`}
+                                  aria-label={`Abrir um ticket para ${u.name}`}
+                                  title="Ticket"
+                                >
+                                  <Ticket className="w-4 h-4 text-amber-400" />
                                 </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={(e) => {
-                                  e.preventDefault()
+                              </Button>
+
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => {
                                   window.dispatchEvent(
                                     new CustomEvent("gmcentral:chat:open", {
                                       detail: {
@@ -411,11 +423,13 @@ export default function Users() {
                                     }),
                                   )
                                 }}
+                                aria-label={`Ir ao chat com ${u.name}`}
+                                title="Chat"
                               >
-                                Ir ao chat com {u.name}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                                <MessageSquare className="w-4 h-4 text-cyan-400" />
+                              </Button>
+                            </div>
+                          </div>
                         ) : (
                           <div className="font-semibold truncate">{u.name}</div>
                         )}
