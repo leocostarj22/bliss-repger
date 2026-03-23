@@ -676,13 +676,11 @@ export default function Analytics() {
             ))}
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Campaign Comparison */}
         <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background">
-        <h3 className="text-sm font-semibold mb-2">Comparação de Campanhas</h3>
-        <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
+          <h3 className="text-sm font-semibold mb-2">Comparação de Campanhas</h3>
+          <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
         <div className="mb-3 space-y-2">
           <div className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2">
             <input
@@ -773,7 +771,7 @@ export default function Analytics() {
         </div>
       </div>
 
-        <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background order-last lg:col-span-3">
+        <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background order-last lg:col-span-2">
           <h3 className="text-sm font-semibold mb-2">Heatmap de Engajamento</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
           {(() => {
