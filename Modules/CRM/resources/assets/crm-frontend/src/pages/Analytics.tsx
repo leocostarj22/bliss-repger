@@ -765,10 +765,10 @@ export default function Analytics() {
         </div>
 
         {/* Campaign Comparison */}
-        <div className="glass-card p-6 order-3 lg:col-span-6 bg-gradient-to-b from-primary/5 via-background to-background">
+        <div className="glass-card p-6 order-3 lg:col-span-6 flex flex-col bg-gradient-to-b from-primary/5 via-background to-background">
           <h3 className="text-sm font-semibold mb-2">Comparação de Campanhas</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
-        <div className="mb-3 space-y-2">
+          <div className="mb-3 space-y-2">
           <div className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2">
             <input
               value={campaignSearch}
@@ -801,8 +801,8 @@ export default function Analytics() {
             ))}
           </div>
         </div>
-        <div className="max-h-96 overflow-y-auto pr-1">
-          <div className="divide-y divide-border rounded-md border">
+          <div className="max-h-96 overflow-y-auto pr-2 scrollbar-modern">
+            <div className="divide-y divide-border rounded-md border bg-card/30 overflow-hidden">
             {(campaignList.length ? campaignList.map(c => ({
               id: c.id,
               name: c.name,
@@ -837,8 +837,8 @@ export default function Analytics() {
                     else setSelectedCampaignIds(prev => prev.length >= 3 ? [...prev.slice(1), c.id] : [...prev, c.id]);
                   }}
                   className={cn(
-                    'w-full flex items-center justify-between gap-3 p-3 text-left hover:bg-muted/50 transition-colors',
-                    active && 'bg-primary/5 ring-1 ring-primary/30'
+                    'w-full flex items-center justify-between gap-3 p-3 text-left transition-colors hover:bg-muted/50 border-l-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background',
+                    active ? 'bg-primary/10 border-primary' : 'border-transparent'
                   )}
                 >
                   <div className="min-w-0">
@@ -971,7 +971,7 @@ export default function Analytics() {
           })()}
         </div>
 
-        <div className="glass-card p-6 order-4 lg:col-span-5 bg-gradient-to-b from-primary/5 via-background to-background">
+        <div className="glass-card p-6 order-4 lg:col-span-6 bg-gradient-to-b from-primary/5 via-background to-background">
           <h3 className="text-sm font-semibold mb-2">Ranking de Assuntos</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
           {(() => {
