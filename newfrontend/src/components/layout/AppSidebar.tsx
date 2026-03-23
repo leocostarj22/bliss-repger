@@ -147,7 +147,13 @@ const colorStyles: Record<NavColor, { icon: string; glow: string; hover: string 
   
 };
 
-export function AppSidebar({ fullWidth = false }: { fullWidth?: boolean }) {
+export function AppSidebar({
+  fullWidth = false,
+  onRequestClose,
+}: {
+  fullWidth?: boolean;
+  onRequestClose?: () => void;
+}) {
   const [collapsed, setCollapsed] = useState(false);
   const [personalOpen, setPersonalOpen] = useState(true);
   const [adminOpen, setAdminOpen] = useState(true);
@@ -284,11 +290,12 @@ export function AppSidebar({ fullWidth = false }: { fullWidth?: boolean }) {
 
   return (
     <aside
-        className={cn(
-          'h-screen sticky top-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 z-30',
-          fullWidth ? 'w-full' : (collapsed ? 'w-16' : 'w-60')
-        )}
-      >
+      className={cn(
+        'flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 z-30 min-h-0',
+        fullWidth ? 'w-full h-svh' : 'h-screen sticky top-0',
+        !fullWidth && (collapsed ? 'w-16' : 'w-60'),
+      )}
+    >
       {/* Logo */}
       <Link
         to="/"
@@ -314,7 +321,7 @@ export function AppSidebar({ fullWidth = false }: { fullWidth?: boolean }) {
       </Link>
 
       {/* Navigation */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <nav className="py-4 px-2 space-y-3">
         <div className="space-y-1">
           {primaryNavItems.map((item) => {
@@ -959,17 +966,30 @@ export function AppSidebar({ fullWidth = false }: { fullWidth?: boolean }) {
         </nav>
       </ScrollArea>
 
-      <div className="flex h-12 border-t border-sidebar-border shrink-0">
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className={cn(
-            "flex-1 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors",
-          )}
-          title={collapsed ? "Expandir" : "Recolher"}
-        >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </button>
-      </div>
+      {fullWidth ? (
+        <div className="border-t border-sidebar-border shrink-0 px-2 py-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
+          <button
+            type="button"
+            onClick={() => onRequestClose?.()}
+            className="w-full flex items-center justify-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Voltar</span>
+          </button>
+        </div>
+      ) : (
+        <div className="flex h-12 border-t border-sidebar-border shrink-0">
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className={cn(
+              "flex-1 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors",
+            )}
+            title={collapsed ? "Expandir" : "Recolher"}
+          >
+            {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

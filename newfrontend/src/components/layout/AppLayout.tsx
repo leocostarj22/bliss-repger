@@ -10,8 +10,13 @@ export function AppLayout() {
 
   useEffect(() => {
     const onOpen = () => setMobileOpen(true);
+    const onClose = () => setMobileOpen(false);
     window.addEventListener('gmcentral:sidebar:open', onOpen);
-    return () => window.removeEventListener('gmcentral:sidebar:open', onOpen);
+    window.addEventListener('gmcentral:sidebar:close', onClose);
+    return () => {
+      window.removeEventListener('gmcentral:sidebar:open', onOpen);
+      window.removeEventListener('gmcentral:sidebar:close', onClose);
+    };
   }, []);
 
   return (
@@ -28,7 +33,7 @@ export function AppLayout() {
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="left" className="p-0 w-screen h-svh max-w-none sm:w-[360px] sm:h-auto">
-          <AppSidebar fullWidth />
+          <AppSidebar fullWidth onRequestClose={() => setMobileOpen(false)} />
         </SheetContent>
       </Sheet>
 
