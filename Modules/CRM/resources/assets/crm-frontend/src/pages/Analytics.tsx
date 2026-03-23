@@ -603,9 +603,9 @@ export default function Analytics() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Line Chart */}
-        <div ref={deliveryRef} className="glass-card p-6 lg:col-span-12 bg-gradient-to-b from-cyan-500/5 via-background to-background border-t border-cyan-500/20">
+        <div ref={deliveryRef} className="glass-card p-6 order-1 lg:col-span-8 bg-gradient-to-b from-cyan-500/5 via-background to-background border-t border-cyan-500/20">
           <h3 className="text-sm font-semibold mb-2">Desempenho de Entrega</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
           {(selectedCampaignIds.length > 1 && avgSeries?.length) ? (
@@ -719,7 +719,7 @@ export default function Analytics() {
         </div>
 
         {/* Pie Chart */}
-        <div ref={engagementRef} className="glass-card p-6 bg-gradient-to-b from-fuchsia-500/5 via-background to-background border-t border-fuchsia-500/20 lg:col-span-5">
+        <div ref={engagementRef} className="glass-card p-6 order-2 lg:col-span-4 bg-gradient-to-b from-fuchsia-500/5 via-background to-background border-t border-fuchsia-500/20">
           <h3 className="text-sm font-semibold mb-2">Detalhamento de Engajamento</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
           <ResponsiveContainer width="100%" height={250}>
@@ -765,7 +765,7 @@ export default function Analytics() {
         </div>
 
         {/* Campaign Comparison */}
-        <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background lg:col-span-7">
+        <div className="glass-card p-6 order-3 lg:col-span-7 bg-gradient-to-b from-primary/5 via-background to-background">
           <h3 className="text-sm font-semibold mb-2">Comparação de Campanhas</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
         <div className="mb-3 space-y-2">
@@ -858,7 +858,7 @@ export default function Analytics() {
         </div>
       </div>
 
-        <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background order-last lg:col-span-12">
+        <div className="glass-card p-6 order-6 lg:col-span-7 flex flex-col bg-gradient-to-b from-primary/5 via-background to-background">
           <h3 className="text-sm font-semibold mb-2">Heatmap de Engajamento</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
           {(() => {
@@ -971,7 +971,7 @@ export default function Analytics() {
           })()}
         </div>
 
-        <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background lg:col-span-6">
+        <div className="glass-card p-6 order-4 lg:col-span-5 bg-gradient-to-b from-primary/5 via-background to-background">
           <h3 className="text-sm font-semibold mb-2">Ranking de Assuntos</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
           {(() => {
@@ -999,7 +999,7 @@ export default function Analytics() {
           })()}
         </div>
 
-        <div className="glass-card p-6 bg-gradient-to-b from-primary/5 via-background to-background lg:col-span-6">
+        <div className="glass-card p-6 order-5 lg:col-span-5 flex flex-col bg-gradient-to-b from-primary/5 via-background to-background">
           <h3 className="text-sm font-semibold mb-2">Funil</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
           {(() => {
