@@ -393,13 +393,28 @@ export default function Analytics() {
   if (loading || !data) {
     return (
       <div className="space-y-6 animate-fade-in">
-        <div className="page-header">
-          <h1 className="page-title">Analítica</h1>
-          <p className="page-subtitle">Análise detalhada do desempenho dos seus emails</p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="page-header">
+            <h1 className="page-title">Analítica</h1>
+            <p className="page-subtitle">Análise detalhada do desempenho dos seus emails</p>
+            <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+          </div>
+          <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row">
+            <Skeleton className="h-10 w-full sm:w-40 rounded-md" />
+            <Skeleton className="h-10 w-full sm:w-32 rounded-md" />
+            <Skeleton className="h-10 w-full sm:w-32 rounded-md" />
+          </div>
         </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <Skeleton className="h-96 rounded-lg" />
-          <Skeleton className="h-96 rounded-lg" />
+          <Skeleton className="h-[430px] rounded-lg lg:col-span-8" />
+          <Skeleton className="h-[430px] rounded-lg lg:col-span-4" />
+
+          <Skeleton className="h-[520px] rounded-lg lg:col-span-6" />
+          <Skeleton className="h-[520px] rounded-lg lg:col-span-6" />
+
+          <Skeleton className="h-[420px] rounded-lg lg:col-span-5" />
+          <Skeleton className="h-[420px] rounded-lg lg:col-span-7" />
         </div>
       </div>
     );
