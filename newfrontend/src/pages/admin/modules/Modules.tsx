@@ -4,7 +4,7 @@ import { Save, ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/use-toast"
-import { fetchAdminModules, fetchUser, updateAdminModules, type AdminModule } from "@/services/api"
+import { fetchAdminModules, fetchMyAccess, updateAdminModules, type AdminModule } from "@/services/api"
 
 export default function Modules() {
   const { toast } = useToast()
@@ -30,14 +30,13 @@ export default function Modules() {
     const run = async () => {
       setLoading(true)
       try {
-        const me = await fetchUser()
-        const role = String(me.data.role ?? "").toLowerCase()
-        const admin = Boolean(me.data.is_admin) || role === "admin"
+        const me = await fetchMyAccess()
+        const allowed = Boolean(me.data.isAdmin) || me.data.permissions.includes("admin.modules.manage") || me.data.permissions.includes("admin.modules.*") || me.data.permissions.includes("admin.*") || me.data.permissions.includes("*")
 
         if (!active) return
-        setIsAdmin(admin)
+        setIsAdmin(allowed)
 
-        if (!admin) return
+        if (!allowed) return
 
         const r = await fetchAdminModules()
         if (!active) return

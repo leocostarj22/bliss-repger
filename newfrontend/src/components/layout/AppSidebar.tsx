@@ -29,9 +29,9 @@ import {
   ShoppingCart,
   Beaker,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, hasPermission } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { fetchAdminModules } from '@/services/api';
+import { fetchAdminModules, fetchMyAccess } from '@/services/api';
 
 export const primaryNavItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/', color: 'cyan' },
@@ -168,6 +168,10 @@ export function AppSidebar({
   const [reportsOpen, setReportsOpen] = useState(true);
   const [moduleStatuses, setModuleStatuses] = useState<Record<string, boolean>>({});
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
+
+  const [accessLoading, setAccessLoading] = useState(true);
+  const [accessPermissions, setAccessPermissions] = useState<string[]>([]);
+  const [accessIsAdmin, setAccessIsAdmin] = useState(false);
   const location = useLocation();
 
   const isModuleEnabled = (key: string) => moduleStatuses[key] !== false;
@@ -288,6 +292,46 @@ export function AppSidebar({
     };
   }, []);
 
+  useEffect(() => {
+    let alive = true;
+    setAccessLoading(true);
+    fetchMyAccess()
+      .then((r) => {
+        if (!alive) return;
+        setAccessIsAdmin(Boolean(r.data.isAdmin));
+        setAccessPermissions(Array.isArray(r.data.permissions) ? r.data.permissions : []);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setAccessIsAdmin(false);
+        setAccessPermissions([]);
+      })
+      .finally(() => {
+        if (!alive) return;
+        setAccessLoading(false);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const can = (perm: string | string[]) => accessIsAdmin || hasPermission(accessPermissions, perm);
+
+  const adminPermissionByPath: Record<string, string> = {
+    '/admin/companies': 'admin.companies.read',
+    '/admin/departments': 'admin.departments.read',
+    '/admin/modules': 'admin.modules.manage',
+    '/admin/users': 'admin.users.read',
+    '/admin/roles': 'admin.roles.read',
+  };
+
+  const adminItems = accessLoading
+    ? []
+    : adminNavItems.filter((it) => can(adminPermissionByPath[it.path] ?? 'admin.access'));
+
+  const showAdminGroup = isModuleEnabled('Administration') && adminItems.length > 0;
+
   return (
     <aside
       className={cn(
@@ -364,7 +408,7 @@ export function AppSidebar({
         </div>
 
 
-        <div className={cn('px-2', collapsed && 'px-0', !isModuleEnabled('Administration') && 'hidden')}>
+        <div className={cn('px-2', collapsed && 'px-0', !showAdminGroup && 'hidden')}>
           {!collapsed && (
             <button
               type="button"
@@ -377,7 +421,7 @@ export function AppSidebar({
           )}
           {(collapsed || adminOpen) && (
             <div className="space-y-1">
-              {adminNavItems.map((item) => {
+              {adminItems.map((item) => {
               const active = location.pathname === item.path || location.pathname.startsWith(item.path);
               const c = colorStyles[item.color];
 

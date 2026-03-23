@@ -1,9 +1,15 @@
+import { useEffect, useState, type ReactElement } from "react";
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as HotToaster } from "react-hot-toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate, Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { Button } from "@/components/ui/button";
+import { ShieldAlert } from "lucide-react";
+import { fetchMyAccess } from "@/services/api";
+import { hasPermission } from "@/lib/utils";
 import { ThemeProvider } from "@/hooks/use-theme";
 import Dashboard from "@/pages/Dashboard";
 import NotFound from "./pages/NotFound";
@@ -75,6 +81,80 @@ const ComingSoon = ({ title }: { title: string }) => (
   </div>
 );
 
+function AccessDenied(props: { title?: string; description?: string }) {
+  const title = props.title ?? "Acesso restrito"
+  const description = props.description ?? "O teu cargo não tem permissão para ver esta página."
+
+  return (
+    <div className="space-y-6 animate-slide-up">
+      <div className="page-header">
+        <h1 className="page-title">{title}</h1>
+        <p className="page-subtitle">Permissões</p>
+        <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+      </div>
+      <div className="glass-card p-6 flex items-start gap-3">
+        <ShieldAlert className="w-5 h-5 text-amber-400 mt-0.5" />
+        <div className="space-y-3">
+          <div>
+            <div className="font-semibold">{title}</div>
+            <div className="text-sm text-muted-foreground">{description}</div>
+          </div>
+          <Button variant="outline" asChild>
+            <Link to="/">Voltar</Link>
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RequirePermission(props: { permission: string | string[]; children: ReactElement }) {
+  const { permission, children } = props
+  const [allowed, setAllowed] = useState<boolean | null>(null)
+  const permKey = Array.isArray(permission) ? permission.join("|") : String(permission)
+
+  useEffect(() => {
+    let alive = true
+    setAllowed(null)
+
+    fetchMyAccess()
+      .then((r) => {
+        if (!alive) return
+        const ok = Boolean(r.data.isAdmin) || hasPermission(r.data.permissions, permission)
+        setAllowed(ok)
+      })
+      .catch(() => {
+        if (!alive) return
+        setAllowed(false)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [permKey])
+
+  if (allowed === null) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="page-header">
+          <h1 className="page-title">A carregar…</h1>
+          <p className="page-subtitle">Permissões</p>
+          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+        </div>
+        <div className="glass-card p-6">
+          <div className="text-sm text-muted-foreground">A validar acesso…</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!allowed) {
+    return <AccessDenied />
+  }
+
+  return children
+}
+
 const App = () => (
   <ThemeProvider>
     <QueryClientProvider client={queryClient}>
@@ -90,24 +170,143 @@ const App = () => (
               <Route path="/gmcentral" element={<Navigate to="/" replace />} />
 
               <Route path="/admin" element={<Navigate to="/" replace />} />
-              <Route path="/admin/companies" element={<Companies />} />
-              <Route path="/admin/companies/new" element={<CompanyForm />} />
-              <Route path="/admin/companies/:id" element={<CompanyDetail />} />
-              <Route path="/admin/companies/:id/edit" element={<CompanyForm />} />
+              <Route
+                path="/admin/companies"
+                element={
+                  <RequirePermission permission="admin.companies.read">
+                    <Companies />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/companies/new"
+                element={
+                  <RequirePermission permission="admin.companies.write">
+                    <CompanyForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/companies/:id"
+                element={
+                  <RequirePermission permission="admin.companies.read">
+                    <CompanyDetail />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/companies/:id/edit"
+                element={
+                  <RequirePermission permission="admin.companies.write">
+                    <CompanyForm />
+                  </RequirePermission>
+                }
+              />
 
-              <Route path="/admin/departments" element={<Departments />} />
-              <Route path="/admin/departments/new" element={<DepartmentForm />} />
-              <Route path="/admin/departments/:id" element={<DepartmentDetail />} />
-              <Route path="/admin/departments/:id/edit" element={<DepartmentForm />} />
-              <Route path="/admin/modules" element={<Modules />} />
-              <Route path="/admin/users" element={<Users />} />
-              <Route path="/admin/users/new" element={<UserForm />} />
-              <Route path="/admin/users/:id" element={<UserDetail />} />
-              <Route path="/admin/users/:id/edit" element={<UserForm />} />
-              <Route path="/admin/roles" element={<Roles />} />
-              <Route path="/admin/roles/new" element={<RoleForm />} />
-              <Route path="/admin/roles/:id" element={<RoleDetail />} />
-              <Route path="/admin/roles/:id/edit" element={<RoleForm />} />
+              <Route
+                path="/admin/departments"
+                element={
+                  <RequirePermission permission="admin.departments.read">
+                    <Departments />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/departments/new"
+                element={
+                  <RequirePermission permission="admin.departments.write">
+                    <DepartmentForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/departments/:id"
+                element={
+                  <RequirePermission permission="admin.departments.read">
+                    <DepartmentDetail />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/departments/:id/edit"
+                element={
+                  <RequirePermission permission="admin.departments.write">
+                    <DepartmentForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/modules"
+                element={
+                  <RequirePermission permission="admin.modules.manage">
+                    <Modules />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/users"
+                element={
+                  <RequirePermission permission="admin.users.read">
+                    <Users />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/users/new"
+                element={
+                  <RequirePermission permission="admin.users.write">
+                    <UserForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/users/:id"
+                element={
+                  <RequirePermission permission="admin.users.read">
+                    <UserDetail />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/users/:id/edit"
+                element={
+                  <RequirePermission permission="admin.users.write">
+                    <UserForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/roles"
+                element={
+                  <RequirePermission permission="admin.roles.read">
+                    <Roles />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/roles/new"
+                element={
+                  <RequirePermission permission="admin.roles.write">
+                    <RoleForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/roles/:id"
+                element={
+                  <RequirePermission permission="admin.roles.read">
+                    <RoleDetail />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/roles/:id/edit"
+                element={
+                  <RequirePermission permission="admin.roles.write">
+                    <RoleForm />
+                  </RequirePermission>
+                }
+              />
 
               <Route path="/support" element={<Navigate to="/support/tickets" replace />} />
               <Route path="/support/categories" element={<SupportCategories />} />

@@ -53,3 +53,30 @@ export function playSound(src: string, options?: { volume?: number }) {
     // ignore
   }
 }
+
+const normalizePermission = (p: string) => String(p ?? "").trim().toLowerCase()
+
+export function permissionMatches(granted: string, required: string) {
+  const g = normalizePermission(granted)
+  const r = normalizePermission(required)
+
+  if (!g || !r) return false
+  if (g === "*") return true
+  if (g === r) return true
+
+  if (g.endsWith(".*")) {
+    const prefix = g.slice(0, -1)
+    return r.startsWith(prefix)
+  }
+
+  return false
+}
+
+export function hasPermission(grantedList: string[] | undefined | null, required: string | string[]) {
+  const granted = Array.isArray(grantedList) ? grantedList : []
+  const requiredList = Array.isArray(required) ? required : [required]
+
+  if (requiredList.length === 0) return true
+
+  return requiredList.some((req) => granted.some((g) => permissionMatches(g, req)))
+}

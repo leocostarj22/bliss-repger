@@ -31,6 +31,32 @@ const parsePermissions = (value: string) => {
   return uniq
 }
 
+const QUICK_PERMISSION_GROUPS = [
+  {
+    key: "all",
+    label: "Global",
+    items: [
+      { value: "*", label: "Tudo" },
+      { value: "admin.*", label: "Administração (tudo)" },
+    ],
+  },
+  {
+    key: "admin",
+    label: "Administração",
+    items: [
+      { value: "admin.companies.read", label: "Empresas (ver)" },
+      { value: "admin.companies.write", label: "Empresas (editar)" },
+      { value: "admin.departments.read", label: "Departamentos (ver)" },
+      { value: "admin.departments.write", label: "Departamentos (editar)" },
+      { value: "admin.users.read", label: "Utilizadores (ver)" },
+      { value: "admin.users.write", label: "Utilizadores (editar)" },
+      { value: "admin.roles.read", label: "Cargos (ver)" },
+      { value: "admin.roles.write", label: "Cargos (editar)" },
+      { value: "admin.modules.manage", label: "Módulos (gerir)" },
+    ],
+  },
+] as const
+
 export default function RoleForm() {
   const { toast } = useToast()
   const navigate = useNavigate()
@@ -54,6 +80,37 @@ export default function RoleForm() {
   const setField = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
   }, [])
+
+  const currentPermissions = useMemo(() => parsePermissions(form.permissionsText), [form.permissionsText])
+  const hasAll = useMemo(() => currentPermissions.includes("*"), [currentPermissions])
+
+  const togglePermission = useCallback(
+    (perm: string) => {
+      const p = perm.trim()
+      if (!p) return
+
+      setForm((prev) => {
+        const current = parsePermissions(prev.permissionsText)
+
+        if (p === "*") {
+          const next = current.includes("*") ? current.filter((x) => x !== "*") : ["*"]
+          return { ...prev, permissionsText: next.join("\n") }
+        }
+
+        if (current.includes("*")) {
+          return prev
+        }
+
+        const next = current.includes(p) ? current.filter((x) => x !== p) : [...current, p]
+        return { ...prev, permissionsText: next.join("\n") }
+      })
+    },
+    [setForm],
+  )
+
+  const clearPermissions = useCallback(() => {
+    setField("permissionsText", "")
+  }, [setField])
 
   useEffect(() => {
     if (!isEdit || !id) {
@@ -183,6 +240,48 @@ export default function RoleForm() {
               className="min-h-[140px]"
             />
             <div className="text-xs text-muted-foreground">Guarda em permissions (array) como no cast do Laravel.</div>
+
+            <div className="mt-3 rounded-lg border border-border bg-background/30 p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-medium">Permissões rápidas</div>
+                  <div className="text-xs text-muted-foreground">Selecionadas: {currentPermissions.length}</div>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={clearPermissions} disabled={!form.permissionsText.trim()}>
+                  Limpar
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                {QUICK_PERMISSION_GROUPS.map((g) => (
+                  <div key={g.key} className="space-y-2">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{g.label}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {g.items.map((it) => {
+                        const selected = currentPermissions.includes(it.value)
+                        const disabled = hasAll && it.value !== "*"
+                        return (
+                          <Button
+                            key={it.value}
+                            type="button"
+                            size="sm"
+                            variant={selected ? "default" : "outline"}
+                            className="h-8"
+                            onClick={() => togglePermission(it.value)}
+                            disabled={disabled}
+                          >
+                            {it.label}
+                          </Button>
+                        )
+                      })}
+                    </div>
+                    {hasAll ? (
+                      <div className="text-xs text-muted-foreground">"Tudo" está ativo e substitui as restantes permissões.</div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center justify-between rounded-lg border border-border p-4 lg:col-span-2">

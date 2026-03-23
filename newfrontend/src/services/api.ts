@@ -968,6 +968,54 @@ export async function fetchUser(): Promise<ApiResponse<{ id: string; name: strin
   };
 }
 
+export type MyAccessSnapshot = {
+  userId: string
+  role: string | null
+  isAdmin: boolean
+  permissions: string[]
+}
+
+let myAccessCache: { key: string; value: MyAccessSnapshot; ts: number } | null = null
+
+export async function fetchMyAccess(opts?: { force?: boolean }): Promise<ApiResponse<MyAccessSnapshot>> {
+  const force = Boolean(opts?.force)
+
+  const me = await fetchUser()
+  const userId = String(me.data.id ?? '').trim()
+  const roleRaw = String(me.data.role ?? '').trim()
+  const role = roleRaw || null
+
+  const key = `${userId}|${roleRaw}`
+  if (!force && myAccessCache && myAccessCache.key === key && Date.now() - myAccessCache.ts < 2 * 60 * 1000) {
+    return { data: myAccessCache.value }
+  }
+
+  const roleName = roleRaw.toLowerCase()
+  const isAdmin = Boolean(me.data.is_admin) || roleName === 'admin'
+
+  if (isAdmin) {
+    const value: MyAccessSnapshot = { userId, role, isAdmin: true, permissions: ['*'] }
+    myAccessCache = { key, value, ts: Date.now() }
+    return { data: value }
+  }
+
+  const normalize = (v: unknown) => String(v ?? '').trim().toLowerCase()
+
+  try {
+    const rolesResp = await fetchRoles()
+    const found = rolesResp.data.find((r) => normalize(r.name) === roleName || normalize(r.display_name) === roleName)
+    const permissions = Array.isArray(found?.permissions) ? found!.permissions.map((p) => String(p).trim()).filter(Boolean) : []
+
+    const value: MyAccessSnapshot = { userId, role, isAdmin: false, permissions }
+    myAccessCache = { key, value, ts: Date.now() }
+    return { data: value }
+  } catch {
+    const value: MyAccessSnapshot = { userId, role, isAdmin: false, permissions: [] }
+    myAccessCache = { key, value, ts: Date.now() }
+    return { data: value }
+  }
+}
+
 // ── Notifications ──
 const NOTIFICATIONS_STORAGE_KEY = 'bliss:notifications';
 
