@@ -110,6 +110,7 @@ export default function Analytics() {
   const [campaignSearch, setCampaignSearch] = useState('');
   const [campaignStatus, setCampaignStatus] = useState<'all' | 'draft' | 'scheduled' | 'sending' | 'sent'>('all');
   const [campaignChannel, setCampaignChannel] = useState<'all' | 'email' | 'sms' | 'whatsapp' | 'gocontact'>('all');
+  const [campaignPage, setCampaignPage] = useState(1);
   const [compare, setCompare] = useState<{ current: { sent: number; opened: number; clicked: number; bounced: number }; prev: { sent: number; opened: number; clicked: number; bounced: number } } | null>(null);
 
   const deliveryRef = useRef<HTMLDivElement | null>(null);
@@ -156,6 +157,10 @@ export default function Analytics() {
       navigate({ search: next }, { replace: true });
     }
   }, [campaignChannel, campaignSearch, campaignStatus, days, location.search, navigate, selectedCampaignIds]);
+
+  useEffect(() => {
+    setCampaignPage(1);
+  }, [campaignChannel, campaignSearch, campaignStatus]);
 
   const selectedCampaign = useMemo(() => {
     if (selectedCampaignIds.length !== 1) return null;
@@ -281,6 +286,62 @@ export default function Analytics() {
 
     return seriesMetrics ?? data?.dailyMetrics ?? [];
   }, [avgSeries, data?.dailyMetrics, selectedCampaignIds, selectedSeries, seriesMetrics]);
+
+  const CAMPAIGNS_PER_PAGE = 6;
+
+  const filteredCampaigns = useMemo(() => {
+    const search = campaignSearch.trim().toLowerCase();
+    const base = (campaignList.length
+      ? campaignList.map(c => ({
+        id: c.id,
+        name: c.name,
+        sent: c.sentCount || 0,
+        openRate: c.openRate || 0,
+        clickedRate: c.clickRate || 0,
+        bouncedRate: c.bounceRate || 0,
+        rate: c.openRate || 0,
+      }))
+      : (data?.topCampaigns || []).map(c => ({
+        id: c.campaignId,
+        name: c.campaignName,
+        sent: c.sent,
+        openRate: c.sent > 0 ? (c.opened / c.sent) * 100 : 0,
+        clickedRate: c.sent > 0 ? (c.clicked / c.sent) * 100 : 0,
+        bouncedRate: c.sent > 0 ? (c.bounced / c.sent) * 100 : 0,
+        rate: c.sent > 0 ? (c.opened / c.sent) * 100 : 0,
+      }))
+    );
+
+    return base
+      .filter(c => !search || c.name.toLowerCase().includes(search))
+      .filter(c => {
+        if (!campaignList.length) return true;
+        const full = campaignList.find(x => x.id === c.id);
+        if (!full) return true;
+        const okStatus = campaignStatus === 'all' || full.status === campaignStatus;
+        const okChannel = campaignChannel === 'all' || (full.channel || 'email') === campaignChannel;
+        return okStatus && okChannel;
+      });
+  }, [campaignChannel, campaignList, campaignSearch, campaignStatus, data?.topCampaigns]);
+
+  const campaignTotalPages = Math.max(1, Math.ceil(filteredCampaigns.length / CAMPAIGNS_PER_PAGE));
+  const campaignPageSafe = Math.max(1, Math.min(campaignPage, campaignTotalPages));
+
+  useEffect(() => {
+    if (campaignPage > campaignTotalPages) setCampaignPage(campaignTotalPages);
+  }, [campaignPage, campaignTotalPages]);
+
+  const campaignPageItems = useMemo(() => {
+    const start = (campaignPageSafe - 1) * CAMPAIGNS_PER_PAGE;
+    return filteredCampaigns.slice(start, start + CAMPAIGNS_PER_PAGE);
+  }, [campaignPageSafe, filteredCampaigns]);
+
+  const campaignRangeLabel = useMemo(() => {
+    if (!filteredCampaigns.length) return '0 resultados';
+    const start = (campaignPageSafe - 1) * CAMPAIGNS_PER_PAGE + 1;
+    const end = Math.min(filteredCampaigns.length, campaignPageSafe * CAMPAIGNS_PER_PAGE);
+    return `${start}-${end} de ${filteredCampaigns.length}`;
+  }, [campaignPageSafe, filteredCampaigns.length]);
 
   useEffect(() => {
     load(days);
@@ -769,65 +830,41 @@ export default function Analytics() {
           <h3 className="text-sm font-semibold mb-2">Comparação de Campanhas</h3>
           <div className="h-1 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 mb-4" />
           <div className="mb-2 space-y-2">
-          <div className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2">
-            <input
-              value={campaignSearch}
-              onChange={e => setCampaignSearch(e.target.value)}
-              placeholder="Pesquisar campanhas..."
-              className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground w-full"
-            />
+            <div className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2">
+              <input
+                value={campaignSearch}
+                onChange={e => setCampaignSearch(e.target.value)}
+                placeholder="Pesquisar campanhas..."
+                className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground w-full"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-1">
+              {(['all','draft','scheduled','sending','sent'] as const).map(s => (
+                <button
+                  key={s}
+                  onClick={() => setCampaignStatus(s)}
+                  className={cn('px-2.5 py-1 rounded-md text-xs capitalize',
+                    campaignStatus===s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
+                >
+                  {s==='all' ? 'Todas' : s}
+                </button>
+              ))}
+              <span className="mx-2 text-xs text-muted-foreground">Canal:</span>
+              {(['all','email','sms','whatsapp','gocontact'] as const).map(ch => (
+                <button
+                  key={ch}
+                  onClick={() => setCampaignChannel(ch)}
+                  className={cn('px-2.5 py-1 rounded-md text-xs capitalize',
+                    campaignChannel===ch ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
+                >
+                  {ch}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-1">
-            {(['all','draft','scheduled','sending','sent'] as const).map(s => (
-              <button
-                key={s}
-                onClick={() => setCampaignStatus(s)}
-                className={cn('px-2.5 py-1 rounded-md text-xs capitalize',
-                  campaignStatus===s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
-              >
-                {s==='all' ? 'Todas' : s}
-              </button>
-            ))}
-            <span className="mx-2 text-xs text-muted-foreground">Canal:</span>
-            {(['all','email','sms','whatsapp','gocontact'] as const).map(ch => (
-              <button
-                key={ch}
-                onClick={() => setCampaignChannel(ch)}
-                className={cn('px-2.5 py-1 rounded-md text-xs capitalize',
-                  campaignChannel===ch ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
-              >
-                {ch}
-              </button>
-            ))}
-          </div>
-        </div>
-          <div className="flex-1 min-h-0 overflow-y-auto pr-2 scrollbar-modern">
-            <div className="divide-y divide-border rounded-md border bg-card/30 overflow-hidden">
-            {(campaignList.length ? campaignList.map(c => ({
-              id: c.id,
-              name: c.name,
-              sent: c.sentCount || 0,
-              openRate: c.openRate || 0,
-              clickedRate: c.clickRate || 0,
-              bouncedRate: c.bounceRate || 0,
-              rate: c.openRate || 0,
-            })) : (data.topCampaigns || []).map(c => ({
-              id: c.campaignId,
-              name: c.campaignName,
-              sent: c.sent,
-              openRate: c.sent > 0 ? (c.opened / c.sent) * 100 : 0,
-              clickedRate: c.sent > 0 ? (c.clicked / c.sent) * 100 : 0,
-              bouncedRate: c.sent > 0 ? (c.bounced / c.sent) * 100 : 0,
-              rate: c.sent > 0 ? (c.opened / c.sent) * 100 : 0,
-            })) ).filter(c => c.name.toLowerCase().includes(campaignSearch.toLowerCase()))
-            .filter(c => {
-              if (!campaignList.length) return true;
-              const full = campaignList.find(x => x.id === c.id);
-              if (!full) return true;
-              const okStatus = campaignStatus==='all' || full.status===campaignStatus;
-              const okChannel = campaignChannel==='all' || (full.channel || 'email')===campaignChannel;
-              return okStatus && okChannel;
-            }).map(c => {
+
+          <div className="divide-y divide-border rounded-md border bg-card/30 overflow-hidden">
+            {campaignPageItems.length ? campaignPageItems.map(c => {
               const active = selectedCampaignIds.includes(c.id);
               return (
                 <button
@@ -853,7 +890,32 @@ export default function Analytics() {
                   </div>
                 </button>
               );
-            })}
+            }) : (
+              <div className="p-3 text-sm text-muted-foreground">Sem campanhas encontradas.</div>
+            )}
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <div className="text-xs text-muted-foreground font-mono">{campaignRangeLabel}</div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCampaignPage(p => Math.max(1, p - 1))}
+                disabled={campaignPageSafe <= 1}
+              >
+                Anterior
+              </Button>
+              <div className="text-xs text-muted-foreground font-mono">{campaignPageSafe}/{campaignTotalPages}</div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCampaignPage(p => Math.min(campaignTotalPages, p + 1))}
+                disabled={campaignPageSafe >= campaignTotalPages}
+              >
+                Próxima
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -1046,7 +1108,6 @@ export default function Analytics() {
           })()}
         </div>
       </div>
-    </div>
   );
 }
 
