@@ -918,7 +918,6 @@ export default function Analytics() {
             </div>
           </div>
         </div>
-      </div>
 
         <div className="glass-card p-6 order-6 lg:col-span-7 flex flex-col bg-gradient-to-b from-primary/5 via-background to-background">
           <h3 className="text-sm font-semibold mb-2">Heatmap de Engajamento</h3>
@@ -1108,6 +1107,7 @@ export default function Analytics() {
           })()}
         </div>
       </div>
+    </div>
   );
 }
 
