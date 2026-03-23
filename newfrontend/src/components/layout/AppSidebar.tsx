@@ -147,7 +147,7 @@ const colorStyles: Record<NavColor, { icon: string; glow: string; hover: string 
   
 };
 
-export function AppSidebar() {
+export function AppSidebar({ fullWidth = false }: { fullWidth?: boolean }) {
   const [collapsed, setCollapsed] = useState(false);
   const [personalOpen, setPersonalOpen] = useState(true);
   const [adminOpen, setAdminOpen] = useState(true);
@@ -284,11 +284,11 @@ export function AppSidebar() {
 
   return (
     <aside
-      className={cn(
-        'h-screen sticky top-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 z-30',
-        collapsed ? 'w-16' : 'w-60'
-      )}
-    >
+        className={cn(
+          'h-screen sticky top-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 z-30',
+          fullWidth ? 'w-full' : (collapsed ? 'w-16' : 'w-60')
+        )}
+      >
       {/* Logo */}
       <Link
         to="/"
