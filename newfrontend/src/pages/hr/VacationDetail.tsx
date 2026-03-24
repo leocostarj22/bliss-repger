@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft, Save } from "lucide-react"
+import { ArrowLeft, Check, Save, X } from "lucide-react"
 
 import type { Company, Employee, Vacation, VacationStatus, VacationType } from "@/types"
 import { createVacation, fetchCompanies, fetchEmployees, fetchVacation, updateVacation } from "@/services/api"
@@ -73,6 +73,10 @@ export default function VacationDetail() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [form, setForm] = useState<FormState>(() => emptyForm())
   const [requestedAt, setRequestedAt] = useState<string | null>(null)
+  const [approvedAt, setApprovedAt] = useState<string | null>(null)
+  const [rejectedAt, setRejectedAt] = useState<string | null>(null)
+  const [approvedBy, setApprovedBy] = useState<string | null>(null)
+  const [rejectedBy, setRejectedBy] = useState<string | null>(null)
 
   const title = isEdit ? "Editar férias" : "Nova solicitação de férias"
 
@@ -98,6 +102,10 @@ export default function VacationDetail() {
         if (vacResp?.data) {
           const v = vacResp.data
           setRequestedAt(v.requested_at ? String(v.requested_at) : null)
+          setApprovedAt(v.approved_at ? String(v.approved_at) : null)
+          setRejectedAt(v.rejected_at ? String(v.rejected_at) : null)
+          setApprovedBy(v.approved_by ? String(v.approved_by) : null)
+          setRejectedBy(v.rejected_by ? String(v.rejected_by) : null)
           setForm({
             employee_id: String(v.employee_id ?? ""),
             company_id: String(v.company_id ?? ""),
@@ -129,9 +137,7 @@ export default function VacationDetail() {
     [employees, setField],
   )
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
+  const save = async (nextStatus?: VacationStatus) => {
     if (!form.employee_id) {
       toast({ title: "Validação", description: "Funcionário é obrigatório", variant: "destructive" })
       return
@@ -153,7 +159,7 @@ export default function VacationDetail() {
       return
     }
 
-    const status = (form.status ?? "pending") as VacationStatus
+    const status = (nextStatus ?? form.status ?? "pending") as VacationStatus
     if (status === "rejected" && !form.rejection_reason.trim()) {
       toast({ title: "Validação", description: "Motivo da rejeição é obrigatório", variant: "destructive" })
       return
@@ -200,6 +206,11 @@ export default function VacationDetail() {
     }
   }
 
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await save()
+  }
+
   if (loading) {
     return (
       <div className="space-y-6 animate-fade-in">
@@ -234,6 +245,30 @@ export default function VacationDetail() {
                 Voltar
               </Link>
             </Button>
+            {isEdit && form.status === "pending" ? (
+              <Button type="button" variant="outline" disabled={saving} onClick={() => save("approved")}>
+                <Check />
+                Aprovar
+              </Button>
+            ) : null}
+            {isEdit && form.status === "pending" ? (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={saving}
+                onClick={() => {
+                  if (form.rejection_reason.trim()) {
+                    void save("rejected")
+                    return
+                  }
+                  setField("status", "rejected")
+                  toast({ title: "Validação", description: "Informe o motivo da rejeição", variant: "destructive" })
+                }}
+              >
+                <X />
+                Rejeitar
+              </Button>
+            ) : null}
             <Button type="submit" form="vacation-form" disabled={saving}>
               <Save />
               {saving ? "A guardar…" : "Guardar"}
@@ -337,11 +372,30 @@ export default function VacationDetail() {
               </Select>
             </div>
 
-            {showApprovalFields ? (
-              <div className="lg:col-span-2 text-sm text-muted-foreground flex items-center">
-                Em um backend real, aqui ficariam “Aprovado por” e “Data de Aprovação”.
-              </div>
-            ) : null}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Solicitado em</label>
+              <Input value={requestedAt ?? ""} disabled />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Aprovado em</label>
+              <Input value={approvedAt ?? ""} disabled />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Rejeitado em</label>
+              <Input value={rejectedAt ?? ""} disabled />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Aprovado por</label>
+              <Input value={approvedBy ?? ""} disabled />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Rejeitado por</label>
+              <Input value={rejectedBy ?? ""} disabled />
+            </div>
           </div>
         </div>
 

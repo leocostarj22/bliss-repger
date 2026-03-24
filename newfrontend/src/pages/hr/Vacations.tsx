@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { CalendarDays, Plus, Search } from "lucide-react"
+import { CalendarDays, Check, Plus, Search } from "lucide-react"
 
 import type { Company, Employee, Vacation, VacationStatus, VacationType } from "@/types"
-import { fetchCompanies, fetchEmployees, fetchVacations } from "@/services/api"
+import { fetchCompanies, fetchEmployees, fetchVacations, updateVacation } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -45,6 +45,7 @@ export default function Vacations() {
   const [rows, setRows] = useState<Vacation[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
+  const [approvingId, setApprovingId] = useState<string | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -87,6 +88,39 @@ export default function Vacations() {
       return employeeName.includes(q) || companyName.includes(q) || period.includes(q) || typeLabel.includes(q)
     })
   }, [rows, search, statusFilter, employeeNameById, companyNameById])
+
+  const approveQuick = async (row: Vacation) => {
+    setApprovingId(row.id)
+    try {
+      const now = new Date().toISOString()
+      await updateVacation(row.id, {
+        status: "approved",
+        approved_days: row.requested_days,
+        approved_at: now,
+        rejected_at: null,
+        rejection_reason: null,
+      })
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === row.id
+            ? {
+                ...r,
+                status: "approved",
+                approved_days: row.requested_days,
+                approved_at: now,
+                rejected_at: null,
+                rejection_reason: null,
+              }
+            : r,
+        ),
+      )
+      toast({ title: "Aprovado", description: "Solicitação aprovada" })
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível aprovar a solicitação", variant: "destructive" })
+    } finally {
+      setApprovingId(null)
+    }
+  }
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -140,6 +174,7 @@ export default function Vacations() {
                 <th className="py-3 pr-4">Tipo</th>
                 <th className="py-3 pr-4">Empresa</th>
                 <th className="py-3 pr-4">Estado</th>
+                <th className="py-3 pr-4"></th>
               </tr>
             </thead>
 
@@ -197,6 +232,20 @@ export default function Vacations() {
                       <td className="py-4 pr-4">{vacationTypeLabel(type)}</td>
                       <td className="py-4 pr-4">{companyName}</td>
                       <td className="py-4 pr-4">{statusLabel(status)}</td>
+                      <td className="py-4 pr-4">
+                        {status === "pending" ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={approvingId === r.id}
+                            onClick={() => approveQuick(r)}
+                          >
+                            <Check />
+                            {approvingId === r.id ? "A aprovar…" : "Aprovar"}
+                          </Button>
+                        ) : null}
+                      </td>
                     </tr>
                   )
                 })
