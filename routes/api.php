@@ -3229,6 +3229,9 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
         $validated = request()->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
+            'system_email' => ['nullable', 'email', 'max:255', Rule::unique('employee_users', 'email')],
+            'system_password' => ['nullable', 'string', 'min:6'],
+            'has_system_access' => ['nullable', 'boolean'],
             'nif' => ['required', 'string', 'max:9', 'unique:employees,nif'],
             'document_type' => ['required', 'in:cartao_cidadao,titulo_residencia,passaporte,bilhete_identidade,outro'],
             'document_number' => ['required', 'string', 'max:50'],
@@ -3289,7 +3292,43 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
             return response()->json(['message' => 'Departamento deve ser da mesma empresa'], 422);
         }
 
+        $systemEmail = trim((string) request()->input('system_email', ''));
+        $systemPassword = trim((string) request()->input('system_password', ''));
+        $hasSystemAccess = (bool) request()->input('has_system_access', false);
+        $wantsSystemAccess = $hasSystemAccess || ($systemEmail !== '' && $systemPassword !== '');
+
+        if ($wantsSystemAccess) {
+            if ($systemEmail === '') {
+                $systemEmail = trim((string) ($validated['email'] ?? ''));
+            }
+
+            if ($systemEmail === '') {
+                return response()->json(['message' => 'Email do sistema é obrigatório para dar acesso ao sistema'], 422);
+            }
+
+            if ($systemPassword === '') {
+                return response()->json(['message' => 'Password é obrigatória para dar acesso ao sistema'], 422);
+            }
+
+            if (EmployeeUser::query()->where('email', $systemEmail)->exists()) {
+                return response()->json(['message' => 'Email do sistema já está em uso'], 422);
+            }
+        }
+
         $employee = Employee::create($validated);
+
+        if ($wantsSystemAccess) {
+            EmployeeUser::updateOrCreate(
+                ['employee_id' => $employee->id],
+                [
+                    'name' => $employee->name,
+                    'email' => $systemEmail,
+                    'password' => $systemPassword,
+                    'is_active' => true,
+                ]
+            );
+        }
+
         $employee->load(['employeeUser']);
 
         return response()->json([
@@ -3372,6 +3411,9 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
             'employee_code' => ['sometimes', 'nullable', 'string', 'max:50', 'unique:employees,employee_code,' . $employee->id],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
+            'system_email' => ['nullable', 'email', 'max:255', Rule::unique('employee_users', 'email')->ignore($employee->employeeUser?->id)],
+            'system_password' => ['nullable', 'string', 'min:6'],
+            'has_system_access' => ['nullable', 'boolean'],
             'nif' => ['sometimes', 'required', 'string', 'max:9', 'unique:employees,nif,' . $employee->id],
             'document_type' => ['sometimes', 'required', 'in:cartao_cidadao,titulo_residencia,passaporte,bilhete_identidade,outro'],
             'document_number' => ['sometimes', 'required', 'string', 'max:50'],
@@ -3439,6 +3481,48 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
 
         $employee->fill($validated);
         $employee->save();
+
+        $systemEmail = trim((string) request()->input('system_email', ''));
+        $systemPassword = trim((string) request()->input('system_password', ''));
+        $hasSystemAccess = request()->has('has_system_access') ? (bool) request()->input('has_system_access') : null;
+        $wantsSystemAccess = ($hasSystemAccess === true) || ($systemEmail !== '' && $systemPassword !== '');
+
+        if ($wantsSystemAccess) {
+            if ($systemEmail === '') {
+                $systemEmail = trim((string) ($employee->employeeUser?->email ?? $employee->email ?? ''));
+            }
+
+            if ($systemEmail === '') {
+                return response()->json(['message' => 'Email do sistema é obrigatório para dar acesso ao sistema'], 422);
+            }
+
+            if (! $employee->employeeUser && $systemPassword === '') {
+                return response()->json(['message' => 'Password é obrigatória para dar acesso ao sistema'], 422);
+            }
+
+            $emailQuery = EmployeeUser::query()->where('email', $systemEmail);
+            if ($employee->employeeUser) {
+                $emailQuery->where('id', '!=', $employee->employeeUser->id);
+            }
+            if ($emailQuery->exists()) {
+                return response()->json(['message' => 'Email do sistema já está em uso'], 422);
+            }
+
+            $userData = [
+                'name' => $employee->name,
+                'email' => $systemEmail,
+                'is_active' => true,
+            ];
+            if ($systemPassword !== '') {
+                $userData['password'] = $systemPassword;
+            }
+
+            EmployeeUser::updateOrCreate(['employee_id' => $employee->id], $userData);
+        } elseif ($hasSystemAccess === false && $employee->employeeUser) {
+            $employee->employeeUser->is_active = false;
+            $employee->employeeUser->save();
+        }
+
         $employee->load(['employeeUser']);
 
         return response()->json([

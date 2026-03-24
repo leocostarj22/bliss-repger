@@ -245,6 +245,7 @@ export interface Employee {
   name: string;
   email?: string | null;
   system_email?: string | null;
+  system_password?: string | null;
   has_system_access?: boolean | null;
   nif?: string | null;
   document_type?: string | null;

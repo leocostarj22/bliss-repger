@@ -365,6 +365,11 @@ export default function EmployeeForm() {
     }
 
     if (!isEdit) {
+      if ((form.system_email.trim() || form.has_system_access) && !form.system_password.trim()) {
+        toast({ title: "Validação", description: "Password é obrigatória para dar acesso ao sistema", variant: "destructive" })
+        return
+      }
+
       if (!form.nif.trim()) {
         toast({ title: "Validação", description: "NIF é obrigatório", variant: "destructive" })
         return
@@ -422,6 +427,7 @@ export default function EmployeeForm() {
       name: form.name.trim(),
       email: form.email.trim() || null,
       system_email: hasSystemAccess ? (systemEmail || form.email.trim() || null) : null,
+      system_password: hasSystemAccess ? (systemPassword || null) : null,
       has_system_access: hasSystemAccess,
       nif: form.nif.trim() || null,
       document_type: form.document_type.trim() || null,
