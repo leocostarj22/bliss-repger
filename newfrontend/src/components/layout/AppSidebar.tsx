@@ -456,7 +456,7 @@ export function AppSidebar({
       <ScrollArea className="flex-1 min-h-0">
         <nav className="py-4 px-2 space-y-3">
         <div className="space-y-1">
-          {(accessIsAdmin ? primaryNavItems.filter((it) => it.path !== "/me/hr") : primaryNavItems.filter((it) => it.path !== "/")).map((item) => {
+          {accessIsAdmin ? primaryNavItems.filter((it) => it.path !== "/me/hr").map((item) => {
             const active = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
             const c = colorStyles[item.color];
 
@@ -492,7 +492,9 @@ export function AppSidebar({
                 </TooltipContent>
               </Tooltip>
             );
-          })}
+          }) : (!collapsed && (
+            <div className="px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Meu RH</div>
+          ))}
         </div>
 
         {!accessIsAdmin && (
