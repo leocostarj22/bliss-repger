@@ -43,6 +43,12 @@ import HrVacations from "@/pages/hr/Vacations";
 import HrVacationForm from "@/pages/hr/VacationDetail";
 import HrTimesheets from "@/pages/hr/Timesheets";
 import HrTimesheetForm from "@/pages/hr/TimesheetDetail";
+import MeHrVacations from "@/pages/me/hr/Vacations";
+import MeHrVacationDetail from "@/pages/me/hr/VacationDetail";
+import MeHrTimesheets from "@/pages/me/hr/Timesheets";
+import MeHrTimesheetDetail from "@/pages/me/hr/TimesheetDetail";
+import MeHrPayrolls from "@/pages/me/hr/Payrolls";
+import MeHrPayrollDetail from "@/pages/me/hr/PayrollDetail";
 import CommVideoCall from "@/pages/communication/VideoCall";
 import CommInternalMessages from "@/pages/communication/InternalMessages";
 import CommChat from "@/pages/communication/Chat";
@@ -522,14 +528,14 @@ const App = () => (
               />
 
               <Route path="/me/hr" element={<Navigate to="/me/hr/vacations" replace />} />
-              <Route path="/me/hr/vacations" element={<HrVacations />} />
-              <Route path="/me/hr/vacations/new" element={<HrVacationForm />} />
-              <Route path="/me/hr/vacations/:id" element={<HrVacationForm />} />
-              <Route path="/me/hr/payrolls" element={<HrPayrolls />} />
-              <Route path="/me/hr/payrolls/:id" element={<HrPayrollForm />} />
-              <Route path="/me/hr/timesheets" element={<HrTimesheets />} />
-              <Route path="/me/hr/timesheets/new" element={<HrTimesheetForm />} />
-              <Route path="/me/hr/timesheets/:id" element={<HrTimesheetForm />} />
+              <Route path="/me/hr/vacations" element={<MeHrVacations />} />
+              <Route path="/me/hr/vacations/new" element={<MeHrVacationDetail />} />
+              <Route path="/me/hr/vacations/:id" element={<MeHrVacationDetail />} />
+              <Route path="/me/hr/payrolls" element={<MeHrPayrolls />} />
+              <Route path="/me/hr/payrolls/:id" element={<MeHrPayrollDetail />} />
+              <Route path="/me/hr/timesheets" element={<MeHrTimesheets />} />
+              <Route path="/me/hr/timesheets/new" element={<MeHrTimesheetDetail />} />
+              <Route path="/me/hr/timesheets/:id" element={<MeHrTimesheetDetail />} />
 
               <Route
                 path="/communication"
