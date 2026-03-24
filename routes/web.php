@@ -13,7 +13,10 @@ use App\Http\Controllers\VideoCallController;
 use Modules\CRM\Http\Controllers\EmailTrackingController;
 
 Route::get('/', function () {
-    return view('welcome');
+    if (Auth::check() || Auth::guard('employee')->check()) {
+        return redirect('/admin');
+    }
+    return redirect('/newadmin/login');
 });
 
 // Rota para download de anexos
