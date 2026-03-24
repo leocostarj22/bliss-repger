@@ -60,11 +60,8 @@ Route::get('/filament-admin', fn () => redirect('/admin'));
 
 // Login do novo painel (newadmin)
 Route::get('/newadmin/login', function () {
-    if (Auth::check()) {
+    if (Auth::check() || Auth::guard('employee')->check()) {
         return redirect('/admin');
-    }
-    if (Auth::guard('employee')->check()) {
-        return redirect('/employee');
     }
     return view('newadmin-login');
 })->name('newadmin.login');
@@ -102,7 +99,7 @@ Route::post('/newadmin/login', function (Request $request) {
 
     if (Auth::guard('employee')->attempt($credentials, $remember)) {
         $request->session()->regenerate();
-        return redirect()->intended('/employee');
+        return redirect()->intended('/admin');
     }
 
     return back()->withErrors(['email' => 'Credenciais inválidas.'])->withInput();
@@ -159,6 +156,7 @@ Route::post('/logout', function (Request $request) {
     }
 
     Auth::logout();
+    Auth::guard('employee')->logout();
     $request->session()->invalidate();
     $request->session()->regenerateToken();
 
@@ -175,7 +173,7 @@ Route::get('/admin/crm/app/{any?}', function () {
 
 // Catch-all do painel para o novo SPA (newfrontend)
 Route::get('/admin/{any?}', function () {
-    if (!Auth::check()) {
+    if (!Auth::check() && !Auth::guard('employee')->check()) {
         return redirect('/newadmin/login');
     }
     return view('newfrontend');
