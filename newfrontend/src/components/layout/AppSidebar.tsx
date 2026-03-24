@@ -455,89 +455,104 @@ export function AppSidebar({
       {/* Navigation */}
       <ScrollArea className="flex-1 min-h-0">
         <nav className="py-4 px-2 space-y-3">
-        <div className="space-y-1">
-          {accessIsAdmin ? primaryNavItems.filter((it) => it.path !== "/me/hr").map((item) => {
-            const active = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
-            const c = colorStyles[item.color];
-
-            const link = (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
-              >
-                {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
-                <item.icon
-                  className={cn(
-                    'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
-                    c.icon,
-                    active ? c.glow : c.hover,
-                  )}
-                />
-                {!collapsed && (
-                  <span className={cn('transition-colors duration-200', active ? 'font-semibold' : 'group-hover:text-foreground')}>
-                    {item.label}
-                  </span>
-                )}
-              </Link>
-            );
-
-            if (!collapsed) return link;
-
-            return (
-              <Tooltip key={item.path}>
-                <TooltipTrigger asChild>{link}</TooltipTrigger>
-                <TooltipContent side="right" align="center">
-                  {item.label}
-                </TooltipContent>
-              </Tooltip>
-            );
-          }) : (!collapsed && (
-            <div className="px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Meu RH</div>
-          ))}
-        </div>
-
-        {!accessIsAdmin && (
           <div className="space-y-1">
-            {employeeHrNavItems.map((item) => {
-              const active = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
-              const c = colorStyles[item.color];
+            {accessIsAdmin
+              ? primaryNavItems.filter((it) => it.path !== "/me/hr").map((item) => {
+                  const active = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
+                  const c = colorStyles[item.color];
 
-              const link = (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
-                >
-                  {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
-                  <item.icon
-                    className={cn(
-                      'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
-                      c.icon,
-                      active ? c.glow : c.hover,
-                    )}
-                  />
-                  {!collapsed && (
-                    <span className={cn('transition-colors duration-200', active ? 'font-semibold' : 'group-hover:text-foreground')}>
-                      {item.label}
-                    </span>
-                  )}
-                </Link>
-              );
+                  const link = (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
+                    >
+                      {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                      <item.icon
+                        className={cn(
+                          'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
+                          c.icon,
+                          active ? c.glow : c.hover,
+                        )}
+                      />
+                      {!collapsed && (
+                        <span className={cn('transition-colors duration-200', active ? 'font-semibold' : 'group-hover:text-foreground')}>
+                          {item.label}
+                        </span>
+                      )}
+                    </Link>
+                  );
 
-              if (!collapsed) return link;
+                  if (!collapsed) return link;
 
-              return (
-                <Tooltip key={item.path}>
-                  <TooltipTrigger asChild>{link}</TooltipTrigger>
-                  <TooltipContent side="right" align="center">
-                    {item.label}
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
+                  return (
+                    <Tooltip key={item.path}>
+                      <TooltipTrigger asChild>{link}</TooltipTrigger>
+                      <TooltipContent side="right" align="center">
+                        {item.label}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })
+              : null}
           </div>
-        )}
+
+          {!accessIsAdmin && (
+            <div className={cn('px-2', collapsed && 'px-0')}>
+              {!collapsed && (
+                <button
+                  type="button"
+                  onClick={() => setHumanResourcesOpen((v) => !v)}
+                  className="w-full flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-2 hover:text-foreground transition-colors"
+                >
+                  <span>Meu RH</span>
+                  {humanResourcesOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </button>
+              )}
+
+              {(collapsed || humanResourcesOpen) && (
+                <div className="space-y-1">
+                  {employeeHrNavItems.map((item) => {
+                    const active = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
+                    const c = colorStyles[item.color];
+
+                    const link = (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
+                      >
+                        {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                        <item.icon
+                          className={cn(
+                            'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
+                            c.icon,
+                            active ? c.glow : c.hover,
+                          )}
+                        />
+                        {!collapsed && (
+                          <span className={cn('transition-colors duration-200', active ? 'font-semibold' : 'group-hover:text-foreground')}>
+                            {item.label}
+                          </span>
+                        )}
+                      </Link>
+                    );
+
+                    if (!collapsed) return link;
+
+                    return (
+                      <Tooltip key={item.path}>
+                        <TooltipTrigger asChild>{link}</TooltipTrigger>
+                        <TooltipContent side="right" align="center">
+                          {item.label}
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
         <div className={cn('px-2', collapsed && 'px-0', !showAdminGroup && 'hidden')}>
           {!collapsed && (
