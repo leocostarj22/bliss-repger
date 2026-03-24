@@ -2558,6 +2558,133 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         return response()->json(['ok' => true]);
     });
 
+    Route::middleware('auth:employee')->group(function () {
+        Route::get('me/support/tickets', function () {
+            $user = auth()->guard('employee')->user();
+            abort_unless($user, 401);
+
+            $search = trim((string) request('search', ''));
+            $status = trim((string) request('status', ''));
+            $priority = trim((string) request('priority', ''));
+            $overdue = request()->boolean('overdue', false);
+
+            $query = Ticket::query()->orderByDesc('created_at')
+                ->where('user_type', \App\Models\EmployeeUser::class)
+                ->where('user_id', $user->id);
+
+            if ($status !== '') $query->where('status', $status);
+            if ($priority !== '') $query->where('priority', $priority);
+            if ($overdue === true) {
+                $query->whereNotNull('due_date')->where('due_date', '<', now())->whereNotIn('status', [Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED]);
+            }
+            if ($search !== '') {
+                $query->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
+                });
+            }
+
+            $rows = $query->get();
+            $data = $rows->map(function (Ticket $t) {
+                return [
+                    'id' => (string) $t->id,
+                    'company_id' => (string) $t->company_id,
+                    'title' => $t->title,
+                    'description' => $t->description,
+                    'status' => $t->status,
+                    'priority' => $t->priority,
+                    'category_id' => $t->category_id !== null ? (string) $t->category_id : null,
+                    'department_id' => $t->department_id !== null ? (string) $t->department_id : null,
+                    'user_id' => (string) $t->user_id,
+                    'user_type' => $t->user_type,
+                    'assigned_to' => $t->assigned_to !== null ? (string) $t->assigned_to : null,
+                    'due_date' => $t->due_date?->toIso8601String(),
+                    'resolved_at' => $t->resolved_at?->toIso8601String(),
+                    'created_at' => $t->created_at?->toIso8601String(),
+                    'updated_at' => $t->updated_at?->toIso8601String(),
+                ];
+            })->values();
+
+            return response()->json(['data' => $data]);
+        });
+
+        Route::get('me/support/tickets/{ticket}', function (Ticket $ticket) {
+            $user = auth()->guard('employee')->user();
+            abort_unless($user, 401);
+            abort_unless($ticket->user_type === \App\Models\EmployeeUser::class && (string) $ticket->user_id === (string) $user->id, 403);
+
+            return response()->json([
+                'data' => [
+                    'id' => (string) $ticket->id,
+                    'company_id' => (string) $ticket->company_id,
+                    'title' => $ticket->title,
+                    'description' => $ticket->description,
+                    'status' => $ticket->status,
+                    'priority' => $ticket->priority,
+                    'category_id' => $ticket->category_id !== null ? (string) $ticket->category_id : null,
+                    'department_id' => $ticket->department_id !== null ? (string) $ticket->department_id : null,
+                    'user_id' => (string) $ticket->user_id,
+                    'user_type' => $ticket->user_type,
+                    'assigned_to' => $ticket->assigned_to !== null ? (string) $ticket->assigned_to : null,
+                    'due_date' => $ticket->due_date?->toIso8601String(),
+                    'resolved_at' => $ticket->resolved_at?->toIso8601String(),
+                    'created_at' => $ticket->created_at?->toIso8601String(),
+                    'updated_at' => $ticket->updated_at?->toIso8601String(),
+                ],
+            ]);
+        });
+
+        Route::post('me/support/tickets', function () {
+            $user = auth()->guard('employee')->user();
+            abort_unless($user, 401);
+
+            $validated = request()->validate([
+                'company_id' => ['required', 'exists:companies,id'],
+                'title' => ['required', 'string', 'max:255'],
+                'description' => ['required', 'string'],
+                'priority' => ['required', 'in:' . implode(',', [Ticket::PRIORITY_LOW, Ticket::PRIORITY_MEDIUM, Ticket::PRIORITY_HIGH, Ticket::PRIORITY_URGENT])],
+                'category_id' => ['nullable', 'exists:categories,id'],
+                'department_id' => ['nullable', 'exists:departments,id'],
+                'due_date' => ['nullable', 'date'],
+            ]);
+
+            $ticket = Ticket::create([
+                'company_id' => $validated['company_id'],
+                'title' => $validated['title'],
+                'description' => $validated['description'],
+                'status' => Ticket::STATUS_OPEN,
+                'priority' => $validated['priority'],
+                'category_id' => $validated['category_id'] ?? null,
+                'department_id' => $validated['department_id'] ?? null,
+                'user_id' => $user->id,
+                'user_type' => \App\Models\EmployeeUser::class,
+                'assigned_to' => null,
+                'due_date' => $validated['due_date'] ?? null,
+                'resolved_at' => null,
+            ]);
+
+            return response()->json([
+                'data' => [
+                    'id' => (string) $ticket->id,
+                    'company_id' => (string) $ticket->company_id,
+                    'title' => $ticket->title,
+                    'description' => $ticket->description,
+                    'status' => $ticket->status,
+                    'priority' => $ticket->priority,
+                    'category_id' => $ticket->category_id !== null ? (string) $ticket->category_id : null,
+                    'department_id' => $ticket->department_id !== null ? (string) $ticket->department_id : null,
+                    'user_id' => (string) $ticket->user_id,
+                    'user_type' => $ticket->user_type,
+                    'assigned_to' => $ticket->assigned_to !== null ? (string) $ticket->assigned_to : null,
+                    'due_date' => $ticket->due_date?->toIso8601String(),
+                    'resolved_at' => $ticket->resolved_at?->toIso8601String(),
+                    'created_at' => $ticket->created_at?->toIso8601String(),
+                    'updated_at' => $ticket->updated_at?->toIso8601String(),
+                ],
+            ], 201);
+        });
+    });
+
     Route::get('companies', function () {
         $user = auth()->user();
         abort_unless($user && $user->isAdmin(), 403);

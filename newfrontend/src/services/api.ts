@@ -63,6 +63,24 @@ const apiFetch = async (input: RequestInfo | URL, init: RequestInit = {}): Promi
   });
 };
 
+const pickErrorMessage = async (response: Response, fallback: string): Promise<string> => {
+  try {
+    const json = await response.json();
+    if (typeof json?.message === 'string' && json.message.trim()) return json.message;
+
+    const errors = json?.errors;
+    if (errors && typeof errors === 'object') {
+      const firstKey = Object.keys(errors)[0];
+      const firstVal = firstKey ? (errors as any)[firstKey] : null;
+      if (Array.isArray(firstVal) && typeof firstVal[0] === 'string') return firstVal[0];
+    }
+  } catch {
+    return fallback;
+  }
+
+  return fallback;
+};
+
 // ── Weather ──
 export interface WeatherData {
   temp: number;
@@ -1931,6 +1949,51 @@ export async function deleteSupportTicket(id: string): Promise<void> {
     }
     throw new Error(msg);
   }
+}
+
+export async function fetchMySupportTickets(): Promise<ApiResponse<SupportTicket[]>> {
+  const response = await apiFetch('/api/v1/me/support/tickets', {
+    method: 'GET',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to fetch my support tickets: ${response.statusText}`);
+    throw new Error(msg);
+  }
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as SupportTicket[]) : [] };
+}
+
+export async function fetchMySupportTicket(id: string): Promise<ApiResponse<SupportTicket>> {
+  const response = await apiFetch(`/api/v1/me/support/tickets/${encodeURIComponent(id)}`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to fetch my support ticket: ${response.statusText}`);
+    throw new Error(msg);
+  }
+  const json = await response.json();
+  return { data: json?.data as SupportTicket };
+}
+
+export async function createMySupportTicket(
+  payload: Pick<SupportTicket, 'company_id' | 'title' | 'description' | 'priority' | 'category_id' | 'department_id' | 'due_date'>
+): Promise<ApiResponse<SupportTicket>> {
+  const response = await apiFetch('/api/v1/me/support/tickets', {
+    method: 'POST',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to create my support ticket: ${response.statusText}`);
+    throw new Error(msg);
+  }
+  const json = await response.json();
+  return { data: json?.data as SupportTicket };
 }
 
 const mapEmployee = (raw: any): Employee => {

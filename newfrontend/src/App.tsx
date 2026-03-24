@@ -49,6 +49,8 @@ import MeHrTimesheets from "@/pages/me/hr/Timesheets";
 import MeHrTimesheetDetail from "@/pages/me/hr/TimesheetDetail";
 import MeHrPayrolls from "@/pages/me/hr/Payrolls";
 import MeHrPayrollDetail from "@/pages/me/hr/PayrollDetail";
+import MeSupportTickets from "@/pages/me/support/Tickets";
+import MeSupportTicketDetail from "@/pages/me/support/TicketDetail";
 import CommVideoCall from "@/pages/communication/VideoCall";
 import CommInternalMessages from "@/pages/communication/InternalMessages";
 import CommChat from "@/pages/communication/Chat";
@@ -580,6 +582,11 @@ const App = () => (
               <Route path="/me/hr/timesheets" element={<MeHrTimesheets />} />
               <Route path="/me/hr/timesheets/new" element={<MeHrTimesheetDetail />} />
               <Route path="/me/hr/timesheets/:id" element={<MeHrTimesheetDetail />} />
+
+              <Route path="/me/support" element={<Navigate to="/me/support/tickets" replace />} />
+              <Route path="/me/support/tickets" element={<MeSupportTickets />} />
+              <Route path="/me/support/tickets/new" element={<MeSupportTicketDetail />} />
+              <Route path="/me/support/tickets/:id" element={<MeSupportTicketDetail />} />
 
               <Route
                 path="/communication"

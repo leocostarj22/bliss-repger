@@ -44,6 +44,10 @@ export const employeeHrNavItems = [
   { label: 'Holerites', icon: Receipt, path: '/me/hr/payrolls', color: 'amber' },
 ] as const;
 
+export const employeeSupportNavItems = [
+  { label: 'Tickets', icon: Ticket, path: '/me/support/tickets', color: 'cyan' },
+] as const;
+
 export const adminNavItems = [
   { label: 'Empresas', icon: Building2, path: '/admin/companies', color: 'amber' },
   { label: 'Departamentos', icon: Layers, path: '/admin/departments', color: 'violet' },
@@ -513,6 +517,59 @@ export function AppSidebar({
               {(collapsed || humanResourcesOpen) && (
                 <div className="space-y-1">
                   {employeeHrNavItems.map((item) => {
+                    const active = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
+                    const c = colorStyles[item.color];
+
+                    const link = (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
+                      >
+                        {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                        <item.icon
+                          className={cn(
+                            'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
+                            c.icon,
+                            active ? c.glow : c.hover,
+                          )}
+                        />
+                        {!collapsed && (
+                          <span className={cn('transition-colors duration-200', active ? 'font-semibold' : 'group-hover:text-foreground')}>
+                            {item.label}
+                          </span>
+                        )}
+                      </Link>
+                    );
+
+                    if (!collapsed) return link;
+
+                    return (
+                      <Tooltip key={item.path}>
+                        <TooltipTrigger asChild>{link}</TooltipTrigger>
+                        <TooltipContent side="right" align="center">
+                          {item.label}
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                </div>
+              )}
+
+              {!collapsed && (
+                <button
+                  type="button"
+                  onClick={() => setSupportOpen((v) => !v)}
+                  className="w-full flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-2 hover:text-foreground transition-colors mt-2"
+                >
+                  <span>Suporte</span>
+                  {supportOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </button>
+              )}
+
+              {(collapsed || supportOpen) && (
+                <div className="space-y-1">
+                  {employeeSupportNavItems.map((item) => {
                     const active = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
                     const c = colorStyles[item.color];
 
