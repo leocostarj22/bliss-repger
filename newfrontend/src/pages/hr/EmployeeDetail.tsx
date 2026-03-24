@@ -364,6 +364,43 @@ export default function EmployeeForm() {
       return
     }
 
+    if (!isEdit) {
+      if (!form.nif.trim()) {
+        toast({ title: "Validação", description: "NIF é obrigatório", variant: "destructive" })
+        return
+      }
+      if (!form.document_type.trim()) {
+        toast({ title: "Validação", description: "Tipo de documento é obrigatório", variant: "destructive" })
+        return
+      }
+      if (!form.document_number.trim()) {
+        toast({ title: "Validação", description: "Número do documento é obrigatório", variant: "destructive" })
+        return
+      }
+      if (!form.position.trim()) {
+        toast({ title: "Validação", description: "Cargo é obrigatório", variant: "destructive" })
+        return
+      }
+      if (!form.company_id) {
+        toast({ title: "Validação", description: "Empresa é obrigatória", variant: "destructive" })
+        return
+      }
+      if (!form.department_id) {
+        toast({ title: "Validação", description: "Departamento é obrigatório", variant: "destructive" })
+        return
+      }
+      if (!form.hire_date) {
+        toast({ title: "Validação", description: "Data de admissão é obrigatória", variant: "destructive" })
+        return
+      }
+    }
+
+    const selectedDepartment = departments.find((d) => d.id === form.department_id)
+    if (selectedDepartment && form.company_id && selectedDepartment.company_id !== form.company_id) {
+      toast({ title: "Validação", description: "Departamento deve ser da mesma empresa", variant: "destructive" })
+      return
+    }
+
     let children_data: any[] = []
 
     if (form.has_children) {
@@ -449,8 +486,9 @@ export default function EmployeeForm() {
         toast({ title: "Criado", description: "Funcionário criado" })
         navigate(`/hr/employees/${resp.data.id}`)
       }
-    } catch {
-      toast({ title: "Erro", description: "Não foi possível guardar o funcionário", variant: "destructive" })
+    } catch (err) {
+      const msg = err instanceof Error && err.message.trim() ? err.message : "Não foi possível guardar o funcionário"
+      toast({ title: "Erro", description: msg, variant: "destructive" })
     } finally {
       setSaving(false)
     }
