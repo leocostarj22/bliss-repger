@@ -599,7 +599,7 @@ export default function Dashboard() {
         {posts.length === 0 ? (
           <div className="text-sm text-muted-foreground">Sem posts.</div>
         ) : (
-          <ScrollArea className="h-[600px] pr-3">
+          <ScrollArea className="h-[650px] pr-3">
           <div className="relative space-y-4">
             <div className="absolute left-5 top-2 bottom-2 w-px bg-border/60" />
             {posts.slice(0, 10).map((p) => {
