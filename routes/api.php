@@ -2559,6 +2559,140 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::middleware('auth:employee')->group(function () {
+        Route::get('me/companies', function () {
+            $user = auth()->guard('employee')->user();
+            abort_unless($user, 401);
+
+            $companyId = $user->employee?->company_id;
+            if (! $companyId) return response()->json(['data' => []]);
+
+            $rows = Company::query()->whereKey($companyId)->get();
+
+            $data = $rows->map(function (Company $c) {
+                $logo = $c->logo;
+                if (is_string($logo) && $logo !== '' && ! str_starts_with($logo, 'http://') && ! str_starts_with($logo, 'https://') && ! str_starts_with($logo, 'data:')) {
+                    $logo = asset('storage/' . ltrim(preg_replace('/^storage\//', '', $logo), '/'));
+                }
+
+                return [
+                    'id' => (string) $c->id,
+                    'name' => $c->name,
+                    'slug' => $c->slug,
+                    'email' => $c->email,
+                    'phone' => $c->phone,
+                    'address' => $c->address,
+                    'logo' => $logo,
+                    'settings' => $c->settings,
+                    'is_active' => (bool) $c->is_active,
+                    'createdAt' => $c->created_at?->toIso8601String(),
+                    'updatedAt' => $c->updated_at?->toIso8601String(),
+                ];
+            })->values();
+
+            return response()->json(['data' => $data]);
+        });
+
+        Route::get('me/departments', function () {
+            $user = auth()->guard('employee')->user();
+            abort_unless($user, 401);
+
+            $companyId = $user->employee?->company_id;
+            if (! $companyId) return response()->json(['data' => []]);
+
+            $rows = Department::query()
+                ->where('company_id', $companyId)
+                ->orderBy('name')
+                ->get();
+
+            $data = $rows->map(function (Department $d) {
+                return [
+                    'id' => (string) $d->id,
+                    'name' => $d->name,
+                    'slug' => $d->slug,
+                    'description' => $d->description,
+                    'color' => $d->color,
+                    'email' => $d->email,
+                    'company_id' => (string) $d->company_id,
+                    'is_active' => (bool) $d->is_active,
+                    'createdAt' => $d->created_at?->toIso8601String(),
+                    'updatedAt' => $d->updated_at?->toIso8601String(),
+                ];
+            })->values();
+
+            return response()->json(['data' => $data]);
+        });
+
+        Route::get('me/support/categories', function () {
+            $user = auth()->guard('employee')->user();
+            abort_unless($user, 401);
+
+            $companyId = $user->employee?->company_id;
+            if (! $companyId) return response()->json(['data' => []]);
+
+            $rows = Category::query()
+                ->where('company_id', $companyId)
+                ->orderBy('name')
+                ->get();
+
+            $data = $rows->map(function (Category $c) {
+                return [
+                    'id' => (string) $c->id,
+                    'company_id' => (string) $c->company_id,
+                    'name' => $c->name,
+                    'description' => $c->description,
+                    'color' => $c->color,
+                    'is_active' => (bool) $c->is_active,
+                    'created_at' => $c->created_at?->toIso8601String(),
+                    'updated_at' => $c->updated_at?->toIso8601String(),
+                ];
+            })->values();
+
+            return response()->json(['data' => $data]);
+        });
+
+        Route::get('me/support/assignees', function () {
+            $user = auth()->guard('employee')->user();
+            abort_unless($user, 401);
+
+            $companyId = $user->employee?->company_id;
+            if (! $companyId) return response()->json(['data' => []]);
+
+            $rows = User::query()
+                ->where('company_id', $companyId)
+                ->where('is_active', true)
+                ->whereIn('role', ['manager', 'supervisor', 'agent'])
+                ->orderBy('name')
+                ->get();
+
+            $data = $rows->map(function (User $u) {
+                $photo = $u->photo_path;
+                if (is_string($photo) && $photo !== '' && ! str_starts_with($photo, 'http://') && ! str_starts_with($photo, 'https://') && ! str_starts_with($photo, 'data:')) {
+                    $photo = asset('storage/' . ltrim(preg_replace('/^storage\//', '', $photo), '/'));
+                }
+
+                return [
+                    'id' => (string) $u->id,
+                    'name' => $u->name,
+                    'email' => $u->email,
+                    'company_id' => $u->company_id !== null ? (string) $u->company_id : null,
+                    'department_id' => $u->department_id !== null ? (string) $u->department_id : null,
+                    'role_id' => $u->role_id !== null ? (string) $u->role_id : null,
+                    'role' => $u->role,
+                    'phone' => $u->phone,
+                    'bio' => $u->bio,
+                    'photo_path' => $photo,
+                    'permissions_allow' => is_array($u->permissions_allow) ? array_values($u->permissions_allow) : [],
+                    'permissions_deny' => is_array($u->permissions_deny) ? array_values($u->permissions_deny) : [],
+                    'is_active' => (bool) $u->is_active,
+                    'last_login_at' => $u->last_login_at?->toIso8601String(),
+                    'createdAt' => $u->created_at?->toIso8601String(),
+                    'updatedAt' => $u->updated_at?->toIso8601String(),
+                ];
+            })->values();
+
+            return response()->json(['data' => $data]);
+        });
+
         Route::get('me/support/tickets', function () {
             $user = auth()->guard('employee')->user();
             abort_unless($user, 401);
@@ -2638,13 +2772,26 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             $user = auth()->guard('employee')->user();
             abort_unless($user, 401);
 
+            $companyId = $user->employee?->company_id;
+            abort_unless($companyId, 422);
+
             $validated = request()->validate([
-                'company_id' => ['required', 'exists:companies,id'],
+                'company_id' => ['required', Rule::in([(string) $companyId])],
                 'title' => ['required', 'string', 'max:255'],
                 'description' => ['required', 'string'],
                 'priority' => ['required', 'in:' . implode(',', [Ticket::PRIORITY_LOW, Ticket::PRIORITY_MEDIUM, Ticket::PRIORITY_HIGH, Ticket::PRIORITY_URGENT])],
-                'category_id' => ['nullable', 'exists:categories,id'],
-                'department_id' => ['nullable', 'exists:departments,id'],
+                'category_id' => [
+                    'nullable',
+                    Rule::exists('categories', 'id')->where(fn ($q) => $q->where('company_id', $companyId)),
+                ],
+                'department_id' => [
+                    'nullable',
+                    Rule::exists('departments', 'id')->where(fn ($q) => $q->where('company_id', $companyId)),
+                ],
+                'assigned_to' => [
+                    'nullable',
+                    Rule::exists('users', 'id')->where(fn ($q) => $q->where('company_id', $companyId)->where('is_active', true)->whereIn('role', ['manager', 'supervisor', 'agent'])),
+                ],
                 'due_date' => ['nullable', 'date'],
             ]);
 
@@ -2658,7 +2805,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 'department_id' => $validated['department_id'] ?? null,
                 'user_id' => $user->id,
                 'user_type' => \App\Models\EmployeeUser::class,
-                'assigned_to' => null,
+                'assigned_to' => $validated['assigned_to'] ?? null,
                 'due_date' => $validated['due_date'] ?? null,
                 'resolved_at' => null,
             ]);

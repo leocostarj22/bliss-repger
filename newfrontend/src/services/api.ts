@@ -1951,6 +1951,62 @@ export async function deleteSupportTicket(id: string): Promise<void> {
   }
 }
 
+export async function fetchMyCompanies(): Promise<ApiResponse<Company[]>> {
+  const response = await apiFetch('/api/v1/me/companies', {
+    method: 'GET',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to fetch my companies: ${response.statusText}`);
+    throw new Error(msg);
+  }
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as Company[]) : [] };
+}
+
+export async function fetchMyDepartments(): Promise<ApiResponse<Department[]>> {
+  const response = await apiFetch('/api/v1/me/departments', {
+    method: 'GET',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to fetch my departments: ${response.statusText}`);
+    throw new Error(msg);
+  }
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as Department[]) : [] };
+}
+
+export async function fetchMySupportCategories(): Promise<ApiResponse<SupportCategory[]>> {
+  const response = await apiFetch('/api/v1/me/support/categories', {
+    method: 'GET',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to fetch my support categories: ${response.statusText}`);
+    throw new Error(msg);
+  }
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as SupportCategory[]) : [] };
+}
+
+export async function fetchMySupportAssignees(): Promise<ApiResponse<User[]>> {
+  const response = await apiFetch('/api/v1/me/support/assignees', {
+    method: 'GET',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to fetch my support assignees: ${response.statusText}`);
+    throw new Error(msg);
+  }
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as User[]) : [] };
+}
+
 export async function fetchMySupportTickets(): Promise<ApiResponse<SupportTicket[]>> {
   const response = await apiFetch('/api/v1/me/support/tickets', {
     method: 'GET',

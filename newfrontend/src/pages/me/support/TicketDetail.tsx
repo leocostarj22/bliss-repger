@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from "react-router-dom"
 import { ArrowLeft, Save } from "lucide-react"
 
 import type { Company, Department, SupportCategory, SupportTicket, SupportTicketPriority, User } from "@/types"
-import { createMySupportTicket, fetchMyEmployee, fetchMySupportTicket, fetchCompanies, fetchDepartments, fetchSupportCategories, fetchUsers } from "@/services/api"
+import { createMySupportTicket, fetchMyCompanies, fetchMyDepartments, fetchMyEmployee, fetchMySupportAssignees, fetchMySupportCategories, fetchMySupportTicket } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -72,7 +72,7 @@ export default function MeSupportTicketDetail() {
 
   useEffect(() => {
     let alive = true
-    Promise.all([fetchCompanies(), fetchDepartments(), fetchSupportCategories(), fetchUsers({ is_active: true })])
+    Promise.all([fetchMyCompanies(), fetchMyDepartments(), fetchMySupportCategories(), fetchMySupportAssignees()])
       .then(([cs, ds, cats, us]) => {
         if (!alive) return
         setCompanies(cs.data)
@@ -80,11 +80,14 @@ export default function MeSupportTicketDetail() {
         setCategories(cats.data)
         setUsers(us.data)
       })
-      .catch(() => {})
+      .catch((e: any) => {
+        if (!alive) return
+        toast({ title: "Erro", description: e?.message ?? "Não foi possível carregar dados do suporte", variant: "destructive" })
+      })
     return () => {
       alive = false
     }
-  }, [])
+  }, [toast])
 
   const categoriesForCompany = useMemo(() => categories.filter((c) => c.company_id === companyId), [categories, companyId])
   const departmentsForCompany = useMemo(() => departments.filter((d) => d.company_id === companyId), [departments, companyId])
