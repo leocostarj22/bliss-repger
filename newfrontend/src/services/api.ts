@@ -1980,7 +1980,7 @@ export async function fetchMySupportTicket(id: string): Promise<ApiResponse<Supp
 }
 
 export async function createMySupportTicket(
-  payload: Pick<SupportTicket, 'company_id' | 'title' | 'description' | 'priority' | 'category_id' | 'department_id' | 'due_date'>
+  payload: Pick<SupportTicket, 'company_id' | 'title' | 'description' | 'priority' | 'category_id' | 'department_id' | 'assigned_to' | 'due_date'>
 ): Promise<ApiResponse<SupportTicket>> {
   const response = await apiFetch('/api/v1/me/support/tickets', {
     method: 'POST',

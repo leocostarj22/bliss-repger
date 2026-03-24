@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react"
 import { Link, useParams, useNavigate } from "react-router-dom"
 import { ArrowLeft, Save } from "lucide-react"
 
-import type { SupportTicket, SupportTicketPriority } from "@/types"
-import { createMySupportTicket, fetchMyEmployee, fetchMySupportTicket } from "@/services/api"
+import type { Company, Department, SupportCategory, SupportTicket, SupportTicketPriority, User } from "@/types"
+import { createMySupportTicket, fetchMyEmployee, fetchMySupportTicket, fetchCompanies, fetchDepartments, fetchSupportCategories, fetchUsers } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -20,10 +20,18 @@ export default function MeSupportTicketDetail() {
   const [saving, setSaving] = useState(false)
   const [ticket, setTicket] = useState<SupportTicket | null>(null)
 
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [categories, setCategories] = useState<SupportCategory[]>([])
+  const [users, setUsers] = useState<User[]>([])
+
   const [companyId, setCompanyId] = useState<string>("")
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [priority, setPriority] = useState<SupportTicketPriority>("medium")
+  const [categoryId, setCategoryId] = useState<string>("none")
+  const [departmentId, setDepartmentId] = useState<string>("none")
+  const [assignedTo, setAssignedTo] = useState<string>("none")
   const [dueDate, setDueDate] = useState<string>("")
 
   useEffect(() => {
@@ -62,6 +70,41 @@ export default function MeSupportTicketDetail() {
     }
   }, [id, toast])
 
+  useEffect(() => {
+    let alive = true
+    Promise.all([fetchCompanies(), fetchDepartments(), fetchSupportCategories(), fetchUsers({ is_active: true })])
+      .then(([cs, ds, cats, us]) => {
+        if (!alive) return
+        setCompanies(cs.data)
+        setDepartments(ds.data)
+        setCategories(cats.data)
+        setUsers(us.data)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const categoriesForCompany = useMemo(() => categories.filter((c) => c.company_id === companyId), [categories, companyId])
+  const departmentsForCompany = useMemo(() => departments.filter((d) => d.company_id === companyId), [departments, companyId])
+  const assigneesForCompany = useMemo(
+    () => users.filter((u) => String(u.company_id) === companyId && ["manager", "supervisor", "agent"].includes(String(u.role ?? '').toLowerCase())),
+    [users, companyId],
+  )
+
+  useEffect(() => {
+    if (categoryId !== "none" && !categoriesForCompany.some((c) => c.id === categoryId)) setCategoryId("none")
+  }, [categoryId, categoriesForCompany])
+
+  useEffect(() => {
+    if (departmentId !== "none" && !departmentsForCompany.some((d) => d.id === departmentId)) setDepartmentId("none")
+  }, [departmentId, departmentsForCompany])
+
+  useEffect(() => {
+    if (assignedTo !== "none" && !assigneesForCompany.some((u) => u.id === assignedTo)) setAssignedTo("none")
+  }, [assignedTo, assigneesForCompany])
+
   const isNew = useMemo(() => !id, [id])
 
   const submit = async () => {
@@ -85,8 +128,9 @@ export default function MeSupportTicketDetail() {
         title,
         description,
         priority,
-        category_id: null,
-        department_id: null,
+        category_id: categoryId === "none" ? null : categoryId,
+        department_id: departmentId === "none" ? null : departmentId,
+        assigned_to: assignedTo === "none" ? null : assignedTo,
         due_date: dueDate || null,
       })
       toast({ title: "Sucesso", description: "Ticket criado" })
@@ -164,7 +208,18 @@ export default function MeSupportTicketDetail() {
       <div className="glass-card p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="md:col-span-2">
           <div className="text-xs text-muted-foreground mb-1">Empresa</div>
-          <Input value={companyId} onChange={(e) => setCompanyId(e.target.value)} placeholder="ID da empresa" />
+          <Select value={companyId} onValueChange={setCompanyId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleciona a empresa" />
+            </SelectTrigger>
+            <SelectContent>
+              {companies.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="md:col-span-2">
@@ -186,6 +241,45 @@ export default function MeSupportTicketDetail() {
               <SelectItem value="medium">Média</SelectItem>
               <SelectItem value="high">Alta</SelectItem>
               <SelectItem value="urgent">Urgente</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <div className="text-xs text-muted-foreground mb-1">Categoria</div>
+          <Select value={categoryId} onValueChange={setCategoryId}>
+            <SelectTrigger><SelectValue placeholder="Sem categoria" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem categoria</SelectItem>
+              {categoriesForCompany.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <div className="text-xs text-muted-foreground mb-1">Departamento</div>
+          <Select value={departmentId} onValueChange={setDepartmentId}>
+            <SelectTrigger><SelectValue placeholder="Sem departamento" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem departamento</SelectItem>
+              {departmentsForCompany.map((d) => (
+                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <div className="text-xs text-muted-foreground mb-1">Atribuição</div>
+          <Select value={assignedTo} onValueChange={setAssignedTo}>
+            <SelectTrigger><SelectValue placeholder="Sem atribuição" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem atribuição</SelectItem>
+              {assigneesForCompany.map((u) => (
+                <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
