@@ -3621,6 +3621,23 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
     };
 
     Route::get('hr/payrolls', function () use ($hrUser) {
+        $employeeUser = auth()->guard('employee')->user();
+        if ($employeeUser) {
+            $status = trim((string) request('status', ''));
+            $referenceMonth = trim((string) request('reference_month', ''));
+            $referenceYear = trim((string) request('reference_year', ''));
+
+            $query = Payroll::query()
+                ->where('employee_id', $employeeUser->employee_id)
+                ->orderByDesc('created_at');
+
+            if ($status !== '') $query->where('status', $status);
+            if ($referenceMonth !== '') $query->where('reference_month', $referenceMonth);
+            if ($referenceYear !== '') $query->where('reference_year', $referenceYear);
+
+            return response()->json(['data' => $query->get()]);
+        }
+
         $hrUser();
 
         $employeeId = trim((string) request('employee_id', ''));
@@ -3641,6 +3658,11 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
     });
 
     Route::get('hr/payrolls/{payroll}', function (Payroll $payroll) use ($hrUser) {
+        $employeeUser = auth()->guard('employee')->user();
+        if ($employeeUser) {
+            abort_unless((int) $payroll->employee_id === (int) $employeeUser->employee_id, 403);
+            return response()->json(['data' => $payroll]);
+        }
         $hrUser();
         return response()->json(['data' => $payroll]);
     });
@@ -3761,6 +3783,23 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
     });
 
     Route::get('hr/vacations', function () use ($hrUser) {
+        $employeeUser = auth()->guard('employee')->user();
+        if ($employeeUser) {
+            $status = trim((string) request('status', ''));
+            $vacationYear = trim((string) request('vacation_year', ''));
+            $vacationType = trim((string) request('vacation_type', ''));
+
+            $query = Vacation::query()
+                ->where('employee_id', $employeeUser->employee_id)
+                ->orderByDesc('created_at');
+
+            if ($status !== '') $query->where('status', $status);
+            if ($vacationYear !== '') $query->where('vacation_year', $vacationYear);
+            if ($vacationType !== '') $query->where('vacation_type', $vacationType);
+
+            return response()->json(['data' => $query->get()]);
+        }
+
         $hrUser();
 
         $employeeId = trim((string) request('employee_id', ''));
@@ -3781,6 +3820,11 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
     });
 
     Route::get('hr/vacations/{vacation}', function (Vacation $vacation) use ($hrUser) {
+        $employeeUser = auth()->guard('employee')->user();
+        if ($employeeUser) {
+            abort_unless((int) $vacation->employee_id === (int) $employeeUser->employee_id, 403);
+            return response()->json(['data' => $vacation]);
+        }
         $hrUser();
         return response()->json(['data' => $vacation]);
     });
@@ -3905,6 +3949,21 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
     });
 
     Route::get('hr/timesheets', function () use ($hrUser) {
+        $employeeUser = auth()->guard('employee')->user();
+        if ($employeeUser) {
+            $status = trim((string) request('status', ''));
+            $workDate = trim((string) request('work_date', ''));
+
+            $query = Timesheet::query()
+                ->where('employee_id', $employeeUser->employee_id)
+                ->orderByDesc('work_date');
+
+            if ($status !== '') $query->where('status', $status);
+            if ($workDate !== '') $query->where('work_date', $workDate);
+
+            return response()->json(['data' => $query->get()]);
+        }
+
         $hrUser();
 
         $employeeId = trim((string) request('employee_id', ''));
@@ -3923,6 +3982,11 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
     });
 
     Route::get('hr/timesheets/{timesheet}', function (Timesheet $timesheet) use ($hrUser) {
+        $employeeUser = auth()->guard('employee')->user();
+        if ($employeeUser) {
+            abort_unless((int) $timesheet->employee_id === (int) $employeeUser->employee_id, 403);
+            return response()->json(['data' => $timesheet]);
+        }
         $hrUser();
         return response()->json(['data' => $timesheet]);
     });

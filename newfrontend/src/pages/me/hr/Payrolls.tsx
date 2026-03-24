@@ -49,8 +49,7 @@ export default function Payrolls() {
     let alive = true
     setLoading(true)
 
-    fetchMyEmployee()
-      .then((me) => fetchPayrolls({ employee_id: me.data.id }))
+    fetchPayrolls()
       .then((resp) => {
         if (!alive) return
         setRows(resp.data)

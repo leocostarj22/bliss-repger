@@ -44,8 +44,7 @@ export default function Vacations() {
     let alive = true
     setLoading(true)
 
-    fetchMyEmployee()
-      .then((me) => fetchVacations({ employee_id: me.data.id }))
+    fetchVacations()
       .then((resp) => {
         if (!alive) return
         setRows(resp.data)

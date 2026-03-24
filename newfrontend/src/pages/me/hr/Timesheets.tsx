@@ -33,8 +33,7 @@ export default function Timesheets() {
     let alive = true
     setLoading(true)
 
-    fetchMyEmployee()
-      .then((me) => fetchTimesheets({ employee_id: me.data.id }))
+    fetchTimesheets()
       .then((resp) => {
         if (!alive) return
         setRows(resp.data)
