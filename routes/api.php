@@ -33,7 +33,7 @@ use Modules\CRM\Models\EspacoAbsolutoUserGroup;
 use Modules\CRM\Models\EspacoAbsolutoUserMessage;
 
 
-Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
+Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function () {
     Route::get('dashboard', function () {
         $user = auth()->user();
 
@@ -224,8 +224,27 @@ Route::prefix('v1')->middleware(['web', 'auth'])->group(function () {
     });
 
     Route::get('me', function () {
-        $u = auth()->user();
+        $u = auth('web')->user() ?? auth('employee')->user();
         abort_unless($u, 401);
+
+        if ($u instanceof EmployeeUser) {
+            return response()->json([
+                'data' => [
+                    'id' => (string) $u->id,
+                    'name' => (string) ($u->name ?? ''),
+                    'email' => (string) ($u->email ?? ''),
+                    'role' => 'employee',
+                    'is_admin' => false,
+                    'photo_path' => null,
+                    'permissions_allow' => [],
+                    'permissions_deny' => [],
+                ],
+            ]);
+        }
+
+        if (! ($u instanceof User)) {
+            return response()->json(['message' => 'Utilizador inválido'], 401);
+        }
 
         $photo = $u->photo_path;
         if (is_string($photo) && $photo !== '') {
