@@ -18,8 +18,8 @@ class MyPayrolls extends Page implements HasTable
 
     protected static ?string $navigationIcon = 'heroicon-o-banknotes';
     protected static string $view = 'filament.employee.pages.my-payrolls';
-    protected static ?string $navigationLabel = 'Meus Holerites';
-    protected static ?string $title = 'Meus Holerites';
+    protected static ?string $navigationLabel = 'Meus Vencimentos';
+    protected static ?string $title = 'Meus Vencimentos';
     protected static ?int $navigationSort = 1;
     protected static ?string $navigationGroup = 'Pessoal';
 
@@ -50,7 +50,7 @@ class MyPayrolls extends Page implements HasTable
             ->actions([
                 ViewAction::make()
                     ->label('Ver Detalhes')
-                    ->modalHeading(fn (Payroll $record) => "Holerite - " . str_pad($record->reference_month, 2, '0', STR_PAD_LEFT) . "/" . $record->reference_year)
+                    ->modalHeading(fn (Payroll $record) => "Vencimento - " . str_pad($record->reference_month, 2, '0', STR_PAD_LEFT) . "/" . $record->reference_year)
                     ->modalContent(fn (Payroll $record): View => view('filament.employee.modals.payroll-details', ['payroll' => $record]))
             ])
             ->defaultSort('reference_year', 'desc')

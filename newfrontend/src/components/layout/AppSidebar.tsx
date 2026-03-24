@@ -41,7 +41,7 @@ export const primaryNavItems = [
 export const employeeHrNavItems = [
   { label: 'Férias', icon: CalendarDays, path: '/me/hr/vacations', color: 'violet' },
   { label: 'Marcação de Ponto', icon: Clock, path: '/me/hr/timesheets', color: 'sky' },
-  { label: 'Holerites', icon: Receipt, path: '/me/hr/payrolls', color: 'amber' },
+  { label: 'Vencimentos', icon: Receipt, path: '/me/hr/payrolls', color: 'amber' },
 ] as const;
 
 export const employeeSupportNavItems = [
@@ -70,7 +70,7 @@ export const financeNavItems = [
 
 export const humanResourcesNavItems = [
   { label: 'Funcionários', icon: Users, path: '/hr/employees', color: 'emerald' },
-  { label: 'Holerites', icon: Receipt, path: '/hr/payrolls', color: 'amber' },
+  { label: 'Vencimentos', icon: Receipt, path: '/hr/payrolls', color: 'amber' },
   { label: 'Férias', icon: CalendarDays, path: '/hr/vacations', color: 'violet' },
   { label: 'Marcação de Ponto', icon: Clock, path: '/hr/timesheets', color: 'sky' },
 ] as const;

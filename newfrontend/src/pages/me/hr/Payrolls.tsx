@@ -56,7 +56,7 @@ export default function Payrolls() {
       })
       .catch(() => {
         if (!alive) return
-        toast({ title: "Erro", description: "Não foi possível carregar holerites", variant: "destructive" })
+        toast({ title: "Erro", description: "Não foi possível carregar vencimentos", variant: "destructive" })
       })
       .finally(() => {
         if (!alive) return
@@ -86,8 +86,8 @@ export default function Payrolls() {
       <div className="page-header">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="page-title">Meus Holerites</h1>
-            <p className="page-subtitle">Meu RH → Holerites</p>
+            <h1 className="page-title">Meus Vencimentos</h1>
+            <p className="page-subtitle">Meu RH → Vencimentos</p>
             <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
           </div>
         </div>
@@ -155,7 +155,7 @@ export default function Payrolls() {
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-10 text-center text-muted-foreground">
-                    Nenhum holerite encontrado
+                    Nenhum vencimento encontrado
                   </td>
                 </tr>
               ) : (

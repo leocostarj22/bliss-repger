@@ -55,7 +55,7 @@ export default function Payrolls() {
         setEmployees(empResp.data)
       })
       .catch(() => {
-        toast({ title: "Erro", description: "Não foi possível carregar holerites", variant: "destructive" })
+        toast({ title: "Erro", description: "Não foi possível carregar vencimentos", variant: "destructive" })
       })
       .finally(() => setLoading(false))
   }, [toast])
@@ -80,7 +80,7 @@ export default function Payrolls() {
   }, [rows, search, statusFilter, employeeNameById])
 
   const handleGenerate = () => {
-    toast({ title: "Em breve", description: "Geração/integração de holerites será feita via API do Laravel." })
+    toast({ title: "Em breve", description: "Geração/integração de vencimentos será feita via API do Laravel." })
   }
 
   return (
@@ -88,8 +88,8 @@ export default function Payrolls() {
       <div className="page-header">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="page-title">Holerites</h1>
-            <p className="page-subtitle">Recursos Humanos → Holerites</p>
+            <h1 className="page-title">Vencimentos</h1>
+            <p className="page-subtitle">Recursos Humanos → Vencimentos</p>
             <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
           </div>
 
@@ -97,11 +97,11 @@ export default function Payrolls() {
             <Button asChild>
               <Link to="/hr/payrolls/new">
                 <Plus />
-                Novo holerite
+                Novo vencimento
               </Link>
             </Button>
             <Button variant="outline" onClick={handleGenerate}>
-              Gerar holerite
+              Gerar vencimento
             </Button>
           </div>
         </div>
@@ -169,7 +169,7 @@ export default function Payrolls() {
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-10 text-center text-muted-foreground">
-                    Nenhum holerite encontrado
+                    Nenhum vencimento encontrado
                   </td>
                 </tr>
               ) : (

@@ -270,7 +270,7 @@ export function Topbar() {
       { label: 'Novo utilizador', path: '/admin/users/new', group: 'Telas', moduleKey: 'Administration', permission: 'admin.users.write' },
       { label: 'Novo cargo', path: '/admin/roles/new', group: 'Telas', moduleKey: 'Administration', permission: 'admin.roles.write' },
       { label: 'Novo funcionário', path: '/hr/employees/new', group: 'Telas', moduleKey: 'HumanResources', permission: 'hr.employees.write' },
-      { label: 'Novo holerite', path: '/hr/payrolls/new', group: 'Telas', moduleKey: 'HumanResources', permission: 'hr.payrolls.write' },
+      { label: 'Novo vencimento', path: '/hr/payrolls/new', group: 'Telas', moduleKey: 'HumanResources', permission: 'hr.payrolls.write' },
       { label: 'Nova férias', path: '/hr/vacations/new', group: 'Telas', moduleKey: 'HumanResources', permission: 'hr.vacations.write' },
       { label: 'Nova marcação de ponto', path: '/hr/timesheets/new', group: 'Telas', moduleKey: 'HumanResources', permission: 'hr.timesheets.write' },
       { label: 'Nova tarefa', path: '/personal/tasks/new', group: 'Telas', moduleKey: 'Personal', permission: 'personal.tasks.write' },

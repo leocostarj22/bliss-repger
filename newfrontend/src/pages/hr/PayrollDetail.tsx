@@ -89,7 +89,7 @@ export default function PayrollDetail() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [form, setForm] = useState<FormState>(() => emptyForm())
 
-  const title = isEdit ? "Editar holerite" : "Novo holerite"
+  const title = isEdit ? "Editar vencimento" : "Novo vencimento"
 
   const setField = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -178,7 +178,7 @@ export default function PayrollDetail() {
         }
       })
       .catch(() => {
-        toast({ title: "Erro", description: "Não foi possível carregar holerite", variant: "destructive" })
+        toast({ title: "Erro", description: "Não foi possível carregar vencimento", variant: "destructive" })
       })
       .finally(() => setLoading(false))
   }, [id, isEdit, toast])
@@ -267,14 +267,14 @@ export default function PayrollDetail() {
     try {
       if (isEdit && id) {
         await updatePayroll(id, payload)
-        toast({ title: "Guardado", description: "Holerite atualizado" })
+        toast({ title: "Guardado", description: "Vencimento atualizado" })
       } else {
         await createPayroll(payload)
-        toast({ title: "Criado", description: "Holerite criado" })
+        toast({ title: "Criado", description: "Vencimento criado" })
       }
       navigate("/hr/payrolls")
     } catch {
-      toast({ title: "Erro", description: "Não foi possível guardar holerite", variant: "destructive" })
+      toast({ title: "Erro", description: "Não foi possível guardar vencimento", variant: "destructive" })
     } finally {
       setSaving(false)
     }
@@ -285,7 +285,7 @@ export default function PayrollDetail() {
       <div className="space-y-6 animate-fade-in">
         <div className="page-header">
           <h1 className="page-title">{title}</h1>
-          <p className="page-subtitle">Recursos Humanos → Holerites</p>
+          <p className="page-subtitle">Recursos Humanos → Vencimentos</p>
           <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
         </div>
         <div className="glass-card p-6">
@@ -322,7 +322,7 @@ export default function PayrollDetail() {
 
       <form id="payroll-form" onSubmit={onSubmit} className="glass-card p-6 space-y-6">
         <div className="rounded-lg border border-border p-4">
-          <div className="text-sm font-semibold">Informações do Holerite</div>
+          <div className="text-sm font-semibold">Informações do Vencimento</div>
 
           <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-2">

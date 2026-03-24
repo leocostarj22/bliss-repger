@@ -95,8 +95,8 @@ const QUICK_PERMISSION_GROUPS = [
     items: [
       { value: "hr.employees.read", label: "Funcionários (ver)" },
       { value: "hr.employees.write", label: "Funcionários (editar)" },
-      { value: "hr.payrolls.read", label: "Holerites (ver)" },
-      { value: "hr.payrolls.write", label: "Holerites (editar)" },
+      { value: "hr.payrolls.read", label: "Vencimentos (ver)" },
+      { value: "hr.payrolls.write", label: "Vencimentos (editar)" },
       { value: "hr.vacations.read", label: "Férias (ver)" },
       { value: "hr.vacations.write", label: "Férias (editar)" },
       { value: "hr.timesheets.read", label: "Marcação de ponto (ver)" },

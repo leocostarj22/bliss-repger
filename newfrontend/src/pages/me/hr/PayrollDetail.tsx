@@ -65,7 +65,7 @@ export default function PayrollDetail() {
         if (!alive) return
 
         if (String(p.data.employee_id) !== String(me.data.id)) {
-          toast({ title: "Acesso restrito", description: "Este holerite não pertence ao teu utilizador.", variant: "destructive" })
+          toast({ title: "Acesso restrito", description: "Este vencimento não pertence ao teu utilizador.", variant: "destructive" })
           navigate("/me/hr/payrolls", { replace: true })
           return
         }
@@ -74,7 +74,7 @@ export default function PayrollDetail() {
       })
       .catch(() => {
         if (!alive) return
-        toast({ title: "Erro", description: "Não foi possível carregar holerite", variant: "destructive" })
+        toast({ title: "Erro", description: "Não foi possível carregar vencimento", variant: "destructive" })
       })
       .finally(() => {
         if (!alive) return
@@ -97,8 +97,8 @@ export default function PayrollDetail() {
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="page-header">
-          <h1 className="page-title">Holerite</h1>
-          <p className="page-subtitle">Meu RH → Holerites</p>
+          <h1 className="page-title">Vencimento</h1>
+          <p className="page-subtitle">Meu RH → Vencimentos</p>
           <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
         </div>
         <div className="glass-card p-6">
@@ -117,7 +117,7 @@ export default function PayrollDetail() {
           <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
         </div>
         <div className="glass-card p-6">
-          <div className="text-sm text-muted-foreground">Holerite não encontrado.</div>
+          <div className="text-sm text-muted-foreground">Vencimento não encontrado.</div>
           <div className="mt-4">
             <Button variant="outline" asChild>
               <Link to="/me/hr/payrolls">Voltar</Link>
@@ -136,8 +136,8 @@ export default function PayrollDetail() {
       <div className="page-header">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="page-title">Holerite</h1>
-            <p className="page-subtitle">Meu RH → Holerites</p>
+            <h1 className="page-title">Vencimento</h1>
+            <p className="page-subtitle">Meu RH → Vencimentos</p>
             <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
           </div>
 
