@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { CalendarDays, Check, Plus, Search } from "lucide-react"
+import { CalendarDays, Check, Pencil, Plus, Search } from "lucide-react"
 
 import type { Company, Employee, Vacation, VacationStatus, VacationType } from "@/types"
 import { fetchCompanies, fetchEmployees, fetchVacations, updateVacation } from "@/services/api"
@@ -175,6 +175,7 @@ export default function Vacations() {
                 <th className="py-3 pr-4">Empresa</th>
                 <th className="py-3 pr-4">Estado</th>
                 <th className="py-3 pr-4"></th>
+                <th className="py-3 pr-4"></th>
               </tr>
             </thead>
 
@@ -232,6 +233,14 @@ export default function Vacations() {
                       <td className="py-4 pr-4">{vacationTypeLabel(type)}</td>
                       <td className="py-4 pr-4">{companyName}</td>
                       <td className="py-4 pr-4">{statusLabel(status)}</td>
+                      <td className="py-4 pr-4">
+                        <Button asChild type="button" size="sm" variant="outline">
+                          <Link to={`/hr/vacations/${r.id}/edit`}>
+                            <Pencil />
+                            Editar
+                          </Link>
+                        </Button>
+                      </td>
                       <td className="py-4 pr-4">
                         {status === "pending" ? (
                           <Button

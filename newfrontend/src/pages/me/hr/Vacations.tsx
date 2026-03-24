@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { CalendarDays, Plus, Search } from "lucide-react"
+import { CalendarDays, Eye, Plus, Search } from "lucide-react"
 
 import type { Vacation, VacationStatus, VacationType } from "@/types"
 import { fetchMyEmployee, fetchVacations } from "@/services/api"
@@ -134,6 +134,7 @@ export default function Vacations() {
                 <th className="py-3 pr-4">Dias</th>
                 <th className="py-3 pr-4">Tipo</th>
                 <th className="py-3 pr-4">Estado</th>
+                <th className="py-3 pr-4"></th>
               </tr>
             </thead>
 
@@ -160,7 +161,7 @@ export default function Vacations() {
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-10 text-center text-muted-foreground">
+                  <td colSpan={5} className="py-10 text-center text-muted-foreground">
                     Nenhuma solicitação encontrada
                   </td>
                 </tr>
@@ -179,6 +180,14 @@ export default function Vacations() {
                       <td className="py-4 pr-4">{r.requested_days}</td>
                       <td className="py-4 pr-4">{vacationTypeLabel(type)}</td>
                       <td className="py-4 pr-4">{statusLabel(status)}</td>
+                      <td className="py-4 pr-4">
+                        <Button asChild type="button" size="sm" variant="outline">
+                          <Link to={`/me/hr/vacations/${r.id}`}>
+                            <Eye />
+                            Detalhes
+                          </Link>
+                        </Button>
+                      </td>
                     </tr>
                   )
                 })
