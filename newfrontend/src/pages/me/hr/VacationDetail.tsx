@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, Save } from "lucide-react"
 
 import type { Employee, Vacation, VacationStatus, VacationType } from "@/types"
-import { createVacation, fetchMyEmployee, fetchVacation } from "@/services/api"
+import { createVacation, fetchMyEmployee, fetchUser, fetchVacation } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -85,34 +85,55 @@ export default function VacationDetail() {
     let alive = true
     setLoading(true)
 
-    fetchMyEmployee()
-      .then(async (me) => {
-        if (!alive) return
-        setMyEmployee(me.data)
+    ;(async () => {
+      let meEmployee: Employee | null = null
 
-        if (!isEdit || !id) {
-          setVacation(null)
-          return
+      try {
+        const me = await fetchMyEmployee()
+        meEmployee = me.data
+      } catch {
+        try {
+          const me = await fetchUser()
+          const now = new Date().toISOString()
+          meEmployee = {
+            id: "",
+            name: String(me.data.name ?? ""),
+            email: me.data.email ?? null,
+            company_id: null,
+            createdAt: now,
+            updatedAt: now,
+          }
+        } catch {
+          meEmployee = null
         }
+      }
 
-        const vac = await fetchVacation(id)
-        if (!alive) return
+      if (!alive) return
+      setMyEmployee(meEmployee)
 
-        if (String(vac.data.employee_id) !== String(me.data.id)) {
-          toast({ title: "Acesso restrito", description: "Esta solicitação não pertence ao teu utilizador.", variant: "destructive" })
-          navigate("/me/hr/vacations", { replace: true })
-          return
-        }
+      if (!isEdit || !id) {
+        setVacation(null)
+        return
+      }
 
-        setVacation(vac.data)
-        setForm({
-          vacation_type: (vac.data.vacation_type ?? "annual_leave") as VacationType,
-          start_date: String(vac.data.start_date ?? ""),
-          end_date: String(vac.data.end_date ?? ""),
-          requested_days: String(vac.data.requested_days ?? 0),
-          employee_notes: String(vac.data.employee_notes ?? ""),
-        })
+      const vac = await fetchVacation(id)
+      if (!alive) return
+
+      if (meEmployee?.id && String(vac.data.employee_id) !== String(meEmployee.id)) {
+        toast({ title: "Acesso restrito", description: "Esta solicitação não pertence ao teu utilizador.", variant: "destructive" })
+        navigate("/me/hr/vacations", { replace: true })
+        return
+      }
+
+      setVacation(vac.data)
+      setForm({
+        vacation_type: (vac.data.vacation_type ?? "annual_leave") as VacationType,
+        start_date: String(vac.data.start_date ?? ""),
+        end_date: String(vac.data.end_date ?? ""),
+        requested_days: String(vac.data.requested_days ?? 0),
+        employee_notes: String(vac.data.employee_notes ?? ""),
       })
+    })()
       .catch(() => {
         if (!alive) return
         toast({ title: "Erro", description: "Não foi possível carregar a solicitação", variant: "destructive" })
@@ -132,15 +153,7 @@ export default function VacationDetail() {
 
     if (isEdit) return
 
-    if (!myEmployee?.id) {
-      toast({ title: "Erro", description: "Funcionário não identificado", variant: "destructive" })
-      return
-    }
 
-    if (!myEmployee.company_id) {
-      toast({ title: "Validação", description: "Empresa não identificada para o teu registo", variant: "destructive" })
-      return
-    }
 
     if (!form.start_date || !form.end_date) {
       toast({ title: "Validação", description: "Informe data de início e fim", variant: "destructive" })
@@ -157,8 +170,8 @@ export default function VacationDetail() {
     const vacationYear = Number(form.start_date.slice(0, 4)) || null
 
     const payload: Omit<Vacation, "id" | "createdAt" | "updatedAt"> = {
-      employee_id: String(myEmployee.id),
-      company_id: String(myEmployee.company_id),
+      employee_id: String(myEmployee?.id ?? ""),
+      company_id: String(myEmployee?.company_id ?? ""),
       vacation_type: (form.vacation_type ?? "other") as VacationType,
       start_date: form.start_date,
       end_date: form.end_date,

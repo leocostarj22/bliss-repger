@@ -3639,6 +3639,32 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         return $user;
     };
 
+    Route::get('hr/me', function () {
+        $employeeUser = auth()->guard('employee')->user();
+        abort_unless($employeeUser, 401);
+
+        $employee = Employee::query()->with(['employeeUser'])->find($employeeUser->employee_id);
+        if (! $employee) {
+            return response()->json(['message' => 'Funcionário não encontrado'], 404);
+        }
+
+        return response()->json([
+            'data' => [
+                'id' => (string) $employee->id,
+                'employee_code' => $employee->employee_code,
+                'name' => $employee->name,
+                'email' => $employee->email,
+                'system_email' => $employee->employeeUser?->email,
+                'has_system_access' => (bool) $employee->hasSystemAccess(),
+                'department_id' => $employee->department_id !== null ? (string) $employee->department_id : null,
+                'company_id' => $employee->company_id !== null ? (string) $employee->company_id : null,
+                'hire_date' => $employee->hire_date?->toIso8601String(),
+                'created_at' => $employee->created_at?->toIso8601String(),
+                'updated_at' => $employee->updated_at?->toIso8601String(),
+            ],
+        ]);
+    });
+
     Route::get('hr/payrolls', function () use ($hrUser) {
         $employeeUser = auth()->guard('employee')->user();
         if ($employeeUser) {
@@ -3849,6 +3875,49 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::post('hr/vacations', function () use ($hrUser) {
+        $employeeUser = auth()->guard('employee')->user();
+        if ($employeeUser) {
+            $employee = Employee::query()->find($employeeUser->employee_id);
+            if (! $employee) {
+                return response()->json(['message' => 'Funcionário não encontrado'], 404);
+            }
+            if (! $employee->company_id) {
+                return response()->json(['message' => 'Empresa não identificada para o funcionário'], 422);
+            }
+
+            $validated = request()->validate([
+                'start_date' => ['required', 'date'],
+                'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+                'requested_days' => ['required', 'integer', 'min:1'],
+                'vacation_year' => ['required', 'integer', 'min:2000'],
+                'vacation_type' => ['required', 'in:annual_leave,maternity_leave,paternity_leave,sick_leave,marriage_leave,bereavement_leave,study_leave,unpaid_leave,other,compensatory_leave,advance_leave'],
+                'employee_notes' => ['nullable', 'string'],
+            ]);
+
+            $vacation = Vacation::create([
+                'employee_id' => $employee->id,
+                'company_id' => $employee->company_id,
+                'start_date' => $validated['start_date'],
+                'end_date' => $validated['end_date'],
+                'requested_days' => $validated['requested_days'],
+                'approved_days' => null,
+                'vacation_year' => $validated['vacation_year'],
+                'vacation_type' => $validated['vacation_type'],
+                'status' => 'pending',
+                'requested_at' => now(),
+                'approved_at' => null,
+                'rejected_at' => null,
+                'employee_notes' => $validated['employee_notes'] ?? null,
+                'manager_notes' => null,
+                'rejection_reason' => null,
+                'approved_by' => null,
+                'rejected_by' => null,
+                'created_by' => null,
+            ]);
+
+            return response()->json(['data' => $vacation], 201);
+        }
+
         $user = $hrUser();
 
         $validated = request()->validate([
@@ -4011,6 +4080,54 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::post('hr/timesheets', function () use ($hrUser) {
+        $employeeUser = auth()->guard('employee')->user();
+        if ($employeeUser) {
+            $employee = Employee::query()->find($employeeUser->employee_id);
+            if (! $employee) {
+                return response()->json(['message' => 'Funcionário não encontrado'], 404);
+            }
+            if (! $employee->company_id) {
+                return response()->json(['message' => 'Empresa não identificada para o funcionário'], 422);
+            }
+
+            $validated = request()->validate([
+                'work_date' => [
+                    'required',
+                    'date',
+                    Rule::unique('timesheets', 'work_date')->where(function ($q) use ($employee) {
+                        return $q->where('employee_id', $employee->id);
+                    }),
+                ],
+                'clock_in' => ['nullable', 'date_format:H:i'],
+                'lunch_start' => ['nullable', 'date_format:H:i'],
+                'lunch_end' => ['nullable', 'date_format:H:i'],
+                'clock_out' => ['nullable', 'date_format:H:i'],
+                'total_hours' => ['nullable', 'numeric', 'min:0'],
+                'lunch_hours' => ['nullable', 'numeric', 'min:0'],
+                'overtime_hours' => ['nullable', 'numeric', 'min:0'],
+                'expected_hours' => ['nullable', 'numeric', 'min:0'],
+                'status' => ['nullable', 'in:present,absent,late,early_leave,holiday,sick_leave,vacation'],
+                'day_type' => ['nullable', 'in:workday,weekend,holiday,vacation'],
+                'ip_address' => ['nullable', 'string', 'max:255'],
+                'location' => ['nullable', 'string', 'max:255'],
+                'device_info' => ['nullable', 'string', 'max:255'],
+                'employee_notes' => ['nullable', 'string'],
+            ]);
+
+            if (array_key_exists('day_type', $validated) && $validated['day_type'] === null) {
+                unset($validated['day_type']);
+            }
+
+            $validated['employee_id'] = $employee->id;
+            $validated['company_id'] = $employee->company_id;
+            $validated['approved_by'] = null;
+            $validated['approved_at'] = null;
+
+            $timesheet = Timesheet::create($validated);
+
+            return response()->json(['data' => $timesheet], 201);
+        }
+
         $hrUser();
 
         $validated = request()->validate([

@@ -38,6 +38,12 @@ export const primaryNavItems = [
   { label: 'Meu RH', icon: CalendarDays, path: '/me/hr', color: 'violet' },
 ] as const;
 
+export const employeeHrNavItems = [
+  { label: 'Férias', icon: CalendarDays, path: '/me/hr/vacations', color: 'violet' },
+  { label: 'Marcação de Ponto', icon: Clock, path: '/me/hr/timesheets', color: 'sky' },
+  { label: 'Holerites', icon: Receipt, path: '/me/hr/payrolls', color: 'amber' },
+] as const;
+
 export const adminNavItems = [
   { label: 'Empresas', icon: Building2, path: '/admin/companies', color: 'amber' },
   { label: 'Departamentos', icon: Layers, path: '/admin/departments', color: 'violet' },
@@ -102,6 +108,7 @@ export const personalNavItems = [
 
 type NavItem =
   | (typeof primaryNavItems)[number]
+  | (typeof employeeHrNavItems)[number]
   | (typeof adminNavItems)[number]
   | (typeof supportNavItems)[number]
   | (typeof financeNavItems)[number]
@@ -488,6 +495,47 @@ export function AppSidebar({
           })}
         </div>
 
+        {!accessIsAdmin && (
+          <div className="space-y-1">
+            {employeeHrNavItems.map((item) => {
+              const active = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
+              const c = colorStyles[item.color];
+
+              const link = (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
+                >
+                  {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                  <item.icon
+                    className={cn(
+                      'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
+                      c.icon,
+                      active ? c.glow : c.hover,
+                    )}
+                  />
+                  {!collapsed && (
+                    <span className={cn('transition-colors duration-200', active ? 'font-semibold' : 'group-hover:text-foreground')}>
+                      {item.label}
+                    </span>
+                  )}
+                </Link>
+              );
+
+              if (!collapsed) return link;
+
+              return (
+                <Tooltip key={item.path}>
+                  <TooltipTrigger asChild>{link}</TooltipTrigger>
+                  <TooltipContent side="right" align="center">
+                    {item.label}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </div>
+        )}
 
         <div className={cn('px-2', collapsed && 'px-0', !showAdminGroup && 'hidden')}>
           {!collapsed && (
