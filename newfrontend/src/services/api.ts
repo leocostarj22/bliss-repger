@@ -1075,6 +1075,45 @@ export async function fetchMyAccess(opts?: { force?: boolean }): Promise<ApiResp
   }
 }
 
+export async function fetchMyEmployee(): Promise<ApiResponse<Employee>> {
+  const me = await fetchUser()
+  const email = String(me.data.email ?? '').trim().toLowerCase()
+
+  const tryResolveByEmail = async () => {
+    if (!email) throw new Error('Utilizador sem email associado')
+
+    const employeesResp = await fetchEmployees({ search: email })
+    const found = employeesResp.data.find((e) => {
+      const sys = String(e.system_email ?? '').trim().toLowerCase()
+      const personal = String(e.email ?? '').trim().toLowerCase()
+      return Boolean(sys && sys === email) || Boolean(personal && personal === email)
+    })
+
+    if (!found) throw new Error('Funcionário não encontrado para o utilizador atual')
+    return found
+  }
+
+  try {
+    const response = await apiFetch('/api/v1/hr/me', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
+
+    if (response.ok) {
+      const json = await response.json()
+      return { data: mapEmployee(json?.data ?? json) }
+    }
+
+    return { data: await tryResolveByEmail() }
+  } catch {
+    return { data: await tryResolveByEmail() }
+  }
+}
+
 // ── Notifications ──
 const NOTIFICATIONS_STORAGE_KEY = 'bliss:notifications';
 

@@ -521,6 +521,16 @@ const App = () => (
                 }
               />
 
+              <Route path="/me/hr" element={<Navigate to="/me/hr/vacations" replace />} />
+              <Route path="/me/hr/vacations" element={<HrVacations />} />
+              <Route path="/me/hr/vacations/new" element={<HrVacationForm />} />
+              <Route path="/me/hr/vacations/:id" element={<HrVacationForm />} />
+              <Route path="/me/hr/payrolls" element={<HrPayrolls />} />
+              <Route path="/me/hr/payrolls/:id" element={<HrPayrollForm />} />
+              <Route path="/me/hr/timesheets" element={<HrTimesheets />} />
+              <Route path="/me/hr/timesheets/new" element={<HrTimesheetForm />} />
+              <Route path="/me/hr/timesheets/:id" element={<HrTimesheetForm />} />
+
               <Route
                 path="/communication"
                 element={

@@ -35,6 +35,7 @@ import { fetchAdminModules, fetchMyAccess } from '@/services/api';
 
 export const primaryNavItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/', color: 'cyan' },
+  { label: 'Meu RH', icon: CalendarDays, path: '/me/hr', color: 'violet' },
 ] as const;
 
 export const adminNavItems = [

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, Save } from "lucide-react"
 
 import type { Company, Employee, Vacation, VacationStatus, VacationType } from "@/types"
-import { createVacation, fetchCompanies, fetchEmployees, fetchVacation, updateVacation } from "@/services/api"
+import { createVacation, fetchCompanies, fetchEmployees, fetchMyEmployee, fetchVacation, updateVacation } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -60,6 +60,9 @@ const daysBetweenInclusive = (start: string, end: string) => {
 }
 
 export default function VacationDetail() {
+  const location = useLocation()
+  const isSelf = location.pathname.startsWith("/me/hr")
+
   const { id } = useParams()
   const isEdit = Boolean(id)
 
@@ -71,10 +74,13 @@ export default function VacationDetail() {
 
   const [employees, setEmployees] = useState<Employee[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
+  const [myEmployee, setMyEmployee] = useState<Employee | null>(null)
   const [form, setForm] = useState<FormState>(() => emptyForm())
   const [requestedAt, setRequestedAt] = useState<string | null>(null)
 
-  const title = isEdit ? "Editar férias" : "Nova solicitação de férias"
+  const canEdit = !isSelf || !isEdit
+
+  const title = isSelf ? (isEdit ? "Detalhe de férias" : "Nova solicitação de férias") : isEdit ? "Editar férias" : "Nova solicitação de férias"
 
   const setField = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -89,34 +95,86 @@ export default function VacationDetail() {
   }, [requestedDays, setField])
 
   useEffect(() => {
+    let alive = true
     setLoading(true)
-    Promise.all([fetchEmployees(), fetchCompanies(), isEdit && id ? fetchVacation(id) : Promise.resolve(null)])
-      .then(([empResp, compResp, vacResp]) => {
-        setEmployees(empResp.data)
-        setCompanies(compResp.data)
 
-        if (vacResp?.data) {
-          const v = vacResp.data
-          setRequestedAt(v.requested_at ? String(v.requested_at) : null)
-          setForm({
-            employee_id: String(v.employee_id ?? ""),
-            company_id: String(v.company_id ?? ""),
-            vacation_type: (v.vacation_type ?? "annual_leave") as VacationType,
-            start_date: String(v.start_date ?? ""),
-            end_date: String(v.end_date ?? ""),
-            requested_days: String(v.requested_days ?? 0),
-            status: (v.status ?? "pending") as VacationStatus,
-            employee_notes: String(v.employee_notes ?? ""),
-            manager_notes: String(v.manager_notes ?? ""),
-            rejection_reason: String(v.rejection_reason ?? ""),
-          })
-        }
-      })
+    const loadAdmin = () =>
+      Promise.all([fetchEmployees(), fetchCompanies(), isEdit && id ? fetchVacation(id) : Promise.resolve(null)])
+        .then(([empResp, compResp, vacResp]) => {
+          if (!alive) return
+          setEmployees(empResp.data)
+          setCompanies(compResp.data)
+
+          if (vacResp?.data) {
+            const v = vacResp.data
+            setRequestedAt(v.requested_at ? String(v.requested_at) : null)
+            setForm({
+              employee_id: String(v.employee_id ?? ""),
+              company_id: String(v.company_id ?? ""),
+              vacation_type: (v.vacation_type ?? "annual_leave") as VacationType,
+              start_date: String(v.start_date ?? ""),
+              end_date: String(v.end_date ?? ""),
+              requested_days: String(v.requested_days ?? 0),
+              status: (v.status ?? "pending") as VacationStatus,
+              employee_notes: String(v.employee_notes ?? ""),
+              manager_notes: String(v.manager_notes ?? ""),
+              rejection_reason: String(v.rejection_reason ?? ""),
+            })
+          }
+        })
+
+    const loadSelf = () =>
+      Promise.all([fetchMyEmployee(), isEdit && id ? fetchVacation(id) : Promise.resolve(null)])
+        .then(([meEmpResp, vacResp]) => {
+          if (!alive) return
+
+          const meEmp = meEmpResp.data
+          setMyEmployee(meEmp)
+          setEmployees([])
+          setCompanies([])
+
+          if (vacResp?.data) {
+            const v = vacResp.data
+            setRequestedAt(v.requested_at ? String(v.requested_at) : null)
+            setForm({
+              employee_id: String(meEmp.id),
+              company_id: String(meEmp.company_id ?? ""),
+              vacation_type: (v.vacation_type ?? "annual_leave") as VacationType,
+              start_date: String(v.start_date ?? ""),
+              end_date: String(v.end_date ?? ""),
+              requested_days: String(v.requested_days ?? 0),
+              status: (v.status ?? "pending") as VacationStatus,
+              employee_notes: String(v.employee_notes ?? ""),
+              manager_notes: String(v.manager_notes ?? ""),
+              rejection_reason: String(v.rejection_reason ?? ""),
+            })
+            return
+          }
+
+          setForm((prev) => ({
+            ...prev,
+            employee_id: String(meEmp.id),
+            company_id: String(meEmp.company_id ?? ""),
+            status: "pending",
+          }))
+        })
+
+    const load = isSelf ? loadSelf : loadAdmin
+
+    load()
       .catch(() => {
+        if (!alive) return
         toast({ title: "Erro", description: "Não foi possível carregar a solicitação", variant: "destructive" })
       })
-      .finally(() => setLoading(false))
-  }, [id, isEdit, toast])
+      .finally(() => {
+        if (!alive) return
+        setLoading(false)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [id, isEdit, isSelf, toast])
 
   const onEmployeeChange = useCallback(
     (employeeId: string) => {
@@ -131,6 +189,11 @@ export default function VacationDetail() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!canEdit) {
+      toast({ title: "Ação indisponível", description: "Esta solicitação está apenas para consulta.", variant: "destructive" })
+      return
+    }
 
     if (!form.employee_id) {
       toast({ title: "Validação", description: "Funcionário é obrigatório", variant: "destructive" })
@@ -223,65 +286,88 @@ export default function VacationDetail() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="page-title">{title}</h1>
-            <p className="page-subtitle">Recursos Humanos → Férias</p>
+            <p className="page-subtitle">{isSelf ? "Meu RH → Férias" : "Recursos Humanos → Férias"}</p>
             <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
           </div>
 
           <div className="flex items-center gap-2">
             <Button variant="outline" asChild>
-              <Link to="/hr/vacations">
+              <Link to={isSelf ? "/me/hr/vacations" : "/hr/vacations"}>
                 <ArrowLeft />
                 Voltar
               </Link>
             </Button>
-            <Button type="submit" form="vacation-form" disabled={saving}>
-              <Save />
-              {saving ? "A guardar…" : "Guardar"}
-            </Button>
+            {canEdit ? (
+              <Button type="submit" form="vacation-form" disabled={saving}>
+                <Save />
+                {saving ? "A guardar…" : "Guardar"}
+              </Button>
+            ) : null}
           </div>
         </div>
       </div>
 
       <form id="vacation-form" onSubmit={onSubmit} className="glass-card p-6 space-y-6">
+        {isSelf && isEdit ? (
+          <div className="rounded-lg border border-border p-4">
+            <div className="text-sm text-muted-foreground">Esta solicitação é apenas para consulta.</div>
+          </div>
+        ) : null}
         <div className="rounded-lg border border-border p-4">
           <div className="text-sm font-semibold">Informações da Solicitação</div>
 
           <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Funcionário</label>
-              <Select value={form.employee_id} onValueChange={onEmployeeChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecionar funcionário" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>
-                      {e.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {isSelf ? (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Funcionário</label>
+                  <Input value={myEmployee?.name ?? ""} disabled />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Empresa</label>
+                  <Input value={myEmployee?.company_id ?? ""} disabled />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Funcionário</label>
+                  <Select value={form.employee_id} onValueChange={onEmployeeChange} disabled={!canEdit}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecionar funcionário" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.map((e) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Empresa</label>
+                  <Select value={form.company_id} onValueChange={(v) => setField("company_id", v)} disabled={!canEdit || Boolean(form.employee_id)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecionar empresa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Empresa</label>
-              <Select value={form.company_id} onValueChange={(v) => setField("company_id", v)} disabled={Boolean(form.employee_id)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecionar empresa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {companies.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tipo de Férias</label>
-              <Select value={String(form.vacation_type)} onValueChange={(v) => setField("vacation_type", v as VacationType)}>
+              <label className="text-sm font-medium">Tipo</label>
+              <Select value={String(form.vacation_type)} onValueChange={(v) => setField("vacation_type", v as VacationType)} disabled={!canEdit}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecionar tipo" />
                 </SelectTrigger>
@@ -303,12 +389,12 @@ export default function VacationDetail() {
           <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="space-y-2">
               <label className="text-sm font-medium">Data de Início</label>
-              <Input type="date" value={form.start_date} onChange={(e) => setField("start_date", e.target.value)} />
+              <Input value={form.start_date} onChange={(e) => setField("start_date", e.target.value)} type="date" disabled={!canEdit} />
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Data de Fim</label>
-              <Input type="date" value={form.end_date} onChange={(e) => setField("end_date", e.target.value)} />
+              <Input value={form.end_date} onChange={(e) => setField("end_date", e.target.value)} type="date" disabled={!canEdit} />
             </div>
 
             <div className="space-y-2">
