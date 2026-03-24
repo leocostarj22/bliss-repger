@@ -449,7 +449,7 @@ export function AppSidebar({
       <ScrollArea className="flex-1 min-h-0">
         <nav className="py-4 px-2 space-y-3">
         <div className="space-y-1">
-          {(accessIsAdmin ? primaryNavItems.filter((it) => it.path !== "/me/hr") : primaryNavItems).map((item) => {
+          {(accessIsAdmin ? primaryNavItems.filter((it) => it.path !== "/me/hr") : primaryNavItems.filter((it) => it.path !== "/")).map((item) => {
             const active = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
             const c = colorStyles[item.color];
 

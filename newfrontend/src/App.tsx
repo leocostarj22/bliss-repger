@@ -163,6 +163,50 @@ function RequirePermission(props: { permission: string | string[]; children: Rea
   return children
 }
 
+function Home() {
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    setIsAdmin(null)
+
+    fetchMyAccess()
+      .then((r) => {
+        if (!alive) return
+        setIsAdmin(Boolean(r.data.isAdmin))
+      })
+      .catch(() => {
+        if (!alive) return
+        setIsAdmin(false)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  if (isAdmin === null) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="page-header">
+          <h1 className="page-title">A carregar…</h1>
+          <p className="page-subtitle">Início</p>
+          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+        </div>
+        <div className="glass-card p-6">
+          <div className="text-sm text-muted-foreground">A preparar o painel…</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/me/hr" replace />
+  }
+
+  return <Dashboard />
+}
+
 const App = () => (
   <ThemeProvider>
     <QueryClientProvider client={queryClient}>
@@ -174,7 +218,7 @@ const App = () => (
           <Routes>
             <Route path="/myformula/orders/:id/purchase-report" element={<MyFormulaPurchaseReport />} />
             <Route element={<AppLayout />}>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<Home />} />
               <Route path="/gmcentral" element={<Navigate to="/" replace />} />
 
               <Route path="/admin" element={<Navigate to="/" replace />} />
