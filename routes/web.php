@@ -63,6 +63,9 @@ Route::get('/newadmin/login', function () {
     if (Auth::check()) {
         return redirect('/admin');
     }
+    if (Auth::guard('employee')->check()) {
+        return redirect('/employee');
+    }
     return view('newadmin-login');
 })->name('newadmin.login');
 
@@ -78,11 +81,7 @@ Route::post('/newadmin/login', function (Request $request) {
 
         $u = Auth::user();
         if ($u instanceof User) {
-            try {
-                $u->updateLastLogin();
-            } catch (\Throwable $e) {
-            }
-
+            try { $u->updateLastLogin(); } catch (\Throwable $e) {}
             try {
                 SystemLog::create([
                     'user_id' => $u->id,
@@ -93,16 +92,17 @@ Route::post('/newadmin/login', function (Request $request) {
                     'ip_address' => (string) $request->ip(),
                     'user_agent' => (string) $request->userAgent(),
                     'level' => 'info',
-                    'context' => [
-                        'path' => (string) $request->path(),
-                        'remember' => $remember,
-                    ],
+                    'context' => [ 'path' => (string) $request->path(), 'remember' => $remember ],
                 ]);
-            } catch (\Throwable $e) {
-            }
+            } catch (\Throwable $e) {}
         }
 
         return redirect()->intended('/admin');
+    }
+
+    if (Auth::guard('employee')->attempt($credentials, $remember)) {
+        $request->session()->regenerate();
+        return redirect()->intended('/employee');
     }
 
     return back()->withErrors(['email' => 'Credenciais inválidas.'])->withInput();
@@ -130,6 +130,7 @@ Route::post('/newadmin/logout', function (Request $request) {
     }
 
     Auth::logout();
+    Auth::guard('employee')->logout();
     $request->session()->invalidate();
     $request->session()->regenerateToken();
     return redirect('/newadmin/login');

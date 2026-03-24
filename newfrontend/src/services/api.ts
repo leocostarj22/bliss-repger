@@ -2020,6 +2020,8 @@ const pickHrEmployeeError = async (response: Response, fallback: string): Promis
           company_id: 'Empresa',
           department_id: 'Departamento',
           hire_date: 'Data de admissão',
+          system_email: 'Email do sistema',
+          system_password: 'Password do sistema',
         };
 
         const head = keys.slice(0, 6).map((k) => labels[k] ?? k);
