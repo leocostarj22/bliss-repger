@@ -535,6 +535,7 @@ export default function EmployeeForm() {
       </div>
 
       <form id="employee-form" onSubmit={onSubmit} className="glass-card p-6 space-y-6">
+        <div className="text-sm text-muted-foreground">Campos obrigatórios estão assinalados com <span className="text-destructive">*</span>.</div>
         <Tabs defaultValue="personal" className="space-y-6">
           <TabsList className="w-full justify-start flex-wrap">
             <TabsTrigger value="personal">Dados Pessoais</TabsTrigger>
@@ -614,7 +615,7 @@ export default function EmployeeForm() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Nome Completo</label>
+                <label className="text-sm font-medium">Nome Completo <span className="text-destructive">*</span></label>
                 <Input value={form.name} onChange={(e) => setField("name", e.target.value)} placeholder="Nome completo" />
               </div>
 
@@ -667,12 +668,12 @@ export default function EmployeeForm() {
                 <div className="text-sm font-semibold">Documentos</div>
                 <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">NIF</label>
+                    <label className="text-sm font-medium">NIF <span className="text-destructive">*</span></label>
                     <Input value={form.nif} onChange={(e) => setField("nif", e.target.value)} placeholder="123456789" />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Tipo de Documento</label>
+                    <label className="text-sm font-medium">Tipo de Documento <span className="text-destructive">*</span></label>
                     <Select value={form.document_type} onValueChange={(v) => setField("document_type", v === CLEAR_SELECT_VALUE ? "" : v)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione" />
@@ -689,7 +690,7 @@ export default function EmployeeForm() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Número do Documento</label>
+                    <label className="text-sm font-medium">Número do Documento <span className="text-destructive">*</span></label>
                     <Input value={form.document_number} onChange={(e) => setField("document_number", e.target.value)} placeholder="…" />
                   </div>
 
@@ -978,12 +979,12 @@ export default function EmployeeForm() {
           <TabsContent value="professional">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Cargo</label>
+                <label className="text-sm font-medium">Cargo <span className="text-destructive">*</span></label>
                 <Input value={form.position} onChange={(e) => setField("position", e.target.value)} placeholder="Ex.: Analista" />
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Empresa</label>
+                <label className="text-sm font-medium">Empresa <span className="text-destructive">*</span></label>
                 <Select
                   value={form.company_id}
                   onValueChange={(v) => {
@@ -1007,7 +1008,7 @@ export default function EmployeeForm() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Departamento</label>
+                <label className="text-sm font-medium">Departamento <span className="text-destructive">*</span></label>
                 <Select value={form.department_id} onValueChange={(v) => setField("department_id", v === CLEAR_SELECT_VALUE ? "" : v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o departamento" />
@@ -1039,7 +1040,7 @@ export default function EmployeeForm() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Data de Admissão</label>
+                <label className="text-sm font-medium">Data de Admissão <span className="text-destructive">*</span></label>
                 <Input type="date" value={form.hire_date} onChange={(e) => setField("hire_date", e.target.value)} />
               </div>
 

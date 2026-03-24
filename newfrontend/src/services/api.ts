@@ -2002,16 +2002,46 @@ const mapEmployee = (raw: any): Employee => {
 const pickHrEmployeeError = async (response: Response, fallback: string): Promise<string> => {
   try {
     const json = await response.json();
+
     if (typeof json?.message === 'string' && json.message.trim()) return json.message;
+
     const errors = json?.errors;
     if (errors && typeof errors === 'object') {
-      const firstKey = Object.keys(errors)[0];
+      const keys = Object.keys(errors);
+
+      if (response.status === 422) {
+        const labels: Record<string, string> = {
+          name: 'Nome',
+          email: 'Email',
+          nif: 'NIF',
+          document_type: 'Tipo de documento',
+          document_number: 'Número do documento',
+          position: 'Cargo',
+          company_id: 'Empresa',
+          department_id: 'Departamento',
+          hire_date: 'Data de admissão',
+        };
+
+        const head = keys.slice(0, 6).map((k) => labels[k] ?? k);
+        if (head.length) {
+          return `Faltam informações obrigatórias para a conclusão do registo. Verifique: ${head.join(', ')}.`;
+        }
+
+        return 'Faltam informações obrigatórias para a conclusão do registo. Verifique os campos obrigatórios.';
+      }
+
+      const firstKey = keys[0];
       const firstVal = firstKey ? (errors as any)[firstKey] : null;
       if (Array.isArray(firstVal) && typeof firstVal[0] === 'string') return firstVal[0];
     }
   } catch {
     // ignore
   }
+
+  if (response.status === 422) {
+    return 'Faltam informações obrigatórias para a conclusão do registo. Verifique os campos obrigatórios.';
+  }
+
   return fallback;
 };
 
@@ -2140,7 +2170,10 @@ export async function createEmployee(payload: Omit<Employee, 'id' | 'createdAt' 
   });
 
   if (!response.ok) {
-    const msg = await pickHrEmployeeError(response, `Failed to create employee: ${response.statusText}`);
+    const fallback = response.status === 422
+      ? 'Faltam informações obrigatórias para a conclusão do registo. Verifique os campos obrigatórios.'
+      : `Falha ao criar funcionário: ${response.statusText}`;
+    const msg = await pickHrEmployeeError(response, fallback);
     throw new Error(msg);
   }
 
@@ -2163,7 +2196,10 @@ export async function updateEmployee(
   });
 
   if (!response.ok) {
-    const msg = await pickHrEmployeeError(response, `Failed to update employee: ${response.statusText}`);
+    const fallback = response.status === 422
+      ? 'Faltam informações obrigatórias para a conclusão do registo. Verifique os campos obrigatórios.'
+      : `Falha ao atualizar funcionário: ${response.statusText}`;
+    const msg = await pickHrEmployeeError(response, fallback);
     throw new Error(msg);
   }
 
