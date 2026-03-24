@@ -59,6 +59,12 @@ const daysBetweenInclusive = (start: string, end: string) => {
   return Number.isFinite(days) ? Math.max(0, days) : 0
 }
 
+const toDateInputValue = (raw: unknown) => {
+  const s = String(raw ?? "").trim()
+  if (!s) return ""
+  return s.split("T")[0].split(" ")[0]
+}
+
 export default function VacationDetail() {
   const { id } = useParams()
   const isEdit = Boolean(id)
@@ -110,8 +116,8 @@ export default function VacationDetail() {
             employee_id: String(v.employee_id ?? ""),
             company_id: String(v.company_id ?? ""),
             vacation_type: (v.vacation_type ?? "annual_leave") as VacationType,
-            start_date: String(v.start_date ?? ""),
-            end_date: String(v.end_date ?? ""),
+            start_date: toDateInputValue(v.start_date),
+            end_date: toDateInputValue(v.end_date),
             requested_days: String(v.requested_days ?? 0),
             status: (v.status ?? "pending") as VacationStatus,
             employee_notes: String(v.employee_notes ?? ""),
