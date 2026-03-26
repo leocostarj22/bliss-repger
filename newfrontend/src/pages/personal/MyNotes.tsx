@@ -112,21 +112,34 @@ export default function MyNotes() {
             <div className="text-sm font-semibold">Lembretes</div>
             <div className="text-xs text-muted-foreground">Formato Post‑it</div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {rows
               .filter((n) => n.remind_at || n.is_favorite)
-              .slice(0, 8)
+              .slice(0, 12)
               .map((n) => (
                 <div
                   key={n.id}
-                  className="relative p-3 rounded-lg shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-border/50 rotate-[-0.8deg] hover:rotate-0 transition-transform"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openEdit(n)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') openEdit(n) }}
+                  className="relative w-[160px] h-[160px] rounded-[8px] shadow-[0_10px_18px_rgba(0,0,0,0.18)] border border-black/10 rotate-[-1.2deg] hover:rotate-0 transition-transform cursor-pointer select-none overflow-hidden"
                   style={{ backgroundColor: n.color || '#FEF3C7' }}
                   title={n.title}
                 >
-                  <div className="text-xs font-semibold mb-1 truncate">{n.title}</div>
-                  <div className="text-xs opacity-80 line-clamp-4 whitespace-pre-wrap">{n.content}</div>
-                  <div className="mt-2 text-[11px] opacity-70">
-                    {n.remind_at ? new Date(n.remind_at).toLocaleString('pt-PT') : n.is_favorite ? 'Favorita' : ''}
+                  <div className="absolute inset-x-0 top-0 h-6 bg-white/20 mix-blend-overlay" />
+                  <div className="absolute inset-x-0 bottom-0 h-6 bg-black/5 blur-[2px] opacity-50" />
+                  <div
+                    className="relative p-3 h-full"
+                    style={{ fontFamily: '"Segoe Print","Bradley Hand","Comic Sans MS","Patrick Hand",cursive' }}
+                  >
+                    <div className="text-[13px] font-semibold leading-tight mb-1 truncate">{n.title}</div>
+                    <div className="text-[13px] leading-snug opacity-90 whitespace-pre-wrap break-words line-clamp-6">
+                      {n.content}
+                    </div>
+                    <div className="absolute bottom-2 right-2 text-[11px] opacity-70">
+                      {n.remind_at ? new Date(n.remind_at).toLocaleString('pt-PT') : n.is_favorite ? '★' : ''}
+                    </div>
                   </div>
                 </div>
               ))}
