@@ -2663,10 +2663,22 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         });
 
         Route::get('me/posts', function () {
-            $user = auth()->guard('employee')->user();
-            abort_unless($user, 401);
+            $webUser = auth('web')->user();
+            $employeeUser = auth('employee')->user();
 
-            $departmentId = $user->employee?->department_id;
+            abort_unless($webUser || $employeeUser, 401);
+
+            $departmentId = null;
+            $meId = null;
+            $canLike = false;
+
+            if ($webUser) {
+                $departmentId = $webUser->department_id;
+                $meId = $webUser->id;
+                $canLike = true;
+            } else {
+                $departmentId = $employeeUser->employee?->department_id;
+            }
 
             $posts = Post::published()
                 ->when($departmentId, function ($query) use ($departmentId) {
@@ -2678,8 +2690,18 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 ->limit(20)
                 ->get();
 
+            $likedSet = [];
+            if ($canLike && $meId) {
+                $likedIds = PostLike::where('user_id', $meId)
+                    ->whereIn('post_id', $posts->pluck('id')->all())
+                    ->pluck('post_id')
+                    ->all();
+
+                $likedSet = array_fill_keys($likedIds, true);
+            }
+
             return response()->json([
-                'data' => $posts->map(function (Post $p) {
+                'data' => $posts->map(function (Post $p) use ($likedSet) {
                     $photo = $p->author?->photo_path;
                     if (is_string($photo) && $photo !== '' && ! str_starts_with($photo, 'http://') && ! str_starts_with($photo, 'https://') && ! str_starts_with($photo, 'data:') && ! str_starts_with($photo, '/')) {
                         $photo = asset('storage/' . ltrim(preg_replace('/^storage\//', '', $photo), '/'));
@@ -2698,7 +2720,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                         'published_at' => $p->published_at?->toIso8601String(),
                         'expires_at' => $p->expires_at?->toIso8601String(),
                         'likes_count' => (int) ($p->likes_count ?? 0),
-                        'liked_by_me' => false,
+                        'liked_by_me' => isset($likedSet[$p->id]),
                         'author' => [
                             'id' => $p->author?->id !== null ? (string) $p->author->id : null,
                             'name' => $p->author?->name,
