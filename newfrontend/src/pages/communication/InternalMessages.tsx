@@ -90,7 +90,7 @@ export default function InternalMessages() {
       const meResp = await fetchUser()
       const nextMeId = String(meResp.data.id)
       setMeId(nextMeId)
-      const mResp = await fetchInternalMessages({ folder: nextFolder, user_id: nextMeId })
+      const mResp = await fetchInternalMessages({ folder: nextFolder, user_id: nextMeId, kind: 'internal' })
       const rows = (mResp.data ?? []).filter((m: any) =>
         nextFolder === 'inbox'
           ? String(m?.to_user_id ?? '').trim() === nextMeId

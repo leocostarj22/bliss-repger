@@ -2915,13 +2915,16 @@ export async function fetchInternalMessages(params?: {
   folder?: 'inbox' | 'sent' | 'archived' | string;
   search?: string;
   user_id?: string;
+  kind?: 'chat' | 'internal' | string;
 }): Promise<ApiResponse<InternalMessage[]>> {
   const qs = new URLSearchParams();
   const folder = (params?.folder ?? 'inbox').trim();
   const search = (params?.search ?? '').trim();
+  const kind = String(params?.kind ?? '').trim();
 
   if (folder) qs.set('folder', folder);
   if (search) qs.set('search', search);
+  if (kind) qs.set('kind', kind);
 
   const url = `/api/v1/communication/messages${qs.toString() ? `?${qs.toString()}` : ''}`;
   const response = await apiFetch(url, {

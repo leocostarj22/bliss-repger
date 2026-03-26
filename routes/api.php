@@ -111,22 +111,27 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $unreadMessages = MessageRecipient::where('recipient_id', $userId)
             ->whereNull('read_at')
             ->whereHas('message', function ($query) {
-                $query->where('status', 'sent');
+                $query->where('status', 'sent')->where('subject', '!=', '(Chat)');
             })
             ->count();
 
         $sentThisMonth = InternalMessage::where('sender_id', $userId)
             ->where('status', 'sent')
+            ->where('subject', '!=', '(Chat)')
             ->whereMonth('sent_at', now()->month)
             ->whereYear('sent_at', now()->year)
             ->count();
 
         $drafts = InternalMessage::where('sender_id', $userId)
             ->where('status', 'draft')
+            ->where('subject', '!=', '(Chat)')
             ->count();
 
         $starred = MessageRecipient::where('recipient_id', $userId)
             ->where('is_starred', true)
+            ->whereHas('message', function ($query) {
+                $query->where('status', 'sent')->where('subject', '!=', '(Chat)');
+            })
             ->count();
 
         $now = now();
@@ -581,11 +586,18 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
             $folder = trim((string) request('folder', 'inbox'));
             $search = trim((string) request('search', ''));
+            $kind = strtolower(trim((string) request('kind', 'internal')));
 
             if ($folder === 'sent') {
                 $q = InternalMessage::query()
                     ->where('sender_id', $user->id)
                     ->where('status', 'sent')
+                    ->when($kind === 'chat', function ($mq) {
+                        $mq->where('subject', '(Chat)');
+                    })
+                    ->when($kind !== 'chat', function ($mq) {
+                        $mq->where('subject', '!=', '(Chat)');
+                    })
                     ->with(['recipients']);
 
                 if ($search !== '') {
@@ -623,6 +635,13 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 ->where('is_archived', false)
                 ->whereHas('message', function ($mq) {
                     $mq->where('status', 'sent');
+                })
+                ->whereHas('message', function ($mq) use ($kind) {
+                    if ($kind === 'chat') {
+                        $mq->where('subject', '(Chat)');
+                    } else {
+                        $mq->where('subject', '!=', '(Chat)');
+                    }
                 })
                 ->with(['message']);
 

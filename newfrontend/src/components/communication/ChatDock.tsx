@@ -311,7 +311,7 @@ export function ChatDock() {
 
     const tick = async () => {
       try {
-        const res = await fetchInternalMessages({ folder: 'inbox', user_id: String(me.id || '').trim() });
+        const res = await fetchInternalMessages({ folder: 'inbox', user_id: String(me.id || '').trim(), kind: 'chat' });
         const next = (res?.data ?? []).filter((m: any) => msgToId(m) === String(me.id || '').trim());
         setInbox(next);
 
@@ -354,7 +354,7 @@ export function ChatDock() {
 
     const tick = async () => {
       try {
-        const res = await fetchInternalMessages({ folder: 'sent', user_id: String(me.id || '').trim() });
+        const res = await fetchInternalMessages({ folder: 'sent', user_id: String(me.id || '').trim(), kind: 'chat' });
         const next = (res?.data ?? []).filter((m: any) => msgFromId(m) === String(me.id || '').trim());
         setSent(next);
       } catch {

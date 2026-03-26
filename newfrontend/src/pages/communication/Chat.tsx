@@ -178,8 +178,8 @@ export default function Chat() {
       })
 
       const [inboxResp, sentResp] = await Promise.all([
-        fetchInternalMessages({ folder: "inbox", user_id: nextMeId }),
-        fetchInternalMessages({ folder: "sent", user_id: nextMeId }),
+        fetchInternalMessages({ folder: "inbox", user_id: nextMeId, kind: "chat" }),
+        fetchInternalMessages({ folder: "sent", user_id: nextMeId, kind: "chat" }),
       ])
 
       const safeInbox = (inboxResp.data ?? []).filter((m: any) => String(m?.to_user_id ?? '').trim() === nextMeId)
