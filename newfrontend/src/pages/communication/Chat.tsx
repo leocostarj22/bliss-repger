@@ -54,11 +54,14 @@ export default function Chat() {
   const [meId, setMeId] = useState<string>("")
   const [meName, setMeName] = useState("")
   const [mePhotoPath, setMePhotoPath] = useState<string | null>(null)
+  const [meIsAdmin, setMeIsAdmin] = useState(false)
   const [users, setUsers] = useState<CommunicationRecipient[]>([])
   const [all, setAll] = useState<InternalMessage[]>([])
 
-  const [userDetailsById, setUserDetailsById] = useState<Record<string, { name?: string; email?: string; photo_path?: string | null }>>({})
-  const userDetailsRef = useRef<Record<string, { name?: string; email?: string; photo_path?: string | null }>>({})
+  const [userDetailsById, setUserDetailsById] = useState<
+    Record<string, { name?: string; email?: string; photo_path?: string | null; role?: string | null; is_admin?: boolean }>
+  >({})
+  const userDetailsRef = useRef<Record<string, { name?: string; email?: string; photo_path?: string | null; role?: string | null; is_admin?: boolean }>>({})
 
   const [activeUserId, setActiveUserId] = useState<string>("")
   const [draft, setDraft] = useState("")
@@ -135,6 +138,8 @@ export default function Chat() {
           name: String(u.name ?? prev[uid]?.name ?? "").trim(),
           email: String(u.email ?? prev[uid]?.email ?? "").trim(),
           photo_path: (u.photo_path ?? prev[uid]?.photo_path ?? null) as any,
+          role: (u.role ?? prev[uid]?.role ?? null) as any,
+          is_admin: (u.is_admin ?? prev[uid]?.is_admin ?? undefined) as any,
         },
       }))
     } catch {
@@ -156,6 +161,9 @@ export default function Chat() {
       setMeId(nextMeId)
       setMeName(String((meResp as any)?.data?.name ?? "").trim())
       setMePhotoPath(((meResp as any)?.data?.photo_path ?? null) as any)
+      setMeIsAdmin(
+        Boolean((meResp as any)?.data?.is_admin) || String((meResp as any)?.data?.role ?? "").toLowerCase() === "admin",
+      )
 
       setUsers(recResp.data)
       setUserDetailsById((prev) => {
@@ -167,6 +175,8 @@ export default function Chat() {
             name: String(u?.name ?? next[id]?.name ?? "").trim(),
             email: String(u?.email ?? next[id]?.email ?? "").trim(),
             photo_path: (next[id]?.photo_path ?? null) as any,
+            role: (u?.role ?? next[id]?.role ?? null) as any,
+            is_admin: (u?.is_admin ?? next[id]?.is_admin ?? undefined) as any,
           }
         })
         return next
@@ -267,6 +277,29 @@ export default function Chat() {
     }
     if (!text) return
 
+    const otherIsAdmin = (() => {
+      const rec: any = userById.get(to)
+      const cached: any = userDetailsById[to]
+      const role = String(cached?.role ?? rec?.role ?? "").trim().toLowerCase()
+      const isAdminFlag = Boolean(cached?.is_admin ?? rec?.is_admin ?? false)
+      return isAdminFlag || role === "admin"
+    })()
+
+    if (!meIsAdmin) {
+      const first = conversation[0] as any
+      const firstFrom = String(first?.from_user_id ?? "").trim()
+      const initiatedByOther = Boolean(first && firstFrom === to)
+
+      if (!initiatedByOther || !otherIsAdmin) {
+        toast({
+          title: "Ação não permitida",
+          description: "No chat, colaboradores só podem responder conversas iniciadas por utilizadores do módulo Admin.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
     setSending(true)
     try {
       await sendInternalMessage({
@@ -285,6 +318,24 @@ export default function Chat() {
   }
 
   const activeUser = activeUserId ? userById.get(String(activeUserId)) : null
+
+  const canSend = useMemo(() => {
+    const other = String(activeUserId || "").trim()
+    if (!other) return false
+    if (meIsAdmin) return true
+
+    const rec: any = userById.get(other)
+    const cached: any = userDetailsById[other]
+    const role = String(cached?.role ?? rec?.role ?? "").trim().toLowerCase()
+    const isAdminFlag = Boolean(cached?.is_admin ?? rec?.is_admin ?? false)
+    const otherIsAdmin = isAdminFlag || role === "admin"
+
+    const first = conversation[0] as any
+    const firstFrom = String(first?.from_user_id ?? "").trim()
+    const initiatedByOther = Boolean(first && firstFrom === other)
+
+    return initiatedByOther && otherIsAdmin
+  }, [activeUserId, conversation, meIsAdmin, userById, userDetailsById])
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -416,7 +467,7 @@ export default function Chat() {
                   variant="ghost"
                   size="sm"
                   className="h-8 px-2"
-                  disabled={!activeUserId || sending}
+                  disabled={!activeUserId || sending || !canSend}
                   onClick={() => setDraft((prev) => `${prev}${emo}`)}
                 >
                   <span className="text-base leading-none">{emo}</span>
@@ -429,14 +480,14 @@ export default function Chat() {
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder={activeUser ? `Mensagem para ${activeUser.name}…` : "Mensagem…"}
-                disabled={!activeUserId || sending}
+                disabled={!activeUserId || sending || !canSend}
                 onKeyDown={(e) => {
                   if (e.key !== "Enter") return
                   e.preventDefault()
                   onSend()
                 }}
               />
-              <Button type="button" onClick={onSend} disabled={!activeUserId || sending || !draft.trim()}>
+              <Button type="button" onClick={onSend} disabled={!activeUserId || sending || !draft.trim() || !canSend}>
                 <Send className="w-4 h-4" />
               </Button>
             </div>

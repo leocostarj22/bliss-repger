@@ -59,6 +59,7 @@ export function ChatDock() {
     email: '',
     photo_path: null,
   });
+  const [meIsAdmin, setMeIsAdmin] = useState(false);
 
   const [users, setUsers] = useState<CommunicationRecipient[]>([]);
   const [inbox, setInbox] = useState<InternalMessage[]>([]);
@@ -73,11 +74,13 @@ export function ChatDock() {
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const inboxRef = useRef<InternalMessage[]>([]);
-  const userDetailsRef = useRef<Record<string, { name?: string; email?: string; photo_path?: string | null }>>({});
+  const userDetailsRef = useRef<Record<string, { name?: string; email?: string; photo_path?: string | null; role?: string | null; is_admin?: boolean }>>({});
   const prevInboxIdsRef = useRef<Set<string>>(new Set());
   const audioUnlockedRef = useRef(false);
 
-  const [userDetailsById, setUserDetailsById] = useState<Record<string, { name?: string; email?: string; photo_path?: string | null }>>({});
+  const [userDetailsById, setUserDetailsById] = useState<
+    Record<string, { name?: string; email?: string; photo_path?: string | null; role?: string | null; is_admin?: boolean }>
+  >({});
 
   useEffect(() => {
     inboxRef.current = inbox;
@@ -166,7 +169,7 @@ export function ChatDock() {
     if (!uid || uid === me.id) return;
 
     const current = userDetailsRef.current[uid];
-    if (current && (current.photo_path !== undefined || current.name || current.email)) return;
+    if (current && (current.photo_path !== undefined || current.name || current.email || current.role || current.is_admin !== undefined)) return;
 
     try {
       const resp = await fetchAdminUser(uid);
@@ -178,6 +181,8 @@ export function ChatDock() {
           name: String(u.name ?? prev[uid]?.name ?? '').trim(),
           email: String(u.email ?? prev[uid]?.email ?? '').trim(),
           photo_path: (u.photo_path ?? prev[uid]?.photo_path ?? null) as any,
+          role: (u.role ?? prev[uid]?.role ?? null) as any,
+          is_admin: (u.is_admin ?? prev[uid]?.is_admin ?? undefined) as any,
         },
       }));
     } catch {
@@ -215,6 +220,23 @@ export function ChatDock() {
     });
   }, [activeUserId, inbox, me.id, sent]);
 
+  const canSend = useMemo(() => {
+    const other = String(activeUserId || '').trim();
+    if (!other) return false;
+    if (meIsAdmin) return true;
+
+    const rec: any = users.find((u: any) => String(u?.id ?? '').trim() === other);
+    const cached: any = userDetailsById[other];
+    const role = String(cached?.role ?? rec?.role ?? '').trim().toLowerCase();
+    const isAdminFlag = Boolean(cached?.is_admin ?? rec?.is_admin ?? false);
+    const otherIsAdmin = isAdminFlag || role === 'admin';
+
+    const first = conversation[0] as any;
+    const initiatedByOther = Boolean(first && msgFromId(first) === other);
+
+    return initiatedByOther && otherIsAdmin;
+  }, [activeUserId, conversation, meIsAdmin, userDetailsById, users]);
+
   useEffect(() => {
     if (!ready) return;
 
@@ -248,6 +270,7 @@ export function ChatDock() {
           email: String(nextMe?.email ?? '').trim(),
           photo_path: (nextMe?.photo_path ?? null) as any,
         });
+        setMeIsAdmin(Boolean(nextMe?.is_admin) || String(nextMe?.role ?? '').toLowerCase() === 'admin');
       } finally {
         setReady(true);
       }
@@ -258,7 +281,25 @@ export function ChatDock() {
     if (!ready) return;
 
     fetchCommunicationRecipients()
-      .then((res) => setUsers(res?.data ?? []))
+      .then((res) => {
+        const rows = (res?.data ?? []) as any[];
+        setUsers(rows as any);
+        setUserDetailsById((prev) => {
+          const next = { ...prev };
+          rows.forEach((u: any) => {
+            const id = String(u?.id ?? '').trim();
+            if (!id) return;
+            next[id] = {
+              name: String(u?.name ?? next[id]?.name ?? '').trim(),
+              email: String(u?.email ?? next[id]?.email ?? '').trim(),
+              photo_path: (next[id]?.photo_path ?? null) as any,
+              role: (u?.role ?? next[id]?.role ?? null) as any,
+              is_admin: (u?.is_admin ?? next[id]?.is_admin ?? undefined) as any,
+            };
+          });
+          return next;
+        });
+      })
       .catch(() => {});
   }, [ready]);
 
@@ -367,6 +408,7 @@ export function ChatDock() {
     const to = String(activeUserId || '').trim();
     const text = draft.trim();
     if (!to || !text) return;
+    if (!meIsAdmin && !canSend) return;
 
     setSending(true);
     try {
@@ -523,7 +565,7 @@ export function ChatDock() {
                     variant="ghost"
                     size="sm"
                     className="h-8 px-2"
-                    disabled={!activeUserId || sending}
+                    disabled={!activeUserId || sending || !canSend}
                     onClick={() => setDraft((prev) => `${prev}${emo}`)}
                   >
                     <span className="text-base leading-none">{emo}</span>
@@ -541,9 +583,9 @@ export function ChatDock() {
                     e.preventDefault();
                     onSend();
                   }}
-                  disabled={!activeUserId || sending}
+                  disabled={!activeUserId || sending || !canSend}
                 />
-                <Button type="button" onClick={onSend} disabled={!activeUserId || !draft.trim() || sending}>
+                <Button type="button" onClick={onSend} disabled={!activeUserId || !draft.trim() || sending || !canSend}>
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
