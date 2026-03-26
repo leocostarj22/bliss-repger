@@ -12,6 +12,7 @@ import { fetchMyAccess } from "@/services/api";
 import { hasEffectivePermission } from "@/lib/utils";
 import { ThemeProvider } from "@/hooks/use-theme";
 import Dashboard from "@/pages/Dashboard";
+import EmployeeDashboard from "@/pages/EmployeeDashboard";
 import NotFound from "./pages/NotFound";
 import Companies from "@/pages/admin/companies/Companies";
 import CompanyForm from "@/pages/admin/companies/CompanyForm";
@@ -203,7 +204,7 @@ function Home() {
   }
 
   if (!isAdmin) {
-    return <Navigate to="/me/hr" replace />
+    return <EmployeeDashboard />
   }
 
   return <Dashboard />

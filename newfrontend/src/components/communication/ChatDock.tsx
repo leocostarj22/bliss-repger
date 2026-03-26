@@ -443,7 +443,10 @@ export function ChatDock() {
           type="button"
           onClick={() => setOpen(true)}
           variant="default"
-          className={cn('h-12 w-12 rounded-full p-0 relative', unreadCount > 0 && 'ring-2 ring-rose-500/30')}
+          className={cn(
+            'h-12 w-12 rounded-full p-0 relative shadow-lg border border-border/50 bg-gradient-to-br from-cyan-500 to-fuchsia-600 hover:from-cyan-400 hover:to-fuchsia-500 transition-colors',
+            unreadCount > 0 && 'ring-2 ring-rose-500/30',
+          )}
           title="Abrir chat"
         >
           <MessageSquare className="h-5 w-5" />
@@ -454,9 +457,19 @@ export function ChatDock() {
           ) : null}
         </Button>
       ) : (
-        <div className={cn('w-[360px] max-w-[calc(100vw-2rem)]', isMobile && 'w-screen max-w-none h-svh')}>
-          <div className={cn('glass-card p-4', isMobile && 'h-svh w-screen max-w-none rounded-none p-0 flex flex-col')}>
-            <div className={cn('flex items-start justify-between gap-3', isMobile && 'p-4 border-b border-border/60 shrink-0')}>
+        <div className={cn('w-[380px] max-w-[calc(100vw-2rem)]', isMobile && 'w-screen max-w-none h-svh')}>
+          <div
+            className={cn(
+              'glass-card p-4 rounded-2xl border border-border/60 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-background/50',
+              isMobile && 'h-svh w-screen max-w-none rounded-none p-0 flex flex-col border-0 shadow-none',
+            )}
+          >
+            <div
+              className={cn(
+                'flex items-start justify-between gap-3 pb-3 border-b border-border/60',
+                isMobile && 'p-4 pb-4 border-b border-border/60 shrink-0',
+              )}
+            >
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold truncate">{activeUserId ? `Chat com ${activeUser.name}` : 'Chat'}</div>
                 <div className="text-xs text-muted-foreground truncate">{activeUserId ? activeUser.email : ''}</div>
@@ -472,7 +485,7 @@ export function ChatDock() {
                         setTimeout(scrollToBottom, 0);
                       }}
                     >
-                      <SelectTrigger className="h-9 bg-background/40 border-border/60">
+                      <SelectTrigger className="h-9 rounded-md bg-background/60 border-border/60 hover:bg-background/80 transition-colors">
                         <SelectValue placeholder="Selecionar conversa…" />
                       </SelectTrigger>
                       <SelectContent>
@@ -486,7 +499,13 @@ export function ChatDock() {
                   </div>
                 ) : null}
               </div>
-              <Button type="button" variant="ghost" size="icon" onClick={() => setOpen(false)}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setOpen(false)}
+                className="rounded-full hover:bg-muted/60"
+              >
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -494,7 +513,7 @@ export function ChatDock() {
             <div
               ref={listRef}
               className={cn(
-                'mt-3 h-[260px] overflow-y-auto rounded-md border border-border/60 bg-background/40 p-3 space-y-2',
+                'mt-4 h-[300px] overflow-y-auto rounded-xl border border-border/60 bg-background/40 p-3 space-y-3',
                 isMobile && 'mt-0 flex-1 min-h-0 rounded-none border-0 bg-background/40 p-4',
               )}
             >
@@ -534,8 +553,10 @@ export function ChatDock() {
 
                       <div
                         className={cn(
-                          'max-w-[78%] rounded-lg px-3 py-2 text-sm border',
-                          mine ? 'bg-cyan-500/10 text-foreground border-cyan-500/20' : 'bg-muted text-foreground border-border',
+                          'max-w-[78%] rounded-2xl px-3 py-2 text-sm border shadow-sm',
+                          mine
+                            ? 'bg-gradient-to-br from-cyan-500/15 to-fuchsia-500/10 text-foreground border-cyan-500/20'
+                            : 'bg-muted/80 text-foreground border-border',
                         )}
                       >
                         <div className="whitespace-pre-wrap break-words">{text}</div>
@@ -563,7 +584,7 @@ export function ChatDock() {
                 isMobile && 'mt-0 shrink-0 border-t border-border/60 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]',
               )}
             >
-              <div className="flex flex-wrap gap-0.5">
+              <div className="flex flex-wrap gap-0.5 pb-1">
                 {['😀', '😂', '😍', '👍', '🙏', '🎉', '🔥', '😢'].map((emo) => (
                   <Button
                     key={emo}
@@ -590,8 +611,14 @@ export function ChatDock() {
                     onSend();
                   }}
                   disabled={!activeUserId || sending || !canSend}
+                  className="bg-background/60 border-border/60 focus-visible:ring-1 focus-visible:ring-cyan-400/40"
                 />
-                <Button type="button" onClick={onSend} disabled={!activeUserId || !draft.trim() || sending || !canSend}>
+                <Button
+                  type="button"
+                  onClick={onSend}
+                  disabled={!activeUserId || !draft.trim() || sending || !canSend}
+                  className="h-10 w-10 p-0 rounded-full bg-gradient-to-br from-cyan-500 to-fuchsia-600 hover:from-cyan-400 hover:to-fuchsia-500"
+                >
                   <Send className="w-4 h-4" />
                 </Button>
               </div>

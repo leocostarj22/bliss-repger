@@ -2040,6 +2040,28 @@ export async function fetchMySupportTickets(): Promise<ApiResponse<SupportTicket
   return { data: Array.isArray(json?.data) ? (json.data as SupportTicket[]) : [] };
 }
 
+export async function fetchMyDashboardPosts(): Promise<ApiResponse<AdminPost[]>> {
+  const response = await apiFetch('/api/v1/me/posts', {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let msg = `Failed to fetch my dashboard posts: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as AdminPost[]) : [] };
+}
+
 export async function fetchMySupportTicket(id: string): Promise<ApiResponse<SupportTicket>> {
   const response = await apiFetch(`/api/v1/me/support/tickets/${encodeURIComponent(id)}`, {
     method: 'GET',

@@ -2625,6 +2625,57 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             return response()->json(['data' => $data]);
         });
 
+        Route::get('me/posts', function () {
+            $user = auth()->guard('employee')->user();
+            abort_unless($user, 401);
+
+            $departmentId = $user->employee?->department_id;
+
+            $posts = Post::published()
+                ->when($departmentId, function ($query) use ($departmentId) {
+                    $query->forDepartment($departmentId);
+                })
+                ->with(['author'])
+                ->orderBy('is_pinned', 'desc')
+                ->orderBy('published_at', 'desc')
+                ->limit(20)
+                ->get();
+
+            return response()->json([
+                'data' => $posts->map(function (Post $p) {
+                    $photo = $p->author?->photo_path;
+                    if (is_string($photo) && $photo !== '' && ! str_starts_with($photo, 'http://') && ! str_starts_with($photo, 'https://') && ! str_starts_with($photo, 'data:') && ! str_starts_with($photo, '/')) {
+                        $photo = asset('storage/' . ltrim(preg_replace('/^storage\//', '', $photo), '/'));
+                    }
+
+                    return [
+                        'id' => (string) $p->id,
+                        'title' => $p->title,
+                        'content' => (string) ($p->content ?? ''),
+                        'type' => $p->type,
+                        'priority' => $p->priority,
+                        'is_pinned' => (bool) $p->is_pinned,
+                        'featured_image_url' => $p->featured_image_url,
+                        'youtube_video_url' => $p->youtube_video_url,
+                        'attachment_urls' => is_array($p->attachment_urls) ? $p->attachment_urls : [],
+                        'published_at' => $p->published_at?->toIso8601String(),
+                        'expires_at' => $p->expires_at?->toIso8601String(),
+                        'likes_count' => (int) ($p->likes_count ?? 0),
+                        'liked_by_me' => false,
+                        'author' => [
+                            'id' => $p->author?->id !== null ? (string) $p->author->id : null,
+                            'name' => $p->author?->name,
+                            'photo_path' => $photo,
+                        ],
+                        'can_pin' => false,
+                        'can_manage' => false,
+                        'created_at' => $p->created_at?->toIso8601String(),
+                        'updated_at' => $p->updated_at?->toIso8601String(),
+                    ];
+                })->values(),
+            ]);
+        });
+
         Route::get('me/support/categories', function () {
             $user = auth()->guard('employee')->user();
             abort_unless($user, 401);
