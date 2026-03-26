@@ -2922,7 +2922,21 @@ export async function fetchInternalMessages(params?: {
   }
 
   const json = await response.json();
-  return { data: Array.isArray(json?.data) ? (json.data as InternalMessage[]) : [] };
+  const all = Array.isArray(json?.data) ? (json.data as InternalMessage[]) : [];
+
+  const uid = String(params?.user_id || currentUserId() || '').trim();
+  const folderNorm = String(folder || '').toLowerCase();
+
+  const filtered = all.filter((m) => {
+    const from = String((m as any)?.from_user_id ?? '').trim();
+    const to = String((m as any)?.to_user_id ?? '').trim();
+    if (!uid) return false;
+    if (folderNorm === 'inbox') return to === uid;
+    if (folderNorm === 'sent') return from === uid;
+    return from === uid || to === uid;
+  });
+
+  return { data: filtered };
 }
 
 export type CommunicationRecipient = {
@@ -2965,6 +2979,12 @@ export async function fetchInternalMessage(id: string): Promise<ApiResponse<Inte
   await delay();
   const found = readCommMessages().find((m) => m.id === id);
   if (!found) throw new Error('Message not found');
+
+  const uid = String(currentUserId() || '').trim();
+  const from = String((found as any)?.from_user_id ?? '').trim();
+  const to = String((found as any)?.to_user_id ?? '').trim();
+  if (!uid || (from !== uid && to !== uid)) throw new Error('Message not found');
+
   return { data: found };
 }
 
