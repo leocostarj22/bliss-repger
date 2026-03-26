@@ -87,9 +87,10 @@ export default function InternalMessages() {
   const load = async (nextFolder: "inbox" | "sent") => {
     setLoading(true)
     try {
-      const [meResp, mResp] = await Promise.all([fetchUser(), fetchInternalMessages({ folder: nextFolder })])
+      const meResp = await fetchUser()
       const nextMeId = String(meResp.data.id)
       setMeId(nextMeId)
+      const mResp = await fetchInternalMessages({ folder: nextFolder, user_id: nextMeId })
       setRows(mResp.data)
       setSelected(null)
 
