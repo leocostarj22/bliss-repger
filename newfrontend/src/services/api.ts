@@ -1008,6 +1008,13 @@ export type MyAccessSnapshot = {
   permissionsDeny: string[]
 }
 
+const DEFAULT_PERSONAL_PERMISSIONS = [
+  'personal.tasks.read',
+  'personal.tasks.write',
+  'personal.notes.read',
+  'personal.notes.write',
+]
+
 let myAccessCache: { key: string; value: MyAccessSnapshot; ts: number } | null = null
 
 export async function fetchMyAccess(opts?: { force?: boolean }): Promise<ApiResponse<MyAccessSnapshot>> {
@@ -1032,14 +1039,21 @@ export async function fetchMyAccess(opts?: { force?: boolean }): Promise<ApiResp
   }
 
   const permissionsAllow = normalizeList(me.data.permissions_allow)
-  const permissionsDeny = normalizeList(me.data.permissions_deny)
+  const roleName = roleRaw.toLowerCase()
+
+  const personalPermissionSet = new Set(DEFAULT_PERSONAL_PERMISSIONS)
+  const isEmployeeRole = ['employee', 'funcionario', 'funcionário', 'colaborador'].includes(roleName)
+
+  const permissionsDenyRaw = normalizeList(me.data.permissions_deny)
+  const permissionsDeny = isEmployeeRole
+    ? permissionsDenyRaw.filter((p) => !personalPermissionSet.has(p))
+    : permissionsDenyRaw
 
   const key = `${userId}|${roleRaw}|a:${permissionsAllow.join(',')}|d:${permissionsDeny.join(',')}`
   if (!force && myAccessCache && myAccessCache.key === key && Date.now() - myAccessCache.ts < 2 * 60 * 1000) {
     return { data: myAccessCache.value }
   }
 
-  const roleName = roleRaw.toLowerCase()
   const isAdmin = Boolean(me.data.is_admin) || roleName === 'admin'
 
   if (isAdmin) {
@@ -1065,7 +1079,7 @@ export async function fetchMyAccess(opts?: { force?: boolean }): Promise<ApiResp
       : []
 
     const merged: string[] = []
-    ;[...rolePermissions, ...permissionsAllow].forEach((p) => {
+    ;[...DEFAULT_PERSONAL_PERMISSIONS, ...rolePermissions, ...permissionsAllow].forEach((p) => {
       if (!merged.includes(p)) merged.push(p)
     })
 
@@ -1080,11 +1094,16 @@ export async function fetchMyAccess(opts?: { force?: boolean }): Promise<ApiResp
     myAccessCache = { key, value, ts: Date.now() }
     return { data: value }
   } catch {
+    const merged: string[] = []
+    ;[...DEFAULT_PERSONAL_PERMISSIONS, ...permissionsAllow].forEach((p) => {
+      if (!merged.includes(p)) merged.push(p)
+    })
+
     const value: MyAccessSnapshot = {
       userId,
       role,
       isAdmin: false,
-      permissions: permissionsAllow,
+      permissions: merged,
       permissionsAllow,
       permissionsDeny,
     }

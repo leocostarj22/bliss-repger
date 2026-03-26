@@ -11,7 +11,12 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 
-const CURRENT_USER_ID = "usr1"
+const CURRENT_USER_KEY = "bliss:currentUserId"
+
+const currentUserId = () => {
+  if (typeof window === "undefined") return "usr1"
+  return window.localStorage.getItem(CURRENT_USER_KEY) || "usr1"
+}
 
 export default function MyNotes() {
   const { toast } = useToast()
@@ -34,7 +39,7 @@ export default function MyNotes() {
         favoriteFilter === "all" ? undefined : favoriteFilter === "favorite" ? true : false
 
       const resp = await fetchPersonalNotes({
-        user_id: CURRENT_USER_ID,
+        user_id: currentUserId(),
         search,
         is_favorite,
       })
@@ -280,17 +285,17 @@ function NoteFormModal({
           content,
           color: color.trim() ? color.trim() : null,
           is_favorite: isFavorite,
-          last_modified_by: CURRENT_USER_ID,
+          last_modified_by: currentUserId(),
         })
         toast({ title: "Sucesso", description: "Anotação atualizada" })
       } else {
         await createPersonalNote({
-          user_id: CURRENT_USER_ID,
+          user_id: currentUserId(),
           title,
           content,
           color: color.trim() ? color.trim() : null,
           is_favorite: isFavorite,
-          last_modified_by: CURRENT_USER_ID,
+          last_modified_by: currentUserId(),
           shared_with_user_ids: [],
         })
         toast({ title: "Sucesso", description: "Anotação criada" })

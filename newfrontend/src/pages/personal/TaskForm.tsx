@@ -14,7 +14,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
 
-const CURRENT_USER_ID = "usr1"
+const CURRENT_USER_KEY = "bliss:currentUserId"
+
+const currentUserId = () => {
+  if (typeof window === "undefined") return "usr1"
+  return window.localStorage.getItem(CURRENT_USER_KEY) || "usr1"
+}
 
 export default function TaskForm() {
   const { toast } = useToast()
@@ -55,7 +60,7 @@ export default function TaskForm() {
       .then((r) => {
         if (!alive) return
         const all = r.data ?? []
-        setUsers(all.filter((u) => u.id !== CURRENT_USER_ID))
+        setUsers(all.filter((u) => u.id !== currentUserId()))
       })
       .catch(() => {
         if (!alive) return
@@ -163,7 +168,7 @@ export default function TaskForm() {
         toast({ title: "Sucesso", description: "Tarefa atualizada" })
       } else {
         await createTask({
-          user_id: CURRENT_USER_ID,
+          user_id: currentUserId(),
           title: cleanTitle,
           description: description.trim() ? description : null,
           priority,
