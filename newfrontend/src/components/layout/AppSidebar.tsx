@@ -498,7 +498,44 @@ export function AppSidebar({
                     </Tooltip>
                   );
                 })
-              : null}
+              : (() => {
+                  const item = { label: 'Dashboard', icon: LayoutDashboard, path: '/', color: 'cyan' as const };
+                  const active = location.pathname === item.path;
+                  const c = colorStyles[item.color];
+
+                  const link = (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
+                    >
+                      {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                      <item.icon
+                        className={cn(
+                          'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
+                          c.icon,
+                          active ? c.glow : c.hover,
+                        )}
+                      />
+                      {!collapsed && (
+                        <span className={cn('transition-colors duration-200', active ? 'font-semibold' : 'group-hover:text-foreground')}>
+                          {item.label}
+                        </span>
+                      )}
+                    </Link>
+                  );
+
+                  if (!collapsed) return link;
+
+                  return (
+                    <Tooltip key={item.path}>
+                      <TooltipTrigger asChild>{link}</TooltipTrigger>
+                      <TooltipContent side="right" align="center">
+                        {item.label}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })()}
           </div>
 
           {!accessIsAdmin && (
