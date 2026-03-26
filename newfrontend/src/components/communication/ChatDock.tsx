@@ -308,7 +308,7 @@ export function ChatDock() {
 
     const tick = async () => {
       try {
-        const res = await fetchInternalMessages({ folder: 'inbox' });
+        const res = await fetchInternalMessages({ folder: 'inbox', user_id: String(me.id || '').trim() });
         const next = res?.data ?? [];
         setInbox(next);
 
@@ -351,7 +351,7 @@ export function ChatDock() {
 
     const tick = async () => {
       try {
-        const res = await fetchInternalMessages({ folder: 'sent' });
+        const res = await fetchInternalMessages({ folder: 'sent', user_id: String(me.id || '').trim() });
         setSent(res?.data ?? []);
       } catch {
         // ignore
@@ -557,14 +557,14 @@ export function ChatDock() {
                 isMobile && 'mt-0 shrink-0 border-t border-border/60 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]',
               )}
             >
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-0.5">
                 {['😀', '😂', '😍', '👍', '🙏', '🎉', '🔥', '😢'].map((emo) => (
                   <Button
                     key={emo}
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-8 px-2"
+                    className="h-8 px-1"
                     disabled={!activeUserId || sending || !canSend}
                     onClick={() => setDraft((prev) => `${prev}${emo}`)}
                   >

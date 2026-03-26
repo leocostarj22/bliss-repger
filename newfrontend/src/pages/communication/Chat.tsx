@@ -150,13 +150,7 @@ export default function Chat() {
   const loadAll = async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true)
     try {
-      const [meResp, recResp, inboxResp, sentResp] = await Promise.all([
-        fetchUser(),
-        fetchCommunicationRecipients(),
-        fetchInternalMessages({ folder: "inbox" }),
-        fetchInternalMessages({ folder: "sent" }),
-      ])
-
+      const meResp = await fetchUser()
       const nextMeId = String(meResp.data.id)
       setMeId(nextMeId)
       setMeName(String((meResp as any)?.data?.name ?? "").trim())
@@ -165,6 +159,7 @@ export default function Chat() {
         Boolean((meResp as any)?.data?.is_admin) || String((meResp as any)?.data?.role ?? "").toLowerCase() === "admin",
       )
 
+      const recResp = await fetchCommunicationRecipients()
       setUsers(recResp.data)
       setUserDetailsById((prev) => {
         const next = { ...prev }
@@ -181,6 +176,11 @@ export default function Chat() {
         })
         return next
       })
+
+      const [inboxResp, sentResp] = await Promise.all([
+        fetchInternalMessages({ folder: "inbox", user_id: nextMeId }),
+        fetchInternalMessages({ folder: "sent", user_id: nextMeId }),
+      ])
 
       const map = new Map<string, InternalMessage>()
       ;[...inboxResp.data, ...sentResp.data].forEach((m: any) => map.set(String(m.id), m))
