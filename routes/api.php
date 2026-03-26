@@ -574,9 +574,9 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         });
     });
 
-    Route::prefix('communication')->group(function () {
+    Route::prefix('communication')->middleware('auth:web')->group(function () {
         Route::get('messages', function () {
-            $user = auth()->user();
+            $user = auth('web')->user();
             abort_unless($user, 401);
 
             $folder = trim((string) request('folder', 'inbox'));
@@ -656,7 +656,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         });
 
         Route::post('messages', function () {
-            $user = auth()->user();
+            $user = auth('web')->user();
             abort_unless($user, 401);
 
             $validated = request()->validate([
@@ -720,7 +720,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         });
 
         Route::get('recipients', function () {
-            $me = auth()->user();
+            $me = auth('web')->user();
             abort_unless($me, 401);
 
             $search = trim((string) request('search', ''));
@@ -753,7 +753,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         });
 
         Route::post('messages/{recipient}/read', function (MessageRecipient $recipient) {
-            $user = auth()->user();
+            $user = auth('web')->user();
             abort_unless($user, 401);
             abort_unless((int) $recipient->recipient_id === (int) $user->id, 403);
 

@@ -60,6 +60,7 @@ export function ChatDock() {
     photo_path: null,
   });
   const [meIsAdmin, setMeIsAdmin] = useState(false);
+  const [chatDisabled, setChatDisabled] = useState(false);
 
   const [users, setUsers] = useState<CommunicationRecipient[]>([]);
   const [inbox, setInbox] = useState<InternalMessage[]>([]);
@@ -270,7 +271,9 @@ export function ChatDock() {
           email: String(nextMe?.email ?? '').trim(),
           photo_path: (nextMe?.photo_path ?? null) as any,
         });
-        setMeIsAdmin(Boolean(nextMe?.is_admin) || String(nextMe?.role ?? '').toLowerCase() === 'admin');
+        const role = String(nextMe?.role ?? '').trim().toLowerCase();
+        setMeIsAdmin(Boolean(nextMe?.is_admin) || role === 'admin');
+        setChatDisabled(role === 'employee');
       } finally {
         setReady(true);
       }
@@ -278,7 +281,7 @@ export function ChatDock() {
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || chatDisabled) return;
 
     fetchCommunicationRecipients()
       .then((res) => {
@@ -304,7 +307,7 @@ export function ChatDock() {
   }, [ready]);
 
   useEffect(() => {
-    if (!me.id) return;
+    if (!me.id || chatDisabled) return;
 
     const tick = async () => {
       try {
@@ -346,7 +349,7 @@ export function ChatDock() {
   }, [me.id]);
 
   useEffect(() => {
-    if (!me.id) return;
+    if (!me.id || chatDisabled) return;
     if (!open) return;
 
     const tick = async () => {
@@ -428,6 +431,8 @@ export function ChatDock() {
       setSending(false);
     }
   };
+
+  if (chatDisabled) return null;
 
   const isMinimized = !open;
 
