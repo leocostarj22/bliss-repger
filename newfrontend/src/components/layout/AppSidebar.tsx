@@ -185,6 +185,7 @@ export function AppSidebar({
   const [accessPermissions, setAccessPermissions] = useState<string[]>([]);
   const [accessPermissionsDeny, setAccessPermissionsDeny] = useState<string[]>([]);
   const [accessIsAdmin, setAccessIsAdmin] = useState(false);
+  const [accessIsEmployeeRole, setAccessIsEmployeeRole] = useState(false);
   const location = useLocation();
 
   const isModuleEnabled = (key: string) => moduleStatuses[key] !== false;
@@ -312,12 +313,14 @@ export function AppSidebar({
       .then((r) => {
         if (!alive) return;
         setAccessIsAdmin(Boolean(r.data.isAdmin));
+        setAccessIsEmployeeRole(Boolean(r.data.isEmployeeRole));
         setAccessPermissions(Array.isArray(r.data.permissions) ? r.data.permissions : []);
         setAccessPermissionsDeny(Array.isArray(r.data.permissionsDeny) ? r.data.permissionsDeny : []);
       })
       .catch(() => {
         if (!alive) return;
         setAccessIsAdmin(false);
+        setAccessIsEmployeeRole(false);
         setAccessPermissions([]);
         setAccessPermissionsDeny([]);
       })
@@ -538,7 +541,7 @@ export function AppSidebar({
                 })()}
           </div>
 
-          {!accessIsAdmin && (
+          {accessIsEmployeeRole && (
             <div className={cn('px-2', collapsed && 'px-0')}>
               {!collapsed && (
                 <button

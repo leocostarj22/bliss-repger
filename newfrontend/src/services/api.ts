@@ -1003,6 +1003,7 @@ export type MyAccessSnapshot = {
   userId: string
   role: string | null
   isAdmin: boolean
+  isEmployeeRole: boolean
   permissions: string[]
   permissionsAllow: string[]
   permissionsDeny: string[]
@@ -1061,6 +1062,7 @@ export async function fetchMyAccess(opts?: { force?: boolean }): Promise<ApiResp
       userId,
       role,
       isAdmin: true,
+      isEmployeeRole: false,
       permissions: ['*'],
       permissionsAllow,
       permissionsDeny,
@@ -1087,6 +1089,7 @@ export async function fetchMyAccess(opts?: { force?: boolean }): Promise<ApiResp
       userId,
       role,
       isAdmin: false,
+      isEmployeeRole,
       permissions: merged,
       permissionsAllow,
       permissionsDeny,
@@ -1103,6 +1106,7 @@ export async function fetchMyAccess(opts?: { force?: boolean }): Promise<ApiResp
       userId,
       role,
       isAdmin: false,
+      isEmployeeRole,
       permissions: merged,
       permissionsAllow,
       permissionsDeny,

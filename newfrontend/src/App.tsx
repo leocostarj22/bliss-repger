@@ -167,20 +167,20 @@ function RequirePermission(props: { permission: string | string[]; children: Rea
 }
 
 function Home() {
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
+  const [isEmployeeRole, setIsEmployeeRole] = useState<boolean | null>(null)
 
   useEffect(() => {
     let alive = true
-    setIsAdmin(null)
+    setIsEmployeeRole(null)
 
     fetchMyAccess()
       .then((r) => {
         if (!alive) return
-        setIsAdmin(Boolean(r.data.isAdmin))
+        setIsEmployeeRole(Boolean(r.data.isEmployeeRole))
       })
       .catch(() => {
         if (!alive) return
-        setIsAdmin(false)
+        setIsEmployeeRole(false)
       })
 
     return () => {
@@ -188,7 +188,7 @@ function Home() {
     }
   }, [])
 
-  if (isAdmin === null) {
+  if (isEmployeeRole === null) {
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="page-header">
@@ -203,7 +203,7 @@ function Home() {
     )
   }
 
-  if (!isAdmin) {
+  if (isEmployeeRole) {
     return <EmployeeDashboard />
   }
 
