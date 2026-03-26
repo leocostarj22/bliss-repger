@@ -3079,6 +3079,30 @@ export async function markInternalMessageRead(id: string): Promise<ApiResponse<I
   return { data: json?.data as InternalMessage };
 }
 
+export async function deleteInternalMessageRecipient(id: string): Promise<ApiResponse<{ id: string }>> {
+  const response = await apiFetch(`/api/v1/communication/messages/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: {
+      'Accept': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let msg = `Failed to delete message: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  return { data: { id: String(json?.data?.id ?? id) } };
+}
+
 const readAdminPosts = (): AdminPost[] => {
   if (typeof window === 'undefined') return mockAdminPosts;
   try {

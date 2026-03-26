@@ -224,19 +224,9 @@ export function ChatDock() {
   const canSend = useMemo(() => {
     const other = String(activeUserId || '').trim();
     if (!other) return false;
-    if (meIsAdmin) return true;
-
-    const rec: any = users.find((u: any) => String(u?.id ?? '').trim() === other);
-    const cached: any = userDetailsById[other];
-    const role = String(cached?.role ?? rec?.role ?? '').trim().toLowerCase();
-    const isAdminFlag = Boolean(cached?.is_admin ?? rec?.is_admin ?? false);
-    const otherIsAdmin = isAdminFlag || role === 'admin';
-
-    const first = conversation[0] as any;
-    const initiatedByOther = Boolean(first && msgFromId(first) === other);
-
-    return initiatedByOther && otherIsAdmin;
-  }, [activeUserId, conversation, meIsAdmin, userDetailsById, users]);
+    if (chatDisabled) return false;
+    return true;
+  }, [activeUserId, chatDisabled]);
 
   useEffect(() => {
     if (!ready) return;
@@ -412,7 +402,7 @@ export function ChatDock() {
     const to = String(activeUserId || '').trim();
     const text = draft.trim();
     if (!to || !text) return;
-    if (!meIsAdmin && !canSend) return;
+    if (!canSend) return;
 
     setSending(true);
     try {

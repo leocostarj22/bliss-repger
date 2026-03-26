@@ -610,20 +610,22 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 $msgs = $q->orderByDesc('sent_at')->limit(50)->get();
 
                 $data = $msgs->flatMap(function (InternalMessage $m) {
-                    return $m->recipients->map(function (MessageRecipient $r) use ($m) {
-                        return [
-                            'id' => (string) $r->id,
-                            'from_user_id' => (string) $m->sender_id,
-                            'to_user_id' => (string) $r->recipient_id,
-                            'subject' => (string) ($m->subject ?? ''),
-                            'body' => (string) ($m->body ?? ''),
-                            'folder' => 'sent',
-                            'read_at' => $r->read_at?->toIso8601String(),
-                            'sent_at' => $m->sent_at?->toIso8601String(),
-                            'created_at' => $m->created_at?->toIso8601String(),
-                            'updated_at' => $m->updated_at?->toIso8601String(),
-                        ];
-                    });
+                    return $m->recipients
+                        ->where('is_deleted', false)
+                        ->map(function (MessageRecipient $r) use ($m) {
+                            return [
+                                'id' => (string) $r->id,
+                                'from_user_id' => (string) $m->sender_id,
+                                'to_user_id' => (string) $r->recipient_id,
+                                'subject' => (string) ($m->subject ?? ''),
+                                'body' => (string) ($m->body ?? ''),
+                                'folder' => 'sent',
+                                'read_at' => $r->read_at?->toIso8601String(),
+                                'sent_at' => $m->sent_at?->toIso8601String(),
+                                'created_at' => $m->created_at?->toIso8601String(),
+                                'updated_at' => $m->updated_at?->toIso8601String(),
+                            ];
+                        });
                 })->values();
 
                 return response()->json(['data' => $data]);
@@ -736,6 +738,22 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                     'updated_at' => $message->updated_at?->toIso8601String(),
                 ],
             ], 201);
+        });
+
+        Route::delete('messages/{recipient}', function (MessageRecipient $recipient) {
+            $user = auth('web')->user();
+            abort_unless($user, 401);
+
+            $recipient->load('message');
+            $isRecipient = (int) $recipient->recipient_id === (int) $user->id;
+            $isSender = $recipient->message && (int) $recipient->message->sender_id === (int) $user->id;
+            abort_unless($isRecipient || $isSender, 403);
+
+            if (! $recipient->is_deleted) {
+                $recipient->forceFill(['is_deleted' => true])->save();
+            }
+
+            return response()->json(['data' => [ 'id' => (string) $recipient->id ]]);
         });
 
         Route::get('recipients', function () {

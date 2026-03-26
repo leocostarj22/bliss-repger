@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react"
-import { Mail, Send } from "lucide-react"
+import { Mail, Send, Trash2 } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
 
 import type { InternalMessage } from "@/types"
-import { fetchCommunicationRecipients, fetchInternalMessages, fetchUser, markInternalMessageRead, sendInternalMessage, type CommunicationRecipient } from "@/services/api"
+import { fetchCommunicationRecipients, fetchInternalMessages, fetchUser, markInternalMessageRead, sendInternalMessage, deleteInternalMessageRecipient, type CommunicationRecipient } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
@@ -157,6 +157,19 @@ export default function InternalMessages() {
     setBody("")
   }
 
+  const onDelete = async (m: InternalMessage) => {
+    const ok = window.confirm("Apagar esta mensagem?")
+    if (!ok) return
+    try {
+      await deleteInternalMessageRecipient(m.id)
+      setRows((prev) => prev.filter((x) => x.id !== m.id))
+      if (selected?.id === m.id) setSelected(null)
+      toast({ title: "Sucesso", description: "Mensagem apagada" })
+    } catch (e: any) {
+      toast({ title: "Erro", description: e?.message || "Não foi possível apagar", variant: "destructive" })
+    }
+  }
+
   const onSend = async () => {
     if (!toUserId) {
       toast({ title: "Validação", description: "Seleciona o destinatário", variant: "destructive" })
@@ -255,6 +268,7 @@ export default function InternalMessages() {
               selectedId={selected?.id || null}
               onOpen={onOpen}
               onReply={onReply}
+              onDelete={onDelete}
             />
           </TabsContent>
           <TabsContent value="sent">
@@ -267,6 +281,7 @@ export default function InternalMessages() {
               selectedId={selected?.id || null}
               onOpen={onOpen}
               onReply={onReply}
+              onDelete={onDelete}
             />
           </TabsContent>
         </Tabs>
@@ -284,6 +299,7 @@ function MessageList(props: {
   selectedId: string | null
   onOpen: (m: InternalMessage) => void
   onReply: (m: InternalMessage) => void
+  onDelete: (m: InternalMessage) => void
 }) {
   if (props.loading) return <div className="text-sm text-muted-foreground">A carregar…</div>
   if (props.rows.length === 0) return <div className="text-sm text-muted-foreground">Sem mensagens.</div>
@@ -333,6 +349,19 @@ function MessageList(props: {
                   }}
                 >
                   Responder
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    props.onDelete(m)
+                  }}
+                  title="Apagar"
+                >
+                  <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
             </div>
