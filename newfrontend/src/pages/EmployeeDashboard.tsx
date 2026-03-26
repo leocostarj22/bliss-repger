@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FolderOpen, Mail, Ticket } from "lucide-react";
-
 import type { AdminPost, SupportTicket } from "@/types";
 import { fetchMyDashboardPosts, fetchMySupportTickets } from "@/services/api";
 import { Button } from "@/components/ui/button";
@@ -13,76 +12,54 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 
 const fmtDateTime = (iso?: string | null) => {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return String(iso);
-  return d.toLocaleString("pt-PT");
+  if (!iso) return ""; const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString("pt-PT");
 };
 
 const plainTextFromHtml = (html: string) => {
   const raw = (html ?? "").toString();
   if (!raw.trim()) return "";
-  try {
-    const doc = new DOMParser().parseFromString(raw, "text/html");
+  try { const doc = new DOMParser().parseFromString(raw, "text/html");
     return (doc.body.textContent ?? "").replace(/\u00A0/g, " ").trim();
-  } catch {
-    return raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-  }
+  } catch { return raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(); }
 };
 
 const sanitizeHtml = (html: string) => {
-  const raw = (html ?? "").toString();
-  if (!raw) return "";
+  const raw = (html ?? "").toString(); if (!raw) return "";
   try {
     const doc = new DOMParser().parseFromString(raw, "text/html");
     doc.querySelectorAll("script, style, iframe, object, embed").forEach((n) => n.remove());
     doc.querySelectorAll("*").forEach((el) => {
       Array.from(el.attributes).forEach((attr) => {
-        const name = attr.name.toLowerCase();
-        const value = attr.value;
+        const name = attr.name.toLowerCase(); const value = attr.value;
         if (name.startsWith("on")) el.removeAttribute(attr.name);
         if ((name === "href" || name === "src") && /^\s*javascript:/i.test(value)) el.removeAttribute(attr.name);
         if (name === "srcdoc") el.removeAttribute(attr.name);
       });
     });
     return doc.body.innerHTML;
-  } catch {
-    return raw;
-  }
+  } catch { return raw; }
 };
 
 export default function EmployeeDashboard() {
   const { toast } = useToast();
-
   const [loading, setLoading] = useState(true);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [posts, setPosts] = useState<AdminPost[]>([]);
   const [expandedPostIds, setExpandedPostIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    let alive = true;
-    setLoading(true);
-
+    let alive = true; setLoading(true);
     Promise.allSettled([fetchMySupportTickets(), fetchMyDashboardPosts()])
       .then((results) => {
         if (!alive) return;
-
-        const t = results[0];
-        if (t.status === "fulfilled") setTickets(t.value.data);
+        const t = results[0]; if (t.status === "fulfilled") setTickets(t.value.data);
         else toast({ title: "Erro", description: "Não foi possível carregar os teus tickets", variant: "destructive" });
-
-        const p = results[1];
-        if (p.status === "fulfilled") setPosts(p.value.data);
+        const p = results[1]; if (p.status === "fulfilled") setPosts(p.value.data);
         else toast({ title: "Erro", description: "Não foi possível carregar os posts administrativos", variant: "destructive" });
       })
-      .finally(() => {
-        if (!alive) return;
-        setLoading(false);
-      });
-
-    return () => {
-      alive = false;
-    };
+      .finally(() => { if (!alive) return; setLoading(false); });
+    return () => { alive = false; };
   }, [toast]);
 
   const ticketStats = useMemo(() => {
@@ -102,7 +79,6 @@ export default function EmployeeDashboard() {
             <p className="page-subtitle">Resumo dos teus tickets e comunicados</p>
             <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
           </div>
-
           <Button asChild>
             <Link to="/me/support/tickets/new">
               <Ticket className="w-4 h-4" />
@@ -218,13 +194,8 @@ export default function EmployeeDashboard() {
 
                     <div className="flex items-start gap-3 min-w-0">
                       <Avatar className="w-9 h-9 border border-border">
-                        <AvatarImage
-                          src={resolvePhotoUrl(p.author?.photo_path ?? null) ?? undefined}
-                          alt={p.author?.name ?? undefined}
-                        />
-                        <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
-                          {getInitials(p.author?.name)}
-                        </AvatarFallback>
+                        <AvatarImage src={resolvePhotoUrl(p.author?.photo_path ?? null) ?? undefined} alt={p.author?.name ?? undefined} />
+                        <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">{getInitials(p.author?.name)}</AvatarFallback>
                       </Avatar>
 
                       <div className="min-w-0">
@@ -248,10 +219,7 @@ export default function EmployeeDashboard() {
                     ) : null}
 
                     {tooLong ? (
-                      <button
-                        className="mt-2 text-xs text-primary hover:underline"
-                        onClick={() => setExpandedPostIds((m) => ({ ...m, [p.id]: !expanded }))}
-                      >
+                      <button className="mt-2 text-xs text-primary hover:underline" onClick={() => setExpandedPostIds((m) => ({ ...m, [p.id]: !expanded }))}>
                         {expanded ? "Ver menos" : "Ver mais"}
                       </button>
                     ) : null}
