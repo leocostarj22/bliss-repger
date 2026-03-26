@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MessageSquare, Send, X } from 'lucide-react';
+import { MessageSquare, Send, X, Trash2 } from 'lucide-react';
 
 import type { InternalMessage, User as AppUser } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -10,6 +10,7 @@ import {
   fetchUser,
   markInternalMessageRead,
   sendInternalMessage,
+  deleteInternalMessageRecipient,
   type CommunicationRecipient,
 } from '@/services/api';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -398,6 +399,20 @@ export function ChatDock() {
     setTimeout(scrollToBottom, 0);
   }, [open, conversation.length]);
 
+  const onDelete = async (m: any) => {
+    const id = msgId(m);
+    if (!id) return;
+    const ok = window.confirm('Apagar esta mensagem?');
+    if (!ok) return;
+    try {
+      await deleteInternalMessageRecipient(id);
+      setInbox((prev) => prev.filter((x: any) => msgId(x) !== id));
+      setSent((prev) => prev.filter((x: any) => msgId(x) !== id));
+    } catch {
+      // ignore
+    }
+  };
+
   const onSend = async () => {
     const to = String(activeUserId || '').trim();
     const text = draft.trim();
@@ -553,6 +568,16 @@ export function ChatDock() {
                         <div className="mt-1 flex items-center justify-end gap-2 text-[11px] opacity-70">
                           <span>{time}</span>
                           {mine ? <span>{read ? '✓✓' : '✓'}</span> : null}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onDelete(m)}
+                            title="Apagar"
+                            className="h-6 w-6 p-0"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
                         </div>
                       </div>
 
