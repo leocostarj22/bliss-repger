@@ -106,6 +106,34 @@ export default function MyNotes() {
         </div>
       </div>
 
+      {rows.filter((n) => n.remind_at || n.is_favorite).length > 0 ? (
+        <div className="glass-card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-semibold">Lembretes</div>
+            <div className="text-xs text-muted-foreground">Formato Post‑it</div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {rows
+              .filter((n) => n.remind_at || n.is_favorite)
+              .slice(0, 8)
+              .map((n) => (
+                <div
+                  key={n.id}
+                  className="relative p-3 rounded-lg shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-border/50 rotate-[-0.8deg] hover:rotate-0 transition-transform"
+                  style={{ backgroundColor: n.color || '#FEF3C7' }}
+                  title={n.title}
+                >
+                  <div className="text-xs font-semibold mb-1 truncate">{n.title}</div>
+                  <div className="text-xs opacity-80 line-clamp-4 whitespace-pre-wrap">{n.content}</div>
+                  <div className="mt-2 text-[11px] opacity-70">
+                    {n.remind_at ? new Date(n.remind_at).toLocaleString('pt-PT') : n.is_favorite ? 'Favorita' : ''}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      ) : null}
+
       <div className="glass-card p-4">
         <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
           <div className="flex items-center gap-2 flex-1">

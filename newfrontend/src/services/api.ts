@@ -4859,6 +4859,7 @@ export async function createPersonalNote(
     title,
     content: payload.content ?? '',
     is_favorite: Boolean(payload.is_favorite),
+    remind_at: (payload as any).remind_at ?? null,
     createdAt: now,
     updatedAt: now,
   };
@@ -4883,6 +4884,7 @@ export async function updatePersonalNote(
     title: payload.title !== undefined ? payload.title.trim() : current.title,
     content: payload.content !== undefined ? payload.content : current.content,
     is_favorite: payload.is_favorite !== undefined ? Boolean(payload.is_favorite) : current.is_favorite,
+    remind_at: (payload as any).remind_at !== undefined ? (payload as any).remind_at : (current as any).remind_at,
     updatedAt: new Date().toISOString(),
   };
 

@@ -830,6 +830,7 @@ export interface PersonalNote {
   content: string;
   color?: string | null;
   is_favorite: boolean;
+  remind_at?: string | null;
   last_modified_by?: string | null;
   shared_with_user_ids?: string[];
   createdAt: string;
