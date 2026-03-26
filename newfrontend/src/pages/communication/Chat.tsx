@@ -182,8 +182,10 @@ export default function Chat() {
         fetchInternalMessages({ folder: "sent", user_id: nextMeId }),
       ])
 
+      const safeInbox = (inboxResp.data ?? []).filter((m: any) => String(m?.to_user_id ?? '').trim() === nextMeId)
+      const safeSent = (sentResp.data ?? []).filter((m: any) => String(m?.from_user_id ?? '').trim() === nextMeId)
       const map = new Map<string, InternalMessage>()
-      ;[...inboxResp.data, ...sentResp.data].forEach((m: any) => map.set(String(m.id), m))
+      ;[...safeInbox, ...safeSent].forEach((m: any) => map.set(String(m.id), m))
       setAll(Array.from(map.values()))
     } catch (e: any) {
       toast({ title: "Erro", description: e?.message || "Não foi possível carregar o chat", variant: "destructive" })

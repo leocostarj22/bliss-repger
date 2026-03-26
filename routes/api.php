@@ -621,6 +621,9 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 ->where('recipient_id', $user->id)
                 ->where('is_deleted', false)
                 ->where('is_archived', false)
+                ->whereHas('message', function ($mq) {
+                    $mq->where('status', 'sent');
+                })
                 ->with(['message']);
 
             if ($search !== '') {
