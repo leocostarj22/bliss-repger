@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 use App\Models\Ticket;
 use App\Models\Post;
 use App\Models\PostLike;
@@ -3342,8 +3343,15 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $note->content = $validated['content'] ?? null;
         $note->color = $validated['color'] ?? null;
         $note->is_favorite = (bool) $validated['is_favorite'];
-        $note->remind_at = $validated['remind_at'] ?? null;
-        $note->last_modified_by = $user->id;
+
+        if (Schema::hasColumn('personal_notes', 'remind_at')) {
+            $note->remind_at = $validated['remind_at'] ?? null;
+        }
+
+        if (Schema::hasColumn('personal_notes', 'last_modified_by')) {
+            $note->last_modified_by = $user->id;
+        }
+
         $note->save();
 
         $sharedIds = collect($validated['shared_with_user_ids'] ?? [])
@@ -3395,8 +3403,17 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         if (array_key_exists('content', $validated)) $note->content = $validated['content'];
         if (array_key_exists('color', $validated)) $note->color = $validated['color'];
         if (array_key_exists('is_favorite', $validated)) $note->is_favorite = (bool) $validated['is_favorite'];
-        if (array_key_exists('remind_at', $validated)) $note->remind_at = $validated['remind_at'];
-        $note->last_modified_by = $user->id;
+
+        if (Schema::hasColumn('personal_notes', 'remind_at')) {
+            if (array_key_exists('remind_at', $validated)) {
+                $note->remind_at = $validated['remind_at'];
+            }
+        }
+
+        if (Schema::hasColumn('personal_notes', 'last_modified_by')) {
+            $note->last_modified_by = $user->id;
+        }
+
         $note->save();
 
         if (array_key_exists('shared_with_user_ids', $validated)) {
