@@ -509,6 +509,25 @@ export default function MyNotes() {
                       size="icon"
                       className="h-8 w-8"
                       onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        toggleFavorite(n)
+                      }}
+                      aria-label={n.is_favorite ? "Remover favorito" : "Marcar como favorito"}
+                      title={n.is_favorite ? "Remover favorito" : "Marcar como favorito"}
+                      disabled={String(n.id ?? "").trim() === "" || Boolean(favoriteBusyById[String(n.id)])}
+                    >
+                      <Star
+                        className={n.is_favorite ? "w-4 h-4 text-amber-400" : "w-4 h-4 text-muted-foreground"}
+                        fill={n.is_favorite ? "currentColor" : "none"}
+                      />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => {
                         e.stopPropagation()
                         openEdit(n)
                       }}

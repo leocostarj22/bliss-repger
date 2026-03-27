@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/use-toast"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { createPersonalNote, fetchPersonalNote, fetchUsers, updatePersonalNote } from "@/services/api"
+import { createPersonalNote, fetchPersonalNote, fetchUser, fetchUsers, updatePersonalNote } from "@/services/api"
 import type { PersonalNote, User } from "@/types"
 import { cn } from "@/lib/utils"
 
@@ -73,6 +73,29 @@ export default function NoteForm() {
   const [loading, setLoading] = useState<boolean>(!!isEditing)
   const [saving, setSaving] = useState(false)
 
+  const [currentUserId, setCurrentUserId] = useState("")
+  const [ownerUserId, setOwnerUserId] = useState("")
+
+  useEffect(() => {
+    let alive = true
+    fetchUser()
+      .then((r) => {
+        if (!alive) return
+        const id = String(r?.data?.id ?? "").trim()
+        if (id) setCurrentUserId(id)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const canEdit = useMemo(() => {
+    if (!isEditing) return true
+    if (!currentUserId || !ownerUserId) return true
+    return currentUserId === ownerUserId
+  }, [isEditing, currentUserId, ownerUserId])
+
   const [usersLoading, setUsersLoading] = useState(true)
   const [users, setUsers] = useState<User[]>([])
   const [shareOpen, setShareOpen] = useState(false)
@@ -133,6 +156,7 @@ export default function NoteForm() {
         const resp = await fetchPersonalNote(editingId)
         if (!alive) return
         const n: PersonalNote = resp.data
+        setOwnerUserId(String(n.user_id ?? "").trim())
         setTitle(htmlToPlainText(n.title || ""))
         setContent(htmlToPlainText(n.content || ""))
         setColor(n.color || "#94a3b8")
@@ -157,6 +181,11 @@ export default function NoteForm() {
     const titleClean = String(title || "").trim()
     if (!titleClean) {
       toast({ title: "Validação", description: "Título é obrigatório", variant: "destructive" })
+      return
+    }
+
+    if (!canEdit) {
+      toast({ title: "Sem permissão", description: "Só o dono da anotação pode editar ou alterar o favorito.", variant: "destructive" })
       return
     }
 
@@ -200,7 +229,7 @@ export default function NoteForm() {
             <Button asChild variant="outline" disabled={saving}>
               <Link to="/personal/notes">Voltar</Link>
             </Button>
-            <Button onClick={submit} disabled={saving || loading}>Guardar</Button>
+            <Button onClick={submit} disabled={saving || loading || !canEdit}>Guardar</Button>
           </div>
         </div>
       </div>
@@ -212,12 +241,12 @@ export default function NoteForm() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <div className="text-xs text-muted-foreground mb-1">Título</div>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Checklist do mês" />
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Checklist do mês" disabled={!canEdit} />
             </div>
 
             <div className="md:col-span-2">
               <div className="text-xs text-muted-foreground mb-1">Conteúdo</div>
-              <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Escreve aqui…" />
+              <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Escreve aqui…" disabled={!canEdit} />
             </div>
 
             <div>
@@ -229,8 +258,9 @@ export default function NoteForm() {
                   onChange={(e) => setColor(e.target.value)}
                   className="h-10 w-12 rounded-md border border-input bg-background p-1"
                   title="Escolher cor"
+                  disabled={!canEdit}
                 />
-                <Input value={color} onChange={(e) => setColor(e.target.value)} placeholder="#RRGGBB" />
+                <Input value={color} onChange={(e) => setColor(e.target.value)} placeholder="#RRGGBB" disabled={!canEdit} />
               </div>
             </div>
 
@@ -239,7 +269,7 @@ export default function NoteForm() {
                 <div className="text-sm font-medium">Favorita</div>
                 <div className="text-xs text-muted-foreground">Controla is_favorite</div>
               </div>
-              <Switch checked={isFavorite} onCheckedChange={(v) => setIsFavorite(Boolean(v))} />
+              <Switch checked={isFavorite} onCheckedChange={(v) => setIsFavorite(Boolean(v))} disabled={!canEdit} />
             </div>
 
             <div className="md:col-span-2">
@@ -247,7 +277,7 @@ export default function NoteForm() {
 
               <Popover open={shareOpen} onOpenChange={setShareOpen}>
                 <PopoverTrigger asChild>
-                  <Button type="button" variant="outline" className="w-full justify-between" disabled={usersLoading}>
+                  <Button type="button" variant="outline" className="w-full justify-between" disabled={usersLoading || !canEdit}>
                     <span className="flex items-center gap-2 min-w-0">
                       <UsersIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className="truncate">{usersLoading ? "A carregar…" : sharedLabel}</span>
@@ -290,7 +320,7 @@ export default function NoteForm() {
 
             <div>
               <div className="text-xs text-muted-foreground mb-1">Lembrar em</div>
-              <Input type="datetime-local" value={remindAtLocal} onChange={(e) => setRemindAtLocal(e.target.value)} />
+              <Input type="datetime-local" value={remindAtLocal} onChange={(e) => setRemindAtLocal(e.target.value)} disabled={!canEdit} />
             </div>
           </div>
         )}
