@@ -260,6 +260,38 @@ export default function MyNotes() {
     }
   }
 
+  const [favoriteBusyById, setFavoriteBusyById] = useState<Record<string, boolean>>({})
+
+  const toggleFavorite = async (row: PersonalNote) => {
+    const id = String((row as any)?.id ?? "").trim()
+    if (!id) return
+    if (favoriteBusyById[id]) return
+
+    const prev = Boolean((row as any)?.is_favorite)
+    const next = !prev
+
+    setFavoriteBusyById((m) => ({ ...m, [id]: true }))
+    setRows((current) => current.map((n) => (String((n as any)?.id ?? "") === id ? { ...n, is_favorite: next } : n)))
+
+    try {
+      const resp = await updatePersonalNote(id, { is_favorite: next })
+      setRows((current) => current.map((n) => (String((n as any)?.id ?? "") === id ? { ...n, ...(resp.data ?? {}) } : n)))
+
+      if (favoriteFilter !== "all") {
+        load({ showSkeleton: false })
+      }
+    } catch (e: any) {
+      setRows((current) => current.map((n) => (String((n as any)?.id ?? "") === id ? { ...n, is_favorite: prev } : n)))
+      toast({
+        title: "Erro",
+        description: typeof e?.message === "string" && e.message.trim() ? e.message : "Falha ao atualizar favorito",
+        variant: "destructive",
+      })
+    } finally {
+      setFavoriteBusyById((m) => ({ ...m, [id]: false }))
+    }
+  }
+
   const reminderRows = rows.filter((n) => n.remind_at || n.is_favorite)
 
   return (
@@ -512,7 +544,7 @@ export default function MyNotes() {
                       <Skeleton className="h-4 w-28" />
                     </td>
                     <td className="py-4 text-right">
-                      <Skeleton className="h-9 w-20 ml-auto" />
+                      <Skeleton className="h-9 w-24 ml-auto" />
                     </td>
                   </tr>
                 ))
@@ -532,7 +564,34 @@ export default function MyNotes() {
                       </div>
                     </td>
                     <td className="py-4 pr-4">
-                      {n.is_favorite ? <Star className="w-4 h-4 text-amber-400" /> : <span className="text-muted-foreground">—</span>}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          toggleFavorite(n)
+                        }}
+                        aria-label={
+                          favoriteBusyById[String(n.id)]
+                            ? "A atualizar favorito"
+                            : n.is_favorite
+                              ? "Remover favorito"
+                              : "Marcar como favorito"
+                        }
+                        title={
+                          favoriteBusyById[String(n.id)]
+                            ? "A atualizar favorito"
+                            : n.is_favorite
+                              ? "Remover favorito"
+                              : "Marcar como favorito"
+                        }
+                        disabled={String(n.id ?? "").trim() === "" || Boolean(favoriteBusyById[String(n.id)])}
+                      >
+                        <Star className={n.is_favorite ? "w-4 h-4 text-amber-400" : "w-4 h-4 text-muted-foreground"} fill={n.is_favorite ? "currentColor" : "none"} />
+                      </Button>
                     </td>
                     <td className="py-4 pr-4">
                       <div className="text-xs text-muted-foreground line-clamp-1">{sharedWithLabel(n.shared_with_user_ids)}</div>

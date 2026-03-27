@@ -133,8 +133,8 @@ export default function NoteForm() {
         const resp = await fetchPersonalNote(editingId)
         if (!alive) return
         const n: PersonalNote = resp.data
-        setTitle(n.title || "")
-        setContent(n.content || "")
+        setTitle(htmlToPlainText(n.title || ""))
+        setContent(htmlToPlainText(n.content || ""))
         setColor(n.color || "#94a3b8")
         setIsFavorite(Boolean(n.is_favorite))
         setRemindAtLocal(toLocalDateTimeInput(n.remind_at ?? null))
@@ -164,7 +164,7 @@ export default function NoteForm() {
     try {
       const payload = {
         title: titleClean,
-        content: content ?? "",
+        content: htmlToPlainText(content ?? ""),
         color: (color || "").trim() ? color.trim() : null,
         is_favorite: Boolean(isFavorite),
         remind_at: fromLocalDateTimeInput(remindAtLocal),
