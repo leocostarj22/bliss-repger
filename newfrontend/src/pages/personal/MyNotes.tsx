@@ -43,6 +43,25 @@ const safeLocalStorageRemove = (key: string) => {
   }
 }
 
+const htmlToPlainText = (value: string) => {
+  const raw = String(value ?? "")
+  if (!raw) return ""
+
+  const looksLikeHtml = /<\s*[a-z][\s\S]*>/i.test(raw)
+  if (!looksLikeHtml) return raw
+
+  try {
+    const normalized = raw
+      .replace(/<\s*br\s*\/?>/gi, "\n")
+      .replace(/<\s*\/\s*p\s*>/gi, "\n\n")
+      .replace(/<\s*\/\s*li\s*>/gi, "\n")
+
+    const doc = new DOMParser().parseFromString(normalized, "text/html")
+    return (doc.body.textContent ?? "").replace(/\n{3,}/g, "\n\n").trim()
+  } catch {
+    return raw.replace(/<[^>]*>/g, "").trim()
+  }
+}
 
 export default function MyNotes() {
   const { toast } = useToast()
@@ -241,7 +260,7 @@ export default function MyNotes() {
                     >
                       <div className="text-[13px] font-semibold leading-tight mb-1 truncate">{n.title}</div>
                       <div className="text-[13px] leading-snug opacity-90 whitespace-pre-wrap break-words line-clamp-6">
-                        {n.content}
+                        {htmlToPlainText(n.content)}
                       </div>
                       <div className="absolute bottom-2 right-2 text-[11px] opacity-70">
                         {n.remind_at ? new Date(n.remind_at).toLocaleString("pt-PT") : n.is_favorite ? "★" : ""}
@@ -353,7 +372,9 @@ export default function MyNotes() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="font-medium truncate">{n.title}</div>
-                    {n.content ? <div className="mt-1 text-xs text-muted-foreground line-clamp-2">{n.content}</div> : null}
+                    {n.content ? (
+                      <div className="mt-1 text-xs text-muted-foreground line-clamp-2">{htmlToPlainText(n.content)}</div>
+                    ) : null}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <Button

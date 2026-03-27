@@ -43,6 +43,26 @@ const priorityLabel = (priority: TaskPriority) => {
   return "Urgente"
 }
 
+const htmlToPlainText = (value: string) => {
+  const raw = String(value ?? "")
+  if (!raw) return ""
+
+  const looksLikeHtml = /<\s*[a-z][\s\S]*>/i.test(raw)
+  if (!looksLikeHtml) return raw
+
+  try {
+    const normalized = raw
+      .replace(/<\s*br\s*\/?>/gi, "\n")
+      .replace(/<\s*\/\s*p\s*>/gi, "\n\n")
+      .replace(/<\s*\/\s*li\s*>/gi, "\n")
+
+    const doc = new DOMParser().parseFromString(normalized, "text/html")
+    return (doc.body.textContent ?? "").replace(/\n{3,}/g, "\n\n").trim()
+  } catch {
+    return raw.replace(/<[^>]*>/g, "").trim()
+  }
+}
+
 const toLocalDateKey = (d: Date) => {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, "0")
@@ -337,7 +357,9 @@ export default function MyTasks() {
                       <div className="min-w-0">
                         <div className="font-medium truncate">{t.title}</div>
                         {t.description || t.notes ? (
-                          <div className="mt-1 text-xs text-muted-foreground line-clamp-2">{t.description || t.notes}</div>
+                          <div className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                            {htmlToPlainText(t.description || t.notes)}
+                          </div>
                         ) : null}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
@@ -614,7 +636,7 @@ export default function MyTasks() {
                     </div>
 
                     {selectedTask.description ? (
-                      <div className="mt-3 text-sm whitespace-pre-wrap">{selectedTask.description}</div>
+                      <div className="mt-3 text-sm whitespace-pre-wrap">{htmlToPlainText(selectedTask.description)}</div>
                     ) : null}
 
                     <div className="mt-3 hidden md:grid grid-cols-2 gap-3">
@@ -662,7 +684,9 @@ export default function MyTasks() {
 
                       <div className="col-span-2">
                         <div className="text-xs text-muted-foreground">Notas</div>
-                        <div className="mt-1 text-sm whitespace-pre-wrap">{selectedTask.notes ?? "—"}</div>
+                        <div className="mt-1 text-sm whitespace-pre-wrap">
+                          {selectedTask.notes ? htmlToPlainText(selectedTask.notes) : "—"}
+                        </div>
                       </div>
                     </div>
 

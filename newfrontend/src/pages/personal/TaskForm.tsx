@@ -14,6 +14,25 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
 
+const htmlToPlainText = (value: string) => {
+  const raw = String(value ?? "")
+  if (!raw) return ""
+
+  const looksLikeHtml = /<\s*[a-z][\s\S]*>/i.test(raw)
+  if (!looksLikeHtml) return raw
+
+  try {
+    const normalized = raw
+      .replace(/<\s*br\s*\/?>/gi, "\n")
+      .replace(/<\s*\/\s*p\s*>/gi, "\n\n")
+      .replace(/<\s*\/\s*li\s*>/gi, "\n")
+
+    const doc = new DOMParser().parseFromString(normalized, "text/html")
+    return (doc.body.textContent ?? "").replace(/\n{3,}/g, "\n\n").trim()
+  } catch {
+    return raw.replace(/<[^>]*>/g, "").trim()
+  }
+}
 
 export default function TaskForm() {
   const { toast } = useToast()
@@ -81,8 +100,8 @@ export default function TaskForm() {
     fetchTask(id)
       .then((r) => {
         const t = r.data
-        setTitle(t.title ?? "")
-        setDescription(t.description ?? "")
+        setTitle(htmlToPlainText(t.title ?? ""))
+        setDescription(htmlToPlainText(t.description ?? ""))
         setPriority((t.priority ?? "medium") as any)
         setStatus((t.status ?? "pending") as any)
         setDueDate(t.due_date ? String(t.due_date).slice(0, 10) : "")
@@ -90,8 +109,8 @@ export default function TaskForm() {
         setIsAllDay(Boolean(t.is_all_day))
         setIsPrivate(Boolean(t.is_private))
         setSharedWithUserIds((t.shared_with_user_ids ?? []).filter(Boolean))
-        setLocation(t.location ?? "")
-        setNotes(t.notes ?? "")
+        setLocation(htmlToPlainText(t.location ?? ""))
+        setNotes(htmlToPlainText(t.notes ?? ""))
       })
       .catch(() => {
         toast({ title: "Erro", description: "Tarefa não encontrada", variant: "destructive" })
