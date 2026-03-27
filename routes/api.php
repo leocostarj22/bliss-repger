@@ -244,6 +244,10 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                     'role' => 'employee',
                     'is_admin' => false,
                     'photo_path' => null,
+                    'phone' => null,
+                    'bio' => null,
+                    'work_timezone' => null,
+                    'work_schedule' => null,
                     'permissions_allow' => [],
                     'permissions_deny' => [],
                 ],
@@ -274,6 +278,112 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 'role' => $u->role,
                 'is_admin' => (bool) $u->isAdmin(),
                 'photo_path' => $photo,
+                'phone' => $u->phone,
+                'bio' => $u->bio,
+                'work_timezone' => Schema::hasColumn('users', 'work_timezone') ? ($u->work_timezone ?? null) : null,
+                'work_schedule' => Schema::hasColumn('users', 'work_schedule') ? ($u->work_schedule ?? null) : null,
+                'permissions_allow' => is_array($u->permissions_allow) ? array_values($u->permissions_allow) : [],
+                'permissions_deny' => is_array($u->permissions_deny) ? array_values($u->permissions_deny) : [],
+            ],
+        ]);
+    });
+
+    Route::put('me', function () {
+        $u = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($u, 401);
+        abort_unless($u instanceof User, 403);
+
+        $validated = request()->validate([
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'email' => ['sometimes', 'required', 'email', 'max:255', 'unique:users,email,' . $u->id],
+            'password' => ['sometimes', 'nullable', 'string', 'min:6'],
+            'phone' => ['nullable', 'string', 'max:255'],
+            'bio' => ['nullable', 'string'],
+            'photo_path' => ['nullable', 'string'],
+            'work_timezone' => ['nullable', 'string', 'max:64'],
+            'work_schedule' => ['nullable', 'array'],
+        ]);
+
+        if (! Schema::hasColumn('users', 'work_timezone')) {
+            unset($validated['work_timezone']);
+        }
+        if (! Schema::hasColumn('users', 'work_schedule')) {
+            unset($validated['work_schedule']);
+        }
+
+        if (array_key_exists('photo_path', $validated)) {
+            $incoming = $validated['photo_path'];
+
+            if ($u->photo_path && is_string($u->photo_path) && $u->photo_path !== '' && ! str_starts_with($u->photo_path, 'http://') && ! str_starts_with($u->photo_path, 'https://') && ! str_starts_with($u->photo_path, 'data:') && ! str_starts_with($u->photo_path, '/')) {
+                if (Storage::disk('public')->exists($u->photo_path)) {
+                    Storage::disk('public')->delete($u->photo_path);
+                }
+            }
+
+            if ($incoming === null || (is_string($incoming) && trim($incoming) === '')) {
+                $validated['photo_path'] = null;
+            } elseif (is_string($incoming) && str_starts_with($incoming, 'data:image/')) {
+                if (preg_match('/^data:(image\/(png|jpe?g|webp));base64,/', $incoming, $m) !== 1) {
+                    abort(422, 'Formato de imagem inválido');
+                }
+                $mime = $m[1];
+                $ext = match ($mime) {
+                    'image/png' => 'png',
+                    'image/jpeg' => 'jpg',
+                    'image/jpg' => 'jpg',
+                    'image/webp' => 'webp',
+                    default => 'png',
+                };
+
+                $raw = substr($incoming, strpos($incoming, ',') + 1);
+                $bin = base64_decode($raw);
+                if ($bin === false) {
+                    abort(422, 'Imagem inválida');
+                }
+
+                $path = 'user-photos/' . Str::uuid()->toString() . '.' . $ext;
+                Storage::disk('public')->put($path, $bin);
+                $validated['photo_path'] = $path;
+            } elseif (is_string($incoming) && $incoming !== '') {
+                if (str_starts_with($incoming, '/storage/')) {
+                    $validated['photo_path'] = ltrim(substr($incoming, strlen('/storage/')), '/');
+                } elseif (preg_match('~^https?://[^/]+/storage/(.+)$~', $incoming, $m) === 1) {
+                    $validated['photo_path'] = ltrim($m[1], '/');
+                }
+            }
+        }
+
+        if (array_key_exists('password', $validated) && ($validated['password'] === null || trim((string) $validated['password']) === '')) {
+            unset($validated['password']);
+        }
+
+        $u->fill($validated);
+        $u->save();
+
+        $photo = $u->photo_path;
+        if (is_string($photo) && $photo !== '') {
+            $norm = str_replace('\\', '/', $photo);
+            if (! str_starts_with($norm, 'http://') && ! str_starts_with($norm, 'https://') && ! str_starts_with($norm, 'data:')) {
+                if (str_starts_with($norm, '/storage/')) {
+                    $photo = url($norm);
+                } else {
+                    $photo = asset('storage/' . ltrim(preg_replace('/^storage\//', '', $norm), '/'));
+                }
+            }
+        }
+
+        return response()->json([
+            'data' => [
+                'id' => (string) $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'role' => $u->role,
+                'is_admin' => (bool) $u->isAdmin(),
+                'photo_path' => $photo,
+                'phone' => $u->phone,
+                'bio' => $u->bio,
+                'work_timezone' => Schema::hasColumn('users', 'work_timezone') ? ($u->work_timezone ?? null) : null,
+                'work_schedule' => Schema::hasColumn('users', 'work_schedule') ? ($u->work_schedule ?? null) : null,
                 'permissions_allow' => is_array($u->permissions_allow) ? array_values($u->permissions_allow) : [],
                 'permissions_deny' => is_array($u->permissions_deny) ? array_values($u->permissions_deny) : [],
             ],

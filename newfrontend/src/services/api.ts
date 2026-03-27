@@ -955,6 +955,10 @@ export async function fetchUser(): Promise<
     role?: string | null
     is_admin?: boolean
     photo_path?: string | null
+    phone?: string | null
+    bio?: string | null
+    work_timezone?: string | null
+    work_schedule?: any | null
     permissions_allow?: string[] | null
     permissions_deny?: string[] | null
   }>
@@ -993,10 +997,70 @@ export async function fetchUser(): Promise<
       role: json?.data?.role ?? null,
       is_admin: Boolean(json?.data?.is_admin ?? false),
       photo_path: json?.data?.photo_path ?? null,
+      phone: json?.data?.phone ?? null,
+      bio: json?.data?.bio ?? null,
+      work_timezone: json?.data?.work_timezone ?? null,
+      work_schedule: json?.data?.work_schedule ?? null,
       permissions_allow: Array.isArray(json?.data?.permissions_allow) ? (json.data.permissions_allow as string[]) : null,
       permissions_deny: Array.isArray(json?.data?.permissions_deny) ? (json.data.permissions_deny as string[]) : null,
     },
   };
+}
+
+export async function updateMyProfile(payload: {
+  name?: string
+  email?: string
+  password?: string | null
+  phone?: string | null
+  bio?: string | null
+  photo_path?: string | null
+  work_timezone?: string | null
+  work_schedule?: any | null
+}): Promise<
+  ApiResponse<{
+    id: string
+    name: string
+    email: string
+    role?: string | null
+    is_admin?: boolean
+    photo_path?: string | null
+    phone?: string | null
+    bio?: string | null
+    work_timezone?: string | null
+    work_schedule?: any | null
+    permissions_allow?: string[] | null
+    permissions_deny?: string[] | null
+  }>
+> {
+  const response = await apiFetch('/api/v1/me', {
+    method: 'PUT',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    let msg = `Failed to update profile: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+      const errors = json?.errors;
+      if (errors && typeof errors === 'object') {
+        const firstKey = Object.keys(errors)[0];
+        const firstVal = (errors as any)[firstKey];
+        if (Array.isArray(firstVal) && typeof firstVal[0] === 'string') msg = firstVal[0];
+      }
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  return { data: json?.data as any };
 }
 
 export type MyAccessSnapshot = {

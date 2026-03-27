@@ -207,22 +207,22 @@ export interface Department {
 }
 
 export type WorkScheduleDay = {
-  enabled: boolean
-  start: string
-  end: string
-  break_start: string
-  break_end: string
-}
+  enabled: boolean;
+  start: string;
+  end: string;
+  break_start: string;
+  break_end: string;
+};
 
 export type WorkSchedule = {
-  mon: WorkScheduleDay
-  tue: WorkScheduleDay
-  wed: WorkScheduleDay
-  thu: WorkScheduleDay
-  fri: WorkScheduleDay
-  sat: WorkScheduleDay
-  sun: WorkScheduleDay
-}
+  mon: WorkScheduleDay;
+  tue: WorkScheduleDay;
+  wed: WorkScheduleDay;
+  thu: WorkScheduleDay;
+  fri: WorkScheduleDay;
+  sat: WorkScheduleDay;
+  sun: WorkScheduleDay;
+};
 
 export interface User {
   id: string;
