@@ -143,13 +143,21 @@ export default function MyNotes() {
     }
   }, [userById])
 
-  const createdAtLabel = useMemo(() => {
+  const createdByLabel = useMemo(() => {
+    return (id?: string | null) => {
+      const key = String(id ?? "").trim()
+      if (!key) return "—"
+      return userById[key]?.name || "—"
+    }
+  }, [userById])
+
+  const updatedAtLabel = useMemo(() => {
     return (iso?: string | null) => {
       const raw = String(iso ?? "").trim()
       if (!raw) return "—"
       const d = new Date(raw)
       if (Number.isNaN(d.getTime())) return "—"
-      return d.toLocaleDateString("pt-PT")
+      return d.toLocaleString("pt-PT")
     }
   }, [])
 
@@ -499,7 +507,8 @@ export default function MyNotes() {
                       <div className="line-clamp-1">Favorito: {n.is_favorite ? "Sim" : "Não"}</div>
                       <div className="line-clamp-1">Partilhado com: {sharedWithLabel(n.shared_with_user_ids)}</div>
                       <div className="line-clamp-1">Modificado por: {modifiedByLabel(n.last_modified_by)}</div>
-                      <div className="line-clamp-1">Data da criação: {createdAtLabel(n.createdAt)}</div>
+                      <div className="line-clamp-1">Criado por: {createdByLabel(n.user_id)}</div>
+                      <div className="line-clamp-1">Última modificação: {updatedAtLabel(n.updatedAt)}</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -565,7 +574,8 @@ export default function MyNotes() {
                 <th className="py-3 pr-4">Favorito</th>
                 <th className="py-3 pr-4">Partilhado com</th>
                 <th className="py-3 pr-4">Modificado por</th>
-                <th className="py-3 pr-4">Data da criação</th>
+                <th className="py-3 pr-4">Criado por</th>
+                <th className="py-3 pr-4">Última modificação</th>
                 <th className="py-3 text-right">Ações</th>
               </tr>
             </thead>
@@ -587,6 +597,9 @@ export default function MyNotes() {
                       <Skeleton className="h-4 w-40" />
                     </td>
                     <td className="py-4 pr-4">
+                      <Skeleton className="h-4 w-40" />
+                    </td>
+                    <td className="py-4 pr-4">
                       <Skeleton className="h-4 w-28" />
                     </td>
                     <td className="py-4 text-right">
@@ -596,7 +609,7 @@ export default function MyNotes() {
                 ))
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-muted-foreground">
+                  <td colSpan={7} className="py-10 text-center text-muted-foreground">
                     Nenhuma anotação encontrada
                   </td>
                 </tr>
@@ -639,7 +652,10 @@ export default function MyNotes() {
                       <div className="text-xs text-muted-foreground line-clamp-1">{modifiedByLabel(n.last_modified_by)}</div>
                     </td>
                     <td className="py-4 pr-4">
-                      <div className="text-xs text-muted-foreground">{createdAtLabel(n.createdAt)}</div>
+                      <div className="text-xs text-muted-foreground line-clamp-1">{createdByLabel(n.user_id)}</div>
+                    </td>
+                    <td className="py-4 pr-4">
+                      <div className="text-xs text-muted-foreground">{updatedAtLabel(n.updatedAt)}</div>
                     </td>
                     <td className="py-4 text-right">
                       <div className="inline-flex items-center gap-1">
