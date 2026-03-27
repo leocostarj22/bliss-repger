@@ -35,6 +35,7 @@ import SystemLogs from "@/pages/reports/SystemLogs";
 import MyTasks from "@/pages/personal/MyTasks";
 import TaskForm from "@/pages/personal/TaskForm";
 import MyNotes from "@/pages/personal/MyNotes";
+import NoteForm from "@/pages/personal/NoteForm";
 import HrEmployees from "@/pages/hr/Employees";
 import HrEmployeeForm from "@/pages/hr/EmployeeDetail";
 import HrEmployeeDetail from "@/pages/hr/EmployeeForm";
@@ -861,6 +862,22 @@ const App = () => (
                 element={
                   <RequirePermission permission={["personal.notes.read", "personal.notes.write"]}>
                     <MyNotes />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/personal/notes/new"
+                element={
+                  <RequirePermission permission="personal.notes.write">
+                    <NoteForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/personal/notes/:id/edit"
+                element={
+                  <RequirePermission permission="personal.notes.write">
+                    <NoteForm />
                   </RequirePermission>
                 }
               />

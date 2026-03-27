@@ -2,14 +2,13 @@ import { useEffect, useState } from "react"
 import { Pencil, Plus, Search, Star, Trash2 } from "lucide-react"
 
 import type { PersonalNote } from "@/types"
-import { createPersonalNote, deletePersonalNote, fetchPersonalNotes, updatePersonalNote } from "@/services/api"
+import { deletePersonalNote, fetchPersonalNotes } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
+import { useNavigate } from "react-router-dom"
 
 const CURRENT_USER_KEY = "bliss:currentUserId"
 
@@ -26,8 +25,7 @@ export default function MyNotes() {
   const [search, setSearch] = useState("")
   const [favoriteFilter, setFavoriteFilter] = useState<"all" | "favorite" | "normal">("all")
 
-  const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState<PersonalNote | null>(null)
+  const navigate = useNavigate()
 
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<PersonalNote | null>(null)
@@ -60,13 +58,11 @@ export default function MyNotes() {
   }, [search, favoriteFilter])
 
   const openCreate = () => {
-    setEditing(null)
-    setFormOpen(true)
+    navigate('/personal/notes/new')
   }
 
   const openEdit = (row: PersonalNote) => {
-    setEditing(row)
-    setFormOpen(true)
+    navigate(`/personal/notes/${row.id}/edit`)
   }
 
   const requestDelete = (row: PersonalNote) => {
@@ -247,20 +243,6 @@ export default function MyNotes() {
         </div>
       </div>
 
-      {formOpen && (
-        <NoteFormModal
-          editing={editing}
-          onClose={() => {
-            setFormOpen(false)
-            setEditing(null)
-          }}
-          onSaved={() => {
-            setFormOpen(false)
-            setEditing(null)
-            load()
-          }}
-        />
-      )}
 
       {deleteOpen && (
         <div
@@ -296,111 +278,6 @@ export default function MyNotes() {
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-function NoteFormModal({
-  editing,
-  onClose,
-  onSaved,
-}: {
-  editing: PersonalNote | null
-  onClose: () => void
-  onSaved: () => void
-}) {
-  const { toast } = useToast()
-  const [saving, setSaving] = useState(false)
-
-  const [title, setTitle] = useState(editing?.title ?? "")
-  const [content, setContent] = useState(editing?.content ?? "")
-  const [color, setColor] = useState(editing?.color ?? "")
-  const [isFavorite, setIsFavorite] = useState(editing ? Boolean(editing.is_favorite) : false)
-
-  const submit = async () => {
-    setSaving(true)
-    try {
-      if (editing) {
-        await updatePersonalNote(editing.id, {
-          title,
-          content,
-          color: color.trim() ? color.trim() : null,
-          is_favorite: isFavorite,
-          last_modified_by: currentUserId(),
-        })
-        toast({ title: "Sucesso", description: "Anotação atualizada" })
-      } else {
-        await createPersonalNote({
-          user_id: currentUserId(),
-          title,
-          content,
-          color: color.trim() ? color.trim() : null,
-          is_favorite: isFavorite,
-          last_modified_by: currentUserId(),
-          shared_with_user_ids: [],
-        })
-        toast({ title: "Sucesso", description: "Anotação criada" })
-      }
-
-      onSaved()
-    } catch (e: any) {
-      toast({ title: "Erro", description: e?.message ?? "Falha ao guardar", variant: "destructive" })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className="glass-card w-full max-w-2xl p-6" onClick={(e) => e.stopPropagation()}>
-        <div>
-          <div className="text-lg font-semibold">{editing ? "Editar anotação" : "Nova anotação"}</div>
-          <div className="text-sm text-muted-foreground">Conteúdo pessoal</div>
-        </div>
-
-        <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="md:col-span-2">
-            <div className="text-xs text-muted-foreground mb-1">Título</div>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Checklist do mês" />
-          </div>
-
-          <div className="md:col-span-2">
-            <div className="text-xs text-muted-foreground mb-1">Conteúdo</div>
-            <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Escreve aqui…" />
-          </div>
-
-          <div>
-            <div className="text-xs text-muted-foreground mb-1">Cor</div>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={color || "#94a3b8"}
-                onChange={(e) => setColor(e.target.value)}
-                className="h-10 w-12 rounded-md border border-input bg-background p-1"
-                title="Escolher cor"
-              />
-              <Input value={color} onChange={(e) => setColor(e.target.value)} placeholder="#RRGGBB" />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between rounded-lg border border-border p-4">
-            <div>
-              <div className="text-sm font-medium">Favorita</div>
-              <div className="text-xs text-muted-foreground">Controla is_favorite</div>
-            </div>
-            <Switch checked={isFavorite} onCheckedChange={(v) => setIsFavorite(Boolean(v))} />
-          </div>
-        </div>
-
-        <div className="mt-5 flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
-            Cancelar
-          </Button>
-          <Button type="button" onClick={submit} disabled={saving}>
-            Guardar
-          </Button>
-        </div>
-      </div>
     </div>
   )
 }
