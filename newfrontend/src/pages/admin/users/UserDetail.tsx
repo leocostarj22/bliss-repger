@@ -55,26 +55,8 @@ export default function UserDetail() {
       .finally(() => setLoading(false))
   }, [id, navigate, toast])
 
-  if (loading || !user) {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="page-header">
-          <h1 className="page-title">Utilizador</h1>
-          <p className="page-subtitle">Administração → Utilizadores</p>
-          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
-        </div>
-        <div className="glass-card p-6">
-          <div className="text-sm text-muted-foreground">A carregar…</div>
-        </div>
-      </div>
-    )
-  }
-
-  const photoSrc = user.photo_path ?? ""
-  const isDataPhoto = Boolean(photoSrc) && photoSrc.startsWith("data:")
-
-  const schedule = user.work_schedule ?? null
-  const timezone = (user.work_timezone ?? "").trim() || "—"
+  const schedule = user?.work_schedule ?? null
+  const timezone = (user?.work_timezone ?? "").trim() || "—"
 
   const dayRows = useMemo(() => {
     if (!schedule) return [] as { label: string; text: string }[]
@@ -104,6 +86,24 @@ export default function UserDetail() {
       return { label, text }
     })
   }, [schedule])
+
+  if (loading || !user) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="page-header">
+          <h1 className="page-title">Utilizador</h1>
+          <p className="page-subtitle">Administração → Utilizadores</p>
+          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+        </div>
+        <div className="glass-card p-6">
+          <div className="text-sm text-muted-foreground">A carregar…</div>
+        </div>
+      </div>
+    )
+  }
+
+  const photoSrc = user.photo_path ?? ""
+  const isDataPhoto = Boolean(photoSrc) && photoSrc.startsWith("data:")
 
   return (
     <div className="space-y-6 animate-slide-up">
