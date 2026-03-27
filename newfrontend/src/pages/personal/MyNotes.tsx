@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { Loader2, Pencil, Plus, Search, Star, Trash2 } from "lucide-react"
 
 import type { PersonalNote, User } from "@/types"
-import { createPersonalNote, deletePersonalNote, fetchPersonalNotes, fetchUsers, updatePersonalNote } from "@/services/api"
+import { createPersonalNote, deletePersonalNote, fetchPersonalNotes, fetchUser, fetchUsers, updatePersonalNote } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { useNavigate } from "react-router-dom"
 
 const FAMILY_PHOTO_KEY = "bliss:personal:familyPhoto"
+const CURRENT_USER_ID_KEY = "bliss:currentUserId"
 
 const safeLocalStorageGet = (key: string) => {
   if (typeof window === "undefined") return null
@@ -73,6 +74,20 @@ export default function MyNotes() {
   const [favoriteFilter, setFavoriteFilter] = useState<"all" | "favorite" | "normal">("all")
 
   const navigate = useNavigate()
+
+  const [currentUserId, setCurrentUserId] = useState("")
+
+  useEffect(() => {
+    const cached = safeLocalStorageGet(CURRENT_USER_ID_KEY)
+    if (cached) setCurrentUserId(String(cached))
+
+    fetchUser()
+      .then((r) => {
+        const id = String(r?.data?.id ?? "").trim()
+        if (id) setCurrentUserId(id)
+      })
+      .catch(() => {})
+  }, [])
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [familyPhoto, setFamilyPhoto] = useState<string | null>(null)
@@ -267,6 +282,16 @@ export default function MyNotes() {
     if (!id) return
     if (favoriteBusyById[id]) return
 
+    const ownerId = String((row as any)?.user_id ?? "").trim()
+    if (currentUserId && ownerId && ownerId !== currentUserId) {
+      toast({
+        title: "Sem permissão",
+        description: "Só o dono da anotação pode alterar o favorito.",
+        variant: "destructive",
+      })
+      return
+    }
+
     const prev = Boolean((row as any)?.is_favorite)
     const next = !prev
 
@@ -282,9 +307,11 @@ export default function MyNotes() {
       }
     } catch (e: any) {
       setRows((current) => current.map((n) => (String((n as any)?.id ?? "") === id ? { ...n, is_favorite: prev } : n)))
+      const msg = typeof e?.message === "string" && e.message.trim() ? e.message : "Falha ao atualizar favorito"
+      const looksLikeNotFound = /\b404\b|not\s+found|não\s+encontrad/i.test(msg)
       toast({
         title: "Erro",
-        description: typeof e?.message === "string" && e.message.trim() ? e.message : "Falha ao atualizar favorito",
+        description: looksLikeNotFound ? "Anotação não encontrada ou sem permissões." : msg,
         variant: "destructive",
       })
     } finally {
@@ -575,20 +602,28 @@ export default function MyNotes() {
                           toggleFavorite(n)
                         }}
                         aria-label={
-                          favoriteBusyById[String(n.id)]
-                            ? "A atualizar favorito"
-                            : n.is_favorite
-                              ? "Remover favorito"
-                              : "Marcar como favorito"
+                          currentUserId && String(n.user_id ?? "").trim() && String(n.user_id ?? "").trim() !== currentUserId
+                            ? "Só o dono pode alterar favorito"
+                            : favoriteBusyById[String(n.id)]
+                              ? "A atualizar favorito"
+                              : n.is_favorite
+                                ? "Remover favorito"
+                                : "Marcar como favorito"
                         }
                         title={
-                          favoriteBusyById[String(n.id)]
-                            ? "A atualizar favorito"
-                            : n.is_favorite
-                              ? "Remover favorito"
-                              : "Marcar como favorito"
+                          currentUserId && String(n.user_id ?? "").trim() && String(n.user_id ?? "").trim() !== currentUserId
+                            ? "Só o dono pode alterar favorito"
+                            : favoriteBusyById[String(n.id)]
+                              ? "A atualizar favorito"
+                              : n.is_favorite
+                                ? "Remover favorito"
+                                : "Marcar como favorito"
                         }
-                        disabled={String(n.id ?? "").trim() === "" || Boolean(favoriteBusyById[String(n.id)])}
+                        disabled={
+                          String(n.id ?? "").trim() === "" ||
+                          Boolean(favoriteBusyById[String(n.id)]) ||
+                          (currentUserId && String(n.user_id ?? "").trim() && String(n.user_id ?? "").trim() !== currentUserId)
+                        }
                       >
                         <Star className={n.is_favorite ? "w-4 h-4 text-amber-400" : "w-4 h-4 text-muted-foreground"} fill={n.is_favorite ? "currentColor" : "none"} />
                       </Button>
