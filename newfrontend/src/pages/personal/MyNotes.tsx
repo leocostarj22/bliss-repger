@@ -184,12 +184,13 @@ export default function MyNotes() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-3">
-        {reminderRows.length > 0 ? (
-          <div className="glass-card p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-sm font-semibold">Lembretes</div>
-              <div className="text-xs text-muted-foreground">Formato Post‑it</div>
-            </div>
+        <div className="glass-card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-semibold">Lembretes</div>
+            <div className="text-xs text-muted-foreground">Formato Post‑it</div>
+          </div>
+
+          {reminderRows.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
               {reminderRows
                 .slice(0, 12)
@@ -199,9 +200,11 @@ export default function MyNotes() {
                     role="button"
                     tabIndex={0}
                     onClick={() => openEdit(n)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') openEdit(n) }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") openEdit(n)
+                    }}
                     className="relative w-[160px] h-[160px] rounded-[8px] shadow-[0_10px_18px_rgba(0,0,0,0.18)] border border-black/10 rotate-[-1.2deg] hover:rotate-0 transition-transform cursor-pointer select-none overflow-hidden"
-                    style={{ backgroundColor: n.color || '#FEF3C7' }}
+                    style={{ backgroundColor: n.color || "#FEF3C7" }}
                     title={n.title}
                   >
                     <div className="absolute inset-x-0 top-0 h-6 bg-white/20 mix-blend-overlay" />
@@ -215,14 +218,18 @@ export default function MyNotes() {
                         {n.content}
                       </div>
                       <div className="absolute bottom-2 right-2 text-[11px] opacity-70">
-                        {n.remind_at ? new Date(n.remind_at).toLocaleString('pt-PT') : n.is_favorite ? '★' : ''}
+                        {n.remind_at ? new Date(n.remind_at).toLocaleString("pt-PT") : n.is_favorite ? "★" : ""}
                       </div>
                     </div>
                   </div>
                 ))}
             </div>
-          </div>
-        ) : null}
+          ) : (
+            <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              Sem lembretes ainda
+            </div>
+          )}
+        </div>
 
         <div className="glass-card p-4">
           <div className="flex items-center justify-between mb-3">
