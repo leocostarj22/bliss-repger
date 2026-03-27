@@ -8,6 +8,39 @@ import { useToast } from "@/components/ui/use-toast"
 import { createPersonalNote, fetchPersonalNote, updatePersonalNote } from "@/services/api"
 import type { PersonalNote } from "@/types"
 
+const htmlToPlainText = (value: string) => {
+  const raw = String(value ?? "")
+  if (!raw) return ""
+
+  if (typeof window === "undefined" || typeof DOMParser === "undefined") {
+    return raw.replace(/<[^>]*>/g, "").trim()
+  }
+
+  let decoded = raw
+  const mayBeEscaped = /&lt;|&#\d+;|&#x[0-9a-f]+;/i.test(raw)
+  if (mayBeEscaped) {
+    try {
+      decoded = new DOMParser().parseFromString(raw, "text/html").documentElement.textContent ?? raw
+    } catch {
+      decoded = raw
+    }
+  }
+
+  const looksLikeHtml = /<\s*[a-z][\s\S]*>/i.test(decoded)
+  if (!looksLikeHtml) return decoded
+
+  try {
+    const normalized = decoded
+      .replace(/<\s*br\s*\/?>/gi, "\n")
+      .replace(/<\s*\/\s*p\s*>/gi, "\n\n")
+      .replace(/<\s*\/\s*li\s*>/gi, "\n")
+
+    const doc = new DOMParser().parseFromString(normalized, "text/html")
+    return (doc.body.textContent ?? "").replace(/\n{3,}/g, "\n\n").trim()
+  } catch {
+    return decoded.replace(/<[^>]*>/g, "").trim()
+  }
+}
 
 const toLocalDateTimeInput = (iso?: string | null) => {
   if (!iso) return ""
@@ -50,8 +83,8 @@ export default function NoteForm() {
         const resp = await fetchPersonalNote(editingId)
         if (!alive) return
         const n: PersonalNote = resp.data
-        setTitle(n.title || "")
-        setContent(n.content || "")
+        setTitle(htmlToPlainText(n.title || ""))
+        setContent(htmlToPlainText(n.content || ""))
         setColor(n.color || "#94a3b8")
         setIsFavorite(Boolean(n.is_favorite))
         setRemindAtLocal(toLocalDateTimeInput(n.remind_at ?? null))
@@ -78,7 +111,7 @@ export default function NoteForm() {
     try {
       const payload = {
         title: titleClean,
-        content: content ?? "",
+        content: htmlToPlainText(content ?? ""),
         color: (color || "").trim() ? color.trim() : null,
         is_favorite: Boolean(isFavorite),
         remind_at: fromLocalDateTimeInput(remindAtLocal),
