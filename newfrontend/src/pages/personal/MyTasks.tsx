@@ -36,6 +36,13 @@ const priorityBadge = (priority: TaskPriority) => {
   return "bg-muted text-muted-foreground border-border dark:text-white"
 }
 
+const priorityLabel = (priority: TaskPriority) => {
+  if (priority === "low") return "Baixa"
+  if (priority === "medium") return "Média"
+  if (priority === "high") return "Alta"
+  return "Urgente"
+}
+
 const toLocalDateKey = (d: Date) => {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, "0")
@@ -216,7 +223,7 @@ export default function MyTasks() {
   ] as const
 
   return (
-    <div className="space-y-6 animate-slide-up">
+    <div className="space-y-6 animate-slide-up pb-24 md:pb-6">
       <div className="page-header">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -225,9 +232,12 @@ export default function MyTasks() {
             <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
           </div>
 
-          <Button onClick={openCreate}>
+          <Button onClick={openCreate} className="hidden md:inline-flex">
             <Plus />
             Nova tarefa
+          </Button>
+          <Button onClick={openCreate} variant="outline" size="icon" className="md:hidden" aria-label="Nova tarefa" title="Nova tarefa">
+            <Plus className="w-4 h-4" />
           </Button>
         </div>
       </div>
@@ -301,56 +311,121 @@ export default function MyTasks() {
           </TabsList>
 
           <TabsContent value="list">
-            <div className="w-full overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-muted-foreground border-b border-border">
-                <th className="py-3 pr-4">Tarefa</th>
-                <th className="py-3 text-right">Ações</th>
-              </tr>
-            </thead>
-
-            <tbody>
+            <div className="md:hidden space-y-2">
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={i} className="border-b border-border/60">
-                    <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-72" />
-                    </td>
-                    <td className="py-4 text-right">
-                      <Skeleton className="h-9 w-28 ml-auto" />
-                    </td>
-                  </tr>
+                  <div key={i} className="rounded-xl border border-border bg-white/5 p-3">
+                    <Skeleton className="h-4 w-52" />
+                    <Skeleton className="mt-2 h-3 w-full" />
+                  </div>
                 ))
               ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={2} className="py-10 text-center text-muted-foreground">
-                    Nenhuma tarefa encontrada
-                  </td>
-                </tr>
+                <div className="py-10 text-center text-muted-foreground">Nenhuma tarefa encontrada</div>
               ) : (
                 rows.map((t) => (
-                  <tr key={t.id} className="border-b border-border/60 hover:bg-white/5 transition-colors">
-                    <td className="py-4 pr-4">
-                      <div className="font-medium">{t.title}</div>
-                    </td>
-                    <td className="py-4 text-right">
-                      <div className="inline-flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => openEdit(t)}>
-                          <Pencil />
-                          Editar
+                  <div
+                    key={t.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openEdit(t)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") openEdit(t)
+                    }}
+                    className="rounded-xl border border-border bg-white/5 p-3 cursor-pointer hover:bg-white/10 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{t.title}</div>
+                        {t.description || t.notes ? (
+                          <div className="mt-1 text-xs text-muted-foreground line-clamp-2">{t.description || t.notes}</div>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openEdit(t)
+                          }}
+                          aria-label="Editar"
+                          title="Editar"
+                        >
+                          <Pencil className="w-4 h-4" />
                         </Button>
-                        <Button variant="destructive" size="sm" onClick={() => requestDelete(t)}>
-                          <Trash2 />
-                          Eliminar
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            requestDelete(t)
+                          }}
+                          aria-label="Eliminar"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))
               )}
-            </tbody>
-          </table>
+            </div>
+
+            <div className="hidden md:block w-full overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-muted-foreground border-b border-border">
+                    <th className="py-3 pr-4">Tarefa</th>
+                    <th className="py-3 text-right">Ações</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {loading ? (
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <tr key={i} className="border-b border-border/60">
+                        <td className="py-4 pr-4">
+                          <Skeleton className="h-4 w-72" />
+                        </td>
+                        <td className="py-4 text-right">
+                          <Skeleton className="h-9 w-28 ml-auto" />
+                        </td>
+                      </tr>
+                    ))
+                  ) : rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={2} className="py-10 text-center text-muted-foreground">
+                        Nenhuma tarefa encontrada
+                      </td>
+                    </tr>
+                  ) : (
+                    rows.map((t) => (
+                      <tr key={t.id} className="border-b border-border/60 hover:bg-white/5 transition-colors">
+                        <td className="py-4 pr-4">
+                          <div className="font-medium">{t.title}</div>
+                        </td>
+                        <td className="py-4 text-right">
+                          <div className="inline-flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => openEdit(t)}>
+                              <Pencil />
+                              Editar
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => requestDelete(t)}>
+                              <Trash2 />
+                              Eliminar
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </TabsContent>
 
@@ -453,12 +528,25 @@ export default function MyTasks() {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="hidden sm:inline-flex"
                     onClick={() => {
                       navigate(`/personal/tasks/new?due=${selectedDayKey}`)
                     }}
                   >
                     <Plus />
                     Nova
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="sm:hidden"
+                    onClick={() => {
+                      navigate(`/personal/tasks/new?due=${selectedDayKey}`)
+                    }}
+                    aria-label="Nova tarefa"
+                    title="Nova tarefa"
+                  >
+                    <Plus className="w-4 h-4" />
                   </Button>
                 </div>
 
@@ -489,7 +577,7 @@ export default function MyTasks() {
                         <div className="text-sm font-semibold">{selectedTask.title}</div>
                         <div className="text-xs text-muted-foreground">Detalhes</div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="hidden sm:flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => openEdit(selectedTask)}>
                           <Pencil />
                           Editar
@@ -499,13 +587,37 @@ export default function MyTasks() {
                           Eliminar
                         </Button>
                       </div>
+                      <div className="flex sm:hidden items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => openEdit(selectedTask)}
+                          aria-label="Editar"
+                          title="Editar"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => requestDelete(selectedTask)}
+                          aria-label="Eliminar"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
 
                     {selectedTask.description ? (
                       <div className="mt-3 text-sm whitespace-pre-wrap">{selectedTask.description}</div>
                     ) : null}
 
-                    <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div className="mt-3 hidden md:grid grid-cols-2 gap-3">
                       <div>
                         <div className="text-xs text-muted-foreground">Estado</div>
                         <div className="mt-1">
@@ -515,7 +627,7 @@ export default function MyTasks() {
                               statusBadge(selectedTask.status),
                             )}
                           >
-                            {selectedTask.status}
+                            {statusLabel(selectedTask.status)}
                           </span>
                         </div>
                       </div>
@@ -529,7 +641,7 @@ export default function MyTasks() {
                               priorityBadge(selectedTask.priority),
                             )}
                           >
-                            {selectedTask.priority}
+                            {priorityLabel(selectedTask.priority)}
                           </span>
                         </div>
                       </div>

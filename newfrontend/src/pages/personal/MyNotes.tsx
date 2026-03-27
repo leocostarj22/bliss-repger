@@ -186,7 +186,7 @@ export default function MyNotes() {
   const reminderRows = rows.filter((n) => n.remind_at || n.is_favorite)
 
   return (
-    <div className="space-y-6 animate-slide-up">
+    <div className="space-y-6 animate-slide-up pb-24 md:pb-6">
       <div className="page-header">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -195,15 +195,18 @@ export default function MyNotes() {
             <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
           </div>
 
-          <Button onClick={openCreate}>
+          <Button onClick={openCreate} className="hidden md:inline-flex">
             <Plus />
             Nova anotação
+          </Button>
+          <Button onClick={openCreate} variant="outline" size="icon" className="md:hidden" aria-label="Nova anotação" title="Nova anotação">
+            <Plus className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-3">
-        <div className="glass-card p-4">
+        <div className="glass-card p-4 hidden md:block">
           <div className="flex items-center justify-between mb-3">
             <div className="text-sm font-semibold">Lembretes</div>
             <div className="text-xs text-muted-foreground">Formato Post‑it</div>
@@ -325,7 +328,70 @@ export default function MyNotes() {
           </div>
         </div>
 
-        <div className="w-full overflow-x-auto">
+        <div className="md:hidden space-y-2">
+          {loading && rows.length === 0 ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-border bg-white/5 p-3">
+                <Skeleton className="h-4 w-52" />
+                <Skeleton className="mt-2 h-3 w-full" />
+              </div>
+            ))
+          ) : rows.length === 0 ? (
+            <div className="py-10 text-center text-muted-foreground">Nenhuma anotação encontrada</div>
+          ) : (
+            rows.map((n) => (
+              <div
+                key={n.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => openEdit(n)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") openEdit(n)
+                }}
+                className="rounded-xl border border-border bg-white/5 p-3 cursor-pointer hover:bg-white/10 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{n.title}</div>
+                    {n.content ? <div className="mt-1 text-xs text-muted-foreground line-clamp-2">{n.content}</div> : null}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openEdit(n)
+                      }}
+                      aria-label="Editar"
+                      title="Editar"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        requestDelete(n)
+                      }}
+                      aria-label="Eliminar"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="hidden md:block w-full overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-muted-foreground border-b border-border">
@@ -378,6 +444,45 @@ export default function MyNotes() {
         </div>
       </div>
 
+      <div className="glass-card p-4 md:hidden">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <div className="text-sm font-semibold">Porta-retratos</div>
+            <div className="text-xs text-muted-foreground">Foto da família</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={onFamilyPhotoChange}
+            />
+            <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+              Escolher
+            </Button>
+            {familyPhoto ? (
+              <Button type="button" variant="outline" size="sm" onClick={clearFamilyPhoto}>
+                <Trash2 />
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-black/10 p-3">
+          <div className="rounded-xl border-[10px] border-amber-200/60 bg-black/20 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)] overflow-hidden">
+            <div className="aspect-[4/5] w-full">
+              {familyPhoto ? (
+                <img src={familyPhoto} alt="Foto da família" className="h-full w-full object-cover" />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground p-6 text-center">
+                  Escolhe uma foto para aparecer aqui
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {deleteOpen && (
         <div
