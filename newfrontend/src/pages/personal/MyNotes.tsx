@@ -330,9 +330,6 @@ export default function MyNotes() {
             <thead>
               <tr className="text-left text-muted-foreground border-b border-border">
                 <th className="py-3 pr-4">Anotação</th>
-                <th className="py-3 pr-4">Cor</th>
-                <th className="py-3 pr-4">Favorita</th>
-                <th className="py-3 pr-4">Atualizada</th>
                 <th className="py-3 text-right">Ações</th>
               </tr>
             </thead>
@@ -344,15 +341,6 @@ export default function MyNotes() {
                     <td className="py-4 pr-4">
                       <Skeleton className="h-4 w-72" />
                     </td>
-                    <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-16" />
-                    </td>
-                    <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-16" />
-                    </td>
-                    <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-40" />
-                    </td>
                     <td className="py-4 text-right">
                       <Skeleton className="h-9 w-28 ml-auto" />
                     </td>
@@ -360,7 +348,7 @@ export default function MyNotes() {
                 ))
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center text-muted-foreground">
+                  <td colSpan={2} className="py-10 text-center text-muted-foreground">
                     Nenhuma anotação encontrada
                   </td>
                 </tr>
@@ -369,16 +357,7 @@ export default function MyNotes() {
                   <tr key={n.id} className="border-b border-border/60 hover:bg-white/5 transition-colors">
                     <td className="py-4 pr-4">
                       <div className="font-medium">{n.title}</div>
-                      <div className="text-xs text-muted-foreground line-clamp-1">{n.content}</div>
                     </td>
-                    <td className="py-4 pr-4">
-                      <span
-                        className="inline-flex h-4 w-4 rounded-full border border-border"
-                        style={{ backgroundColor: n.color ?? "#94a3b8" }}
-                      />
-                    </td>
-                    <td className="py-4 pr-4">{n.is_favorite ? <Star className="w-4 h-4 text-amber-400" /> : "—"}</td>
-                    <td className="py-4 pr-4">{new Date(n.updatedAt).toLocaleString("pt-PT")}</td>
                     <td className="py-4 text-right">
                       <div className="inline-flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => openEdit(n)}>

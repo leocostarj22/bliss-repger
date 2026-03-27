@@ -306,10 +306,6 @@ export default function MyTasks() {
             <thead>
               <tr className="text-left text-muted-foreground border-b border-border">
                 <th className="py-3 pr-4">Tarefa</th>
-                <th className="py-3 pr-4">Vencimento</th>
-                <th className="py-3 pr-4">Prioridade</th>
-                <th className="py-3 pr-4">Estado</th>
-                <th className="py-3 pr-4">Privada</th>
                 <th className="py-3 text-right">Ações</th>
               </tr>
             </thead>
@@ -321,18 +317,6 @@ export default function MyTasks() {
                     <td className="py-4 pr-4">
                       <Skeleton className="h-4 w-72" />
                     </td>
-                    <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-28" />
-                    </td>
-                    <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-24" />
-                    </td>
-                    <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-24" />
-                    </td>
-                    <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-16" />
-                    </td>
                     <td className="py-4 text-right">
                       <Skeleton className="h-9 w-28 ml-auto" />
                     </td>
@@ -340,7 +324,7 @@ export default function MyTasks() {
                 ))
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-muted-foreground">
+                  <td colSpan={2} className="py-10 text-center text-muted-foreground">
                     Nenhuma tarefa encontrada
                   </td>
                 </tr>
@@ -349,40 +333,7 @@ export default function MyTasks() {
                   <tr key={t.id} className="border-b border-border/60 hover:bg-white/5 transition-colors">
                     <td className="py-4 pr-4">
                       <div className="font-medium">{t.title}</div>
-                      {t.description ? <div className="text-xs text-muted-foreground line-clamp-1">{t.description}</div> : null}
                     </td>
-                    <td className="py-4 pr-4">{t.due_date ? new Date(t.due_date).toLocaleDateString("pt-PT") : "—"}</td>
-                    <td className="py-4 pr-4">
-                      <span
-                        className={cn(
-                          "inline-flex min-w-[110px] items-center justify-center rounded-full px-2 py-1 text-xs font-medium border",
-                          priorityBadge(t.priority),
-                        )}
-                      >
-                        {t.priority}
-                      </span>
-                    </td>
-                    <td className="py-4 pr-4">
-                      <Select value={t.status} onValueChange={(v) => changeStatus(t, v as any)}>
-                        <SelectTrigger className="h-8 w-[160px]">
-                          <span
-                            className={cn(
-                              "inline-flex min-w-[110px] items-center justify-center rounded-full px-2 py-1 text-xs font-medium border",
-                              statusBadge(t.status),
-                            )}
-                          >
-                            {statusLabel(t.status)}
-                          </span>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pendente</SelectItem>
-                          <SelectItem value="in_progress">Em curso</SelectItem>
-                          <SelectItem value="completed">Concluída</SelectItem>
-                          <SelectItem value="cancelled">Cancelada</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </td>
-                    <td className="py-4 pr-4">{t.is_private ? "Sim" : "Não"}</td>
                     <td className="py-4 text-right">
                       <div className="inline-flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => openEdit(t)}>
@@ -525,28 +476,7 @@ export default function MyTasks() {
                           selectedTaskId === t.id ? "ring-2 ring-cyan-400/40" : "",
                         )}
                       >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="font-medium line-clamp-1">{t.title}</div>
-                          <span
-                            className={cn(
-                              "shrink-0 inline-flex min-w-[110px] items-center justify-center rounded-full px-2 py-1 text-xs font-medium border",
-                              statusBadge(t.status),
-                            )}
-                          >
-                            {t.status}
-                          </span>
-                        </div>
-                        <div className="mt-1 flex items-center justify-between gap-3">
-                          <span
-                            className={cn(
-                              "inline-flex min-w-[110px] items-center justify-center rounded-full px-2 py-1 text-xs font-medium border",
-                              priorityBadge(t.priority),
-                            )}
-                          >
-                            {t.priority}
-                          </span>
-                          <div className="text-xs text-muted-foreground">{t.is_private ? "Privada" : "Partilhada"}</div>
-                        </div>
+                        <div className="font-medium line-clamp-1">{t.title}</div>
                       </button>
                     ))
                   )}

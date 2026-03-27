@@ -1418,24 +1418,13 @@ export async function updateCompany(id: string, payload: Partial<Omit<Company, '
 }
 
 export async function deleteCompany(id: string): Promise<void> {
-  const response = await fetch(`/api/v1/companies/${encodeURIComponent(id)}`, {
+  const response = await apiFetch(`/api/v1/companies/${encodeURIComponent(id)}`, {
     method: 'DELETE',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
   });
 
   if (!response.ok) {
-    let msg = `Failed to delete company: ${response.statusText}`;
-    try {
-      const json = await response.json();
-      if (typeof json?.message === 'string') msg = json.message;
-    } catch {
-      // ignore
-    }
-    throw new Error(msg);
+    const fallback = `Failed to delete company: ${response.statusText}`;
+    throw new Error(await pickErrorMessage(response, fallback));
   }
 }
 
