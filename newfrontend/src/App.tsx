@@ -32,6 +32,7 @@ import FinanceCategories from "@/pages/finance/FinanceCategories";
 import FinanceCostCenters from "@/pages/finance/FinanceCostCenters";
 import FinanceTransactions from "@/pages/finance/FinanceTransactions";
 import SystemLogs from "@/pages/reports/SystemLogs";
+import SystemLogDetail from "@/pages/reports/SystemLogDetail";
 import MyTasks from "@/pages/personal/MyTasks";
 import TaskForm from "@/pages/personal/TaskForm";
 import MyNotes from "@/pages/personal/MyNotes";
@@ -813,6 +814,14 @@ const App = () => (
                 element={
                   <RequirePermission permission="reports.system-logs.read">
                     <SystemLogs />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/reports/system-logs/:id"
+                element={
+                  <RequirePermission permission="reports.system-logs.read">
+                    <SystemLogDetail />
                   </RequirePermission>
                 }
               />

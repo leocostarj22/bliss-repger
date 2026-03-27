@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Eye, Search } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 import type { SystemLog, User } from "@/types"
 import { fetchSystemLog, fetchSystemLogs, fetchUsers } from "@/services/api"
@@ -85,6 +86,7 @@ const resourceLabel = (row: SystemLog) => {
 
 export default function SystemLogs() {
   const { toast } = useToast()
+  const navigate = useNavigate()
   const [rows, setRows] = useState<SystemLog[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
@@ -144,18 +146,8 @@ export default function SystemLogs() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, levelFilter, actionFilter, userFilter])
 
-  const openView = async (row: SystemLog) => {
-    setViewOpen(true)
-    setSelected(row)
-    setViewLoading(true)
-    try {
-      const resp = await fetchSystemLog(row.id)
-      setSelected(resp.data)
-    } catch {
-      toast({ title: "Erro", description: "Falha ao carregar detalhe do log", variant: "destructive" })
-    } finally {
-      setViewLoading(false)
-    }
+  const openView = (row: SystemLog) => {
+    navigate(`/reports/system-logs/${encodeURIComponent(row.id)}`)
   }
 
   return (
@@ -301,101 +293,6 @@ export default function SystemLogs() {
           </table>
         </div>
       </div>
-
-      {viewOpen && (
-        <div
-          className="fixed inset-0 z-[220] flex items-center justify-center bg-black/60 p-4"
-          onClick={() => {
-            setViewOpen(false)
-            setSelected(null)
-          }}
-        >
-          <div className="glass-card w-full max-w-2xl p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-lg font-semibold">Detalhe do Log</div>
-                <div className="text-sm text-muted-foreground">{selected?.id ?? "—"}</div>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setViewOpen(false)
-                  setSelected(null)
-                }}
-              >
-                Fechar
-              </Button>
-            </div>
-
-            <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
-              {viewLoading || !selected ? (
-                <>
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                </>
-              ) : (
-                <>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Data</div>
-                    <div className="font-medium">{new Date(selected.created_at).toLocaleString("pt-PT")}</div>
-                  </div>
-
-                  <div>
-                    <div className="text-xs text-muted-foreground">Nível</div>
-                    <div className="mt-1">
-                      <span className={cn("inline-flex items-center rounded-full px-2 py-1 text-xs font-medium border", levelBadge(selected.level))}>
-                        {selected.level}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="lg:col-span-2">
-                    <div className="text-xs text-muted-foreground">Ação</div>
-                    <div className="font-medium">{describeAction(selected)}</div>
-                    <div className="text-xs text-muted-foreground">{selected.action}</div>
-                  </div>
-
-                  <div className="lg:col-span-2">
-                    <div className="text-xs text-muted-foreground">Descrição</div>
-                    <div className="font-medium whitespace-pre-wrap">{normalizeDescription(selected) || "—"}</div>
-                  </div>
-
-                  <div>
-                    <div className="text-xs text-muted-foreground">Utilizador</div>
-                    <div className="font-medium">{selected.user_id ? userNameById[selected.user_id] ?? selected.user_id : "Sistema"}</div>
-                  </div>
-
-                  <div>
-                    <div className="text-xs text-muted-foreground">IP</div>
-                    <div className="font-medium">{selected.ip_address ?? "—"}</div>
-                  </div>
-
-                  <div className="lg:col-span-2">
-                    <div className="text-xs text-muted-foreground">User Agent</div>
-                    <div className="font-medium break-words">{selected.user_agent ?? "—"}</div>
-                  </div>
-
-                  <div className="lg:col-span-2">
-                    <div className="text-xs text-muted-foreground">Recurso</div>
-                    <div className="font-medium">{resourceLabel(selected)}</div>
-                    <div className="text-xs text-muted-foreground">{selected.model_id ?? "—"}</div>
-                  </div>
-
-                  <div className="lg:col-span-2">
-                    <div className="text-xs text-muted-foreground">Context</div>
-                    <pre className="mt-1 rounded-md border border-border bg-background/40 p-3 text-xs overflow-auto">
-                      {JSON.stringify(selected.context ?? {}, null, 2)}
-                    </pre>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
