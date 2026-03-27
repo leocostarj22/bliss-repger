@@ -217,7 +217,7 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <HotToaster />
+        <HotToaster toastOptions={{ duration: 5000 }} />
         <HashRouter>
 
           <Routes>

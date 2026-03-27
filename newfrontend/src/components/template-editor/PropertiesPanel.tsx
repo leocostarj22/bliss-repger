@@ -25,15 +25,9 @@ function getVideoThumbnailUrl(url: string): string | null {
     return `https://img.youtube.com/vi/${youtubeMatch[1]}/maxresdefault.jpg`;
   }
   
-  // Vimeo (suporte futuro - requer API)
   const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
-  if (vimeoMatch) {
-    // TODO: Implementar chamada à API do Vimeo para obter thumbnail
-    // Por enquanto, retornaremos null
-    console.log('Vimeo detectado - thumbnail requer API (em desenvolvimento)');
-    return null;
-  }
-  
+  if (vimeoMatch) return null;
+
   return null;
 }
 
@@ -53,48 +47,48 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
   const [mediaItems, setMediaItems] = useState<EmailMediaItem[]>([]);
   const [mediaSearch, setMediaSearch] = useState('');
   const [mediaColumnIndex, setMediaColumnIndex] = useState<number | null>(null);
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [pendingDeleteFilename, setPendingDeleteFilename] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   const set = (key: string, val: unknown) => onChange({ ...p, [key]: val });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Efeito para carregar thumbnail automaticamente quando URL do vídeo mudar
   useEffect(() => {
-    if (block.type === 'video' && p.url) {
-      const thumbnailUrl = getVideoThumbnailUrl(String(p.url));
-      if (thumbnailUrl) {
-        setIsLoadingThumbnail(true);
-        setVideoThumbnail(thumbnailUrl);
-        // Atualiza o bloco com a thumbnail
-        onChange({ 
-          ...p, 
-          thumbnailUrl: thumbnailUrl,
-          thumbnailText: p.thumbnailText || 'Assista ao vídeo'
-        });
-        setIsLoadingThumbnail(false);
-      } else {
-        setVideoThumbnail(null);
-      }
-    }
-  }, [block.type, p.url, onChange]);
+    if (block.type !== 'video') return;
 
-  // Efeito para carregar thumbnail automaticamente quando URL do vídeo mudar
-  useEffect(() => {
-    if (block.type === 'video' && p.url) {
-      const thumbnailUrl = getVideoThumbnailUrl(String(p.url));
-      if (thumbnailUrl) {
-        setIsLoadingThumbnail(true);
-        setVideoThumbnail(thumbnailUrl);
-        // Atualiza o bloco com a thumbnail
-        onChange({ 
-          ...p, 
-          thumbnailUrl: thumbnailUrl,
-          thumbnailText: p.thumbnailText || 'Assista ao vídeo'
-        });
-        setIsLoadingThumbnail(false);
-      } else {
-        setVideoThumbnail(null);
-      }
+    const url = String(p.url ?? '').trim();
+    if (!url) {
+      setVideoThumbnail(null);
+      setIsLoadingThumbnail(false);
+      return;
     }
-  }, [block.type, p.url]);
+
+    const thumbnailUrl = getVideoThumbnailUrl(url);
+    if (!thumbnailUrl) {
+      setVideoThumbnail(null);
+      setIsLoadingThumbnail(false);
+      return;
+    }
+
+    const current = String(p.thumbnailUrl ?? '').trim();
+    const text = String(p.thumbnailText ?? '').trim();
+
+    setIsLoadingThumbnail(true);
+    setVideoThumbnail(thumbnailUrl);
+
+    const needsUpdate = current !== thumbnailUrl || !text;
+    if (needsUpdate) {
+      onChange({
+        ...p,
+        thumbnailUrl: thumbnailUrl,
+        thumbnailText: text || 'Assista ao vídeo',
+      });
+    }
+
+    setIsLoadingThumbnail(false);
+  }, [block.type, onChange, p]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -106,8 +100,7 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
       const url = await handleImageUpload(file);
       set('src', url);
       toast.success("Imagem enviada com sucesso", { id: toastId });
-    } catch (error) {
-      console.error("Erro ao enviar imagem:", error);
+    } catch {
       toast.error("Erro ao enviar imagem", { id: toastId });
     } finally {
       if (fileInputRef.current) {
@@ -216,13 +209,8 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        if (!confirm('Eliminar esta imagem do servidor?')) return;
-                        deleteEmailMedia(item.filename)
-                          .then(() => {
-                            setMediaItems(prev => prev.filter(m => m.filename !== item.filename));
-                            toast.success('Imagem eliminada');
-                          })
-                          .catch(() => toast.error('Falha ao eliminar imagem'));
+                        setPendingDeleteFilename(item.filename);
+                        setDeleteOpen(true);
                       }}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -238,6 +226,60 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {deleteOpen && (
+        <div
+          className="fixed inset-0 z-[260] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => {
+            setDeleteOpen(false);
+            setPendingDeleteFilename(null);
+          }}
+        >
+          <div className="glass-card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="space-y-2">
+              <div className="text-lg font-semibold">Eliminar imagem?</div>
+              <div className="text-sm text-muted-foreground">Deseja eliminar esta imagem do servidor?</div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setDeleteOpen(false);
+                  setPendingDeleteFilename(null);
+                }}
+                disabled={deleting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={async () => {
+                  const filename = pendingDeleteFilename;
+                  if (!filename) return;
+                  setDeleting(true);
+                  try {
+                    await deleteEmailMedia(filename);
+                    setMediaItems(prev => prev.filter(m => m.filename !== filename));
+                    toast.success('Imagem eliminada');
+                    setDeleteOpen(false);
+                    setPendingDeleteFilename(null);
+                  } catch {
+                    toast.error('Falha ao eliminar imagem');
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                disabled={deleting}
+              >
+                Eliminar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <input
         type="file"
@@ -473,31 +515,33 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
           </Field>
           
           {/* Preview da thumbnail */}
-          {(videoThumbnail || p.thumbnailUrl) && (
-            <Field label="Thumbnail do vídeo">
-              <div className="space-y-2">
-                <div className="relative w-full h-32 bg-gray-100 rounded-lg overflow-hidden">
-                  <img 
-                    src={videoThumbnail || p.thumbnailUrl} 
-                    alt="Thumbnail do vídeo" 
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      // Se a imagem falhar, esconde o preview
-                      setVideoThumbnail(null);
-                    }}
-                  />
-                  {isLoadingThumbnail && (
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                      <span className="text-white text-sm">Carregando...</span>
-                    </div>
-                  )}
+          {(() => {
+            const thumbnailSrc = videoThumbnail || String((p as any).thumbnailUrl ?? '').trim();
+            if (!thumbnailSrc) return null;
+
+            return (
+              <Field label="Thumbnail do vídeo">
+                <div className="space-y-2">
+                  <div className="relative w-full h-32 bg-gray-100 rounded-lg overflow-hidden">
+                    <img
+                      src={thumbnailSrc}
+                      alt="Thumbnail do vídeo"
+                      className="w-full h-full object-cover"
+                      onError={() => {
+                        setVideoThumbnail(null);
+                      }}
+                    />
+                    {isLoadingThumbnail && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                        <span className="text-white text-sm">Carregando...</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Thumbnail extraída automaticamente do vídeo</p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Thumbnail extraída automaticamente do vídeo
-                </p>
-              </div>
-            </Field>
-          )}
+              </Field>
+            );
+          })()}
           
           <Field label="Texto do thumbnail">
             <Input value={String(p.thumbnailText)} onChange={e => set('thumbnailText', e.target.value)} className="text-sm" />

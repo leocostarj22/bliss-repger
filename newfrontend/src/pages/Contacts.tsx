@@ -43,6 +43,13 @@ export default function Contacts() {
   const [sourceFilter, setSourceFilter] = useState('');
   const [activeTag, setActiveTag] = useState('All');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<
+    | { mode: 'single'; id: string }
+    | { mode: 'bulk'; ids: string[]; count: number }
+    | null
+  >(null);
   
   // Tag Dialog State
   const [tagDialogOpen, setTagDialogOpen] = useState(false);
@@ -98,29 +105,37 @@ export default function Contacts() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem a certeza que deseja eliminar este contacto?')) return;
-    try {
-      await deleteContact(id);
-      toast({ title: 'Contacto eliminado', description: 'O contacto foi removido com sucesso.' });
-      loadContacts();
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível eliminar o contacto.' });
-    }
+  const requestDelete = (id: string) => {
+    setPendingDelete({ mode: 'single', id });
+    setDeleteOpen(true);
   };
 
-  const handleBulkDelete = async () => {
-    if (selectedIds.size === 0) return;
-    if (!confirm(`Tem a certeza que deseja eliminar ${selectedIds.size} contactos selecionados?`)) return;
+  const requestBulkDelete = () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setPendingDelete({ mode: 'bulk', ids, count: ids.length });
+    setDeleteOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    const p = pendingDelete;
+    setDeleteOpen(false);
+    setPendingDelete(null);
+    if (!p) return;
+
     try {
-      const ids = Array.from(selectedIds);
-      for (const id of ids) {
-        await deleteContact(id);
+      if (p.mode === 'bulk') {
+        for (const id of p.ids) {
+          await deleteContact(id);
+        }
+        toast({ title: 'Contactos eliminados', description: 'Os contactos selecionados foram removidos com sucesso.' });
+      } else {
+        await deleteContact(p.id);
+        toast({ title: 'Contacto eliminado', description: 'O contacto foi removido com sucesso.' });
       }
-      toast({ title: 'Contactos eliminados', description: 'Os contactos selecionados foram removidos com sucesso.' });
       loadContacts();
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível eliminar todos os contactos selecionados.' });
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível eliminar.' });
     }
   };
 
@@ -166,7 +181,7 @@ export default function Contacts() {
             <span className="text-sm font-medium text-primary">{selectedIds.size} contactos selecionados</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="destructive" onClick={handleBulkDelete} className="gap-2">
+            <Button size="sm" variant="destructive" onClick={requestBulkDelete} className="gap-2">
               <Trash className="w-4 h-4" /> Apagar Selecionados
             </Button>
             <Button size="sm" onClick={handleCreateCampaign} className="gap-2">
@@ -308,7 +323,7 @@ export default function Contacts() {
                               <Tag className="w-4 h-4 mr-2" /> Adicionar Tag
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(c.id)}>
+                            <DropdownMenuItem className="text-destructive" onClick={() => requestDelete(c.id)}>
                               <Trash className="w-4 h-4 mr-2" /> Remover
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -327,6 +342,45 @@ export default function Contacts() {
           </div>
         )}
       </div>
+
+      {deleteOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => {
+            setDeleteOpen(false);
+            setPendingDelete(null);
+          }}
+        >
+          <div className="glass-card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="space-y-2">
+              <div className="text-lg font-semibold">Apagar?</div>
+              <div className="text-sm text-muted-foreground">
+                {pendingDelete?.mode === 'bulk'
+                  ? `Deseja eliminar ${pendingDelete.count} contactos selecionados?`
+                  : pendingDelete?.mode === 'single'
+                    ? 'Deseja eliminar este contacto?'
+                    : 'Deseja eliminar?'}
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setDeleteOpen(false);
+                  setPendingDelete(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button type="button" variant="destructive" onClick={confirmDelete}>
+                Eliminar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Dialog open={tagDialogOpen} onOpenChange={setTagDialogOpen}>
         <DialogContent>

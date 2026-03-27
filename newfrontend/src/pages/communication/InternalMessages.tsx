@@ -73,6 +73,9 @@ export default function InternalMessages() {
   const [rows, setRows] = useState<InternalMessage[]>([])
   const [selected, setSelected] = useState<InternalMessage | null>(null)
 
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<InternalMessage | null>(null)
+
   const [toUserId, setToUserId] = useState<string>("")
   const [subject, setSubject] = useState("")
   const [body, setBody] = useState("")
@@ -157,9 +160,17 @@ export default function InternalMessages() {
     setBody("")
   }
 
-  const onDelete = async (m: InternalMessage) => {
-    const ok = window.confirm("Apagar esta mensagem?")
-    if (!ok) return
+  const onDelete = (m: InternalMessage) => {
+    setPendingDelete(m)
+    setDeleteOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    const m = pendingDelete
+    setDeleteOpen(false)
+    setPendingDelete(null)
+    if (!m) return
+
     try {
       await deleteInternalMessageRecipient(m.id)
       setRows((prev) => prev.filter((x) => x.id !== m.id))
@@ -286,6 +297,39 @@ export default function InternalMessages() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {deleteOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => {
+            setDeleteOpen(false)
+            setPendingDelete(null)
+          }}
+        >
+          <div className="glass-card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="space-y-2">
+              <div className="text-lg font-semibold">Apagar mensagem?</div>
+              <div className="text-sm text-muted-foreground">Deseja apagar esta mensagem?</div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setDeleteOpen(false)
+                  setPendingDelete(null)
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button type="button" variant="destructive" onClick={confirmDelete}>
+                Eliminar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

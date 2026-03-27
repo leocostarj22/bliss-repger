@@ -25,6 +25,13 @@ export default function Segments() {
   const [estimates, setEstimates] = useState<Record<string, number | null>>({});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<
+    | { mode: 'single'; segment: Segment }
+    | { mode: 'bulk'; ids: string[]; count: number }
+    | null
+  >(null);
+
   const loadSegments = async () => {
     setLoading(true);
     try {
@@ -52,19 +59,39 @@ export default function Segments() {
     setSelectedIds(next);
   };
 
-  const handleBulkDelete = async () => {
-    if (selectedIds.size === 0) return;
-    if (!confirm(`Tem a certeza que deseja eliminar ${selectedIds.size} segmentos selecionados?`)) return;
+  const requestBulkDelete = () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setPendingDelete({ mode: 'bulk', ids, count: ids.length });
+    setDeleteOpen(true);
+  };
+
+  const requestDelete = (segment: Segment) => {
+    setPendingDelete({ mode: 'single', segment });
+    setDeleteOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    const p = pendingDelete;
+    setDeleteOpen(false);
+    setPendingDelete(null);
+    if (!p) return;
+
     try {
-      const ids = Array.from(selectedIds);
-      for (const id of ids) {
-        await deleteSegment(id);
+      if (p.mode === 'bulk') {
+        for (const id of p.ids) {
+          await deleteSegment(id);
+        }
+        setSegments(prev => prev.filter(s => !selectedIds.has(String(s.id))));
+        setSelectedIds(new Set());
+        toast({ title: 'Segmentos eliminados', description: 'Os segmentos selecionados foram removidos com sucesso.' });
+      } else {
+        await deleteSegment(String(p.segment.id));
+        setSegments(prev => prev.filter(s => String(s.id) !== String(p.segment.id)));
+        toast({ title: 'Segmento eliminado', description: 'O segmento foi removido com sucesso.' });
       }
-      setSegments(prev => prev.filter(s => !selectedIds.has(String(s.id))));
-      setSelectedIds(new Set());
-      toast({ title: 'Segmentos eliminados', description: 'Os segmentos selecionados foram removidos com sucesso.' });
     } catch {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível eliminar todos os segmentos selecionados.' });
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível eliminar.' });
     }
   };
 
@@ -141,7 +168,7 @@ export default function Segments() {
               variant="destructive"
               className="gap-2"
               size="sm"
-              onClick={handleBulkDelete}
+              onClick={requestBulkDelete}
             >
               <Trash2 className="w-4 h-4" /> Apagar Selecionados
             </Button>
@@ -280,7 +307,7 @@ export default function Segments() {
                               size="icon"
                               variant="destructive"
                               className="h-8 w-8"
-                              onClick={() => handleDelete(segment)}
+                              onClick={() => requestDelete(segment)}
                               title="Eliminar segmento"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -294,6 +321,45 @@ export default function Segments() {
           </table>
         </div>
       </div>
+
+      {deleteOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => {
+            setDeleteOpen(false);
+            setPendingDelete(null);
+          }}
+        >
+          <div className="glass-card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="space-y-2">
+              <div className="text-lg font-semibold">Apagar?</div>
+              <div className="text-sm text-muted-foreground">
+                {pendingDelete?.mode === 'bulk'
+                  ? `Deseja eliminar ${pendingDelete.count} segmentos selecionados?`
+                  : pendingDelete?.mode === 'single'
+                    ? `Deseja eliminar “${pendingDelete.segment.name}”?`
+                    : 'Deseja eliminar?'}
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setDeleteOpen(false);
+                  setPendingDelete(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button type="button" variant="destructive" onClick={confirmDelete}>
+                Eliminar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

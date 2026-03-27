@@ -17,6 +17,9 @@ export default function Companies() {
   const [refreshing, setRefreshing] = useState(false)
   const [search, setSearch] = useState("")
 
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<Company | null>(null)
+
   const requestSeq = useRef(0)
   const hasLoadedOnce = useRef(false)
 
@@ -56,11 +59,20 @@ export default function Companies() {
     return () => clearTimeout(t)
   }, [search, toast])
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Tem a certeza que deseja eliminar esta empresa?")) return
+  const requestDelete = (c: Company) => {
+    setPendingDelete(c)
+    setDeleteOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    const c = pendingDelete
+    setDeleteOpen(false)
+    setPendingDelete(null)
+    if (!c) return
+
     try {
-      await deleteCompany(id)
-      setRows((prev) => prev.filter((c) => c.id !== id))
+      await deleteCompany(c.id)
+      setRows((prev) => prev.filter((x) => x.id !== c.id))
       toast({ title: "Sucesso", description: "Empresa eliminada" })
     } catch (e: any) {
       toast({
@@ -187,7 +199,7 @@ export default function Companies() {
                             Editar
                           </Link>
                         </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDelete(c.id)}>
+                        <Button variant="destructive" size="sm" onClick={() => requestDelete(c)}>
                           <Trash2 />
                           Eliminar
                         </Button>
@@ -200,6 +212,41 @@ export default function Companies() {
           </table>
         </div>
       </div>
+
+      {deleteOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => {
+            setDeleteOpen(false)
+            setPendingDelete(null)
+          }}
+        >
+          <div className="glass-card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="space-y-2">
+              <div className="text-lg font-semibold">Eliminar empresa?</div>
+              <div className="text-sm text-muted-foreground">
+                {pendingDelete ? `Deseja eliminar “${pendingDelete.name}”?` : "Deseja eliminar esta empresa?"}
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setDeleteOpen(false)
+                  setPendingDelete(null)
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button type="button" variant="destructive" onClick={confirmDelete}>
+                Eliminar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

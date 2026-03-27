@@ -34,6 +34,9 @@ export default function Campaigns() {
   const [isPolling, setIsPolling] = useState(false);
   const [notifiedCampaigns, setNotifiedCampaigns] = useState<Set<string>>(new Set());
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Campaign | null>(null);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(true);
@@ -110,12 +113,21 @@ export default function Campaigns() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem a certeza que deseja eliminar esta campanha?')) return;
+  const requestDelete = (c: Campaign) => {
+    setPendingDelete(c);
+    setDeleteOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    const c = pendingDelete;
+    setDeleteOpen(false);
+    setPendingDelete(null);
+    if (!c) return;
+
     try {
-      await deleteCampaign(id);
+      await deleteCampaign(c.id);
       toast({ title: "Sucesso", description: "Campanha eliminada" });
-      setCampaigns(prev => prev.filter(c => c.id !== id));
+      setCampaigns(prev => prev.filter(x => x.id !== c.id));
     } catch (e) {
       toast({ title: "Erro", description: "Falha ao eliminar", variant: "destructive" });
     }
@@ -254,7 +266,7 @@ export default function Campaigns() {
                               {(c.channel === 'email' && (c.status === 'draft' || c.status === 'scheduled')) && (
                                 <DropdownMenuItem onClick={() => handleSendNow(c.id)}>Enviar agora</DropdownMenuItem>
                               )}
-                              <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(c.id)}>Eliminar</DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive" onClick={() => requestDelete(c)}>Eliminar</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>
@@ -273,6 +285,41 @@ export default function Campaigns() {
           </div>
         )}
       </div>
+
+      {deleteOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => {
+            setDeleteOpen(false);
+            setPendingDelete(null);
+          }}
+        >
+          <div className="glass-card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="space-y-2">
+              <div className="text-lg font-semibold">Eliminar campanha?</div>
+              <div className="text-sm text-muted-foreground">
+                {pendingDelete ? `Deseja eliminar “${pendingDelete.name}”?` : "Deseja eliminar esta campanha?"}
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setDeleteOpen(false);
+                  setPendingDelete(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button type="button" variant="destructive" onClick={confirmDelete}>
+                Eliminar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

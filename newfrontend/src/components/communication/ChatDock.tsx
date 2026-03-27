@@ -74,6 +74,10 @@ export function ChatDock() {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   const listRef = useRef<HTMLDivElement | null>(null);
   const inboxRef = useRef<InternalMessage[]>([]);
   const userDetailsRef = useRef<Record<string, { name?: string; email?: string; photo_path?: string | null; role?: string | null; is_admin?: boolean }>>({});
@@ -399,17 +403,28 @@ export function ChatDock() {
     setTimeout(scrollToBottom, 0);
   }, [open, conversation.length]);
 
-  const onDelete = async (m: any) => {
+  const onDelete = (m: any) => {
     const id = msgId(m);
     if (!id) return;
-    const ok = window.confirm('Apagar esta mensagem?');
-    if (!ok) return;
+    setPendingDeleteId(id);
+    setDeleteOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    const id = String(pendingDeleteId || '').trim();
+    if (!id) return;
+
+    setDeleting(true);
     try {
       await deleteInternalMessageRecipient(id);
       setInbox((prev) => prev.filter((x: any) => msgId(x) !== id));
       setSent((prev) => prev.filter((x: any) => msgId(x) !== id));
+      setDeleteOpen(false);
+      setPendingDeleteId(null);
     } catch {
-      // ignore
+      return;
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -639,6 +654,41 @@ export function ChatDock() {
               </div>
             </div>
           </div>
+
+          {deleteOpen && (
+            <div
+              className="fixed inset-0 z-[240] flex items-center justify-center bg-black/60 p-4"
+              onClick={() => {
+                if (deleting) return;
+                setDeleteOpen(false);
+                setPendingDeleteId(null);
+              }}
+            >
+              <div className="glass-card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+                <div className="space-y-2">
+                  <div className="text-lg font-semibold">Apagar mensagem?</div>
+                  <div className="text-sm text-muted-foreground">Deseja apagar esta mensagem?</div>
+                </div>
+
+                <div className="mt-5 flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setDeleteOpen(false);
+                      setPendingDeleteId(null);
+                    }}
+                    disabled={deleting}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="button" variant="destructive" onClick={confirmDelete} disabled={deleting}>
+                    Eliminar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
