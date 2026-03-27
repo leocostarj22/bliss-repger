@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Loader2, Pencil, Plus, Search, Star, Trash2 } from "lucide-react"
 
-import type { PersonalNote } from "@/types"
-import { createPersonalNote, deletePersonalNote, fetchPersonalNotes, updatePersonalNote } from "@/services/api"
+import type { PersonalNote, User } from "@/types"
+import { createPersonalNote, deletePersonalNote, fetchPersonalNotes, fetchUsers, updatePersonalNote } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -79,6 +79,64 @@ export default function MyNotes() {
 
   const requestSeq = useRef(0)
   const hasLoadedOnce = useRef(false)
+
+  const [users, setUsers] = useState<User[]>([])
+
+  useEffect(() => {
+    let alive = true
+    fetchUsers({ is_active: true })
+      .then((r) => {
+        if (!alive) return
+        setUsers(r.data ?? [])
+      })
+      .catch(() => {
+        if (!alive) return
+        setUsers([])
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const userById = useMemo(() => {
+    const map: Record<string, User> = {}
+    users.forEach((u) => {
+      map[String(u.id)] = u
+    })
+    return map
+  }, [users])
+
+  const sharedWithLabel = useMemo(() => {
+    return (ids?: string[]) => {
+      const list = Array.isArray(ids) ? ids.map((v) => String(v)).filter(Boolean) : []
+      if (list.length === 0) return "—"
+
+      const names = list
+        .map((id) => userById[id]?.name)
+        .filter(Boolean) as string[]
+
+      if (names.length === 0) return `${list.length} utilizador(es)`
+      return names.join(", ")
+    }
+  }, [userById])
+
+  const modifiedByLabel = useMemo(() => {
+    return (id?: string | null) => {
+      const key = String(id ?? "").trim()
+      if (!key) return "—"
+      return userById[key]?.name || "—"
+    }
+  }, [userById])
+
+  const createdAtLabel = useMemo(() => {
+    return (iso?: string | null) => {
+      const raw = String(iso ?? "").trim()
+      if (!raw) return "—"
+      const d = new Date(raw)
+      if (Number.isNaN(d.getTime())) return "—"
+      return d.toLocaleDateString("pt-PT")
+    }
+  }, [])
 
   useEffect(() => {
     const raw = safeLocalStorageGet(FAMILY_PHOTO_KEY)
@@ -375,6 +433,11 @@ export default function MyNotes() {
                     {n.content ? (
                       <div className="mt-1 text-xs text-muted-foreground line-clamp-2">{htmlToPlainText(n.content)}</div>
                     ) : null}
+                    <div className="mt-2 space-y-0.5 text-[11px] text-muted-foreground">
+                      <div className="line-clamp-1">Partilhado com: {sharedWithLabel(n.shared_with_user_ids)}</div>
+                      <div className="line-clamp-1">Modificado por: {modifiedByLabel(n.last_modified_by)}</div>
+                      <div className="line-clamp-1">Data da criação: {createdAtLabel(n.createdAt)}</div>
+                    </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <Button
@@ -417,6 +480,9 @@ export default function MyNotes() {
             <thead>
               <tr className="text-left text-muted-foreground border-b border-border">
                 <th className="py-3 pr-4">Anotação</th>
+                <th className="py-3 pr-4">Partilhado com</th>
+                <th className="py-3 pr-4">Modificado por</th>
+                <th className="py-3 pr-4">Data da criação</th>
                 <th className="py-3 text-right">Ações</th>
               </tr>
             </thead>
@@ -428,6 +494,15 @@ export default function MyNotes() {
                     <td className="py-4 pr-4">
                       <Skeleton className="h-4 w-72" />
                     </td>
+                    <td className="py-4 pr-4">
+                      <Skeleton className="h-4 w-56" />
+                    </td>
+                    <td className="py-4 pr-4">
+                      <Skeleton className="h-4 w-40" />
+                    </td>
+                    <td className="py-4 pr-4">
+                      <Skeleton className="h-4 w-28" />
+                    </td>
                     <td className="py-4 text-right">
                       <Skeleton className="h-9 w-28 ml-auto" />
                     </td>
@@ -435,7 +510,7 @@ export default function MyNotes() {
                 ))
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={2} className="py-10 text-center text-muted-foreground">
+                  <td colSpan={5} className="py-10 text-center text-muted-foreground">
                     Nenhuma anotação encontrada
                   </td>
                 </tr>
@@ -444,6 +519,15 @@ export default function MyNotes() {
                   <tr key={n.id} className="border-b border-border/60 hover:bg-white/5 transition-colors">
                     <td className="py-4 pr-4">
                       <div className="font-medium">{n.title}</div>
+                    </td>
+                    <td className="py-4 pr-4">
+                      <div className="text-xs text-muted-foreground line-clamp-1">{sharedWithLabel(n.shared_with_user_ids)}</div>
+                    </td>
+                    <td className="py-4 pr-4">
+                      <div className="text-xs text-muted-foreground line-clamp-1">{modifiedByLabel(n.last_modified_by)}</div>
+                    </td>
+                    <td className="py-4 pr-4">
+                      <div className="text-xs text-muted-foreground">{createdAtLabel(n.createdAt)}</div>
                     </td>
                     <td className="py-4 text-right">
                       <div className="inline-flex items-center gap-2">
