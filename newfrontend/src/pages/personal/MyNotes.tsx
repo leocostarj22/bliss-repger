@@ -610,26 +610,13 @@ export default function MyNotes() {
                       </div>
                     </td>
                     <td className="py-4 pr-4">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
+                      <Switch
+                        checked={Boolean(n.is_favorite)}
+                        onCheckedChange={(v) => {
+                          if (Boolean(v) === Boolean(n.is_favorite)) return
                           toggleFavorite(n)
                         }}
                         aria-label={
-                          currentUserId && String(n.user_id ?? "").trim() && String(n.user_id ?? "").trim() !== currentUserId
-                            ? "Só o dono pode alterar favorito"
-                            : favoriteBusyById[String(n.id)]
-                              ? "A atualizar favorito"
-                              : n.is_favorite
-                                ? "Remover favorito"
-                                : "Marcar como favorito"
-                        }
-                        title={
                           currentUserId && String(n.user_id ?? "").trim() && String(n.user_id ?? "").trim() !== currentUserId
                             ? "Só o dono pode alterar favorito"
                             : favoriteBusyById[String(n.id)]
@@ -643,9 +630,7 @@ export default function MyNotes() {
                           Boolean(favoriteBusyById[String(n.id)]) ||
                           (currentUserId && String(n.user_id ?? "").trim() && String(n.user_id ?? "").trim() !== currentUserId)
                         }
-                      >
-                        <Star className={n.is_favorite ? "w-4 h-4 text-amber-400" : "w-4 h-4 text-muted-foreground"} fill={n.is_favorite ? "currentColor" : "none"} />
-                      </Button>
+                      />
                     </td>
                     <td className="py-4 pr-4">
                       <div className="text-xs text-muted-foreground line-clamp-1">{sharedWithLabel(n.shared_with_user_ids)}</div>

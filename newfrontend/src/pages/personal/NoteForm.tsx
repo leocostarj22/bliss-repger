@@ -105,6 +105,7 @@ export default function NoteForm() {
   const [content, setContent] = useState("")
   const [color, setColor] = useState("#94a3b8")
   const [isFavorite, setIsFavorite] = useState(false)
+  const [favoriteSaving, setFavoriteSaving] = useState(false)
   const [remindAtLocal, setRemindAtLocal] = useState("")
 
   useEffect(() => {
@@ -176,6 +177,35 @@ export default function NoteForm() {
       alive = false
     }
   }, [isEditing, editingId, toast])
+
+  const setFavorite = useCallback(
+    async (next: boolean) => {
+      const desired = Boolean(next)
+      setIsFavorite(desired)
+
+      if (!isEditing) return
+      if (!canEdit) return
+      if (!editingId) return
+
+      const prev = !desired
+      setFavoriteSaving(true)
+      try {
+        await updatePersonalNote(editingId, { is_favorite: desired })
+      } catch (e: any) {
+        setIsFavorite(prev)
+        const msg = typeof e?.message === "string" && e.message.trim() ? e.message : "Falha ao atualizar favorito"
+        const looksLikeNotFound = /\b404\b|not\s+found|não\s+encontrad/i.test(msg)
+        toast({
+          title: "Erro",
+          description: looksLikeNotFound ? "Anotação não encontrada ou sem permissões." : msg,
+          variant: "destructive",
+        })
+      } finally {
+        setFavoriteSaving(false)
+      }
+    },
+    [isEditing, canEdit, editingId, toast]
+  )
 
   const submit = async () => {
     const titleClean = String(title || "").trim()
@@ -269,7 +299,11 @@ export default function NoteForm() {
                 <div className="text-sm font-medium">Favorita</div>
                 <div className="text-xs text-muted-foreground">Controla is_favorite</div>
               </div>
-              <Switch checked={isFavorite} onCheckedChange={(v) => setIsFavorite(Boolean(v))} disabled={!canEdit} />
+              <Switch
+                checked={isFavorite}
+                onCheckedChange={(v) => setFavorite(Boolean(v))}
+                disabled={!canEdit || favoriteSaving}
+              />
             </div>
 
             <div className="md:col-span-2">
