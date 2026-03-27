@@ -429,11 +429,15 @@ export default function MyNotes() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="font-medium truncate">{n.title}</div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="font-medium truncate">{n.title}</div>
+                      {n.is_favorite ? <Star className="w-4 h-4 text-amber-400 shrink-0" /> : null}
+                    </div>
                     {n.content ? (
                       <div className="mt-1 text-xs text-muted-foreground line-clamp-2">{htmlToPlainText(n.content)}</div>
                     ) : null}
                     <div className="mt-2 space-y-0.5 text-[11px] text-muted-foreground">
+                      <div className="line-clamp-1">Favorito: {n.is_favorite ? "Sim" : "Não"}</div>
                       <div className="line-clamp-1">Partilhado com: {sharedWithLabel(n.shared_with_user_ids)}</div>
                       <div className="line-clamp-1">Modificado por: {modifiedByLabel(n.last_modified_by)}</div>
                       <div className="line-clamp-1">Data da criação: {createdAtLabel(n.createdAt)}</div>
@@ -480,6 +484,7 @@ export default function MyNotes() {
             <thead>
               <tr className="text-left text-muted-foreground border-b border-border">
                 <th className="py-3 pr-4">Anotação</th>
+                <th className="py-3 pr-4">Favorito</th>
                 <th className="py-3 pr-4">Partilhado com</th>
                 <th className="py-3 pr-4">Modificado por</th>
                 <th className="py-3 pr-4">Data da criação</th>
@@ -495,6 +500,9 @@ export default function MyNotes() {
                       <Skeleton className="h-4 w-72" />
                     </td>
                     <td className="py-4 pr-4">
+                      <Skeleton className="h-4 w-16" />
+                    </td>
+                    <td className="py-4 pr-4">
                       <Skeleton className="h-4 w-56" />
                     </td>
                     <td className="py-4 pr-4">
@@ -504,13 +512,13 @@ export default function MyNotes() {
                       <Skeleton className="h-4 w-28" />
                     </td>
                     <td className="py-4 text-right">
-                      <Skeleton className="h-9 w-28 ml-auto" />
+                      <Skeleton className="h-9 w-20 ml-auto" />
                     </td>
                   </tr>
                 ))
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center text-muted-foreground">
+                  <td colSpan={6} className="py-10 text-center text-muted-foreground">
                     Nenhuma anotação encontrada
                   </td>
                 </tr>
@@ -518,7 +526,13 @@ export default function MyNotes() {
                 rows.map((n) => (
                   <tr key={n.id} className="border-b border-border/60 hover:bg-white/5 transition-colors">
                     <td className="py-4 pr-4">
-                      <div className="font-medium">{n.title}</div>
+                      <div className="inline-flex items-center gap-2">
+                        <div className="font-medium">{n.title}</div>
+                        {n.is_favorite ? <Star className="w-4 h-4 text-amber-400" /> : null}
+                      </div>
+                    </td>
+                    <td className="py-4 pr-4">
+                      {n.is_favorite ? <Star className="w-4 h-4 text-amber-400" /> : <span className="text-muted-foreground">—</span>}
                     </td>
                     <td className="py-4 pr-4">
                       <div className="text-xs text-muted-foreground line-clamp-1">{sharedWithLabel(n.shared_with_user_ids)}</div>
@@ -530,14 +544,28 @@ export default function MyNotes() {
                       <div className="text-xs text-muted-foreground">{createdAtLabel(n.createdAt)}</div>
                     </td>
                     <td className="py-4 text-right">
-                      <div className="inline-flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => openEdit(n)}>
-                          <Pencil />
-                          Editar
+                      <div className="inline-flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => openEdit(n)}
+                          aria-label="Editar"
+                          title="Editar"
+                        >
+                          <Pencil className="w-4 h-4" />
                         </Button>
-                        <Button variant="destructive" size="sm" onClick={() => requestDelete(n)}>
-                          <Trash2 />
-                          Eliminar
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => requestDelete(n)}
+                          aria-label="Eliminar"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </td>
