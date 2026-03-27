@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { AlertTriangle, CheckCircle, Clock, Pencil, Plus, Search, Trash2, Zap, ListTodo } from "lucide-react"
 import { pt } from "date-fns/locale"
@@ -84,6 +84,7 @@ export default function MyTasks() {
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all")
   const [priorityFilter, setPriorityFilter] = useState<"all" | TaskPriority>("all")
+  const [dateFilter, setDateFilter] = useState<"all" | "due_today" | "overdue">("all")
 
 
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -207,6 +208,76 @@ export default function MyTasks() {
 
   const todayKey = toLocalDateKey(new Date())
 
+  const filteredRows = useMemo(() => {
+    if (dateFilter === "all") return rows
+
+    return rows.filter((t) => {
+      const dueKey = isoToDateKey(t.due_date)
+      if (!dueKey) return false
+      if (t.status === "completed" || t.status === "cancelled") return false
+      if (dateFilter === "due_today") return dueKey === todayKey
+      if (dateFilter === "overdue") return dueKey < todayKey
+      return true
+    })
+  }, [dateFilter, rows, todayKey])
+
+  type KpiKey = (typeof kpiCards)[number]["key"]
+
+  const applyKpi = (key: KpiKey) => {
+    setView("list")
+
+    if (key === "total") {
+      setStatusFilter("all")
+      setPriorityFilter("all")
+      setDateFilter("all")
+      return
+    }
+
+    if (key === "pending") {
+      setStatusFilter("pending")
+      setDateFilter("all")
+      return
+    }
+
+    if (key === "in_progress") {
+      setStatusFilter("in_progress")
+      setDateFilter("all")
+      return
+    }
+
+    if (key === "completed") {
+      setStatusFilter("completed")
+      setDateFilter("all")
+      return
+    }
+
+    if (key === "urgent") {
+      setPriorityFilter("urgent")
+      setDateFilter("all")
+      return
+    }
+
+    if (key === "due_today") {
+      setDateFilter("due_today")
+      return
+    }
+
+    if (key === "overdue") {
+      setDateFilter("overdue")
+    }
+  }
+
+  const isKpiActive = (key: KpiKey) => {
+    if (key === "total") return statusFilter === "all" && priorityFilter === "all" && dateFilter === "all"
+    if (key === "pending") return statusFilter === "pending" && dateFilter === "all"
+    if (key === "in_progress") return statusFilter === "in_progress" && dateFilter === "all"
+    if (key === "completed") return statusFilter === "completed" && dateFilter === "all"
+    if (key === "urgent") return priorityFilter === "urgent" && dateFilter === "all"
+    if (key === "due_today") return dateFilter === "due_today"
+    if (key === "overdue") return dateFilter === "overdue"
+    return false
+  }
+
   const totalCount = rows.length
   const pendingCount = rows.filter((t) => t.status === "pending").length
   const inProgressCount = rows.filter((t) => t.status === "in_progress").length
@@ -271,13 +342,21 @@ export default function MyTasks() {
               </div>
             ))
           : kpiCards.map((c) => (
-              <div key={c.key} className="stat-card p-4">
+              <button
+                key={c.key}
+                type="button"
+                onClick={() => applyKpi(c.key)}
+                className={cn(
+                  "stat-card p-4 text-left transition-colors hover:bg-white/10",
+                  isKpiActive(c.key) && "ring-1 ring-primary/30 bg-white/5",
+                )}
+              >
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
                   <c.icon className={cn("w-4 h-4", c.tone)} />
                   <span className="text-xs font-medium uppercase tracking-wide">{c.label}</span>
                 </div>
                 <div className="text-2xl font-bold tabular-nums">{c.value}</div>
-              </div>
+              </button>
             ))}
       </div>
 
@@ -339,10 +418,10 @@ export default function MyTasks() {
                     <Skeleton className="mt-2 h-3 w-full" />
                   </div>
                 ))
-              ) : rows.length === 0 ? (
+              ) : filteredRows.length === 0 ? (
                 <div className="py-10 text-center text-muted-foreground">Nenhuma tarefa encontrada</div>
               ) : (
-                rows.map((t) => (
+                filteredRows.map((t) => (
                   <div
                     key={t.id}
                     role="button"
@@ -363,6 +442,23 @@ export default function MyTasks() {
                         ) : null}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            "h-8 w-8",
+                            t.status === "completed" ? "text-amber-600 hover:text-amber-600 hover:bg-amber-500/10" : "text-emerald-600 hover:text-emerald-600 hover:bg-emerald-500/10",
+                          )}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            changeStatus(t, t.status === "completed" ? "pending" : "completed")
+                          }}
+                          aria-label={t.status === "completed" ? "Marcar como pendente" : "Concluir"}
+                          title={t.status === "completed" ? "Marcar como pendente" : "Concluir"}
+                        >
+                          {t.status === "completed" ? <Clock className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                        </Button>
                         <Button
                           type="button"
                           variant="ghost"
@@ -419,20 +515,28 @@ export default function MyTasks() {
                         </td>
                       </tr>
                     ))
-                  ) : rows.length === 0 ? (
+                  ) : filteredRows.length === 0 ? (
                     <tr>
                       <td colSpan={2} className="py-10 text-center text-muted-foreground">
                         Nenhuma tarefa encontrada
                       </td>
                     </tr>
                   ) : (
-                    rows.map((t) => (
+                    filteredRows.map((t) => (
                       <tr key={t.id} className="border-b border-border/60 hover:bg-white/5 transition-colors">
                         <td className="py-4 pr-4">
                           <div className="font-medium">{t.title}</div>
                         </td>
                         <td className="py-4 text-right">
                           <div className="inline-flex items-center gap-2">
+                            <Button
+                              variant={t.status === "completed" ? "outline" : "outline"}
+                              size="sm"
+                              onClick={() => changeStatus(t, t.status === "completed" ? "pending" : "completed")}
+                            >
+                              {t.status === "completed" ? <Clock /> : <CheckCircle />}
+                              {t.status === "completed" ? "Reabrir" : "Concluir"}
+                            </Button>
                             <Button variant="outline" size="sm" onClick={() => openEdit(t)}>
                               <Pencil />
                               Editar
