@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -45,6 +46,13 @@ class Company extends Model
         return $this->hasMany(User::class);
     }
 
+    public function members(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class)
+            ->withPivot(['is_primary'])
+            ->withTimestamps();
+    }
+
     public function tickets(): HasMany
     {
         return $this->hasMany(Ticket::class);
@@ -73,9 +81,11 @@ class Company extends Model
             return $logo;
         }
         $path = str_replace('\\', '/', ltrim($logo, '/'));
+        $publicPath = preg_replace('~^storage/~', '', $path) ?? $path;
         try {
-            if (Storage::disk('public')->exists($path)) {
-                return Storage::disk('public')->url($path);
+            $disk = Storage::disk('public');
+            if ($disk->exists($publicPath)) {
+                return $disk->url($publicPath);
             }
         } catch (\Throwable $e) {
         }

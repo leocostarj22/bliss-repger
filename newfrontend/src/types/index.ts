@@ -212,6 +212,7 @@ export interface User {
   email: string;
   password?: string | null;
   company_id?: string | null;
+  company_ids?: string[] | null;
   department_id?: string | null;
   role_id?: string | null;
   role?: string | null;

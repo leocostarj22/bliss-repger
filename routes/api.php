@@ -4615,10 +4615,13 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $hasIsActive = request()->has('is_active');
         $isActive = $hasIsActive ? filter_var(request('is_active'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
 
-        $query = User::query()->orderByDesc('created_at');
+        $query = User::query()->with('companies:id')->orderByDesc('created_at');
 
         if ($companyId !== '') {
-            $query->where('company_id', $companyId);
+            $query->where(function ($q) use ($companyId) {
+                $q->where('company_id', $companyId)
+                    ->orWhereHas('companies', fn ($cq) => $cq->where('companies.id', $companyId));
+            });
         }
 
         if ($departmentId !== '') {
@@ -4646,11 +4649,16 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 $photo = asset('storage/' . ltrim(preg_replace('/^storage\//', '', $photo), '/'));
             }
 
+            $companyIds = $u->companies
+                ? $u->companies->pluck('id')->map(fn ($v) => (string) $v)->values()->all()
+                : [];
+
             return [
                 'id' => (string) $u->id,
                 'name' => $u->name,
                 'email' => $u->email,
                 'company_id' => $u->company_id !== null ? (string) $u->company_id : null,
+                'company_ids' => $companyIds,
                 'department_id' => $u->department_id !== null ? (string) $u->department_id : null,
                 'role_id' => $u->role_id !== null ? (string) $u->role_id : null,
                 'role' => $u->role,
@@ -4671,10 +4679,16 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $me = auth()->user();
         abort_unless($me && $me->isAdmin(), 403);
 
+        $user->loadMissing('companies:id');
+
         $photo = $user->photo_path;
         if (is_string($photo) && $photo !== '' && ! str_starts_with($photo, 'http://') && ! str_starts_with($photo, 'https://') && ! str_starts_with($photo, 'data:')) {
             $photo = asset('storage/' . ltrim(preg_replace('/^storage\//', '', $photo), '/'));
         }
+
+        $companyIds = $user->companies
+            ? $user->companies->pluck('id')->map(fn ($v) => (string) $v)->values()->all()
+            : [];
 
         return response()->json([
             'data' => [
@@ -4682,6 +4696,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 'name' => $user->name,
                 'email' => $user->email,
                 'company_id' => $user->company_id !== null ? (string) $user->company_id : null,
+                'company_ids' => $companyIds,
                 'department_id' => $user->department_id !== null ? (string) $user->department_id : null,
                 'role_id' => $user->role_id !== null ? (string) $user->role_id : null,
                 'role' => $user->role,
@@ -4707,6 +4722,8 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6'],
             'company_id' => ['nullable', 'exists:companies,id'],
+            'company_ids' => ['nullable', 'array'],
+            'company_ids.*' => ['string', 'exists:companies,id'],
             'department_id' => ['nullable', 'exists:departments,id'],
             'role_id' => ['nullable', 'exists:roles,id'],
             'role' => ['nullable', 'string', 'max:255'],
@@ -4757,7 +4774,23 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             }
         }
 
+        $companyIds = collect($validated['company_ids'] ?? [])->filter()->values();
+        if ($companyIds->isEmpty() && array_key_exists('company_id', $validated) && $validated['company_id'] !== null) {
+            $companyIds = collect([(string) $validated['company_id']]);
+        }
+
+        if ($companyIds->isNotEmpty() && (! array_key_exists('company_id', $validated) || $validated['company_id'] === null)) {
+            $validated['company_id'] = $companyIds->first();
+        }
+
         $user = User::create($validated);
+
+        if ($companyIds->isNotEmpty()) {
+            $sync = $companyIds
+                ->mapWithKeys(fn ($cid) => [$cid => ['is_primary' => (string) $cid === (string) $user->company_id]])
+                ->all();
+            $user->companies()->sync($sync);
+        }
 
         $photoOut = $user->photo_path;
         if (is_string($photoOut) && $photoOut !== '' && ! str_starts_with($photoOut, 'http://') && ! str_starts_with($photoOut, 'https://') && ! str_starts_with($photoOut, 'data:')) {
@@ -4770,6 +4803,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 'name' => $user->name,
                 'email' => $user->email,
                 'company_id' => $user->company_id !== null ? (string) $user->company_id : null,
+                'company_ids' => $companyIds->values()->all(),
                 'department_id' => $user->department_id !== null ? (string) $user->department_id : null,
                 'role_id' => $user->role_id !== null ? (string) $user->role_id : null,
                 'role' => $user->role,
@@ -4795,6 +4829,8 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             'email' => ['sometimes', 'required', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'password' => ['sometimes', 'nullable', 'string', 'min:6'],
             'company_id' => ['nullable', 'exists:companies,id'],
+            'company_ids' => ['nullable', 'array'],
+            'company_ids.*' => ['string', 'exists:companies,id'],
             'department_id' => ['nullable', 'exists:departments,id'],
             'role_id' => ['nullable', 'exists:roles,id'],
             'role' => ['nullable', 'string', 'max:255'],
@@ -4859,8 +4895,29 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             unset($validated['password']);
         }
 
+        $companyIds = null;
+        if (array_key_exists('company_ids', $validated)) {
+            $companyIds = collect($validated['company_ids'] ?? [])->filter()->values();
+        }
+
+        if ($companyIds !== null && $companyIds->isNotEmpty() && (! array_key_exists('company_id', $validated) || $validated['company_id'] === null)) {
+            $validated['company_id'] = $companyIds->first();
+        }
+
         $user->fill($validated);
         $user->save();
+
+        if ($companyIds !== null) {
+            $sync = $companyIds
+                ->mapWithKeys(fn ($cid) => [$cid => ['is_primary' => (string) $cid === (string) $user->company_id]])
+                ->all();
+            $user->companies()->sync($sync);
+        }
+
+        $user->loadMissing('companies:id');
+        $companyIdsOut = $user->companies
+            ? $user->companies->pluck('id')->map(fn ($v) => (string) $v)->values()->all()
+            : [];
 
         $photoOut = $user->photo_path;
         if (is_string($photoOut) && $photoOut !== '' && ! str_starts_with($photoOut, 'http://') && ! str_starts_with($photoOut, 'https://') && ! str_starts_with($photoOut, 'data:')) {
@@ -4873,6 +4930,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 'name' => $user->name,
                 'email' => $user->email,
                 'company_id' => $user->company_id !== null ? (string) $user->company_id : null,
+                'company_ids' => $companyIdsOut,
                 'department_id' => $user->department_id !== null ? (string) $user->department_id : null,
                 'role_id' => $user->role_id !== null ? (string) $user->role_id : null,
                 'role' => $user->role,

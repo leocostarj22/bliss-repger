@@ -438,7 +438,15 @@ export default function Users() {
                         <div className="text-xs text-muted-foreground truncate">{u.email}</div>
                       </div>
                     </td>
-                    <td className="py-4 pr-4">{u.company_id ? companyNameById[u.company_id] ?? u.company_id : "—"}</td>
+                    <td className="py-4 pr-4">
+                      {(() => {
+                        const primary = u.company_id ? companyNameById[u.company_id] ?? u.company_id : "—"
+                        const extra = Array.isArray(u.company_ids)
+                          ? u.company_ids.filter((id) => id && id !== u.company_id).length
+                          : 0
+                        return extra > 0 ? `${primary} (+${extra})` : primary
+                      })()}
+                    </td>
                     <td className="py-4 pr-4">
                       {u.department_id ? departmentNameById[u.department_id] ?? u.department_id : "—"}
                     </td>

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -18,6 +19,7 @@ type FormState = {
   email: string
   password: string
   company_id: string
+  company_ids: string[]
   department_id: string
   role_id: string
   role: string
@@ -65,6 +67,7 @@ export default function UserForm() {
     email: "",
     password: "",
     company_id: "",
+    company_ids: [],
     department_id: "",
     role_id: "",
     role: "",
@@ -157,11 +160,18 @@ export default function UserForm() {
 
         if (userResp?.data) {
           const u = userResp.data
+          const companyIds = Array.isArray(u.company_ids)
+            ? u.company_ids.filter(Boolean)
+            : u.company_id
+              ? [u.company_id]
+              : []
+
           setForm({
             name: u.name ?? "",
             email: u.email ?? "",
             password: "",
             company_id: u.company_id ?? "",
+            company_ids: companyIds,
             department_id: u.department_id ?? "",
             role_id: u.role_id ?? "",
             role: u.role ?? "",
@@ -178,12 +188,22 @@ export default function UserForm() {
         const defaultCompanyId = compsResp.data[0]?.id || ""
         const defaultRole = rolesResp.data[0]
 
-        setForm((prev) => ({
-          ...prev,
-          company_id: prev.company_id || defaultCompanyId,
-          role_id: prev.role_id || defaultRole?.id || "",
-          role: prev.role || defaultRole?.name || "",
-        }))
+        setForm((prev) => {
+          const nextCompanyId = prev.company_id || defaultCompanyId
+          const nextCompanyIds = prev.company_ids.length
+            ? prev.company_ids
+            : nextCompanyId
+              ? [nextCompanyId]
+              : []
+
+          return {
+            ...prev,
+            company_id: nextCompanyId,
+            company_ids: nextCompanyIds,
+            role_id: prev.role_id || defaultRole?.id || "",
+            role: prev.role || defaultRole?.name || "",
+          }
+        })
       })
       .catch(() => {
         if (isEdit) {
@@ -229,6 +249,7 @@ export default function UserForm() {
           name,
           email,
           company_id: form.company_id.trim() || null,
+          company_ids: form.company_ids,
           department_id: form.department_id.trim() || null,
           role_id: form.role_id.trim() || null,
           role: form.role.trim() || null,
@@ -252,6 +273,7 @@ export default function UserForm() {
           email,
           password: form.password.trim() || null,
           company_id: form.company_id.trim() || null,
+          company_ids: form.company_ids,
           department_id: form.department_id.trim() || null,
           role_id: form.role_id.trim() || null,
           role: form.role.trim() || null,
@@ -344,8 +366,16 @@ export default function UserForm() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Empresa</label>
-            <Select value={form.company_id} onValueChange={(v) => setField("company_id", v)}>
+            <label className="text-sm font-medium">Empresa principal</label>
+            <Select
+              value={form.company_id}
+              onValueChange={(v) => {
+                setForm((prev) => {
+                  const nextIds = prev.company_ids.includes(v) ? prev.company_ids : [...prev.company_ids, v]
+                  return { ...prev, company_id: v, company_ids: nextIds }
+                })
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a empresa" />
               </SelectTrigger>
@@ -357,6 +387,66 @@ export default function UserForm() {
                 ))}
               </SelectContent>
             </Select>
+            <div className="text-xs text-muted-foreground">Define a empresa usada como contexto principal (departamento, filtros, etc.).</div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-sm font-medium">Empresas (acesso)</label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const all = companies.map((c) => c.id)
+                  setForm((prev) => ({ ...prev, company_ids: all, company_id: prev.company_id || all[0] || "" }))
+                }}
+              >
+                Selecionar todas
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-lg border border-border p-3 bg-background/30">
+              {companies.map((c) => {
+                const checked = form.company_ids.includes(c.id)
+                return (
+                  <label key={c.id} className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={(next) => {
+                        const on = next === true
+                        setForm((prev) => {
+                          const already = prev.company_ids.includes(c.id)
+                          const nextIds = on
+                            ? already
+                              ? prev.company_ids
+                              : [...prev.company_ids, c.id]
+                            : prev.company_ids.filter((id) => id !== c.id)
+
+                          let nextPrimary = prev.company_id
+                          if (!nextIds.includes(nextPrimary)) nextPrimary = nextIds[0] || ""
+
+                          let nextDepartment = prev.department_id
+                          if (nextPrimary && nextDepartment) {
+                            const dep = departments.find((d) => d.id === nextDepartment)
+                            if (dep && dep.company_id !== nextPrimary) nextDepartment = ""
+                          }
+                          if (!nextPrimary) nextDepartment = ""
+
+                          return {
+                            ...prev,
+                            company_ids: nextIds,
+                            company_id: nextPrimary,
+                            department_id: nextDepartment,
+                          }
+                        })
+                      }}
+                    />
+                    <span className="truncate">{c.name}</span>
+                  </label>
+                )
+              })}
+            </div>
           </div>
 
           <div className="space-y-2">

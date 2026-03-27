@@ -22,6 +22,17 @@ export default function UserDetail() {
     return companies.find((c) => c.id === user.company_id)?.name ?? user.company_id
   }, [companies, user])
 
+  const companyNames = useMemo(() => {
+    const ids = Array.isArray(user?.company_ids)
+      ? user!.company_ids!.filter(Boolean)
+      : user?.company_id
+        ? [user.company_id]
+        : []
+
+    const uniq = Array.from(new Set(ids))
+    return uniq.map((id) => companies.find((c) => c.id === id)?.name ?? id)
+  }, [companies, user])
+
   const departmentName = useMemo(() => {
     if (!user?.department_id) return "—"
     return departments.find((d) => d.id === user.department_id)?.name ?? user.department_id
@@ -102,8 +113,13 @@ export default function UserDetail() {
           </div>
 
           <div>
-            <div className="text-xs text-muted-foreground">Empresa</div>
+            <div className="text-xs text-muted-foreground">Empresa principal</div>
             <div className="font-medium">{companyName}</div>
+          </div>
+
+          <div className="lg:col-span-2">
+            <div className="text-xs text-muted-foreground">Empresas (acesso)</div>
+            <div className="font-medium">{companyNames.length ? companyNames.join(", ") : "—"}</div>
           </div>
 
           <div>
