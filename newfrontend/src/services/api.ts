@@ -4613,7 +4613,12 @@ export async function fetchSystemLogs(params?: {
   if (params?.action) usp.set('action', params.action);
   if (params && 'user_id' in params) {
     const v = params.user_id;
-    usp.set('user_id', v === null ? 'null' : String(v));
+    if (v === null) {
+      usp.set('user_id', 'null');
+    } else {
+      const s = String(v ?? '').trim();
+      if (s) usp.set('user_id', s);
+    }
   }
 
   const response = await fetch(`/api/v1/reports/system-logs?${usp.toString()}`,
