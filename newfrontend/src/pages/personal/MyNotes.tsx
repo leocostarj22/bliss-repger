@@ -15,9 +15,37 @@ import { useNavigate } from "react-router-dom"
 const CURRENT_USER_KEY = "bliss:currentUserId"
 const FAMILY_PHOTO_KEY = "bliss:personal:familyPhoto"
 
+const safeLocalStorageGet = (key: string) => {
+  if (typeof window === "undefined") return null
+  try {
+    return window.localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+const safeLocalStorageSet = (key: string, value: string) => {
+  if (typeof window === "undefined") return false
+  try {
+    window.localStorage.setItem(key, value)
+    return true
+  } catch {
+    return false
+  }
+}
+
+const safeLocalStorageRemove = (key: string) => {
+  if (typeof window === "undefined") return false
+  try {
+    window.localStorage.removeItem(key)
+    return true
+  } catch {
+    return false
+  }
+}
+
 const currentUserId = () => {
-  if (typeof window === "undefined") return "usr1"
-  return window.localStorage.getItem(CURRENT_USER_KEY) || "usr1"
+  return safeLocalStorageGet(CURRENT_USER_KEY) || "usr1"
 }
 
 export default function MyNotes() {
@@ -34,13 +62,8 @@ export default function MyNotes() {
   const [familyPhoto, setFamilyPhoto] = useState<string | null>(null)
 
   useEffect(() => {
-    if (typeof window === "undefined") return
-    try {
-      const raw = window.localStorage.getItem(FAMILY_PHOTO_KEY)
-      setFamilyPhoto(raw || null)
-    } catch {
-      setFamilyPhoto(null)
-    }
+    const raw = safeLocalStorageGet(FAMILY_PHOTO_KEY)
+    setFamilyPhoto(raw || null)
   }, [])
 
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -105,9 +128,8 @@ export default function MyNotes() {
       }
 
       setFamilyPhoto(dataUrl)
-      try {
-        window.localStorage.setItem(FAMILY_PHOTO_KEY, dataUrl)
-      } catch {
+      const ok = safeLocalStorageSet(FAMILY_PHOTO_KEY, dataUrl)
+      if (!ok) {
         toast({ title: "Erro", description: "Não foi possível guardar a foto", variant: "destructive" })
       }
     }
@@ -119,11 +141,7 @@ export default function MyNotes() {
 
   const clearFamilyPhoto = () => {
     setFamilyPhoto(null)
-    try {
-      window.localStorage.removeItem(FAMILY_PHOTO_KEY)
-    } catch {
-      return
-    }
+    safeLocalStorageRemove(FAMILY_PHOTO_KEY)
   }
 
   const requestDelete = (row: PersonalNote) => {
