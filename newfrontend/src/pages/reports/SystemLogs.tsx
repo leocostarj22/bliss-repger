@@ -19,6 +19,70 @@ const levelBadge = (level: string) => {
   return "bg-muted text-muted-foreground border-border"
 }
 
+const classBasename = (value?: string | null) => {
+  const raw = String(value ?? "").trim()
+  if (!raw) return ""
+  const parts = raw.split("\\")
+  return parts[parts.length - 1] ?? raw
+}
+
+const modelTypeLabel = (modelType?: string | null) => {
+  const base = classBasename(modelType)
+  const key = base.toLowerCase()
+
+  if (key === "personalnote") return "Anotação"
+  if (key === "task") return "Tarefa"
+  if (key === "user") return "Utilizador"
+  if (key === "ticket") return "Ticket"
+  if (key === "post") return "Publicação"
+
+  return base || "Sistema"
+}
+
+const getModelPrimaryLabel = (row: SystemLog) => {
+  const data = (row as any)?.context?.model_data
+  const title = typeof data?.title === "string" ? data.title.trim() : ""
+  const name = typeof data?.name === "string" ? data.name.trim() : ""
+  const email = typeof data?.email === "string" ? data.email.trim() : ""
+  return title || name || email
+}
+
+const describeAction = (row: SystemLog) => {
+  const action = String(row.action ?? "").trim().toLowerCase()
+  const typeLabel = modelTypeLabel(row.model_type)
+  const primary = getModelPrimaryLabel(row)
+  const id = String(row.model_id ?? "").trim()
+
+  if (action === "login") return "Iniciou sessão"
+  if (action === "logout") return "Terminou sessão"
+
+  const suffix = primary ? `: ${primary}` : id ? ` #${id}` : ""
+
+  if (action === "create") return `Criou ${typeLabel.toLowerCase()}${suffix}`
+  if (action === "update") return `Atualizou ${typeLabel.toLowerCase()}${suffix}`
+  if (action === "delete") return `Eliminou ${typeLabel.toLowerCase()}${suffix}`
+
+  return suffix ? `${row.action}${suffix}` : row.action
+}
+
+const normalizeDescription = (row: SystemLog) => {
+  const raw = String(row.description ?? "").trim()
+  if (!raw) return ""
+  if (/^Registro\s+(criado|atualizado|exclu[ií]do)$/i.test(raw)) return ""
+  return raw
+}
+
+const resourceLabel = (row: SystemLog) => {
+  const typeLabel = modelTypeLabel(row.model_type)
+  const primary = getModelPrimaryLabel(row)
+  const id = String(row.model_id ?? "").trim()
+
+  if (typeLabel === "Sistema" && !primary && !id) return "Sistema"
+  if (primary) return `${typeLabel}: ${primary}`
+  if (id) return `${typeLabel} #${id}`
+  return typeLabel
+}
+
 export default function SystemLogs() {
   const { toast } = useToast()
   const [rows, setRows] = useState<SystemLog[]>([])
@@ -113,7 +177,7 @@ export default function SystemLogs() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Pesquisar por ação, modelo, descrição, nível…"
+              placeholder="Pesquisar por ação, descrição, nível…"
               className="max-w-lg"
             />
           </div>
@@ -176,9 +240,8 @@ export default function SystemLogs() {
               <tr className="text-left text-muted-foreground border-b border-border">
                 <th className="py-3 pr-4">Data</th>
                 <th className="py-3 pr-4">Nível</th>
-                <th className="py-3 pr-4">Ação</th>
+                <th className="py-3 pr-4">Evento</th>
                 <th className="py-3 pr-4">Utilizador</th>
-                <th className="py-3 pr-4">Modelo</th>
                 <th className="py-3 text-right">Ações</th>
               </tr>
             </thead>
@@ -199,9 +262,6 @@ export default function SystemLogs() {
                     <td className="py-4 pr-4">
                       <Skeleton className="h-4 w-40" />
                     </td>
-                    <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-56" />
-                    </td>
                     <td className="py-4 text-right">
                       <Skeleton className="h-9 w-28 ml-auto" />
                     </td>
@@ -209,7 +269,7 @@ export default function SystemLogs() {
                 ))
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-muted-foreground">
+                  <td colSpan={5} className="py-10 text-center text-muted-foreground">
                     Nenhum log encontrado
                   </td>
                 </tr>
@@ -223,14 +283,11 @@ export default function SystemLogs() {
                       </span>
                     </td>
                     <td className="py-4 pr-4">
-                      <div className="font-medium">{r.action}</div>
-                      {r.description ? <div className="text-xs text-muted-foreground line-clamp-1">{r.description}</div> : null}
+                      <div className="font-medium">{describeAction(r)}</div>
+                      {normalizeDescription(r) ? <div className="text-xs text-muted-foreground line-clamp-1">{normalizeDescription(r)}</div> : null}
+                      <div className="text-xs text-muted-foreground line-clamp-1">{resourceLabel(r)}</div>
                     </td>
                     <td className="py-4 pr-4">{r.user_id ? userNameById[r.user_id] ?? r.user_id : "Sistema"}</td>
-                    <td className="py-4 pr-4">
-                      <div className="text-xs">{r.model_type ?? "—"}</div>
-                      <div className="text-xs text-muted-foreground">{r.model_id ?? "—"}</div>
-                    </td>
                     <td className="py-4 text-right">
                       <Button variant="outline" size="sm" onClick={() => openView(r)}>
                         <Eye />
@@ -297,12 +354,13 @@ export default function SystemLogs() {
 
                   <div className="lg:col-span-2">
                     <div className="text-xs text-muted-foreground">Ação</div>
-                    <div className="font-medium">{selected.action}</div>
+                    <div className="font-medium">{describeAction(selected)}</div>
+                    <div className="text-xs text-muted-foreground">{selected.action}</div>
                   </div>
 
                   <div className="lg:col-span-2">
                     <div className="text-xs text-muted-foreground">Descrição</div>
-                    <div className="font-medium whitespace-pre-wrap">{selected.description ?? "—"}</div>
+                    <div className="font-medium whitespace-pre-wrap">{normalizeDescription(selected) || "—"}</div>
                   </div>
 
                   <div>
@@ -321,8 +379,8 @@ export default function SystemLogs() {
                   </div>
 
                   <div className="lg:col-span-2">
-                    <div className="text-xs text-muted-foreground">Modelo</div>
-                    <div className="font-medium">{selected.model_type ?? "—"}</div>
+                    <div className="text-xs text-muted-foreground">Recurso</div>
+                    <div className="font-medium">{resourceLabel(selected)}</div>
                     <div className="text-xs text-muted-foreground">{selected.model_id ?? "—"}</div>
                   </div>
 
