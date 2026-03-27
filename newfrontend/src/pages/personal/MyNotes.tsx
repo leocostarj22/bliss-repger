@@ -361,7 +361,7 @@ export default function MyNotes() {
               A carregar…
             </div>
           ) : reminderRows.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-[10px]">
               {reminderRows
                 .slice(0, 12)
                 .map((n) => (
@@ -505,10 +505,10 @@ export default function MyNotes() {
                     ) : null}
                     <div className="mt-2 space-y-0.5 text-[11px] text-muted-foreground">
                       <div className="line-clamp-1">Favorito: {n.is_favorite ? "Sim" : "Não"}</div>
-                      <div className="line-clamp-1">Partilhado com: {sharedWithLabel(n.shared_with_user_ids)}</div>
-                      <div className="line-clamp-1">Modificado por: {modifiedByLabel(n.last_modified_by)}</div>
                       <div className="line-clamp-1">Criado por: {createdByLabel(n.user_id)}</div>
+                      <div className="line-clamp-1">Partilhado com: {sharedWithLabel(n.shared_with_user_ids)}</div>
                       <div className="line-clamp-1">Última modificação: {updatedAtLabel(n.updatedAt)}</div>
+                      <div className="line-clamp-1">Modificado por: {modifiedByLabel(n.last_modified_by)}</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -572,10 +572,10 @@ export default function MyNotes() {
               <tr className="text-left text-muted-foreground border-b border-border">
                 <th className="py-3 pr-4">Anotação</th>
                 <th className="py-3 pr-4">Favorito</th>
-                <th className="py-3 pr-4">Partilhado com</th>
-                <th className="py-3 pr-4">Modificado por</th>
                 <th className="py-3 pr-4">Criado por</th>
+                <th className="py-3 pr-4">Partilhado com</th>
                 <th className="py-3 pr-4">Última modificação</th>
+                <th className="py-3 pr-4">Modificado por</th>
                 <th className="py-3 text-right">Ações</th>
               </tr>
             </thead>
@@ -646,16 +646,16 @@ export default function MyNotes() {
                       />
                     </td>
                     <td className="py-4 pr-4">
-                      <div className="text-xs text-muted-foreground line-clamp-1">{sharedWithLabel(n.shared_with_user_ids)}</div>
-                    </td>
-                    <td className="py-4 pr-4">
-                      <div className="text-xs text-muted-foreground line-clamp-1">{modifiedByLabel(n.last_modified_by)}</div>
-                    </td>
-                    <td className="py-4 pr-4">
                       <div className="text-xs text-muted-foreground line-clamp-1">{createdByLabel(n.user_id)}</div>
                     </td>
                     <td className="py-4 pr-4">
+                      <div className="text-xs text-muted-foreground line-clamp-1">{sharedWithLabel(n.shared_with_user_ids)}</div>
+                    </td>
+                    <td className="py-4 pr-4">
                       <div className="text-xs text-muted-foreground">{updatedAtLabel(n.updatedAt)}</div>
+                    </td>
+                    <td className="py-4 pr-4">
+                      <div className="text-xs text-muted-foreground line-clamp-1">{modifiedByLabel(n.last_modified_by)}</div>
                     </td>
                     <td className="py-4 text-right">
                       <div className="inline-flex items-center gap-1">
