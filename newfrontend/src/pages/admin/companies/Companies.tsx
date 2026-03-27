@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Link } from "react-router-dom"
-import { Building2, Eye, Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { Building2, Eye, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react"
 
 import type { Company } from "@/types"
 import { fetchCompanies, deleteCompany } from "@/services/api"
@@ -14,18 +14,47 @@ export default function Companies() {
   const { toast } = useToast()
   const [rows, setRows] = useState<Company[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [search, setSearch] = useState("")
 
+  const requestSeq = useRef(0)
+  const hasLoadedOnce = useRef(false)
+
   useEffect(() => {
-    const t = setTimeout(() => {
+    const seq = ++requestSeq.current
+    const isInitial = !hasLoadedOnce.current
+
+    if (isInitial) {
       setLoading(true)
+    } else {
+      setRefreshing(true)
+    }
+
+    const t = setTimeout(() => {
       fetchCompanies({ search })
-        .then((r) => setRows(r.data))
-        .finally(() => setLoading(false))
+        .then((r) => {
+          if (seq !== requestSeq.current) return
+          setRows(r.data)
+          hasLoadedOnce.current = true
+        })
+        .catch((e: any) => {
+          if (seq !== requestSeq.current) return
+          toast({
+            title: "Erro",
+            description:
+              typeof e?.message === "string" && e.message.trim() ? e.message : "Falha ao carregar empresas",
+            variant: "destructive",
+          })
+        })
+        .finally(() => {
+          if (seq !== requestSeq.current) return
+          setLoading(false)
+          setRefreshing(false)
+        })
     }, 250)
 
     return () => clearTimeout(t)
-  }, [search])
+  }, [search, toast])
 
   const handleDelete = async (id: string) => {
     if (!confirm("Tem a certeza que deseja eliminar esta empresa?")) return
@@ -33,8 +62,12 @@ export default function Companies() {
       await deleteCompany(id)
       setRows((prev) => prev.filter((c) => c.id !== id))
       toast({ title: "Sucesso", description: "Empresa eliminada" })
-    } catch {
-      toast({ title: "Erro", description: "Falha ao eliminar", variant: "destructive" })
+    } catch (e: any) {
+      toast({
+        title: "Erro",
+        description: typeof e?.message === "string" && e.message.trim() ? e.message : "Falha ao eliminar",
+        variant: "destructive",
+      })
     }
   }
 
@@ -59,7 +92,11 @@ export default function Companies() {
 
       <div className="glass-card p-4">
         <div className="flex items-center gap-2 mb-4">
-          <Search className="w-4 h-4 text-muted-foreground" />
+          {refreshing ? (
+            <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+          ) : (
+            <Search className="w-4 h-4 text-muted-foreground" />
+          )}
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -81,7 +118,7 @@ export default function Companies() {
             </thead>
 
             <tbody>
-              {loading ? (
+              {loading && rows.length === 0 ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-b border-border/60">
                     <td className="py-4 pr-4">

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Pencil, Plus, Search, Star, Trash2 } from "lucide-react"
+import { Loader2, Pencil, Plus, Search, Star, Trash2 } from "lucide-react"
 
 import type { PersonalNote } from "@/types"
 import { createPersonalNote, deletePersonalNote, fetchPersonalNotes, updatePersonalNote } from "@/services/api"
@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast"
 import { useNavigate } from "react-router-dom"
 
-const CURRENT_USER_KEY = "bliss:currentUserId"
 const FAMILY_PHOTO_KEY = "bliss:personal:familyPhoto"
 
 const safeLocalStorageGet = (key: string) => {
@@ -44,14 +43,12 @@ const safeLocalStorageRemove = (key: string) => {
   }
 }
 
-const currentUserId = () => {
-  return safeLocalStorageGet(CURRENT_USER_KEY) || "usr1"
-}
 
 export default function MyNotes() {
   const { toast } = useToast()
   const [rows, setRows] = useState<PersonalNote[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
 
   const [search, setSearch] = useState("")
   const [favoriteFilter, setFavoriteFilter] = useState<"all" | "favorite" | "normal">("all")
@@ -61,6 +58,9 @@ export default function MyNotes() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [familyPhoto, setFamilyPhoto] = useState<string | null>(null)
 
+  const requestSeq = useRef(0)
+  const hasLoadedOnce = useRef(false)
+
   useEffect(() => {
     const raw = safeLocalStorageGet(FAMILY_PHOTO_KEY)
     setFamilyPhoto(raw || null)
@@ -69,22 +69,41 @@ export default function MyNotes() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<PersonalNote | null>(null)
 
-  const load = async () => {
-    setLoading(true)
+  const load = async (opts?: { showSkeleton?: boolean }) => {
+    const seq = ++requestSeq.current
+    const isInitial = !hasLoadedOnce.current
+    const showSkeleton = typeof opts?.showSkeleton === "boolean" ? opts.showSkeleton : isInitial
+
+    if (showSkeleton) {
+      setLoading(true)
+    } else {
+      setRefreshing(true)
+    }
+
     try {
       const is_favorite =
         favoriteFilter === "all" ? undefined : favoriteFilter === "favorite" ? true : false
 
       const resp = await fetchPersonalNotes({
-        user_id: currentUserId(),
         search,
         is_favorite,
       })
+
+      if (seq !== requestSeq.current) return
       setRows(resp.data)
-    } catch {
-      toast({ title: "Erro", description: "Falha ao carregar anotações", variant: "destructive" })
+      hasLoadedOnce.current = true
+    } catch (e: any) {
+      if (seq !== requestSeq.current) return
+      toast({
+        title: "Erro",
+        description:
+          typeof e?.message === "string" && e.message.trim() ? e.message : "Falha ao carregar anotações",
+        variant: "destructive",
+      })
     } finally {
+      if (seq !== requestSeq.current) return
       setLoading(false)
+      setRefreshing(false)
     }
   }
 
@@ -94,7 +113,7 @@ export default function MyNotes() {
     }, 250)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, favoriteFilter])
+  }, [search, favoriteFilter, toast])
 
   const openCreate = () => {
     navigate('/personal/notes/new')
@@ -158,7 +177,7 @@ export default function MyNotes() {
     try {
       await deletePersonalNote(row.id)
       toast({ title: "Sucesso", description: "Anotação eliminada" })
-      load()
+      load({ showSkeleton: false })
     } catch {
       toast({ title: "Erro", description: "Falha ao eliminar", variant: "destructive" })
     }
@@ -190,7 +209,11 @@ export default function MyNotes() {
             <div className="text-xs text-muted-foreground">Formato Post‑it</div>
           </div>
 
-          {reminderRows.length > 0 ? (
+          {loading && rows.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              A carregar…
+            </div>
+          ) : reminderRows.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
               {reminderRows
                 .slice(0, 12)
@@ -275,7 +298,11 @@ export default function MyNotes() {
       <div className="glass-card p-4">
         <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
           <div className="flex items-center gap-2 flex-1">
-            <Search className="w-4 h-4 text-muted-foreground" />
+            {refreshing ? (
+              <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+            ) : (
+              <Search className="w-4 h-4 text-muted-foreground" />
+            )}
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -311,7 +338,7 @@ export default function MyNotes() {
             </thead>
 
             <tbody>
-              {loading ? (
+              {loading && rows.length === 0 ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i} className="border-b border-border/60">
                     <td className="py-4 pr-4">

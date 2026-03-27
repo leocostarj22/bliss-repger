@@ -14,12 +14,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
 
-const CURRENT_USER_KEY = "bliss:currentUserId"
-
-const currentUserId = () => {
-  if (typeof window === "undefined") return "usr1"
-  return window.localStorage.getItem(CURRENT_USER_KEY) || "usr1"
-}
 
 const statusBadge = (status: TaskStatus) => {
   if (status === "completed") return "bg-emerald-500/10 text-emerald-700 border-emerald-500/25 dark:text-white"
@@ -77,7 +71,6 @@ export default function MyTasks() {
     setLoading(true)
     try {
       const resp = await fetchTasks({
-        user_id: currentUserId(),
         search,
         status: statusFilter === "all" ? undefined : statusFilter,
         priority: priorityFilter === "all" ? undefined : priorityFilter,

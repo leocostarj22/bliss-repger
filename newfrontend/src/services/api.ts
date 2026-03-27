@@ -4702,93 +4702,114 @@ const writeTasks = (items: Task[]) => {
 
 export async function fetchTasks(params?: {
   search?: string;
-  user_id?: string;
   status?: TaskStatus;
   priority?: TaskPriority;
 }): Promise<ApiResponse<Task[]>> {
-  await delay();
-  const rows = readTasks();
-
-  const search = (params?.search ?? '').trim().toLowerCase();
-  const userId = params?.user_id;
+  const qs = new URLSearchParams();
+  const search = (params?.search ?? '').trim();
   const status = params?.status;
   const priority = params?.priority;
 
-  const filtered = rows.filter((t) => {
-    if (userId) {
-      const isOwner = (t.user_id ?? null) === userId;
-      const isShared = Array.isArray(t.shared_with_user_ids) && t.shared_with_user_ids.includes(userId);
-      if (!isOwner && !isShared) return false;
-    }
-    if (status && t.status !== status) return false;
-    if (priority && t.priority !== priority) return false;
-    if (!search) return true;
+  if (search) qs.set('search', search);
+  if (status) qs.set('status', status);
+  if (priority) qs.set('priority', priority);
 
-    const hay = `${t.title} ${t.description ?? ''} ${t.location ?? ''} ${t.notes ?? ''}`.toLowerCase();
-    return hay.includes(search);
-  });
+  const url = `/api/v1/tasks${qs.toString() ? `?${qs.toString()}` : ''}`;
+  const response = await apiFetch(url, { method: 'GET' });
 
-  filtered.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0));
+  if (!response.ok) {
+    const fallback = `Failed to fetch tasks: ${response.statusText}`;
+    throw new Error(await pickErrorMessage(response, fallback));
+  }
 
-  return { data: filtered };
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as Task[]) : [] };
 }
 
 export async function fetchTask(id: string): Promise<ApiResponse<Task>> {
-  await delay();
-  const found = readTasks().find((x) => x.id === id);
-  if (!found) throw new Error('Task not found');
-  return { data: found };
+  const response = await apiFetch(`/api/v1/tasks/${encodeURIComponent(id)}`, { method: 'GET' });
+
+  if (!response.ok) {
+    const fallback = `Failed to fetch task: ${response.statusText}`;
+    throw new Error(await pickErrorMessage(response, fallback));
+  }
+
+  const json = await response.json();
+  return { data: json?.data as Task };
 }
 
-export async function createTask(payload: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<Task>> {
-  await delay(250);
-  const rows = readTasks();
-  const now = new Date().toISOString();
+export async function createTask(payload: {
+  title: string;
+  description?: string | null;
+  priority: TaskPriority;
+  status: TaskStatus;
+  due_date?: string | null;
+  start_date?: string | null;
+  completed_at?: string | null;
+  is_all_day: boolean;
+  location?: string | null;
+  notes?: string | null;
+  attachments?: any[];
+  recurrence_rule?: any;
+  is_private: boolean;
+  shared_with_user_ids?: string[];
+}): Promise<ApiResponse<Task>> {
+  const response = await apiFetch('/api/v1/tasks', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 
-  const title = payload.title.trim();
-  if (!title) throw new Error('Título é obrigatório');
+  if (!response.ok) {
+    const fallback = `Failed to create task: ${response.statusText}`;
+    throw new Error(await pickErrorMessage(response, fallback));
+  }
 
-  const next: Task = {
-    ...payload,
-    id: `tsk_${Math.random().toString(16).slice(2)}`,
-    title,
-    priority: payload.priority ?? 'medium',
-    status: payload.status ?? 'pending',
-    is_all_day: Boolean(payload.is_all_day),
-    is_private: Boolean(payload.is_private),
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  writeTasks([next, ...rows]);
-  return { data: next };
+  const json = await response.json();
+  return { data: json?.data as Task };
 }
 
-export async function updateTask(id: string, payload: Partial<Omit<Task, 'id' | 'createdAt'>>): Promise<ApiResponse<Task>> {
-  await delay(250);
-  const rows = readTasks();
-  const idx = rows.findIndex((x) => x.id === id);
-  if (idx < 0) throw new Error('Task not found');
+export async function updateTask(
+  id: string,
+  payload: Partial<{
+    title: string;
+    description: string | null;
+    priority: TaskPriority;
+    status: TaskStatus;
+    due_date: string | null;
+    start_date: string | null;
+    completed_at: string | null;
+    is_all_day: boolean;
+    location: string | null;
+    notes: string | null;
+    attachments: any[];
+    recurrence_rule: any;
+    is_private: boolean;
+    shared_with_user_ids: string[];
+  }>
+): Promise<ApiResponse<Task>> {
+  const response = await apiFetch(`/api/v1/tasks/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
 
-  const current = rows[idx];
-  const updated: Task = {
-    ...current,
-    ...payload,
-    title: payload.title !== undefined ? payload.title.trim() : current.title,
-    updatedAt: new Date().toISOString(),
-  };
+  if (!response.ok) {
+    const fallback = `Failed to update task: ${response.statusText}`;
+    throw new Error(await pickErrorMessage(response, fallback));
+  }
 
-  if (!updated.title) throw new Error('Título é obrigatório');
-
-  const nextRows = [...rows];
-  nextRows[idx] = updated;
-  writeTasks(nextRows);
-  return { data: updated };
+  const json = await response.json();
+  return { data: json?.data as Task };
 }
 
 export async function deleteTask(id: string): Promise<void> {
-  await delay(200);
-  writeTasks(readTasks().filter((x) => x.id !== id));
+  const response = await apiFetch(`/api/v1/tasks/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const fallback = `Failed to delete task: ${response.statusText}`;
+    throw new Error(await pickErrorMessage(response, fallback));
+  }
 }
 
 // ── Personal: Notes ──
@@ -4816,91 +4837,93 @@ const writePersonalNotes = (items: PersonalNote[]) => {
 
 export async function fetchPersonalNotes(params?: {
   search?: string;
-  user_id?: string;
   is_favorite?: boolean;
 }): Promise<ApiResponse<PersonalNote[]>> {
-  await delay();
-  const rows = readPersonalNotes();
-
-  const search = (params?.search ?? '').trim().toLowerCase();
-  const userId = params?.user_id;
+  const qs = new URLSearchParams();
+  const search = (params?.search ?? '').trim();
   const isFavorite = params?.is_favorite;
 
-  const filtered = rows.filter((n) => {
-    if (userId && n.user_id !== userId) return false;
-    if (typeof isFavorite === 'boolean' && Boolean(n.is_favorite) !== isFavorite) return false;
-    if (!search) return true;
+  if (search) qs.set('search', search);
+  if (typeof isFavorite === 'boolean') qs.set('is_favorite', isFavorite ? '1' : '0');
 
-    const hay = `${n.title} ${n.content}`.toLowerCase();
-    return hay.includes(search);
-  });
+  const url = `/api/v1/personal-notes${qs.toString() ? `?${qs.toString()}` : ''}`;
+  const response = await apiFetch(url, { method: 'GET' });
 
-  filtered.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0));
+  if (!response.ok) {
+    const fallback = `Failed to fetch notes: ${response.statusText}`;
+    throw new Error(await pickErrorMessage(response, fallback));
+  }
 
-  return { data: filtered };
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as PersonalNote[]) : [] };
 }
 
 export async function fetchPersonalNote(id: string): Promise<ApiResponse<PersonalNote>> {
-  await delay();
-  const found = readPersonalNotes().find((x) => x.id === id);
-  if (!found) throw new Error('Note not found');
-  return { data: found };
+  const response = await apiFetch(`/api/v1/personal-notes/${encodeURIComponent(id)}`, { method: 'GET' });
+
+  if (!response.ok) {
+    const fallback = `Failed to fetch note: ${response.statusText}`;
+    throw new Error(await pickErrorMessage(response, fallback));
+  }
+
+  const json = await response.json();
+  return { data: json?.data as PersonalNote };
 }
 
-export async function createPersonalNote(
-  payload: Omit<PersonalNote, 'id' | 'createdAt' | 'updatedAt'>
-): Promise<ApiResponse<PersonalNote>> {
-  await delay(250);
-  const rows = readPersonalNotes();
-  const now = new Date().toISOString();
+export async function createPersonalNote(payload: {
+  title: string;
+  content?: string | null;
+  color?: string | null;
+  is_favorite: boolean;
+  remind_at?: string | null;
+  shared_with_user_ids?: string[];
+}): Promise<ApiResponse<PersonalNote>> {
+  const response = await apiFetch('/api/v1/personal-notes', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 
-  const title = payload.title.trim();
-  if (!title) throw new Error('Título é obrigatório');
+  if (!response.ok) {
+    const fallback = `Failed to create note: ${response.statusText}`;
+    throw new Error(await pickErrorMessage(response, fallback));
+  }
 
-  const next: PersonalNote = {
-    ...payload,
-    id: `note_${Math.random().toString(16).slice(2)}`,
-    title,
-    content: payload.content ?? '',
-    is_favorite: Boolean(payload.is_favorite),
-    remind_at: (payload as any).remind_at ?? null,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  writePersonalNotes([next, ...rows]);
-  return { data: next };
+  const json = await response.json();
+  return { data: json?.data as PersonalNote };
 }
 
 export async function updatePersonalNote(
   id: string,
-  payload: Partial<Omit<PersonalNote, 'id' | 'createdAt'>>
+  payload: Partial<{
+    title: string;
+    content: string | null;
+    color: string | null;
+    is_favorite: boolean;
+    remind_at: string | null;
+    shared_with_user_ids: string[];
+  }>
 ): Promise<ApiResponse<PersonalNote>> {
-  await delay(250);
-  const rows = readPersonalNotes();
-  const idx = rows.findIndex((x) => x.id === id);
-  if (idx < 0) throw new Error('Note not found');
+  const response = await apiFetch(`/api/v1/personal-notes/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
 
-  const current = rows[idx];
-  const updated: PersonalNote = {
-    ...current,
-    ...payload,
-    title: payload.title !== undefined ? payload.title.trim() : current.title,
-    content: payload.content !== undefined ? payload.content : current.content,
-    is_favorite: payload.is_favorite !== undefined ? Boolean(payload.is_favorite) : current.is_favorite,
-    remind_at: (payload as any).remind_at !== undefined ? (payload as any).remind_at : (current as any).remind_at,
-    updatedAt: new Date().toISOString(),
-  };
+  if (!response.ok) {
+    const fallback = `Failed to update note: ${response.statusText}`;
+    throw new Error(await pickErrorMessage(response, fallback));
+  }
 
-  if (!updated.title) throw new Error('Título é obrigatório');
-
-  const nextRows = [...rows];
-  nextRows[idx] = updated;
-  writePersonalNotes(nextRows);
-  return { data: updated };
+  const json = await response.json();
+  return { data: json?.data as PersonalNote };
 }
 
 export async function deletePersonalNote(id: string): Promise<void> {
-  await delay(200);
-  writePersonalNotes(readPersonalNotes().filter((x) => x.id !== id));
+  const response = await apiFetch(`/api/v1/personal-notes/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const fallback = `Failed to delete note: ${response.statusText}`;
+    throw new Error(await pickErrorMessage(response, fallback));
+  }
 }

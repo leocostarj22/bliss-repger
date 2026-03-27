@@ -19,6 +19,8 @@ use App\Models\Role;
 use App\Models\Category;
 use App\Models\Employee;
 use App\Models\EmployeeUser;
+use App\Models\PersonalNote;
+use App\Models\Task;
 use App\Models\Payroll;
 use App\Models\Vacation;
 use App\Models\Timesheet;
@@ -2945,6 +2947,497 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         });
     });
 
+    Route::get('tasks', function () {
+        $user = auth()->user();
+        abort_unless($user, 403);
+
+        $search = trim((string) request('search', ''));
+        $status = trim((string) request('status', ''));
+        $priority = trim((string) request('priority', ''));
+
+        $taskableType = get_class($user);
+        $taskableId = $user->id;
+
+        $query = Task::query()->with(['sharedWith:id']);
+
+        $query->where(function ($q) use ($user, $taskableType, $taskableId) {
+            $q->where(function ($q2) use ($taskableType, $taskableId) {
+                $q2->where('taskable_type', $taskableType)->where('taskable_id', $taskableId);
+            });
+
+            if ($user instanceof \App\Models\User) {
+                $q->orWhereHas('sharedWith', function ($q2) use ($user) {
+                    $q2->where('users.id', $user->id);
+                });
+            }
+        });
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('location', 'like', "%{$search}%")
+                    ->orWhere('notes', 'like', "%{$search}%");
+            });
+        }
+
+        if ($status !== '') {
+            $query->where('status', $status);
+        }
+
+        if ($priority !== '') {
+            $query->where('priority', $priority);
+        }
+
+        $rows = $query->orderByDesc('updated_at')->get();
+
+        $data = $rows->map(function (Task $t) {
+            $sharedIds = $t->sharedWith->pluck('id')->map(fn ($id) => (string) $id)->values();
+
+            return [
+                'id' => (string) $t->id,
+                'title' => $t->title,
+                'description' => $t->description,
+                'priority' => $t->priority,
+                'status' => $t->status,
+                'due_date' => $t->due_date?->toIso8601String(),
+                'start_date' => $t->start_date?->toIso8601String(),
+                'completed_at' => $t->completed_at?->toIso8601String(),
+                'is_all_day' => (bool) $t->is_all_day,
+                'location' => $t->location,
+                'notes' => $t->notes,
+                'attachments' => $t->attachments ?? [],
+                'taskable_type' => $t->taskable_type,
+                'taskable_id' => $t->taskable_id !== null ? (string) $t->taskable_id : null,
+                'calendar_event_id' => $t->calendar_event_id,
+                'recurrence_rule' => $t->recurrence_rule,
+                'is_private' => (bool) $t->is_private,
+                'user_id' => $t->taskable_type === \App\Models\User::class && $t->taskable_id !== null ? (string) $t->taskable_id : null,
+                'shared_with_user_ids' => $sharedIds,
+                'createdAt' => $t->created_at?->toIso8601String(),
+                'updatedAt' => $t->updated_at?->toIso8601String(),
+            ];
+        })->values();
+
+        return response()->json(['data' => $data]);
+    });
+
+    Route::get('tasks/{task}', function (Task $task) {
+        $user = auth()->user();
+        abort_unless($user, 403);
+
+        $taskableType = get_class($user);
+        $taskableId = $user->id;
+
+        $isOwner = $task->taskable_type === $taskableType && (string) $task->taskable_id === (string) $taskableId;
+
+        $isShared = false;
+        if ($user instanceof \App\Models\User) {
+            $isShared = $task->sharedWith()->where('users.id', $user->id)->exists();
+        }
+
+        abort_unless($isOwner || $isShared, 404);
+
+        $task->load(['sharedWith:id']);
+
+        return response()->json([
+            'data' => [
+                'id' => (string) $task->id,
+                'title' => $task->title,
+                'description' => $task->description,
+                'priority' => $task->priority,
+                'status' => $task->status,
+                'due_date' => $task->due_date?->toIso8601String(),
+                'start_date' => $task->start_date?->toIso8601String(),
+                'completed_at' => $task->completed_at?->toIso8601String(),
+                'is_all_day' => (bool) $task->is_all_day,
+                'location' => $task->location,
+                'notes' => $task->notes,
+                'attachments' => $task->attachments ?? [],
+                'taskable_type' => $task->taskable_type,
+                'taskable_id' => $task->taskable_id !== null ? (string) $task->taskable_id : null,
+                'calendar_event_id' => $task->calendar_event_id,
+                'recurrence_rule' => $task->recurrence_rule,
+                'is_private' => (bool) $task->is_private,
+                'user_id' => $task->taskable_type === \App\Models\User::class && $task->taskable_id !== null ? (string) $task->taskable_id : null,
+                'shared_with_user_ids' => $task->sharedWith->pluck('id')->map(fn ($id) => (string) $id)->values(),
+                'createdAt' => $task->created_at?->toIso8601String(),
+                'updatedAt' => $task->updated_at?->toIso8601String(),
+            ],
+        ]);
+    });
+
+    Route::post('tasks', function () {
+        $user = auth()->user();
+        abort_unless($user, 403);
+
+        $validated = request()->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'priority' => ['required', 'string', Rule::in(['low', 'medium', 'high', 'urgent'])],
+            'status' => ['required', 'string', Rule::in(['pending', 'in_progress', 'completed', 'cancelled'])],
+            'due_date' => ['nullable', 'date'],
+            'start_date' => ['nullable', 'date'],
+            'completed_at' => ['nullable', 'date'],
+            'is_all_day' => ['required', 'boolean'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'notes' => ['nullable', 'string'],
+            'attachments' => ['sometimes', 'array'],
+            'recurrence_rule' => ['nullable', 'array'],
+            'is_private' => ['required', 'boolean'],
+            'shared_with_user_ids' => ['sometimes', 'array'],
+            'shared_with_user_ids.*' => ['string'],
+        ]);
+
+        $task = new Task();
+        $task->taskable_type = get_class($user);
+        $task->taskable_id = $user->id;
+        $task->title = $validated['title'];
+        $task->description = $validated['description'] ?? null;
+        $task->priority = $validated['priority'];
+        $task->status = $validated['status'];
+        $task->due_date = $validated['due_date'] ?? null;
+        $task->start_date = $validated['start_date'] ?? null;
+        $task->completed_at = $validated['completed_at'] ?? null;
+        $task->is_all_day = (bool) $validated['is_all_day'];
+        $task->location = $validated['location'] ?? null;
+        $task->notes = $validated['notes'] ?? null;
+        $task->attachments = $validated['attachments'] ?? [];
+        $task->recurrence_rule = $validated['recurrence_rule'] ?? null;
+        $task->is_private = (bool) $validated['is_private'];
+        $task->save();
+
+        if ($task->is_private) {
+            $task->sharedWith()->sync([]);
+        } elseif ($user instanceof \App\Models\User && array_key_exists('shared_with_user_ids', $validated)) {
+            $sharedIds = collect($validated['shared_with_user_ids'] ?? [])
+                ->map(fn ($v) => trim((string) $v))
+                ->filter()
+                ->map(fn ($v) => (int) $v)
+                ->values()
+                ->all();
+            $task->sharedWith()->sync($sharedIds);
+        }
+
+        $task->load(['sharedWith:id']);
+
+        return response()->json([
+            'data' => [
+                'id' => (string) $task->id,
+                'title' => $task->title,
+                'description' => $task->description,
+                'priority' => $task->priority,
+                'status' => $task->status,
+                'due_date' => $task->due_date?->toIso8601String(),
+                'start_date' => $task->start_date?->toIso8601String(),
+                'completed_at' => $task->completed_at?->toIso8601String(),
+                'is_all_day' => (bool) $task->is_all_day,
+                'location' => $task->location,
+                'notes' => $task->notes,
+                'attachments' => $task->attachments ?? [],
+                'taskable_type' => $task->taskable_type,
+                'taskable_id' => $task->taskable_id !== null ? (string) $task->taskable_id : null,
+                'calendar_event_id' => $task->calendar_event_id,
+                'recurrence_rule' => $task->recurrence_rule,
+                'is_private' => (bool) $task->is_private,
+                'user_id' => $task->taskable_type === \App\Models\User::class && $task->taskable_id !== null ? (string) $task->taskable_id : null,
+                'shared_with_user_ids' => $task->sharedWith->pluck('id')->map(fn ($id) => (string) $id)->values(),
+                'createdAt' => $task->created_at?->toIso8601String(),
+                'updatedAt' => $task->updated_at?->toIso8601String(),
+            ],
+        ], 201);
+    });
+
+    Route::put('tasks/{task}', function (Task $task) {
+        $user = auth()->user();
+        abort_unless($user, 403);
+
+        $taskableType = get_class($user);
+        $taskableId = $user->id;
+        abort_unless($task->taskable_type === $taskableType && (string) $task->taskable_id === (string) $taskableId, 404);
+
+        $validated = request()->validate([
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'priority' => ['sometimes', 'required', 'string', Rule::in(['low', 'medium', 'high', 'urgent'])],
+            'status' => ['sometimes', 'required', 'string', Rule::in(['pending', 'in_progress', 'completed', 'cancelled'])],
+            'due_date' => ['nullable', 'date'],
+            'start_date' => ['nullable', 'date'],
+            'completed_at' => ['nullable', 'date'],
+            'is_all_day' => ['sometimes', 'required', 'boolean'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'notes' => ['nullable', 'string'],
+            'attachments' => ['sometimes', 'array'],
+            'recurrence_rule' => ['nullable', 'array'],
+            'is_private' => ['sometimes', 'required', 'boolean'],
+            'shared_with_user_ids' => ['sometimes', 'array'],
+            'shared_with_user_ids.*' => ['string'],
+        ]);
+
+        if (array_key_exists('title', $validated)) $task->title = $validated['title'];
+        if (array_key_exists('description', $validated)) $task->description = $validated['description'];
+        if (array_key_exists('priority', $validated)) $task->priority = $validated['priority'];
+        if (array_key_exists('status', $validated)) $task->status = $validated['status'];
+        if (array_key_exists('due_date', $validated)) $task->due_date = $validated['due_date'];
+        if (array_key_exists('start_date', $validated)) $task->start_date = $validated['start_date'];
+        if (array_key_exists('completed_at', $validated)) $task->completed_at = $validated['completed_at'];
+        if (array_key_exists('is_all_day', $validated)) $task->is_all_day = (bool) $validated['is_all_day'];
+        if (array_key_exists('location', $validated)) $task->location = $validated['location'];
+        if (array_key_exists('notes', $validated)) $task->notes = $validated['notes'];
+        if (array_key_exists('attachments', $validated)) $task->attachments = $validated['attachments'] ?? [];
+        if (array_key_exists('recurrence_rule', $validated)) $task->recurrence_rule = $validated['recurrence_rule'];
+        if (array_key_exists('is_private', $validated)) $task->is_private = (bool) $validated['is_private'];
+
+        $task->save();
+
+        if ($task->is_private) {
+            $task->sharedWith()->sync([]);
+        } elseif ($user instanceof \App\Models\User && array_key_exists('shared_with_user_ids', $validated)) {
+            $sharedIds = collect($validated['shared_with_user_ids'] ?? [])
+                ->map(fn ($v) => trim((string) $v))
+                ->filter()
+                ->map(fn ($v) => (int) $v)
+                ->values()
+                ->all();
+            $task->sharedWith()->sync($sharedIds);
+        }
+
+        $task->load(['sharedWith:id']);
+
+        return response()->json([
+            'data' => [
+                'id' => (string) $task->id,
+                'title' => $task->title,
+                'description' => $task->description,
+                'priority' => $task->priority,
+                'status' => $task->status,
+                'due_date' => $task->due_date?->toIso8601String(),
+                'start_date' => $task->start_date?->toIso8601String(),
+                'completed_at' => $task->completed_at?->toIso8601String(),
+                'is_all_day' => (bool) $task->is_all_day,
+                'location' => $task->location,
+                'notes' => $task->notes,
+                'attachments' => $task->attachments ?? [],
+                'taskable_type' => $task->taskable_type,
+                'taskable_id' => $task->taskable_id !== null ? (string) $task->taskable_id : null,
+                'calendar_event_id' => $task->calendar_event_id,
+                'recurrence_rule' => $task->recurrence_rule,
+                'is_private' => (bool) $task->is_private,
+                'user_id' => $task->taskable_type === \App\Models\User::class && $task->taskable_id !== null ? (string) $task->taskable_id : null,
+                'shared_with_user_ids' => $task->sharedWith->pluck('id')->map(fn ($id) => (string) $id)->values(),
+                'createdAt' => $task->created_at?->toIso8601String(),
+                'updatedAt' => $task->updated_at?->toIso8601String(),
+            ],
+        ]);
+    });
+
+    Route::delete('tasks/{task}', function (Task $task) {
+        $user = auth()->user();
+        abort_unless($user, 403);
+
+        $taskableType = get_class($user);
+        $taskableId = $user->id;
+        abort_unless($task->taskable_type === $taskableType && (string) $task->taskable_id === (string) $taskableId, 404);
+
+        $task->delete();
+
+        return response()->json(['ok' => true]);
+    });
+
+    Route::get('personal-notes', function () {
+        $user = auth()->user();
+        abort_unless($user && $user instanceof \App\Models\User, 403);
+
+        $search = trim((string) request('search', ''));
+        $isFavorite = request()->has('is_favorite') ? filter_var(request('is_favorite'), FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) : null;
+
+        $query = PersonalNote::query()
+            ->with(['sharedWith:id'])
+            ->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                    ->orWhereHas('sharedWith', function ($q2) use ($user) {
+                        $q2->where('users.id', $user->id);
+                    });
+            })
+            ->orderByDesc('updated_at');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('content', 'like', "%{$search}%");
+            });
+        }
+
+        if (is_bool($isFavorite)) {
+            $query->where('is_favorite', $isFavorite);
+        }
+
+        $rows = $query->get();
+
+        $data = $rows->map(function (PersonalNote $n) {
+            $sharedIds = $n->sharedWith->pluck('id')->map(fn ($id) => (string) $id)->values();
+
+            return [
+                'id' => (string) $n->id,
+                'user_id' => (string) $n->user_id,
+                'title' => $n->title,
+                'content' => $n->content ?? '',
+                'color' => $n->color,
+                'is_favorite' => (bool) $n->is_favorite,
+                'remind_at' => $n->remind_at?->toIso8601String(),
+                'last_modified_by' => $n->last_modified_by !== null ? (string) $n->last_modified_by : null,
+                'shared_with_user_ids' => $sharedIds,
+                'createdAt' => $n->created_at?->toIso8601String(),
+                'updatedAt' => $n->updated_at?->toIso8601String(),
+            ];
+        })->values();
+
+        return response()->json(['data' => $data]);
+    });
+
+    Route::get('personal-notes/{note}', function (PersonalNote $note) {
+        $user = auth()->user();
+        abort_unless($user && $user instanceof \App\Models\User, 403);
+
+        $isOwner = (string) $note->user_id === (string) $user->id;
+        $isShared = $note->sharedWith()->where('users.id', $user->id)->exists();
+        abort_unless($isOwner || $isShared, 404);
+
+        $note->load(['sharedWith:id']);
+
+        return response()->json([
+            'data' => [
+                'id' => (string) $note->id,
+                'user_id' => (string) $note->user_id,
+                'title' => $note->title,
+                'content' => $note->content ?? '',
+                'color' => $note->color,
+                'is_favorite' => (bool) $note->is_favorite,
+                'remind_at' => $note->remind_at?->toIso8601String(),
+                'last_modified_by' => $note->last_modified_by !== null ? (string) $note->last_modified_by : null,
+                'shared_with_user_ids' => $note->sharedWith->pluck('id')->map(fn ($id) => (string) $id)->values(),
+                'createdAt' => $note->created_at?->toIso8601String(),
+                'updatedAt' => $note->updated_at?->toIso8601String(),
+            ],
+        ]);
+    });
+
+    Route::post('personal-notes', function () {
+        $user = auth()->user();
+        abort_unless($user && $user instanceof \App\Models\User, 403);
+
+        $validated = request()->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'content' => ['nullable', 'string'],
+            'color' => ['nullable', 'string', 'max:32'],
+            'is_favorite' => ['required', 'boolean'],
+            'remind_at' => ['nullable', 'date'],
+            'shared_with_user_ids' => ['sometimes', 'array'],
+            'shared_with_user_ids.*' => ['string'],
+        ]);
+
+        $note = new PersonalNote();
+        $note->user_id = $user->id;
+        $note->title = $validated['title'];
+        $note->content = $validated['content'] ?? null;
+        $note->color = $validated['color'] ?? null;
+        $note->is_favorite = (bool) $validated['is_favorite'];
+        $note->remind_at = $validated['remind_at'] ?? null;
+        $note->last_modified_by = $user->id;
+        $note->save();
+
+        $sharedIds = collect($validated['shared_with_user_ids'] ?? [])
+            ->map(fn ($v) => trim((string) $v))
+            ->filter()
+            ->map(fn ($v) => (int) $v)
+            ->values()
+            ->all();
+
+        if (!empty($sharedIds)) {
+            $note->sharedWith()->sync($sharedIds);
+        }
+
+        $note->load(['sharedWith:id']);
+
+        return response()->json([
+            'data' => [
+                'id' => (string) $note->id,
+                'user_id' => (string) $note->user_id,
+                'title' => $note->title,
+                'content' => $note->content ?? '',
+                'color' => $note->color,
+                'is_favorite' => (bool) $note->is_favorite,
+                'remind_at' => $note->remind_at?->toIso8601String(),
+                'last_modified_by' => $note->last_modified_by !== null ? (string) $note->last_modified_by : null,
+                'shared_with_user_ids' => $note->sharedWith->pluck('id')->map(fn ($id) => (string) $id)->values(),
+                'createdAt' => $note->created_at?->toIso8601String(),
+                'updatedAt' => $note->updated_at?->toIso8601String(),
+            ],
+        ], 201);
+    });
+
+    Route::put('personal-notes/{note}', function (PersonalNote $note) {
+        $user = auth()->user();
+        abort_unless($user && $user instanceof \App\Models\User, 403);
+        abort_unless((string) $note->user_id === (string) $user->id, 404);
+
+        $validated = request()->validate([
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'content' => ['nullable', 'string'],
+            'color' => ['nullable', 'string', 'max:32'],
+            'is_favorite' => ['sometimes', 'required', 'boolean'],
+            'remind_at' => ['nullable', 'date'],
+            'shared_with_user_ids' => ['sometimes', 'array'],
+            'shared_with_user_ids.*' => ['string'],
+        ]);
+
+        if (array_key_exists('title', $validated)) $note->title = $validated['title'];
+        if (array_key_exists('content', $validated)) $note->content = $validated['content'];
+        if (array_key_exists('color', $validated)) $note->color = $validated['color'];
+        if (array_key_exists('is_favorite', $validated)) $note->is_favorite = (bool) $validated['is_favorite'];
+        if (array_key_exists('remind_at', $validated)) $note->remind_at = $validated['remind_at'];
+        $note->last_modified_by = $user->id;
+        $note->save();
+
+        if (array_key_exists('shared_with_user_ids', $validated)) {
+            $sharedIds = collect($validated['shared_with_user_ids'] ?? [])
+                ->map(fn ($v) => trim((string) $v))
+                ->filter()
+                ->map(fn ($v) => (int) $v)
+                ->values()
+                ->all();
+            $note->sharedWith()->sync($sharedIds);
+        }
+
+        $note->load(['sharedWith:id']);
+
+        return response()->json([
+            'data' => [
+                'id' => (string) $note->id,
+                'user_id' => (string) $note->user_id,
+                'title' => $note->title,
+                'content' => $note->content ?? '',
+                'color' => $note->color,
+                'is_favorite' => (bool) $note->is_favorite,
+                'remind_at' => $note->remind_at?->toIso8601String(),
+                'last_modified_by' => $note->last_modified_by !== null ? (string) $note->last_modified_by : null,
+                'shared_with_user_ids' => $note->sharedWith->pluck('id')->map(fn ($id) => (string) $id)->values(),
+                'createdAt' => $note->created_at?->toIso8601String(),
+                'updatedAt' => $note->updated_at?->toIso8601String(),
+            ],
+        ]);
+    });
+
+    Route::delete('personal-notes/{note}', function (PersonalNote $note) {
+        $user = auth()->user();
+        abort_unless($user && $user instanceof \App\Models\User, 403);
+        abort_unless((string) $note->user_id === (string) $user->id, 404);
+
+        $note->delete();
+
+        return response()->json(['ok' => true]);
+    });
+
     Route::get('companies', function () {
         $user = auth()->user();
         abort_unless($user && $user->isAdmin(), 403);
@@ -3174,13 +3667,28 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $user = auth()->user();
         abort_unless($user && $user->isAdmin(), 403);
 
-        if ($company->logo && is_string($company->logo) && ! str_starts_with($company->logo, 'http://') && ! str_starts_with($company->logo, 'https://') && ! str_starts_with($company->logo, 'data:')) {
-            if (Storage::disk('public')->exists($company->logo)) {
-                Storage::disk('public')->delete($company->logo);
-            }
+        $employeeCount = Employee::where('company_id', $company->id)->count();
+        if ($employeeCount > 0) {
+            return response()->json([
+                'message' => "Não é possível eliminar a empresa porque existem {$employeeCount} colaborador(es) associados. Remova ou mova os colaboradores para outra empresa e tente novamente.",
+            ], 409);
         }
 
-        $company->delete();
+        $logo = $company->logo;
+
+        try {
+            $company->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            return response()->json([
+                'message' => 'Não foi possível eliminar a empresa devido a registos associados.',
+            ], 409);
+        }
+
+        if ($logo && is_string($logo) && ! str_starts_with($logo, 'http://') && ! str_starts_with($logo, 'https://') && ! str_starts_with($logo, 'data:')) {
+            if (Storage::disk('public')->exists($logo)) {
+                Storage::disk('public')->delete($logo);
+            }
+        }
 
         return response()->json(['ok' => true]);
     });

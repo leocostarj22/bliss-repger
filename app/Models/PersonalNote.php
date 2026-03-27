@@ -14,7 +14,13 @@ class PersonalNote extends Model
         'content',
         'color',
         'is_favorite',
+        'remind_at',
         'last_modified_by',
+    ];
+
+    protected $casts = [
+        'is_favorite' => 'boolean',
+        'remind_at' => 'datetime',
     ];
 
     protected static function booted()

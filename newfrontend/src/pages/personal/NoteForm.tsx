@@ -8,12 +8,6 @@ import { useToast } from "@/components/ui/use-toast"
 import { createPersonalNote, fetchPersonalNote, updatePersonalNote } from "@/services/api"
 import type { PersonalNote } from "@/types"
 
-const CURRENT_USER_KEY = "bliss:currentUserId"
-
-const currentUserId = () => {
-  if (typeof window === "undefined") return "usr1"
-  return window.localStorage.getItem(CURRENT_USER_KEY) || "usr1"
-}
 
 const toLocalDateTimeInput = (iso?: string | null) => {
   if (!iso) return ""
@@ -88,7 +82,6 @@ export default function NoteForm() {
         color: (color || "").trim() ? color.trim() : null,
         is_favorite: Boolean(isFavorite),
         remind_at: fromLocalDateTimeInput(remindAtLocal),
-        last_modified_by: currentUserId(),
       } as any
 
       if (isEditing) {
@@ -96,7 +89,6 @@ export default function NoteForm() {
         toast({ title: "Sucesso", description: "Anotação atualizada" })
       } else {
         await createPersonalNote({
-          user_id: currentUserId(),
           shared_with_user_ids: [],
           ...payload,
         })
