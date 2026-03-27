@@ -206,6 +206,24 @@ export interface Department {
   updatedAt: string;
 }
 
+export type WorkScheduleDay = {
+  enabled: boolean
+  start: string
+  end: string
+  break_start: string
+  break_end: string
+}
+
+export type WorkSchedule = {
+  mon: WorkScheduleDay
+  tue: WorkScheduleDay
+  wed: WorkScheduleDay
+  thu: WorkScheduleDay
+  fri: WorkScheduleDay
+  sat: WorkScheduleDay
+  sun: WorkScheduleDay
+}
+
 export interface User {
   id: string;
   name: string;
@@ -219,6 +237,8 @@ export interface User {
   phone?: string | null;
   bio?: string | null;
   photo_path?: string | null;
+  work_timezone?: string | null;
+  work_schedule?: WorkSchedule | null;
   permissions_allow?: string[] | null;
   permissions_deny?: string[] | null;
   is_active: boolean;

@@ -36,6 +36,8 @@ class User extends Authenticatable implements UserInterface, FilamentUser
         'permissions_deny',
         'is_active',
         'last_login_at',
+        'work_timezone',
+        'work_schedule',
     ];
 
     protected $hidden = [
@@ -50,6 +52,7 @@ class User extends Authenticatable implements UserInterface, FilamentUser
         'permissions_deny' => 'array',
         'is_active' => 'boolean',
         'last_login_at' => 'datetime',
+        'work_schedule' => 'array',
     ];
 
     /**

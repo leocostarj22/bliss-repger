@@ -4,7 +4,7 @@ import { ArrowLeft, Save, X } from "lucide-react"
 
 const CLEAR_SELECT_VALUE = "__clear__"
 
-import type { Company, Department, Role, User } from "@/types"
+import type { Company, Department, Role, User, WorkSchedule, WorkScheduleDay } from "@/types"
 import { createUser, fetchAdminUser, fetchCompanies, fetchDepartments, fetchRoles, updateUser } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,6 +26,8 @@ type FormState = {
   phone: string
   bio: string
   photo_path: string
+  work_timezone: string
+  work_schedule: WorkSchedule
   permissions_allow_text: string
   permissions_deny_text: string
   is_active: boolean
@@ -42,6 +44,45 @@ const parsePermissions = (value: string) => {
     if (!uniq.includes(p)) uniq.push(p)
   })
   return uniq
+}
+
+const emptyWorkDay = (enabled: boolean): WorkScheduleDay => ({
+  enabled,
+  start: "09:00",
+  end: "18:00",
+  break_start: "13:00",
+  break_end: "14:00",
+})
+
+const defaultWorkSchedule = (): WorkSchedule => ({
+  mon: emptyWorkDay(true),
+  tue: emptyWorkDay(true),
+  wed: emptyWorkDay(true),
+  thu: emptyWorkDay(true),
+  fri: emptyWorkDay(true),
+  sat: emptyWorkDay(false),
+  sun: emptyWorkDay(false),
+})
+
+const normalizeWorkSchedule = (incoming: any): WorkSchedule => {
+  const base = defaultWorkSchedule()
+  if (!incoming || typeof incoming !== "object") return base
+
+  const keys = Object.keys(base) as (keyof WorkSchedule)[]
+  keys.forEach((k) => {
+    const v = (incoming as any)[k]
+    if (!v || typeof v !== "object") return
+
+    base[k] = {
+      enabled: typeof v.enabled === "boolean" ? v.enabled : base[k].enabled,
+      start: typeof v.start === "string" ? v.start : base[k].start,
+      end: typeof v.end === "string" ? v.end : base[k].end,
+      break_start: typeof v.break_start === "string" ? v.break_start : base[k].break_start,
+      break_end: typeof v.break_end === "string" ? v.break_end : base[k].break_end,
+    }
+  })
+
+  return base
 }
 
 export default function UserForm() {
@@ -62,6 +103,15 @@ export default function UserForm() {
   const [replacePhotoOpen, setReplacePhotoOpen] = useState(false)
   const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null)
 
+  const defaultTimezone = useMemo(() => {
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+      return typeof tz === "string" && tz.trim() ? tz : "Europe/Lisbon"
+    } catch {
+      return "Europe/Lisbon"
+    }
+  }, [])
+
   const [form, setForm] = useState<FormState>({
     name: "",
     email: "",
@@ -74,6 +124,8 @@ export default function UserForm() {
     phone: "",
     bio: "",
     photo_path: "",
+    work_timezone: defaultTimezone,
+    work_schedule: defaultWorkSchedule(),
     permissions_allow_text: "",
     permissions_deny_text: "",
     is_active: true,
@@ -178,6 +230,8 @@ export default function UserForm() {
             phone: u.phone ?? "",
             bio: u.bio ?? "",
             photo_path: u.photo_path ?? "",
+            work_timezone: (u.work_timezone ?? "").trim() || defaultTimezone,
+            work_schedule: normalizeWorkSchedule(u.work_schedule),
             permissions_allow_text: Array.isArray(u.permissions_allow) ? u.permissions_allow.join("\n") : "",
             permissions_deny_text: Array.isArray(u.permissions_deny) ? u.permissions_deny.join("\n") : "",
             is_active: Boolean(u.is_active),
@@ -256,6 +310,8 @@ export default function UserForm() {
           phone: form.phone.trim() || null,
           bio: form.bio.trim() || null,
           photo_path: form.photo_path.trim() || null,
+          work_timezone: form.work_timezone.trim() || null,
+          work_schedule: form.work_schedule,
           permissions_allow: parsePermissions(form.permissions_allow_text),
           permissions_deny: parsePermissions(form.permissions_deny_text),
           is_active: form.is_active,
@@ -280,6 +336,8 @@ export default function UserForm() {
           phone: form.phone.trim() || null,
           bio: form.bio.trim() || null,
           photo_path: form.photo_path.trim() || null,
+          work_timezone: form.work_timezone.trim() || null,
+          work_schedule: form.work_schedule,
           permissions_allow: parsePermissions(form.permissions_allow_text),
           permissions_deny: parsePermissions(form.permissions_deny_text),
           is_active: form.is_active,
@@ -545,6 +603,118 @@ export default function UserForm() {
           <div className="space-y-2 lg:col-span-2">
             <label className="text-sm font-medium">Bio</label>
             <Textarea value={form.bio} onChange={(e) => setField("bio", e.target.value)} placeholder="Descrição/observações" />
+          </div>
+
+          <div className="space-y-4 rounded-lg border border-border p-4 lg:col-span-2">
+            <div>
+              <div className="text-sm font-medium">Horário de trabalho</div>
+              <div className="text-xs text-muted-foreground">Não está ligado ao relógio de ponto. Serve como referência/configuração para futuras integrações.</div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Timezone</label>
+                <Input value={form.work_timezone} onChange={(e) => setField("work_timezone", e.target.value)} placeholder="Europe/Lisbon" />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <div className="min-w-[760px] grid grid-cols-[160px_90px_120px_120px_120px_120px] gap-2 items-center text-sm">
+                <div className="text-xs text-muted-foreground">Dia</div>
+                <div className="text-xs text-muted-foreground">Ativo</div>
+                <div className="text-xs text-muted-foreground">Entrada</div>
+                <div className="text-xs text-muted-foreground">Saída</div>
+                <div className="text-xs text-muted-foreground">Início intervalo</div>
+                <div className="text-xs text-muted-foreground">Fim intervalo</div>
+
+                {([
+                  ["mon", "Segunda"],
+                  ["tue", "Terça"],
+                  ["wed", "Quarta"],
+                  ["thu", "Quinta"],
+                  ["fri", "Sexta"],
+                  ["sat", "Sábado"],
+                  ["sun", "Domingo"],
+                ] as const).map(([key, label]) => {
+                  const day = form.work_schedule[key]
+                  return (
+                    <div key={key} className="contents">
+                      <div className="font-medium">{label}</div>
+                      <div>
+                        <Switch
+                          checked={day.enabled}
+                          onCheckedChange={(v) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              work_schedule: {
+                                ...prev.work_schedule,
+                                [key]: { ...prev.work_schedule[key], enabled: Boolean(v) },
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                      <Input
+                        type="time"
+                        value={day.start}
+                        disabled={!day.enabled}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            work_schedule: {
+                              ...prev.work_schedule,
+                              [key]: { ...prev.work_schedule[key], start: e.target.value },
+                            },
+                          }))
+                        }
+                      />
+                      <Input
+                        type="time"
+                        value={day.end}
+                        disabled={!day.enabled}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            work_schedule: {
+                              ...prev.work_schedule,
+                              [key]: { ...prev.work_schedule[key], end: e.target.value },
+                            },
+                          }))
+                        }
+                      />
+                      <Input
+                        type="time"
+                        value={day.break_start}
+                        disabled={!day.enabled}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            work_schedule: {
+                              ...prev.work_schedule,
+                              [key]: { ...prev.work_schedule[key], break_start: e.target.value },
+                            },
+                          }))
+                        }
+                      />
+                      <Input
+                        type="time"
+                        value={day.break_end}
+                        disabled={!day.enabled}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            work_schedule: {
+                              ...prev.work_schedule,
+                              [key]: { ...prev.work_schedule[key], break_end: e.target.value },
+                            },
+                          }))
+                        }
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
 
           <div className="space-y-4 rounded-lg border border-border p-4 lg:col-span-2">

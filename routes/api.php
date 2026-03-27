@@ -5190,6 +5190,8 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 'phone' => $u->phone,
                 'bio' => $u->bio,
                 'photo_path' => $photo,
+                'work_timezone' => Schema::hasColumn('users', 'work_timezone') ? ($u->work_timezone ?? null) : null,
+                'work_schedule' => Schema::hasColumn('users', 'work_schedule') ? ($u->work_schedule ?? null) : null,
                 'is_active' => (bool) $u->is_active,
                 'last_login_at' => $u->last_login_at?->toIso8601String(),
                 'createdAt' => $u->created_at?->toIso8601String(),
@@ -5228,6 +5230,8 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 'phone' => $user->phone,
                 'bio' => $user->bio,
                 'photo_path' => $photo,
+                'work_timezone' => Schema::hasColumn('users', 'work_timezone') ? ($user->work_timezone ?? null) : null,
+                'work_schedule' => Schema::hasColumn('users', 'work_schedule') ? ($user->work_schedule ?? null) : null,
                 'permissions_allow' => is_array($user->permissions_allow) ? array_values($user->permissions_allow) : [],
                 'permissions_deny' => is_array($user->permissions_deny) ? array_values($user->permissions_deny) : [],
                 'is_active' => (bool) $user->is_active,
@@ -5255,12 +5259,21 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             'phone' => ['nullable', 'string', 'max:255'],
             'bio' => ['nullable', 'string'],
             'photo_path' => ['nullable', 'string'],
+            'work_timezone' => ['nullable', 'string', 'max:64'],
+            'work_schedule' => ['nullable', 'array'],
             'permissions_allow' => ['nullable', 'array'],
             'permissions_allow.*' => ['string'],
             'permissions_deny' => ['nullable', 'array'],
             'permissions_deny.*' => ['string'],
             'is_active' => ['required', 'boolean'],
         ]);
+
+        if (! Schema::hasColumn('users', 'work_timezone')) {
+            unset($validated['work_timezone']);
+        }
+        if (! Schema::hasColumn('users', 'work_schedule')) {
+            unset($validated['work_schedule']);
+        }
 
         $validated['permissions_allow'] = collect($validated['permissions_allow'] ?? [])->map(fn ($v) => trim((string) $v))->filter()->values()->all();
         $validated['permissions_deny'] = collect($validated['permissions_deny'] ?? [])->map(fn ($v) => trim((string) $v))->filter()->values()->all();
@@ -5335,6 +5348,8 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 'phone' => $user->phone,
                 'bio' => $user->bio,
                 'photo_path' => $photoOut,
+                'work_timezone' => Schema::hasColumn('users', 'work_timezone') ? ($user->work_timezone ?? null) : null,
+                'work_schedule' => Schema::hasColumn('users', 'work_schedule') ? ($user->work_schedule ?? null) : null,
                 'permissions_allow' => is_array($user->permissions_allow) ? array_values($user->permissions_allow) : [],
                 'permissions_deny' => is_array($user->permissions_deny) ? array_values($user->permissions_deny) : [],
                 'is_active' => (bool) $user->is_active,
@@ -5362,12 +5377,21 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             'phone' => ['nullable', 'string', 'max:255'],
             'bio' => ['nullable', 'string'],
             'photo_path' => ['nullable', 'string'],
+            'work_timezone' => ['nullable', 'string', 'max:64'],
+            'work_schedule' => ['nullable', 'array'],
             'permissions_allow' => ['nullable', 'array'],
             'permissions_allow.*' => ['string'],
             'permissions_deny' => ['nullable', 'array'],
             'permissions_deny.*' => ['string'],
             'is_active' => ['sometimes', 'required', 'boolean'],
         ]);
+
+        if (! Schema::hasColumn('users', 'work_timezone')) {
+            unset($validated['work_timezone']);
+        }
+        if (! Schema::hasColumn('users', 'work_schedule')) {
+            unset($validated['work_schedule']);
+        }
 
         if (array_key_exists('permissions_allow', $validated)) {
             $validated['permissions_allow'] = collect($validated['permissions_allow'] ?? [])->map(fn ($v) => trim((string) $v))->filter()->values()->all();
@@ -5462,6 +5486,8 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 'phone' => $user->phone,
                 'bio' => $user->bio,
                 'photo_path' => $photoOut,
+                'work_timezone' => Schema::hasColumn('users', 'work_timezone') ? ($user->work_timezone ?? null) : null,
+                'work_schedule' => Schema::hasColumn('users', 'work_schedule') ? ($user->work_schedule ?? null) : null,
                 'permissions_allow' => is_array($user->permissions_allow) ? array_values($user->permissions_allow) : [],
                 'permissions_deny' => is_array($user->permissions_deny) ? array_values($user->permissions_deny) : [],
                 'is_active' => (bool) $user->is_active,

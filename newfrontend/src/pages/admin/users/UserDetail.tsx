@@ -73,6 +73,38 @@ export default function UserDetail() {
   const photoSrc = user.photo_path ?? ""
   const isDataPhoto = Boolean(photoSrc) && photoSrc.startsWith("data:")
 
+  const schedule = user.work_schedule ?? null
+  const timezone = (user.work_timezone ?? "").trim() || "—"
+
+  const dayRows = useMemo(() => {
+    if (!schedule) return [] as { label: string; text: string }[]
+
+    const map: [keyof NonNullable<User["work_schedule"]>, string][] = [
+      ["mon", "Segunda"],
+      ["tue", "Terça"],
+      ["wed", "Quarta"],
+      ["thu", "Quinta"],
+      ["fri", "Sexta"],
+      ["sat", "Sábado"],
+      ["sun", "Domingo"],
+    ]
+
+    return map.map(([k, label]) => {
+      const d: any = (schedule as any)[k]
+      const enabled = Boolean(d?.enabled)
+      if (!enabled) return { label, text: "—" }
+
+      const start = typeof d?.start === "string" ? d.start : ""
+      const end = typeof d?.end === "string" ? d.end : ""
+      const bs = typeof d?.break_start === "string" ? d.break_start : ""
+      const be = typeof d?.break_end === "string" ? d.break_end : ""
+
+      const interval = bs && be ? ` (intervalo ${bs}–${be})` : ""
+      const text = start && end ? `${start}–${end}${interval}` : "—"
+      return { label, text }
+    })
+  }, [schedule])
+
   return (
     <div className="space-y-6 animate-slide-up">
       <div className="page-header">
@@ -151,6 +183,29 @@ export default function UserDetail() {
           <div className="lg:col-span-2">
             <div className="text-xs text-muted-foreground">Bio</div>
             <div className="font-medium whitespace-pre-wrap">{user.bio ?? "—"}</div>
+          </div>
+
+          <div className="lg:col-span-2">
+            <div className="text-xs text-muted-foreground">Horário de trabalho</div>
+            {!schedule ? (
+              <div className="font-medium">—</div>
+            ) : (
+              <div className="mt-2 rounded-lg border border-border bg-background/40 p-4">
+                <div className="text-sm">
+                  <div className="text-xs text-muted-foreground">Timezone</div>
+                  <div className="font-medium">{timezone}</div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  {dayRows.map((r) => (
+                    <div key={r.label} className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/30 px-3 py-2">
+                      <div className="font-medium">{r.label}</div>
+                      <div className="text-muted-foreground">{r.text}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="lg:col-span-2">
