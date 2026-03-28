@@ -137,9 +137,9 @@ export const mockNotifications: AppNotification[] = [
 export const mockCompanies: Company[] = [
   {
     id: 'cmp1',
-    name: 'Bliss Repger',
-    slug: 'bliss-repger',
-    email: 'geral@blissrepger.com',
+    name: 'NextERP',
+    slug: 'nexterp',
+    email: 'geral@nexterp.local',
     phone: '+351 210 000 000',
     address: 'Lisboa, Portugal',
     logo: null,
@@ -183,7 +183,7 @@ export const mockDepartments: Department[] = [
     slug: 'suporte',
     description: 'Equipa responsável por tickets e atendimento.',
     color: '#22d3ee',
-    email: 'suporte@blissrepger.com',
+    email: 'suporte@nexterp.local',
     company_id: 'cmp1',
     is_active: true,
     createdAt: d(200),
@@ -195,7 +195,7 @@ export const mockDepartments: Department[] = [
     slug: 'comercial',
     description: 'Vendas e relação com clientes.',
     color: '#a78bfa',
-    email: 'comercial@blissrepger.com',
+    email: 'comercial@nexterp.local',
     company_id: 'cmp1',
     is_active: true,
     createdAt: d(180),
@@ -344,8 +344,8 @@ export const mockSupportTickets: SupportTicket[] = [
 export const mockUsers: User[] = [
   {
     id: 'usr1',
-    name: 'Admin GMCentral',
-    email: 'admin@gmcentral.local',
+    name: 'Admin NextERP',
+    email: 'admin@nexterp.local',
     password: 'secret',
     company_id: 'cmp1',
     department_id: 'dep2',
@@ -362,7 +362,7 @@ export const mockUsers: User[] = [
   {
     id: 'usr2',
     name: 'Gestor Comercial',
-    email: 'manager@gmcentral.local',
+    email: 'manager@nexterp.local',
     password: 'secret',
     company_id: 'cmp1',
     department_id: 'dep2',
@@ -379,7 +379,7 @@ export const mockUsers: User[] = [
   {
     id: 'usr3',
     name: 'Agente Suporte',
-    email: 'agent@gmcentral.local',
+    email: 'agent@nexterp.local',
     password: 'secret',
     company_id: 'cmp1',
     department_id: 'dep1',
@@ -396,7 +396,7 @@ export const mockUsers: User[] = [
   {
     id: 'usr4',
     name: 'Utilizador Inativo',
-    email: 'inactive@gmcentral.local',
+    email: 'inactive@nexterp.local',
     password: 'secret',
     company_id: 'cmp2',
     department_id: 'dep4',
@@ -419,7 +419,7 @@ export const mockInternalMessages: InternalMessage[] = [
     from_user_id: 'usr1',
     to_user_id: 'usr2',
     subject: 'Boas-vindas',
-    body: 'Bem-vindo ao GMCentral. Qualquer coisa, estou por aqui.',
+    body: 'Bem-vindo ao NextERP. Qualquer coisa, estou por aqui.',
     folder: 'sent',
     read_at: null,
     sent_at: d(5),

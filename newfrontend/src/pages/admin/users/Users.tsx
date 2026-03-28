@@ -182,19 +182,23 @@ export default function Users() {
       await deleteUser(u.id)
       setRows((prev) => prev.filter((x) => x.id !== u.id))
       toast({ title: "Sucesso", description: "Utilizador eliminado" })
-    } catch {
-      toast({ title: "Erro", description: "Falha ao eliminar", variant: "destructive" })
+    } catch (e: any) {
+      toast({
+        title: "Erro",
+        description: typeof e?.message === "string" && e.message.trim() ? e.message : "Falha ao eliminar",
+        variant: "destructive",
+      })
     }
   }
 
   return (
     <div className="space-y-6 animate-slide-up">
       <div className="page-header">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex gap-4 justify-between items-start">
           <div>
             <h1 className="page-title">Utilizadores</h1>
             <p className="page-subtitle">Administração → Utilizadores</p>
-            <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+            <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
           </div>
 
           <Button asChild>
@@ -206,9 +210,9 @@ export default function Users() {
         </div>
       </div>
 
-      <div className="glass-card p-4">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
-          <div className="flex items-center gap-2 flex-1">
+      <div className="p-4 glass-card">
+        <div className="flex flex-col gap-3 mb-4 lg:flex-row lg:items-center">
+          <div className="flex flex-1 gap-2 items-center">
             <Search className="w-4 h-4 text-muted-foreground" />
             <Input
               value={search}
@@ -264,15 +268,15 @@ export default function Users() {
           </div>
         </div>
 
-        <div className="w-full overflow-x-auto">
+        <div className="overflow-x-auto w-full">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-muted-foreground border-b border-border">
+              <tr className="text-left border-b text-muted-foreground border-border">
                 <th className="py-3 pr-4">
                   <button
                     type="button"
                     onClick={() => sortBy("name")}
-                    className="inline-flex items-center gap-2 hover:text-foreground transition-colors"
+                    className="inline-flex gap-2 items-center transition-colors hover:text-foreground"
                   >
                     Utilizador
                     <ArrowUpDown className={"w-4 h-4 opacity-60" + (sortKey === "name" ? " opacity-100" : "")} />
@@ -282,7 +286,7 @@ export default function Users() {
                   <button
                     type="button"
                     onClick={() => sortBy("company")}
-                    className="inline-flex items-center gap-2 hover:text-foreground transition-colors"
+                    className="inline-flex gap-2 items-center transition-colors hover:text-foreground"
                   >
                     Empresa
                     <ArrowUpDown className={"w-4 h-4 opacity-60" + (sortKey === "company" ? " opacity-100" : "")} />
@@ -292,7 +296,7 @@ export default function Users() {
                   <button
                     type="button"
                     onClick={() => sortBy("department")}
-                    className="inline-flex items-center gap-2 hover:text-foreground transition-colors"
+                    className="inline-flex gap-2 items-center transition-colors hover:text-foreground"
                   >
                     Departamento
                     <ArrowUpDown className={"w-4 h-4 opacity-60" + (sortKey === "department" ? " opacity-100" : "")} />
@@ -302,7 +306,7 @@ export default function Users() {
                   <button
                     type="button"
                     onClick={() => sortBy("role")}
-                    className="inline-flex items-center gap-2 hover:text-foreground transition-colors"
+                    className="inline-flex gap-2 items-center transition-colors hover:text-foreground"
                   >
                     Role
                     <ArrowUpDown className={"w-4 h-4 opacity-60" + (sortKey === "role" ? " opacity-100" : "")} />
@@ -312,7 +316,7 @@ export default function Users() {
                   <button
                     type="button"
                     onClick={() => sortBy("active")}
-                    className="inline-flex items-center gap-2 hover:text-foreground transition-colors"
+                    className="inline-flex gap-2 items-center transition-colors hover:text-foreground"
                   >
                     Ativo
                     <ArrowUpDown className={"w-4 h-4 opacity-60" + (sortKey === "active" ? " opacity-100" : "")} />
@@ -322,7 +326,7 @@ export default function Users() {
                   <button
                     type="button"
                     onClick={() => sortBy("online")}
-                    className="inline-flex items-center gap-2 hover:text-foreground transition-colors"
+                    className="inline-flex gap-2 items-center transition-colors hover:text-foreground"
                   >
                     Online
                     <ArrowUpDown className={"w-4 h-4 opacity-60" + (sortKey === "online" ? " opacity-100" : "")} />
@@ -337,28 +341,28 @@ export default function Users() {
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i} className="border-b border-border/60">
                     <td className="py-4 pr-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex gap-2 items-center">
                         <UserIcon className="w-4 h-4 text-muted-foreground" />
-                        <Skeleton className="h-4 w-56" />
+                        <Skeleton className="w-56 h-4" />
                       </div>
                     </td>
                     <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-44" />
+                      <Skeleton className="w-44 h-4" />
                     </td>
                     <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-44" />
+                      <Skeleton className="w-44 h-4" />
                     </td>
                     <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="w-20 h-4" />
                     </td>
                     <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-16" />
+                      <Skeleton className="w-16 h-4" />
                     </td>
                     <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-16" />
+                      <Skeleton className="w-16 h-4" />
                     </td>
                     <td className="py-4 text-right">
-                      <Skeleton className="h-9 w-28 ml-auto" />
+                      <Skeleton className="ml-auto w-28 h-9" />
                     </td>
                   </tr>
                 ))
@@ -370,18 +374,18 @@ export default function Users() {
                 </tr>
               ) : (
                 sortedRows.map((u) => (
-                  <tr key={u.id} className="border-b border-border/60 hover:bg-secondary/30 transition-colors">
+                  <tr key={u.id} className="border-b transition-colors border-border/60 hover:bg-secondary/30">
                     <td className="py-4 pr-4">
                       <div className="min-w-0">
                         {canQuickActions ? (
-                          <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex gap-2 items-center min-w-0">
                             <div className="font-semibold truncate">{u.name}</div>
-                            <div className="inline-flex items-center gap-1 shrink-0">
+                            <div className="inline-flex gap-1 items-center shrink-0">
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7"
+                                className="w-7 h-7"
                                 asChild
                               >
                                 <Link
@@ -397,7 +401,7 @@ export default function Users() {
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7"
+                                className="w-7 h-7"
                                 asChild
                               >
                                 <Link
@@ -413,10 +417,10 @@ export default function Users() {
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7"
+                                className="w-7 h-7"
                                 onClick={() => {
                                   window.dispatchEvent(
-                                    new CustomEvent("gmcentral:chat:open", {
+                                    new CustomEvent("nexterp:chat:open", {
                                       detail: {
                                         userId: String(u.id),
                                         name: u.name,
@@ -435,7 +439,7 @@ export default function Users() {
                         ) : (
                           <div className="font-semibold truncate">{u.name}</div>
                         )}
-                        <div className="text-xs text-muted-foreground truncate">{u.email}</div>
+                        <div className="text-xs truncate text-muted-foreground">{u.email}</div>
                       </div>
                     </td>
                     <td className="py-4 pr-4">
@@ -488,7 +492,7 @@ export default function Users() {
                       })()}
                     </td>
                     <td className="py-4 text-right">
-                      <div className="inline-flex items-center gap-2">
+                      <div className="inline-flex gap-2 items-center">
                         <Button variant="outline" size="sm" asChild>
                           <Link to={`/admin/users/${u.id}`}>
                             <Eye />
@@ -523,7 +527,7 @@ export default function Users() {
             setPendingDelete(null)
           }}
         >
-          <div className="glass-card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="p-6 w-full max-w-sm glass-card" onClick={(e) => e.stopPropagation()}>
             <div className="space-y-2">
               <div className="text-lg font-semibold">Eliminar utilizador?</div>
               <div className="text-sm text-muted-foreground">
@@ -531,7 +535,7 @@ export default function Users() {
               </div>
             </div>
 
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="flex gap-2 justify-end mt-5">
               <Button
                 type="button"
                 variant="outline"

@@ -443,6 +443,19 @@ export interface InternalMessage {
   to_user_id: string;
   subject: string;
   body: string;
+  attachments?: Array<{
+    id: string;
+    url: string;
+    mime_type?: string;
+    filename?: string;
+    original_filename?: string;
+    file_size?: number;
+  }>;
+  reactions?: Array<{
+    emoji: string;
+    count: number;
+    reacted_by_me?: boolean;
+  }>;
   folder?: CommunicationMessageFolder | null;
   read_at?: string | null;
   sent_at?: string | null;

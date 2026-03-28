@@ -172,15 +172,15 @@
 
   /* Task Lists - Override prose defaults */
   .prose ul[data-type="taskList"] {
-    @apply list-none pl-0;
+    @apply pl-0 list-none;
   }
 
   .prose ul[data-type="taskList"] li {
-    @apply flex items-start pl-0 mt-2 gap-2; 
+    @apply flex gap-2 items-start pl-0 mt-2; 
   }
 
   .prose ul[data-type="taskList"] li > label {
-    @apply select-none mt-1 flex-none;
+    @apply flex-none mt-1 select-none;
   }
 
   .prose ul[data-type="taskList"] li > div {
@@ -197,37 +197,60 @@
   }
   
   .ProseMirror .column-resize-handle {
-    @apply bg-primary w-1 absolute top-0 bottom-0 -right-0.5 pointer-events-none z-20;
+    @apply absolute top-0 bottom-0 -right-0.5 z-20 w-1 pointer-events-none bg-primary;
   }
 
   /* Image Selection */
   .ProseMirror img.ProseMirror-selectednode {
-    @apply ring-2 ring-primary ring-offset-2;
+    @apply ring-2 ring-offset-2 ring-primary;
   }
   
   /* Code Blocks - Enhance prose defaults if needed */
   .prose pre {
-    @apply bg-muted text-foreground border border-border;
+    @apply border bg-muted text-foreground border-border;
   }
   
   .prose code {
-    @apply text-primary bg-muted/50 px-1 py-0.5 rounded font-normal before:content-none after:content-none;
+    @apply px-1 py-0.5 font-normal rounded text-primary bg-muted/50 before:content-none after:content-none;
   }
 }
 
 @layer base {
   * {
     @apply border-border;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
   }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.35);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.55);
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply antialiased bg-background text-foreground;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
 
 @layer components {
   .glass-card {
-    @apply bg-card/80 backdrop-blur-sm border border-border/50 rounded-lg;
+    @apply rounded-lg border backdrop-blur-sm bg-card/80 border-border/50;
     box-shadow: var(--shadow-glow);
   }
 
@@ -256,14 +279,14 @@
     background: transparent;
   }
   .stat-card {
-    @apply glass-card p-5 transition-all duration-300;
+    @apply p-5 transition-all duration-300 glass-card;
   }
   .stat-card:hover {
     @apply border-primary/30;
     box-shadow: 0 0 30px hsl(185 65% 48% / 0.12);
   }
   .nav-item {
-    @apply relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground dark:text-slate-200/80 transition-all duration-200;
+    @apply flex relative gap-3 items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 text-muted-foreground dark:text-slate-200/80;
   }
   .nav-item:hover {
     @apply bg-secondary text-foreground;
@@ -284,7 +307,7 @@
     height: 0;
   }
   .nav-item.active {
-    @apply bg-primary/10 text-primary border border-primary/20;
+    @apply border bg-primary/10 text-primary border-primary/20;
     box-shadow: 0 0 24px hsl(var(--ring) / 0.18);
   }
   .nav-item.active::before {
@@ -304,7 +327,7 @@
     @apply text-2xl font-bold tracking-tight;
   }
   .page-subtitle {
-    @apply text-muted-foreground text-sm mt-1;
+    @apply mt-1 text-sm text-muted-foreground;
   }
   .badge-draft {
     @apply bg-muted text-muted-foreground;

@@ -10,17 +10,25 @@ class EditPost extends EditRecord
 {
     protected static string $resource = PostResource::class;
 
+    protected function authorizeAccess(): void
+    {
+        parent::authorizeAccess();
+
+        abort_unless(PostResource::canEdit($this->record), 403);
+    }
+
     protected function getHeaderActions(): array
     {
         return [
             Actions\ViewAction::make(),
-            Actions\DeleteAction::make(),
-            
+            Actions\DeleteAction::make()
+                ->visible(fn (): bool => PostResource::canDelete($this->record)),
+
             Actions\Action::make('publish')
                 ->label('Publicar')
                 ->icon('heroicon-o-paper-airplane')
                 ->color('success')
-                ->visible(fn (): bool => $this->record->status === 'draft')
+                ->visible(fn (): bool => $this->record->status === 'draft' && PostResource::canEdit($this->record))
                 ->action(function () {
                     $this->record->update([
                         'status' => 'published',

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as HotToaster } from "react-hot-toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,7 +27,61 @@ import Templates from "@/pages/Templates";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const ensureHeadBranding = async () => {
+  if (typeof document === "undefined") return;
+
+  const fallbackTitle = "NextCRM";
+  const fallbackIcon = "/images/nextfavicon.png";
+
+  let title = fallbackTitle;
+  let iconUrl = fallbackIcon;
+
+  try {
+    const response = await fetch("/api/v1/branding", {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      credentials: "include",
+    });
+
+    if (response.ok) {
+      const json = await response.json();
+      const crm = json?.data?.crm;
+      const nextTitle = String(crm?.title ?? "").trim();
+      const nextIcon = String(crm?.favicon_url ?? "").trim();
+
+      if (nextTitle) title = nextTitle;
+      if (nextIcon) iconUrl = nextIcon;
+    }
+  } catch {
+    // ignore
+  }
+
+  document.title = title;
+
+  const href = `${iconUrl}${iconUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
+  const links = Array.from(document.querySelectorAll<HTMLLinkElement>("link[rel~='icon']"));
+
+  if (links.length === 0) {
+    const link = document.createElement("link");
+    link.rel = "icon";
+    link.type = "image/png";
+    link.href = href;
+    document.head.appendChild(link);
+    return;
+  }
+
+  for (const link of links) {
+    link.href = href;
+    if (!link.type) link.type = "image/png";
+  }
+};
+
+const App = () => {
+  useEffect(() => {
+    ensureHeadBranding();
+  }, []);
+
+  return (
   <ThemeProvider>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -65,6 +120,7 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
   </ThemeProvider>
-);
+  );
+};
 
 export default App;

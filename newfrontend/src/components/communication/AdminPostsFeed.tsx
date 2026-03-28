@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { ChangeEvent } from "react"
-import { Heart, Loader2, MoreHorizontal, Pin, Trash2, Link as LinkIcon, Image as ImageIcon, Paperclip, Upload, X } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { Heart, Loader2, MoreHorizontal, Pin, Trash2, Link as LinkIcon, Image as ImageIcon, Paperclip, Upload, X, Pencil } from "lucide-react"
 
 import type { AdminPost } from "@/types"
-import { createAdminPost, deleteAdminPost, fetchAdminPosts, toggleAdminPostLike, toggleAdminPostPin } from "@/services/api"
+import { createAdminPost, deleteAdminPost, fetchAdminPosts, toggleAdminPostLike, toggleAdminPostPin, updateAdminPost } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
@@ -106,6 +107,7 @@ const youtubeEmbedUrl = (raw?: string | null) => {
 
 export default function AdminPostsFeed(props: Props) {
   const { toast } = useToast()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [posting, setPosting] = useState(false)
 
@@ -120,6 +122,19 @@ export default function AdminPostsFeed(props: Props) {
   const [imageUrlDraft, setImageUrlDraft] = useState("")
   const [youtubeUrlDraft, setYoutubeUrlDraft] = useState("")
   const [attachmentUrlsDraft, setAttachmentUrlsDraft] = useState<string[]>([])
+
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editingPostId, setEditingPostId] = useState<string | null>(null)
+  const [savingEdit, setSavingEdit] = useState(false)
+
+  const [editTitleDraft, setEditTitleDraft] = useState("")
+  const [editContentDraft, setEditContentDraft] = useState("")
+  const [editTypeDraft, setEditTypeDraft] = useState<"announcement" | "text" | "image" | "video">("announcement")
+  const [editPriorityDraft, setEditPriorityDraft] = useState<"normal" | "low" | "high" | "urgent">("normal")
+  const [editImageUrlDraft, setEditImageUrlDraft] = useState("")
+  const [editYoutubeUrlDraft, setEditYoutubeUrlDraft] = useState("")
+  const [editAttachmentUrlsDraft, setEditAttachmentUrlsDraft] = useState<string[]>([])
+  const [editNewAttachmentUrlDraft, setEditNewAttachmentUrlDraft] = useState("")
 
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false)
   const [mediaItems, setMediaItems] = useState<{ filename: string; url: string }[]>([])
@@ -138,7 +153,7 @@ export default function AdminPostsFeed(props: Props) {
   const loadMedia = async () => {
     setMediaLoading(true)
     try {
-      const resp = await fetch("/api/v1/email/media/list", {
+      const resp = await fetch("/api/v1/communication/posts/images/list", {
         headers: { Accept: "application/json" },
         credentials: "include",
       })
@@ -359,6 +374,52 @@ export default function AdminPostsFeed(props: Props) {
     }
   }
 
+  const onOpenEdit = (p: AdminPost) => {
+    setEditingPostId(p.id)
+    setEditTitleDraft((p.title ?? "").toString())
+    setEditContentDraft((p.content ?? "").toString())
+    setEditTypeDraft((p.type as any) || "announcement")
+    setEditPriorityDraft((p.priority as any) || "normal")
+    setEditImageUrlDraft((p.featured_image_url ?? "").toString())
+    setEditYoutubeUrlDraft((p.youtube_video_url ?? "").toString())
+    setEditAttachmentUrlsDraft(Array.isArray(p.attachment_urls) ? p.attachment_urls.map((u) => String(u)) : [])
+    setEditNewAttachmentUrlDraft("")
+    setEditDialogOpen(true)
+  }
+
+  const onSaveEdit = async () => {
+    if (!editingPostId) return
+
+    const content = editContentDraft
+    if (isRichTextEmpty(content)) {
+      toast({ title: "Validação", description: "Escreve o conteúdo do post", variant: "destructive" })
+      return
+    }
+
+    const payload = {
+      title: editTitleDraft.trim() ? editTitleDraft.trim() : null,
+      content,
+      type: editTypeDraft,
+      priority: editPriorityDraft,
+      featured_image_url: editImageUrlDraft.trim() ? editImageUrlDraft.trim() : null,
+      youtube_video_url: editYoutubeUrlDraft.trim() ? editYoutubeUrlDraft.trim() : null,
+      attachment_urls: editAttachmentUrlsDraft.length ? editAttachmentUrlsDraft : null,
+    }
+
+    setSavingEdit(true)
+    try {
+      const resp = await updateAdminPost(editingPostId, payload)
+      setPosts((prev) => prev.map((p) => (p.id === editingPostId ? resp.data : p)))
+      setEditDialogOpen(false)
+      toast({ title: "Sucesso", description: "Post atualizado" })
+    } catch (e: any) {
+      const msg = e?.message ? String(e.message) : "Não foi possível atualizar"
+      toast({ title: "Erro", description: msg, variant: "destructive" })
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
   const onCopyLink = async (postId: string) => {
     const url = `${window.location.origin}${window.location.pathname}#post-${postId}`
     try {
@@ -400,24 +461,26 @@ export default function AdminPostsFeed(props: Props) {
             <DialogDescription>Escolhe uma imagem já enviada para o servidor.</DialogDescription>
           </DialogHeader>
 
+          
+
           {mediaLoading ? (
             <div className="text-sm text-muted-foreground">A carregar imagens…</div>
           ) : !mediaItems.length ? (
             <div className="text-sm text-muted-foreground">Sem imagens disponíveis.</div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-80 overflow-auto">
+            <div className="grid overflow-auto grid-cols-2 gap-3 max-h-80 md:grid-cols-3">
               {mediaItems.map((m) => (
                 <button
                   key={m.filename}
                   type="button"
-                  className="flex flex-col items-stretch text-left rounded-md border border-border/60 bg-background/40 hover:bg-secondary/40 overflow-hidden"
+                  className="flex overflow-hidden flex-col items-stretch text-left rounded-md border border-border/60 bg-background/40 hover:bg-secondary/40"
                   onClick={() => {
                     onPickMedia(m.url)
                     setMediaDialogOpen(false)
                   }}
                 >
-                  <div className="aspect-video overflow-hidden bg-muted">
-                    <img src={m.url} alt={m.filename} className="w-full h-full object-cover" loading="lazy" />
+                  <div className="overflow-hidden aspect-video bg-muted">
+                    <img src={m.url} alt={m.filename} className="object-cover w-full h-full" loading="lazy" />
                   </div>
                   <div className="px-2 py-1 text-[11px] truncate flex items-center gap-1">
                     <Paperclip className="w-3 h-3" />
@@ -432,7 +495,121 @@ export default function AdminPostsFeed(props: Props) {
         {/* Trigger é o botão de imagem ao lado dos anexos */}
       </Dialog>
 
-      <div className="flex items-start justify-between gap-4 mb-5">
+      <Dialog
+        open={editDialogOpen}
+        onOpenChange={(open) => {
+          setEditDialogOpen(open)
+          if (!open) setEditingPostId(null)
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar post</DialogTitle>
+            <DialogDescription>Atualiza o conteúdo e a mídia do post.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <Input value={editTitleDraft} onChange={(e) => setEditTitleDraft(e.target.value)} placeholder="Título (opcional)" />
+            <RichTextEditor value={editContentDraft} onChange={setEditContentDraft} className="min-h-[160px]" />
+
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+              <Input value={editImageUrlDraft} onChange={(e) => setEditImageUrlDraft(e.target.value)} placeholder="Capa (URL)" />
+              <Input value={editYoutubeUrlDraft} onChange={(e) => setEditYoutubeUrlDraft(e.target.value)} placeholder="YouTube (URL)" />
+            </div>
+
+            <div className="flex flex-wrap gap-2 items-center">
+              <Button
+                type="button"
+                size="sm"
+                variant={editTypeDraft === "announcement" ? "secondary" : "outline"}
+                onClick={() => setEditTypeDraft("announcement")}
+              >
+                Comunicado
+              </Button>
+              <Button type="button" size="sm" variant={editTypeDraft === "text" ? "secondary" : "outline"} onClick={() => setEditTypeDraft("text")}>
+                Texto
+              </Button>
+              <Button type="button" size="sm" variant={editTypeDraft === "image" ? "secondary" : "outline"} onClick={() => setEditTypeDraft("image")}>
+                Imagem
+              </Button>
+              <Button type="button" size="sm" variant={editTypeDraft === "video" ? "secondary" : "outline"} onClick={() => setEditTypeDraft("video")}>
+                Vídeo
+              </Button>
+
+              <Button type="button" size="sm" variant={editPriorityDraft === "normal" ? "secondary" : "outline"} onClick={() => setEditPriorityDraft("normal")}>
+                Normal
+              </Button>
+              <Button type="button" size="sm" variant={editPriorityDraft === "high" ? "secondary" : "outline"} onClick={() => setEditPriorityDraft("high")}>
+                Alta
+              </Button>
+              <Button type="button" size="sm" variant={editPriorityDraft === "urgent" ? "destructive" : "outline"} onClick={() => setEditPriorityDraft("urgent")}>
+                Urgente
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-sm text-muted-foreground">Anexos</div>
+
+              <div className="flex gap-2 items-center">
+                <Input
+                  value={editNewAttachmentUrlDraft}
+                  onChange={(e) => setEditNewAttachmentUrlDraft(e.target.value)}
+                  placeholder="Adicionar anexo (URL)"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const u = editNewAttachmentUrlDraft.trim()
+                    if (!u) return
+                    setEditAttachmentUrlsDraft((prev) => Array.from(new Set([...prev, u])))
+                    setEditNewAttachmentUrlDraft("")
+                  }}
+                >
+                  Adicionar
+                </Button>
+              </div>
+
+              {!editAttachmentUrlsDraft.length ? (
+                <div className="text-xs text-muted-foreground">Sem anexos.</div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {editAttachmentUrlsDraft.map((url) => (
+                    <div
+                      key={url}
+                      className="flex gap-2 items-center px-2 py-1 text-xs rounded-md border border-border/60 bg-background/40"
+                    >
+                      <a href={url} target="_blank" rel="noreferrer" className="hover:underline max-w-[320px] truncate">
+                        {url.split("/").pop()}
+                      </a>
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-foreground"
+                        onClick={() => setEditAttachmentUrlsDraft((prev) => prev.filter((u) => u !== url))}
+                        aria-label="Remover anexo"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)} disabled={savingEdit}>
+                Cancelar
+              </Button>
+              <Button type="button" onClick={onSaveEdit} disabled={savingEdit}>
+                {savingEdit ? <Loader2 className="mr-2 w-4 h-4 animate-spin" /> : null}
+                Guardar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <div className="flex gap-4 justify-between items-start mb-5">
         <div>
           <h3 className="text-base font-semibold">{title}</h3>
           <p className="text-xs text-muted-foreground">{subtitle}</p>
@@ -442,7 +619,7 @@ export default function AdminPostsFeed(props: Props) {
         </Button>
       </div>
 
-      <div className="space-y-3 mb-6">
+      <div className="mb-6 space-y-3">
         <Input value={titleDraft} onChange={(e) => setTitleDraft(e.target.value)} placeholder="Título (opcional)" />
         <RichTextEditor
           value={contentDraft}
@@ -451,12 +628,12 @@ export default function AdminPostsFeed(props: Props) {
           className="min-h-[160px]"
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          <div className="flex items-center gap-2">
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+          <div className="flex gap-2 items-center">
             <Input
               value={imageUrlDraft}
               onChange={(e) => setImageUrlDraft(e.target.value)}
-              placeholder="Imagem (URL)"
+              placeholder="Capa (URL)"
               className="flex-1"
             />
             <input
@@ -483,10 +660,35 @@ export default function AdminPostsFeed(props: Props) {
           <Input value={youtubeUrlDraft} onChange={(e) => setYoutubeUrlDraft(e.target.value)} placeholder="YouTube (URL)" />
         </div>
 
+        {imageUrlDraft.trim() ? (
+          <div className="overflow-hidden rounded-md border border-border/60 bg-background/40">
+            <div className="flex gap-2 justify-between items-center px-3 py-2">
+              <div className="text-xs truncate text-muted-foreground">Capa</div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setImageUrlDraft("")}
+              >
+                Remover
+              </Button>
+            </div>
+            <div className="aspect-video bg-muted">
+              <img
+                src={imageUrlDraft}
+                alt="Capa"
+                className="object-cover w-full h-full"
+                loading="lazy"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+          </div>
+        ) : null}
+
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex gap-2 justify-between items-center">
             <div className="text-sm text-muted-foreground">Anexos</div>
-            <div className="flex items-center gap-2">
+            <div className="flex gap-2 items-center">
               <input
                 ref={attachmentUploadInputRef}
                 type="file"
@@ -524,7 +726,7 @@ export default function AdminPostsFeed(props: Props) {
               {attachmentUrlsDraft.map((url) => (
                 <div
                   key={url}
-                  className="flex items-center gap-2 rounded-md border border-border/60 bg-background/40 px-2 py-1 text-xs"
+                  className="flex gap-2 items-center px-2 py-1 text-xs rounded-md border border-border/60 bg-background/40"
                 >
                   <a href={url} target="_blank" rel="noreferrer" className="hover:underline max-w-[320px] truncate">
                     {url.split("/").pop()}
@@ -545,8 +747,8 @@ export default function AdminPostsFeed(props: Props) {
 
 
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap gap-2 justify-between items-center">
+          <div className="flex flex-wrap gap-2 items-center">
             <Button
               type="button"
               size="sm"
@@ -607,7 +809,7 @@ export default function AdminPostsFeed(props: Props) {
           </div>
 
           <Button onClick={onCreate} disabled={posting || loading}>
-            {posting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+            {posting ? <Loader2 className="mr-2 w-4 h-4 animate-spin" /> : null}
             Publicar
           </Button>
         </div>
@@ -630,17 +832,17 @@ export default function AdminPostsFeed(props: Props) {
             const tooLong = text.length > 420
 
             return (
-              <div key={p.id} id={`post-${p.id}`} className="rounded-lg border border-border/60 bg-background/40 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0">
+              <div key={p.id} id={`post-${p.id}`} className="p-4 rounded-lg border border-border/60 bg-background/40">
+                <div className="flex gap-3 justify-between items-start">
+                  <div className="flex gap-3 items-start min-w-0">
                     <Avatar className="w-9 h-9 border border-border">
                       <AvatarImage src={resolvePhotoUrl(p.author?.photo_path ?? null) ?? undefined} alt={p.author?.name ?? undefined} />
-                      <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
+                      <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
                         {getInitials(p.author?.name)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex gap-2 items-center min-w-0">
                         <div className="text-sm font-medium truncate">{p.author?.name ?? "Sistema"}</div>
                         {p.is_pinned ? <Badge variant="secondary">Fixado</Badge> : null}
                         {priorityBadge(p)}
@@ -661,18 +863,24 @@ export default function AdminPostsFeed(props: Props) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => onCopyLink(p.id)}>
-                        <LinkIcon className="w-4 h-4 mr-2" />
+                        <LinkIcon className="mr-2 w-4 h-4" />
                         Copiar link
                       </DropdownMenuItem>
                       {p.can_pin ? (
                         <DropdownMenuItem onClick={() => onTogglePin(p.id)}>
-                          <Pin className="w-4 h-4 mr-2" />
+                          <Pin className="mr-2 w-4 h-4" />
                           {p.is_pinned ? "Desafixar" : "Fixar"}
                         </DropdownMenuItem>
                       ) : null}
                       {p.can_manage ? (
+                        <DropdownMenuItem onClick={() => navigate(`/communication/posts/${encodeURIComponent(p.id)}/edit`)}>
+                          <Pencil className="mr-2 w-4 h-4" />
+                          Editar
+                        </DropdownMenuItem>
+                      ) : null}
+                      {p.can_manage ? (
                         <DropdownMenuItem onClick={() => onDelete(p.id)} className="text-destructive">
-                          <Trash2 className="w-4 h-4 mr-2" />
+                          <Trash2 className="mr-2 w-4 h-4" />
                           Apagar
                         </DropdownMenuItem>
                       ) : null}
@@ -699,7 +907,7 @@ export default function AdminPostsFeed(props: Props) {
                 ) : null}
 
                 {p.featured_image_url ? (
-                  <div className="mt-4 overflow-hidden rounded-md border border-border/60">
+                  <div className="overflow-hidden mt-4 rounded-md border border-border/60">
                     <img
                       src={p.featured_image_url}
                       alt={p.title ?? "Imagem"}
@@ -711,7 +919,7 @@ export default function AdminPostsFeed(props: Props) {
                 ) : null}
 
                 {embed ? (
-                  <div className="mt-4 overflow-hidden rounded-md border border-border/60 aspect-video">
+                  <div className="overflow-hidden mt-4 rounded-md border border-border/60 aspect-video">
                     <iframe
                       src={embed}
                       title={p.title ?? "YouTube"}
@@ -724,14 +932,14 @@ export default function AdminPostsFeed(props: Props) {
                 ) : null}
 
                 {Array.isArray(p.attachment_urls) && p.attachment_urls.length ? (
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 mt-4">
                     {p.attachment_urls.map((u) => (
                       <a
                         key={u}
                         href={u}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs px-2 py-1 rounded-md border border-border/60 bg-background/50 hover:bg-secondary/50"
+                        className="px-2 py-1 text-xs rounded-md border border-border/60 bg-background/50 hover:bg-secondary/50"
                       >
                         {u}
                       </a>
@@ -739,7 +947,7 @@ export default function AdminPostsFeed(props: Props) {
                   </div>
                 ) : null}
 
-                <div className="mt-4 flex items-center gap-2">
+                <div className="flex gap-2 items-center mt-4">
                   <Button
                     variant="outline"
                     size="sm"

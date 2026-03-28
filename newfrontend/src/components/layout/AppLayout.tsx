@@ -12,11 +12,11 @@ export function AppLayout() {
   useEffect(() => {
     const onOpen = () => setMobileOpen(true);
     const onClose = () => setMobileOpen(false);
-    window.addEventListener('gmcentral:sidebar:open', onOpen);
-    window.addEventListener('gmcentral:sidebar:close', onClose);
+    window.addEventListener('nexterp:sidebar:open', onOpen);
+    window.addEventListener('nexterp:sidebar:close', onClose);
     return () => {
-      window.removeEventListener('gmcentral:sidebar:open', onOpen);
-      window.removeEventListener('gmcentral:sidebar:close', onClose);
+      window.removeEventListener('nexterp:sidebar:open', onOpen);
+      window.removeEventListener('nexterp:sidebar:close', onClose);
     };
   }, []);
 
@@ -26,13 +26,13 @@ export function AppLayout() {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="flex w-full min-h-screen bg-background">
       <div className="hidden md:block">
         <AppSidebar />
       </div>
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex flex-col flex-1 min-w-0">
         <Topbar />
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="overflow-auto flex-1 p-6">
           <Outlet />
         </main>
       </div>

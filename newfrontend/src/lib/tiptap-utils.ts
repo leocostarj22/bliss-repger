@@ -406,7 +406,7 @@ export const handleImageUpload = async (
 
     const startUpload = (overwrite: boolean) => {
       const xhr = new XMLHttpRequest()
-      const url = `/api/v1/email/media/upload${overwrite ? '?overwrite=1' : ''}`
+      const url = `/api/v1/communication/posts/images/upload${overwrite ? '?overwrite=1' : ''}`
       xhr.open("POST", url)
       
       if (csrfToken) {
@@ -463,7 +463,7 @@ export const handleImageUpload = async (
     }
 
     // Pré-verificar existência pelo nome sanitizado
-    fetch('/api/v1/email/media/list', { headers: { 'Accept': 'application/json' }, credentials: 'include' })
+    fetch('/api/v1/communication/posts/images/list', { headers: { 'Accept': 'application/json' }, credentials: 'include' })
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(json => {
         const items = Array.isArray(json?.data) ? json.data : []

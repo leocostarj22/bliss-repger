@@ -52,7 +52,7 @@ type SearchSuggestion = {
   icon?: any;
 };
 
-const TOPBAR_RECENT_SEARCH_KEY = 'gmcentral:topbar:recent_search';
+const TOPBAR_RECENT_SEARCH_KEY = 'nexterp:topbar:recent_search';
 
 const normalizeHay = (v: string) =>
   v
@@ -119,7 +119,7 @@ export function Topbar() {
 
     const read = () => {
       try {
-        const raw = window.localStorage.getItem('bliss:module-statuses');
+        const raw = window.localStorage.getItem('nexterp:module-statuses');
         if (!raw) {
           setModuleStatuses({});
           return;
@@ -134,8 +134,8 @@ export function Topbar() {
     const onUpdated = () => read();
 
     read();
-    window.addEventListener('bliss:modules:updated', onUpdated);
-    return () => window.removeEventListener('bliss:modules:updated', onUpdated);
+    window.addEventListener('nexterp:modules:updated', onUpdated);
+    return () => window.removeEventListener('nexterp:modules:updated', onUpdated);
   }, []);
 
   useEffect(() => {
@@ -428,15 +428,15 @@ export function Topbar() {
   };
 
   return (
-    <header className="h-14 border-b border-border bg-card/60 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-20">
+    <header className="flex sticky top-0 z-20 justify-between items-center px-6 h-14 border-b backdrop-blur-sm border-border bg-card/60">
       {/* Left: mobile menu + search */}
-      <div className="flex items-center gap-3 w-full max-w-md">
+      <div className="flex gap-3 items-center w-full max-w-md">
         <button
           type="button"
-          className="md:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          className="p-2 rounded-md transition-colors md:hidden text-muted-foreground hover:text-foreground hover:bg-secondary"
           aria-label="Abrir menu"
           title="Menu"
-          onClick={() => window.dispatchEvent(new Event('gmcentral:sidebar:open'))}
+          onClick={() => window.dispatchEvent(new Event('nexterp:sidebar:open'))}
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -446,7 +446,7 @@ export function Topbar() {
             ref={searchInputRef}
             type="search"
             placeholder="Pesquisar..."
-            className="w-full pl-9 bg-secondary/50 border-transparent focus:bg-background focus:border-input transition-all"
+            className="pl-9 w-full border-transparent transition-all bg-secondary/50 focus:bg-background focus:border-input"
             value={searchQuery}
             onFocus={() => setSearchOpen(true)}
             onChange={(e) => {
@@ -494,8 +494,8 @@ export function Topbar() {
           />
 
           {searchOpen && (q || recentSearches.length > 0) ? (
-            <div className="absolute left-0 right-0 top-full mt-2 z-50 rounded-lg border border-border bg-popover shadow-xl overflow-hidden">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-border/60">
+            <div className="overflow-hidden absolute right-0 left-0 top-full z-50 mt-2 rounded-lg border shadow-xl border-border bg-popover">
+              <div className="flex justify-between items-center px-3 py-2 border-b border-border/60">
                 <div className="text-xs font-semibold text-muted-foreground">
                   {q ? 'Resultados' : 'Recentes'}
                 </div>
@@ -512,7 +512,7 @@ export function Topbar() {
 
               <div className="max-h-[60vh] overflow-y-auto p-1">
                 {visibleSuggestions.length === 0 ? (
-                  <div className="px-3 py-6 text-sm text-muted-foreground text-center">Sem resultados</div>
+                  <div className="px-3 py-6 text-sm text-center text-muted-foreground">Sem resultados</div>
                 ) : (
                   visibleSuggestions.map((it, idx) => {
                     const active = idx === searchSelectedIndex;
@@ -526,7 +526,7 @@ export function Topbar() {
                         onMouseEnter={() => setSearchSelectedIndex(idx)}
                         onClick={() => goToSuggestion(it)}
                         className={cn(
-                          'w-full flex items-center gap-2 rounded-md px-2 py-2 text-sm text-left transition-colors',
+                          'flex gap-2 items-center px-2 py-2 w-full text-sm text-left rounded-md transition-colors',
                           active
                             ? 'bg-secondary text-foreground'
                             : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
@@ -550,10 +550,10 @@ export function Topbar() {
       </div>
 
       {/* Right: weather, notifications & avatar */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+      <div className="flex gap-3 items-center">
+        <div className="flex gap-2 items-center text-sm transition-colors text-muted-foreground hover:text-foreground">
           {weather.loading ? (
-            <div className="w-4 h-4 animate-pulse bg-muted rounded" />
+            <div className="w-4 h-4 rounded animate-pulse bg-muted" />
           ) : weather.error ? (
             <span className="text-xs">--°</span>
           ) : (
@@ -591,8 +591,8 @@ export function Topbar() {
           </button>
 
           {notifOpen && (
-            <div className="absolute right-0 top-10 w-80 bg-popover border border-border rounded-lg shadow-xl animate-fade-in z-50">
-              <div className="p-3 border-b border-border flex items-center justify-between">
+            <div className="absolute right-0 top-10 z-50 w-80 rounded-lg border shadow-xl bg-popover border-border animate-fade-in">
+              <div className="flex justify-between items-center p-3 border-b border-border">
                 <h4 className="text-sm font-semibold">Notificações</h4>
                 <div className="flex gap-1">
                   {unreadCount > 0 && (
@@ -615,9 +615,9 @@ export function Topbar() {
                   )}
                 </div>
               </div>
-              <div className="max-h-64 overflow-y-auto">
+              <div className="overflow-y-auto max-h-64">
                 {notifications.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground text-sm">
+                  <div className="p-8 text-sm text-center text-muted-foreground">
                     Nenhuma notificação
                   </div>
                 ) : (
@@ -629,7 +629,7 @@ export function Topbar() {
                         !n.read && 'bg-primary/5'
                       )}
                     >
-                      <div className="flex items-start justify-between gap-2">
+                      <div className="flex gap-2 justify-between items-start">
                         <div className="min-w-0">
                           <p className="text-sm font-medium">{n.title}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
@@ -638,7 +638,7 @@ export function Topbar() {
                           <button
                             type="button"
                             onClick={() => handleMarkOneAsRead(n.id)}
-                            className="shrink-0 p-1 text-muted-foreground hover:text-primary hover:bg-secondary rounded-md transition-colors"
+                            className="p-1 rounded-md transition-colors shrink-0 text-muted-foreground hover:text-primary hover:bg-secondary"
                             title="Marcar como lida"
                           >
                             <CheckCheck className="w-3.5 h-3.5" />
@@ -659,7 +659,7 @@ export function Topbar() {
             <button title="Perfil">
               <Avatar className="w-8 h-8 border border-border hover:shadow-[0_0_16px_hsl(var(--ring)/0.25)] transition-shadow">
                 <AvatarImage src={resolvePhotoUrl(user?.photo_path ?? null) ?? undefined} alt={user?.name} />
-                <AvatarFallback className="bg-primary/20 text-xs font-bold text-primary">
+                <AvatarFallback className="text-xs font-bold bg-primary/20 text-primary">
                   {getInitials(user?.name)}
                 </AvatarFallback>
               </Avatar>

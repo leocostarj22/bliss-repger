@@ -47,7 +47,12 @@ class CRMServiceProvider extends ServiceProvider
                 }
 
                 Filament::registerRenderHook('panels::head.start', function () {
-                    return '<link rel="icon" type="image/png" href="'.e(asset('images/gmfavicon.png')).'" />';
+                    $faviconPath = public_path('images/nextfavicon.png');
+                    $faviconUrl = asset('images/nextfavicon.png');
+                    if (is_file($faviconPath)) {
+                        $faviconUrl .= '?v=' . filemtime($faviconPath);
+                    }
+                    return '<link rel="icon" type="image/png" href="'.e($faviconUrl).'" />';
                 });
             });
         }

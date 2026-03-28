@@ -3021,6 +3021,51 @@ export async function fetchInternalMessages(params?: {
   return { data: filtered };
 }
 
+export type ChatThreadCursor = { ts: string; id: string };
+
+export async function fetchChatThread(params: {
+  other_user_id: string;
+  limit?: number;
+  cursor?: ChatThreadCursor | null;
+}): Promise<{ items: InternalMessage[]; nextCursor: ChatThreadCursor | null; hasMore: boolean }> {
+  const other = String(params.other_user_id ?? '').trim();
+  if (!other) throw new Error('other_user_id é obrigatório');
+
+  const qs = new URLSearchParams();
+  qs.set('other_user_id', other);
+
+  const limit = typeof params.limit === 'number' ? params.limit : undefined;
+  if (limit && Number.isFinite(limit)) qs.set('limit', String(Math.max(1, Math.min(100, Math.floor(limit)))));
+
+  const cursor = params.cursor;
+  if (cursor?.ts) qs.set('cursor_ts', String(cursor.ts));
+  if (cursor?.id) qs.set('cursor_id', String(cursor.id));
+
+  const url = `/api/v1/communication/messages/thread?${qs.toString()}`;
+  const response = await apiFetch(url, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to fetch thread: ${response.statusText}`);
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  const items = Array.isArray(json?.data) ? (json.data as InternalMessage[]) : [];
+
+  const meta = (json?.meta ?? {}) as any;
+  const hasMore = Boolean(meta?.has_more);
+  const next = meta?.next_cursor;
+  const nextCursor = next && next.ts && next.id ? { ts: String(next.ts), id: String(next.id) } : null;
+
+  return { items, nextCursor, hasMore };
+}
+
 export type CommunicationRecipient = {
   id: string;
   name: string;
@@ -3109,6 +3154,98 @@ export async function sendInternalMessage(payload: {
 
   const json = await response.json();
   return { data: json?.data as InternalMessage };
+}
+
+export async function sendInternalMessageWithAttachment(payload: {
+  to_user_id: string;
+  subject: string;
+  body?: string;
+  file: File;
+}): Promise<ApiResponse<InternalMessage>> {
+  const formData = new FormData();
+  formData.append('to_user_id', payload.to_user_id);
+  formData.append('subject', payload.subject);
+  if (payload.body !== undefined) formData.append('body', payload.body);
+  formData.append('file', payload.file);
+
+  const response = await apiFetch('/api/v1/communication/messages', {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+    },
+    credentials: 'include',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let msg = `Failed to send message: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+      const errors = json?.errors;
+      if (errors && typeof errors === 'object') {
+        const firstKey = Object.keys(errors)[0];
+        const firstVal = (errors as any)[firstKey];
+        if (Array.isArray(firstVal) && typeof firstVal[0] === 'string') msg = firstVal[0];
+      }
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  return { data: json?.data as InternalMessage };
+}
+
+export async function addInternalMessageReaction(
+  recipientId: string,
+  emoji: string
+): Promise<ApiResponse<{ id: string; reactions: Array<{ emoji: string; count: number; reacted_by_me?: boolean }> }>> {
+  const response = await apiFetch(`/api/v1/communication/messages/${encodeURIComponent(recipientId)}/reactions`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({ emoji }),
+  });
+
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to react: ${response.statusText}`);
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  return { data: json?.data as any };
+}
+
+export async function removeInternalMessageReaction(
+  recipientId: string,
+  emoji: string
+): Promise<ApiResponse<{ id: string; reactions: Array<{ emoji: string; count: number; reacted_by_me?: boolean }> }>> {
+  const qs = new URLSearchParams();
+  qs.set('emoji', emoji);
+
+  const response = await apiFetch(
+    `/api/v1/communication/messages/${encodeURIComponent(recipientId)}/reactions?${qs.toString()}`,
+    {
+      method: 'DELETE',
+      headers: {
+        'Accept': 'application/json',
+      },
+      credentials: 'include',
+    }
+  );
+
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to remove reaction: ${response.statusText}`);
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  return { data: json?.data as any };
 }
 
 export async function markInternalMessageRead(id: string): Promise<ApiResponse<InternalMessage>> {
@@ -3244,6 +3381,38 @@ export async function createAdminPost(payload: {
 
   const json = await response.json();
   return { data: json?.data as AdminPost };
+}
+
+export async function updateAdminPost(
+  postId: string,
+  payload: {
+    title?: string | null;
+    content: string;
+    type?: 'text' | 'image' | 'video' | 'announcement' | string | null;
+    priority?: 'low' | 'normal' | 'high' | 'urgent' | string | null;
+    featured_image_url?: string | null;
+    youtube_video_url?: string | null;
+    attachment_urls?: string[] | null;
+    expires_at?: string | null;
+  }
+): Promise<ApiResponse<AdminPost>> {
+  const response = await apiFetch(`/api/v1/communication/posts/${encodeURIComponent(postId)}`, {
+    method: 'PUT',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to update post: ${response.statusText}`)
+    throw new Error(msg)
+  }
+
+  const json = await response.json()
+  return { data: json?.data as AdminPost }
 }
 
 export async function toggleAdminPostLike(postId: string): Promise<ApiResponse<AdminPost>> {
@@ -4397,24 +4566,13 @@ export async function updateUser(
 }
 
 export async function deleteUser(id: string): Promise<void> {
-  const response = await fetch(`/api/v1/users/${encodeURIComponent(id)}`, {
+  const response = await apiFetch(`/api/v1/users/${encodeURIComponent(id)}`, {
     method: 'DELETE',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
   });
 
   if (!response.ok) {
-    let msg = `Failed to delete user: ${response.statusText}`;
-    try {
-      const json = await response.json();
-      if (typeof json?.message === 'string') msg = json.message;
-    } catch {
-      // ignore
-    }
-    throw new Error(msg);
+    const fallback = `Failed to delete user: ${response.statusText}`;
+    throw new Error(await pickErrorMessage(response, fallback));
   }
 }
 
@@ -4645,6 +4803,63 @@ export async function updateAdminModules(modules: AdminModule[]): Promise<ApiRes
       enabled: Boolean(r?.enabled),
     })),
   };
+}
+
+export type BrandingSnapshot = {
+  app: {
+    name: string
+    title: string
+    favicon_url: string | null
+  }
+  crm: {
+    name: string
+    title: string
+    favicon_url: string | null
+  }
+}
+
+export async function fetchBranding(): Promise<ApiResponse<BrandingSnapshot>> {
+  const response = await apiFetch('/api/v1/branding', {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to fetch branding: ${response.statusText}`)
+    throw new Error(msg)
+  }
+
+  const json = await response.json()
+  return { data: json?.data as BrandingSnapshot }
+}
+
+export type UpdateBrandingPayload = {
+  app_name: string
+  app_title: string
+  app_favicon: string | null
+  app_favicon_file_name?: string
+  crm_name: string
+  crm_title: string
+  crm_favicon: string | null
+  crm_favicon_file_name?: string
+}
+
+export async function updateAdminBranding(payload: UpdateBrandingPayload): Promise<ApiResponse<BrandingSnapshot>> {
+  const response = await apiFetch('/api/v1/admin/branding', {
+    method: 'PUT',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to update branding: ${response.statusText}`)
+    throw new Error(msg)
+  }
+
+  const json = await response.json()
+  return { data: json?.data as BrandingSnapshot }
 }
 
 // ── System Logs (Reports & Logs) ──

@@ -208,17 +208,17 @@ export default function Dashboard() {
         <div className="page-header lg:col-span-3 order-0">
           <h1 className="page-title">Dashboard</h1>
           <p className="page-subtitle">Resumo de suporte, mensagens e comunicados</p>
-          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500"></div>
+          <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full"></div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="stat-card space-y-3">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-8 w-16" />
+            <div key={i} className="space-y-3 stat-card">
+              <Skeleton className="w-20 h-4" />
+              <Skeleton className="w-16 h-8" />
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Skeleton className="h-80 rounded-lg" />
           <Skeleton className="h-80 rounded-lg" />
         </div>
@@ -232,9 +232,9 @@ export default function Dashboard() {
         <div className="page-header">
           <h1 className="page-title">Dashboard</h1>
           <p className="page-subtitle">Resumo de suporte, mensagens e comunicados</p>
-          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500"></div>
+          <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full"></div>
         </div>
-        <div className="glass-card p-6">
+        <div className="p-6 glass-card">
           <div className="text-sm font-medium">Não foi possível carregar dados reais</div>
           <div className="mt-1 text-xs text-muted-foreground">{error ?? 'Sem resposta do servidor'}</div>
           <div className="mt-4 text-xs text-muted-foreground">Confirma que o backend Laravel está a correr e que o proxy do frontend aponta para o porto correto.</div>
@@ -310,15 +310,15 @@ export default function Dashboard() {
   ] as const;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-slide-up">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 animate-slide-up">
       <div className="page-header">
         <h1 className="page-title">Dashboard</h1>
         <p className="page-subtitle">Resumo de suporte, mensagens e comunicados</p>
-        <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500"></div>
+        <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full"></div>
       </div>
 
       {/* KPI Cards */}
-      <div className="order-1 lg:col-span-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid order-1 grid-cols-2 gap-4 lg:col-span-3 md:grid-cols-3 lg:grid-cols-6">
         {statConfig.map((s, i) => {
           const raw = (dashboard.tickets as any)[s.key];
 
@@ -336,16 +336,16 @@ export default function Dashboard() {
               className="group stat-card relative overflow-hidden animate-fade-in hover:shadow-[0_0_30px_hsl(var(--ring)/0.25)] hover:border-cyan-400/40 transition-all duration-300 hover:-translate-y-1"
               style={{ animationDelay: `${i * 60}ms` }}
             >
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-gradient-to-br from-cyan-500/10 to-transparent rounded-full blur-2xl group-hover:from-cyan-400/20 transition-all duration-500" />
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-gradient-to-br to-transparent rounded-full blur-2xl transition-all duration-500 from-cyan-500/10 group-hover:from-cyan-400/20" />
               
-              <div className="relative z-10 flex items-center gap-3 mb-3">
+              <div className="flex relative z-10 gap-3 items-center mb-3">
                 <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/20 to-fuchsia-500/20 ring-1 ring-white/10 group-hover:ring-cyan-400/50 shadow-sm group-hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] transition-all duration-300">
-                  <s.icon className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform duration-300" />
+                  <s.icon className="w-5 h-5 text-cyan-400 transition-transform duration-300 group-hover:scale-110" />
                 </span>
-                <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">{s.label}</span>
+                <span className="text-xs font-medium transition-colors text-muted-foreground group-hover:text-foreground">{s.label}</span>
               </div>
               
-              <div className="relative z-10 text-2xl font-bold tracking-tight animate-count bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70 group-hover:from-cyan-400 group-hover:to-fuchsia-400 transition-all duration-300">
+              <div className="relative z-10 text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r transition-all duration-300 animate-count from-foreground to-foreground/70 group-hover:from-cyan-400 group-hover:to-fuchsia-400">
                 {formatted}{s.suffix}
               </div>
             </Link>
@@ -355,15 +355,15 @@ export default function Dashboard() {
 
       <div className="order-2 lg:col-span-3">
         <div className="glass-card p-6 bg-gradient-to-b from-cyan-500/5 via-background to-background border-t-cyan-500/20 hover:shadow-[0_0_30px_hsl(var(--ring)/0.25)] hover:border-cyan-400/40 transition-all duration-300 hover:-translate-y-1">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex justify-between items-center mb-6">
             <div>
               <h3 className="text-base font-semibold">Mensagens</h3>
               <p className="text-xs text-muted-foreground">{dashboard.messages.month_label}</p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex gap-2 items-center">
               {unread > 0 ? (
-                <Badge className="border border-rose-500/30 bg-rose-500/15 text-rose-300">
+                <Badge className="text-rose-300 border border-rose-500/30 bg-rose-500/15">
                   {unread === 1 ? '1 nova' : `${formatNumber(unread)} novas`}
                 </Badge>
               ) : null}
@@ -373,7 +373,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
             {messageCards.map((c, i) => {
               const Icon = c.icon;
               const isUnread = c.key === 'unread';
@@ -416,7 +416,7 @@ export default function Dashboard() {
                   )}
                   style={{ animationDelay: `${i * 60}ms` }}
                 >
-                  <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-gradient-to-br from-cyan-500/10 to-transparent rounded-full blur-2xl transition-all duration-500" />
+                  <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-gradient-to-br to-transparent rounded-full blur-2xl transition-all duration-500 from-cyan-500/10" />
 
                   {emphasize ? (
                     <>
@@ -425,14 +425,14 @@ export default function Dashboard() {
                     </>
                   ) : null}
 
-                  <div className="relative z-10 flex items-center gap-3 mb-3">
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/20 to-fuchsia-500/20 ring-1 ring-white/10 shadow-sm transition-all duration-300">
+                  <div className="flex relative z-10 gap-3 items-center mb-3">
+                    <span className="inline-flex justify-center items-center w-9 h-9 bg-gradient-to-br rounded-xl ring-1 shadow-sm transition-all duration-300 from-cyan-400/20 to-fuchsia-500/20 ring-white/10">
                       <Icon className={cn('w-5 h-5 transition-transform duration-300 group-hover:scale-110', iconTone)} />
                     </span>
-                    <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">{c.label}</span>
+                    <span className="text-xs font-medium transition-colors text-muted-foreground group-hover:text-foreground">{c.label}</span>
                   </div>
 
-                  <div className={cn('relative z-10 text-2xl font-bold tracking-tight animate-count bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70 transition-all duration-300', toneClasses)}>
+                  <div className={cn('relative z-10 text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r transition-all duration-300 animate-count from-foreground to-foreground/70', toneClasses)}>
                     {formatNumber(c.value)}
                   </div>
                   <div className="relative z-10 mt-1 text-[11px] text-muted-foreground">{c.meta}</div>
@@ -446,10 +446,10 @@ export default function Dashboard() {
       {showLegacyEmailWidgets ? (
         <>
           {/* Charts */}
-          <div className="order-5 lg:col-span-1 grid grid-cols-1 gap-6">
+          <div className="grid order-5 grid-cols-1 gap-6 lg:col-span-1">
         {/* Email Performance Over Time */}
-        <div className="glass-card p-6 bg-gradient-to-b from-cyan-500/5 via-background to-background border-t-cyan-500/20">
-          <div className="flex items-center justify-between mb-6">
+        <div className="p-6 bg-gradient-to-b glass-card from-cyan-500/5 via-background to-background border-t-cyan-500/20">
+          <div className="flex justify-between items-center mb-6">
             <div>
               <h3 className="text-base font-semibold">Email Performance</h3>
               <p className="text-xs text-muted-foreground">Last 30 days activity</p>
@@ -527,7 +527,7 @@ export default function Dashboard() {
 
         {/* Top Campaigns */}
         <div className="glass-card p-6 bg-gradient-to-b from-fuchsia-500/5 via-background to-background border-t-fuchsia-500/20 hover:shadow-[0_0_30px_hsl(var(--ring)/0.25)] hover:border-fuchsia-400/40 transition-all duration-300 hover:-translate-y-1">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex justify-between items-center mb-6">
             <div>
               <h3 className="text-base font-semibold">Top Campaigns</h3>
               <p className="text-xs text-muted-foreground">By open rate performance</p>
@@ -571,7 +571,7 @@ export default function Dashboard() {
                   <Cell 
                     key={i} 
                     fill={CHART_COLORS[i % CHART_COLORS.length]} 
-                    className="hover:opacity-80 transition-opacity"
+                    className="transition-opacity hover:opacity-80"
                     filter={`drop-shadow(0 0 4px ${CHART_COLORS[i % CHART_COLORS.length]}80)`}
                   />
                 ))}
@@ -589,7 +589,7 @@ export default function Dashboard() {
       ) : null}
 
       <div className="order-4 lg:col-span-2 glass-card p-6 bg-gradient-to-b from-fuchsia-500/5 via-background to-background border-t-fuchsia-500/20 hover:shadow-[0_0_30px_hsl(var(--ring)/0.25)] hover:border-fuchsia-400/40 transition-all duration-300">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex justify-between items-center mb-6">
           <div>
             <h3 className="text-base font-semibold">Posts Administrativos</h3>
             <p className="text-xs text-muted-foreground">Últimos comunicados</p>
@@ -601,7 +601,7 @@ export default function Dashboard() {
         ) : (
           <ScrollArea className="h-[700px] pr-3">
           <div className="relative space-y-4">
-            <div className="absolute left-5 top-2 bottom-2 w-px bg-border/60" />
+            <div className="absolute top-2 bottom-2 left-5 w-px bg-border/60" />
             {posts.slice(0, 10).map((p) => {
               const busy = !!busyPostIds[p.id];
               const expanded = !!expandedPostIds[p.id];
@@ -616,18 +616,18 @@ export default function Dashboard() {
               const tooLong = text.length > 420;
 
               return (
-                <div key={p.id} className="relative rounded-lg border border-border/60 bg-background/40 p-4 pl-10">
+                <div key={p.id} className="relative p-4 pl-10 rounded-lg border border-border/60 bg-background/40">
                   <span className="absolute left-4 top-6 h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.45)]" />
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3 min-w-0">
+                  <div className="flex gap-3 justify-between items-start">
+                    <div className="flex gap-3 items-start min-w-0">
                       <Avatar className="w-9 h-9 border border-border">
                         <AvatarImage src={resolvePhotoUrl(p.author?.photo_path ?? null) ?? undefined} alt={p.author?.name ?? undefined} />
-                        <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
+                        <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
                           {getInitials(p.author?.name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex gap-2 items-center min-w-0">
                           <div className="text-sm font-medium truncate">{p.author?.name ?? 'Sistema'}</div>
                           {p.is_pinned ? <Badge variant="secondary">Fixado</Badge> : null}
                         </div>
@@ -659,7 +659,19 @@ export default function Dashboard() {
                     </button>
                   ) : null}
 
-                  <div className="mt-4 flex items-center gap-2">
+                  {(p as any).featured_image_url ? (
+                    <div className="overflow-hidden mt-4 rounded-md border border-border/60">
+                      <img
+                        src={resolvePhotoUrl((p as any).featured_image_url ?? null) ?? (p as any).featured_image_url}
+                        alt={title}
+                        className="w-full max-h-[420px] object-cover"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  ) : null}
+
+                  <div className="flex gap-2 items-center mt-4">
                     <Button
                       variant="outline"
                       size="sm"
@@ -668,7 +680,7 @@ export default function Dashboard() {
                       className={cn(p.liked_by_me && 'border-rose-500/40 text-rose-600')}
                     >
                       {busy ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        <Loader2 className="mr-2 w-4 h-4 animate-spin" />
                       ) : (
                         <Heart className={cn('w-4 h-4 mr-2', p.liked_by_me && 'fill-rose-500 text-rose-500')} />
                       )}
@@ -676,19 +688,19 @@ export default function Dashboard() {
                     </Button>
 
                     <Button variant="outline" size="sm" onClick={() => onToggleComments(p.id)}>
-                      <MessageCircle className="w-4 h-4 mr-2" />
+                      <MessageCircle className="mr-2 w-4 h-4" />
                       Comentários
                     </Button>
                   </div>
 
                   {commentsOpenIds[p.id] ? (
-                    <div className="mt-3 rounded-md border border-border/60 bg-background/30 p-3 space-y-3">
+                    <div className="p-3 mt-3 space-y-3 rounded-md border border-border/60 bg-background/30">
                       {commentsLoadingIds[p.id] ? (
                         <div className="text-xs text-muted-foreground">A carregar comentários…</div>
                       ) : (commentsByPostId[p.id] ?? []).length ? (
                         <div className="space-y-3">
                           {(commentsByPostId[p.id] ?? []).map((c) => (
-                            <div key={c.id} className="flex items-start gap-3">
+                            <div key={c.id} className="flex gap-3 items-start">
                               <Avatar className="w-8 h-8 border border-border">
                                 <AvatarImage src={resolvePhotoUrl(c.user?.photo_path ?? null) ?? undefined} alt={c.user?.name ?? undefined} />
                                 <AvatarFallback className="bg-primary/10 text-[11px] font-bold text-primary">
@@ -736,14 +748,14 @@ export default function Dashboard() {
       </div>
 
       <div className="order-6 lg:col-span-3 glass-card p-6 bg-gradient-to-b from-violet-500/5 via-background to-background border-t-violet-500/20 hover:shadow-[0_0_30px_hsl(var(--ring)/0.25)] hover:border-violet-400/40 transition-all duration-300">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex justify-between items-center mb-6">
           <div>
             <h3 className="text-base font-semibold">Heatmap de Atividade</h3>
-            <p className="text-xs text-muted-foreground">Informações relevantes do GMCentral por dia e hora</p>
+            <p className="text-xs text-muted-foreground">Informações relevantes do NextERP por dia e hora</p>
           </div>
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-full border border-border/50">
             <span>Menos</span>
-            <div className="h-2 w-24 rounded-full" style={{ background: 'linear-gradient(to right, rgba(34,211,238,0.1), #22d3ee)' }} />
+            <div className="w-24 h-2 rounded-full" style={{ background: 'linear-gradient(to right, rgba(34,211,238,0.1), #22d3ee)' }} />
             <span>Mais</span>
           </div>
         </div>
@@ -758,7 +770,7 @@ export default function Dashboard() {
             ))}
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, di) => (
               <Fragment key={day}>
-                <div className="text-xs text-muted-foreground flex items-center font-medium">{day}</div>
+                <div className="flex items-center text-xs font-medium text-muted-foreground">{day}</div>
                 {Array.from({ length: 24 }, (_, h) => {
                   const val = heatData.find((d: any) => ((d.day + 6) % 7) === di && d.hour === h)?.value ?? 0;
                   const opacity = Math.max(0.05, val / maxHeat);

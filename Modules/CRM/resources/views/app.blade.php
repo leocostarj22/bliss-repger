@@ -3,8 +3,15 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/png" href="{{ asset('images/gmfavicon.png') }}" />
-    <title>CRM GMCentral</title>
+    @php
+        $faviconPath = public_path('images/nextfavicon.png');
+        $faviconUrl = asset('images/nextfavicon.png');
+        if (is_file($faviconPath)) {
+            $faviconUrl .= '?v=' . filemtime($faviconPath);
+        }
+    @endphp
+    <link rel="icon" type="image/png" href="{{ $faviconUrl }}" />
+    <title>NextCRM</title>
     
     @vite([
         'resources/assets/crm-frontend/src/main.tsx'

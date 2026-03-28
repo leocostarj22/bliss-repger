@@ -16,8 +16,8 @@ export default function Modules() {
       acc[item.key] = Boolean(item.enabled)
       return acc
     }, {})
-    window.localStorage.setItem("bliss:module-statuses", JSON.stringify(map))
-    window.dispatchEvent(new Event("bliss:modules:updated"))
+    window.localStorage.setItem("nexterp:module-statuses", JSON.stringify(map))
+    window.dispatchEvent(new Event("nexterp:modules:updated"))
   }
 
   const [loading, setLoading] = useState(true)
@@ -94,9 +94,9 @@ export default function Modules() {
         <div className="page-header">
           <h1 className="page-title">Módulos</h1>
           <p className="page-subtitle">Administração → Módulos</p>
-          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+          <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
         </div>
-        <div className="glass-card p-6">
+        <div className="p-6 glass-card">
           <div className="text-sm text-muted-foreground">A carregar…</div>
         </div>
       </div>
@@ -109,9 +109,9 @@ export default function Modules() {
         <div className="page-header">
           <h1 className="page-title">Módulos</h1>
           <p className="page-subtitle">Administração → Módulos</p>
-          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+          <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
         </div>
-        <div className="glass-card p-6 flex items-start gap-3">
+        <div className="flex gap-3 items-start p-6 glass-card">
           <ShieldAlert className="w-5 h-5 text-amber-400 mt-0.5" />
           <div>
             <div className="font-semibold">Acesso restrito</div>
@@ -125,11 +125,11 @@ export default function Modules() {
   return (
     <div className="space-y-6 animate-slide-up">
       <div className="page-header">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex gap-4 justify-between items-start">
           <div>
             <h1 className="page-title">Módulos</h1>
             <p className="page-subtitle">Administração → Módulos</p>
-            <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+            <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
           </div>
 
           <Button onClick={handleSave} disabled={saving || !hasRows}>
@@ -139,18 +139,18 @@ export default function Modules() {
         </div>
       </div>
 
-      <div className="glass-card p-6 space-y-4">
+      <div className="p-6 space-y-4 glass-card">
         {!hasRows ? (
           <div className="text-sm text-muted-foreground">Nenhum módulo encontrado.</div>
         ) : (
           rows.map((m) => (
-            <div key={m.key} className="flex items-center justify-between rounded-lg border border-border bg-background/30 px-4 py-3">
+            <div key={m.key} className="flex justify-between items-center px-4 py-3 rounded-lg border border-border bg-background/30">
               <div>
                 <div className="font-medium">{m.name}</div>
                 <div className="text-xs text-muted-foreground">Chave: {m.key}</div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex gap-3 items-center">
                 <span
                   className={[
                     "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium border",

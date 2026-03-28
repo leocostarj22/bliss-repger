@@ -186,11 +186,11 @@ function TemplateThumbnail({ content }: { content: any }) {
   }, [content]);
 
   return (
-    <div className="h-32 rounded-md overflow-hidden border border-border/40 bg-background/80 shadow-sm">
+    <div className="overflow-hidden h-32 rounded-md border shadow-sm border-border/40 bg-background/80">
       {thumbnail ? (
-        <img src={thumbnail} alt="Preview do template" className="w-full h-full object-cover" />
+        <img src={thumbnail} alt="Preview do template" className="object-cover w-full h-full" />
       ) : (
-        <div className="w-full h-full flex items-center justify-center text-3xl">📧</div>
+        <div className="flex justify-center items-center w-full h-full text-3xl">📧</div>
       )}
     </div>
   );
@@ -270,13 +270,13 @@ export default function Templates() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Templates</h1>
-          <p className="text-muted-foreground mt-2">Gerencie seus modelos de e-mail</p>
+          <p className="mt-2 text-muted-foreground">Gerencie seus modelos de e-mail</p>
         </div>
         <Button className="w-full sm:w-auto" onClick={() => {
           localStorage.removeItem('template-draft'); // Clear draft for new template
           navigate('/templates/editor');
         }}>
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="mr-2 w-4 h-4" />
           Novo Template
         </Button>
       </div>
@@ -286,22 +286,22 @@ export default function Templates() {
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       ) : templates.length === 0 ? (
-        <div className="text-center py-12 border rounded-lg bg-card">
+        <div className="py-12 text-center rounded-lg border bg-card">
           <p className="text-muted-foreground">Nenhum template encontrado.</p>
           <Button variant="link" onClick={() => navigate('/templates/editor')} className="mt-2">
             Criar meu primeiro template
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {templates.map((template) => (
             <div key={template.id} className="group relative rounded-xl border border-border bg-card hover:border-cyan-400/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.25)] transition-all p-4 flex flex-col">
               <div className="mb-4">
                 <TemplateThumbnail content={template.content || '[]'} />
               </div>
               <div className="flex-1 space-y-1">
-                <h3 className="font-semibold text-sm truncate" title={template.name}>{template.name}</h3>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <h3 className="text-sm font-semibold truncate" title={template.name}>{template.name}</h3>
+                <div className="flex gap-2 items-center text-xs text-muted-foreground">
                   <span className="bg-secondary/40 px-2 py-0.5 rounded">
                     {typeof template.content === 'string' ? 'HTML' : 'Blocos'}
                   </span>
@@ -309,9 +309,9 @@ export default function Templates() {
                   <span>{format(new Date(template.updatedAt), "d 'de' MMM", { locale: ptBR })}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+              <div className="flex gap-2 items-center pt-4 mt-4 border-t">
                 <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(template)}>
-                  <Edit className="w-4 h-4 mr-2" />
+                  <Edit className="mr-2 w-4 h-4" />
                   Editar
                 </Button>
                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => requestDelete(template.id)}>

@@ -48,11 +48,25 @@ const htmlToPlainText = (value: string) => {
   const raw = String(value ?? "")
   if (!raw) return ""
 
-  const looksLikeHtml = /<\s*[a-z][\s\S]*>/i.test(raw)
-  if (!looksLikeHtml) return raw
+  if (typeof window === "undefined" || typeof DOMParser === "undefined") {
+    return raw.replace(/<[^>]*>/g, "").trim()
+  }
+
+  let decoded = raw
+  const mayBeEscaped = /&lt;|&#\d+;|&#x[0-9a-f]+;/i.test(raw)
+  if (mayBeEscaped) {
+    try {
+      decoded = new DOMParser().parseFromString(raw, "text/html").documentElement.textContent ?? raw
+    } catch {
+      decoded = raw
+    }
+  }
+
+  const looksLikeHtml = /<\s*[a-z][\s\S]*>/i.test(decoded)
+  if (!looksLikeHtml) return decoded
 
   try {
-    const normalized = raw
+    const normalized = decoded
       .replace(/<\s*br\s*\/?>/gi, "\n")
       .replace(/<\s*\/\s*p\s*>/gi, "\n\n")
       .replace(/<\s*\/\s*li\s*>/gi, "\n")
@@ -60,7 +74,7 @@ const htmlToPlainText = (value: string) => {
     const doc = new DOMParser().parseFromString(normalized, "text/html")
     return (doc.body.textContent ?? "").replace(/\n{3,}/g, "\n\n").trim()
   } catch {
-    return raw.replace(/<[^>]*>/g, "").trim()
+    return decoded.replace(/<[^>]*>/g, "").trim()
   }
 }
 
@@ -330,13 +344,13 @@ export default function MyNotes() {
   const reminderRows = rows.filter((n) => n.remind_at || n.is_favorite)
 
   return (
-    <div className="space-y-6 animate-slide-up pb-24 md:pb-6">
+    <div className="pb-24 space-y-6 animate-slide-up md:pb-6">
       <div className="page-header">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex gap-4 justify-between items-start">
           <div>
             <h1 className="page-title">Minhas Anotações</h1>
             <p className="page-subtitle">Pessoal → Minhas Anotações</p>
-            <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+            <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
           </div>
 
           <Button onClick={openCreate} className="hidden md:inline-flex">
@@ -350,14 +364,14 @@ export default function MyNotes() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-3">
-        <div className="glass-card p-4 hidden md:block">
-          <div className="flex items-center justify-between mb-3">
+        <div className="hidden p-4 glass-card md:block">
+          <div className="flex justify-between items-center mb-3">
             <div className="text-sm font-semibold">Lembretes</div>
             <div className="text-xs text-muted-foreground">Formato Post‑it</div>
           </div>
 
           {loading && rows.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+            <div className="p-6 text-sm text-center rounded-lg border border-dashed border-border text-muted-foreground">
               A carregar…
             </div>
           ) : reminderRows.length > 0 ? (
@@ -377,7 +391,7 @@ export default function MyNotes() {
                     style={{ backgroundColor: n.color || "#FEF3C7" }}
                     title={n.title}
                   >
-                    <div className="absolute inset-x-0 top-0 h-6 bg-white/20 mix-blend-overlay" />
+                    <div className="absolute inset-x-0 top-0 h-6 mix-blend-overlay bg-white/20" />
                     <div className="absolute inset-x-0 bottom-0 h-6 bg-black/5 blur-[2px] opacity-50" />
                     <div
                       className="relative p-3 h-full"
@@ -395,19 +409,19 @@ export default function MyNotes() {
                 ))}
             </div>
           ) : (
-            <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+            <div className="p-6 text-sm text-center rounded-lg border border-dashed border-border text-muted-foreground">
               Sem lembretes ainda
             </div>
           )}
         </div>
 
-        <div className="glass-card p-4">
-          <div className="flex items-center justify-between mb-3">
+        <div className="p-4 glass-card">
+          <div className="flex justify-between items-center mb-3">
             <div>
               <div className="text-sm font-semibold">Porta-retratos</div>
               <div className="text-xs text-muted-foreground">Foto da família</div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex gap-2 items-center">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -426,13 +440,13 @@ export default function MyNotes() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-black/10 p-3">
+          <div className="p-3 rounded-2xl border border-border bg-black/10">
             <div className="rounded-xl border-[10px] border-amber-200/60 bg-black/20 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)] overflow-hidden">
               <div className="aspect-[4/5] w-full">
                 {familyPhoto ? (
-                  <img src={familyPhoto} alt="Foto da família" className="h-full w-full object-cover" />
+                  <img src={familyPhoto} alt="Foto da família" className="object-cover w-full h-full" />
                 ) : (
-                  <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground p-6 text-center">
+                  <div className="flex justify-center items-center p-6 w-full h-full text-xs text-center text-muted-foreground">
                     Escolhe uma foto para aparecer aqui
                   </div>
                 )}
@@ -442,11 +456,11 @@ export default function MyNotes() {
         </div>
       </div>
 
-      <div className="glass-card p-4">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
-          <div className="flex items-center gap-2 flex-1">
+      <div className="p-4 glass-card">
+        <div className="flex flex-col gap-3 mb-4 lg:flex-row lg:items-center">
+          <div className="flex flex-1 gap-2 items-center">
             {refreshing ? (
-              <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
             ) : (
               <Search className="w-4 h-4 text-muted-foreground" />
             )}
@@ -472,12 +486,12 @@ export default function MyNotes() {
           </div>
         </div>
 
-        <div className="md:hidden space-y-2">
+        <div className="space-y-2 md:hidden">
           {loading && rows.length === 0 ? (
             Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="rounded-xl border border-border bg-white/5 p-3">
-                <Skeleton className="h-4 w-52" />
-                <Skeleton className="mt-2 h-3 w-full" />
+              <div key={i} className="p-3 rounded-xl border border-border bg-white/5">
+                <Skeleton className="w-52 h-4" />
+                <Skeleton className="mt-2 w-full h-3" />
               </div>
             ))
           ) : rows.length === 0 ? (
@@ -492,11 +506,11 @@ export default function MyNotes() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") openEdit(n)
                 }}
-                className="rounded-xl border border-border bg-white/5 p-3 cursor-pointer hover:bg-white/10 transition-colors"
+                className="p-3 rounded-xl border transition-colors cursor-pointer border-border bg-white/5 hover:bg-white/10"
               >
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex gap-3 justify-between items-start">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex gap-2 items-center min-w-0">
                       <div className="font-medium truncate">{n.title}</div>
                       {n.is_favorite ? <Star className="w-4 h-4 text-amber-400 shrink-0" /> : null}
                     </div>
@@ -511,12 +525,12 @@ export default function MyNotes() {
                       <div className="line-clamp-1">Modificado por: {modifiedByLabel(n.last_modified_by)}</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex gap-1 items-center shrink-0">
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="w-8 h-8"
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
@@ -535,7 +549,7 @@ export default function MyNotes() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="w-8 h-8"
                       onClick={(e) => {
                         e.stopPropagation()
                         openEdit(n)
@@ -549,7 +563,7 @@ export default function MyNotes() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      className="w-8 h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={(e) => {
                         e.stopPropagation()
                         requestDelete(n)
@@ -566,10 +580,10 @@ export default function MyNotes() {
           )}
         </div>
 
-        <div className="hidden md:block w-full overflow-x-auto">
+        <div className="hidden overflow-x-auto w-full md:block">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-muted-foreground border-b border-border">
+              <tr className="text-left border-b text-muted-foreground border-border">
                 <th className="py-3 pr-4">Anotação</th>
                 <th className="py-3 pr-4">Favorito</th>
                 <th className="py-3 pr-4">Criado por</th>
@@ -585,25 +599,25 @@ export default function MyNotes() {
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i} className="border-b border-border/60">
                     <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-72" />
+                      <Skeleton className="w-72 h-4" />
                     </td>
                     <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-16" />
+                      <Skeleton className="w-16 h-4" />
                     </td>
                     <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-56" />
+                      <Skeleton className="w-56 h-4" />
                     </td>
                     <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="w-40 h-4" />
                     </td>
                     <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="w-40 h-4" />
                     </td>
                     <td className="py-4 pr-4">
-                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="w-28 h-4" />
                     </td>
                     <td className="py-4 text-right">
-                      <Skeleton className="h-9 w-24 ml-auto" />
+                      <Skeleton className="ml-auto w-24 h-9" />
                     </td>
                   </tr>
                 ))
@@ -615,9 +629,9 @@ export default function MyNotes() {
                 </tr>
               ) : (
                 rows.map((n) => (
-                  <tr key={n.id} className="border-b border-border/60 hover:bg-white/5 transition-colors">
+                  <tr key={n.id} className="border-b transition-colors border-border/60 hover:bg-white/5">
                     <td className="py-4 pr-4">
-                      <div className="inline-flex items-center gap-2">
+                      <div className="inline-flex gap-2 items-center">
                         <div className="font-medium">{n.title}</div>
                         {n.is_favorite ? <Star className="w-4 h-4 text-amber-400" /> : null}
                       </div>
@@ -658,12 +672,12 @@ export default function MyNotes() {
                       <div className="text-xs text-muted-foreground line-clamp-1">{modifiedByLabel(n.last_modified_by)}</div>
                     </td>
                     <td className="py-4 text-right">
-                      <div className="inline-flex items-center gap-1">
+                      <div className="inline-flex gap-1 items-center">
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="w-8 h-8"
                           onClick={() => openEdit(n)}
                           aria-label="Editar"
                           title="Editar"
@@ -674,7 +688,7 @@ export default function MyNotes() {
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          className="w-8 h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                           onClick={() => requestDelete(n)}
                           aria-label="Eliminar"
                           title="Eliminar"
@@ -691,13 +705,13 @@ export default function MyNotes() {
         </div>
       </div>
 
-      <div className="glass-card p-4 md:hidden">
-        <div className="flex items-center justify-between mb-3">
+      <div className="p-4 glass-card md:hidden">
+        <div className="flex justify-between items-center mb-3">
           <div>
             <div className="text-sm font-semibold">Porta-retratos</div>
             <div className="text-xs text-muted-foreground">Foto da família</div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex gap-2 items-center">
             <input
               ref={fileInputRef}
               type="file"
@@ -716,13 +730,13 @@ export default function MyNotes() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-black/10 p-3">
+        <div className="p-3 rounded-2xl border border-border bg-black/10">
           <div className="rounded-xl border-[10px] border-amber-200/60 bg-black/20 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)] overflow-hidden">
             <div className="aspect-[4/5] w-full">
               {familyPhoto ? (
-                <img src={familyPhoto} alt="Foto da família" className="h-full w-full object-cover" />
+                <img src={familyPhoto} alt="Foto da família" className="object-cover w-full h-full" />
               ) : (
-                <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground p-6 text-center">
+                <div className="flex justify-center items-center p-6 w-full h-full text-xs text-center text-muted-foreground">
                   Escolhe uma foto para aparecer aqui
                 </div>
               )}
@@ -739,7 +753,7 @@ export default function MyNotes() {
             setPendingDelete(null)
           }}
         >
-          <div className="glass-card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="p-6 w-full max-w-sm glass-card" onClick={(e) => e.stopPropagation()}>
             <div className="space-y-2">
               <div className="text-lg font-semibold">Eliminar anotação?</div>
               <div className="text-sm text-muted-foreground">
@@ -747,7 +761,7 @@ export default function MyNotes() {
               </div>
             </div>
 
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="flex gap-2 justify-end mt-5">
               <Button
                 type="button"
                 variant="outline"

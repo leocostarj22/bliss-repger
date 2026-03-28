@@ -1,6 +1,14 @@
 {
+    "Administration": true,
+    "BlissNatura": false,
     "CRM": true,
+    "Communication": true,
+    "EspacoAbsoluto": false,
     "Finance": true,
+    "MyFormula": false,
+    "Personal": true,
+    "Products": true,
     "HumanResources": true,
-    "Products": true
+    "Reports": true,
+    "Support": true
 }

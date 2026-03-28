@@ -47,17 +47,17 @@ export default function Dashboard() {
         <div className="page-header">
           <h1 className="page-title">Dashboard</h1>
           <p className="page-subtitle">Overview of your email marketing performance</p>
-          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500"></div>
+          <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full"></div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="stat-card space-y-3">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-8 w-16" />
+            <div key={i} className="space-y-3 stat-card">
+              <Skeleton className="w-20 h-4" />
+              <Skeleton className="w-16 h-8" />
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Skeleton className="h-80 rounded-lg" />
           <Skeleton className="h-80 rounded-lg" />
         </div>
@@ -72,11 +72,11 @@ export default function Dashboard() {
       <div className="page-header">
         <h1 className="page-title">Dashboard</h1>
         <p className="page-subtitle">Overview of your email marketing performance</p>
-        <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500"></div>
+        <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full"></div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         {statConfig.map((s, i) => {
           const value = stats[s.key as keyof DashboardStats] as number;
           return (
@@ -85,16 +85,16 @@ export default function Dashboard() {
               className="group stat-card relative overflow-hidden animate-fade-in hover:shadow-[0_0_30px_hsl(var(--ring)/0.25)] hover:border-cyan-400/40 transition-all duration-300 hover:-translate-y-1"
               style={{ animationDelay: `${i * 60}ms` }}
             >
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-gradient-to-br from-cyan-500/10 to-transparent rounded-full blur-2xl group-hover:from-cyan-400/20 transition-all duration-500" />
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-gradient-to-br to-transparent rounded-full blur-2xl transition-all duration-500 from-cyan-500/10 group-hover:from-cyan-400/20" />
               
-              <div className="relative z-10 flex items-center gap-3 mb-3">
+              <div className="flex relative z-10 gap-3 items-center mb-3">
                 <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/20 to-fuchsia-500/20 ring-1 ring-white/10 group-hover:ring-cyan-400/50 shadow-sm group-hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] transition-all duration-300">
-                  <s.icon className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform duration-300" />
+                  <s.icon className="w-5 h-5 text-cyan-400 transition-transform duration-300 group-hover:scale-110" />
                 </span>
-                <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">{s.label}</span>
+                <span className="text-xs font-medium transition-colors text-muted-foreground group-hover:text-foreground">{s.label}</span>
               </div>
               
-              <div className="relative z-10 text-2xl font-bold tracking-tight animate-count bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70 group-hover:from-cyan-400 group-hover:to-fuchsia-400 transition-all duration-300">
+              <div className="relative z-10 text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r transition-all duration-300 animate-count from-foreground to-foreground/70 group-hover:from-cyan-400 group-hover:to-fuchsia-400">
                 {s.format(value)}{s.suffix}
               </div>
             </div>
@@ -103,10 +103,10 @@ export default function Dashboard() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Email Performance Over Time */}
-        <div className="glass-card p-6 bg-gradient-to-b from-cyan-500/5 via-background to-background border-t-cyan-500/20">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="p-6 bg-gradient-to-b glass-card from-cyan-500/5 via-background to-background border-t-cyan-500/20">
+          <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-base font-semibold">Email Performance</h3>
               <p className="text-xs text-muted-foreground">Last 30 days activity</p>
@@ -180,8 +180,8 @@ export default function Dashboard() {
         </div>
 
         {/* Top Campaigns */}
-        <div className="glass-card p-6 bg-gradient-to-b from-fuchsia-500/5 via-background to-background border-t-fuchsia-500/20">
-          <div className="flex items-center justify-between mb-6">
+        <div className="p-6 bg-gradient-to-b glass-card from-fuchsia-500/5 via-background to-background border-t-fuchsia-500/20">
+          <div className="flex justify-between items-center mb-6">
             <div>
               <h3 className="text-base font-semibold">Top Campaigns</h3>
               <p className="text-xs text-muted-foreground">By open rate performance</p>
@@ -225,7 +225,7 @@ export default function Dashboard() {
                   <Cell 
                     key={i} 
                     fill={CHART_COLORS[i % CHART_COLORS.length]} 
-                    className="hover:opacity-80 transition-opacity"
+                    className="transition-opacity hover:opacity-80"
                     filter={`drop-shadow(0 0 4px ${CHART_COLORS[i % CHART_COLORS.length]}80)`}
                   />
                 ))}
@@ -236,15 +236,15 @@ export default function Dashboard() {
       </div>
 
       {/* Activity Heatmap */}
-      <div className="glass-card p-6 bg-gradient-to-b from-violet-500/5 via-background to-background border-t-violet-500/20">
-        <div className="flex items-center justify-between mb-6">
+      <div className="p-6 bg-gradient-to-b glass-card from-violet-500/5 via-background to-background border-t-violet-500/20">
+        <div className="flex justify-between items-center mb-6">
             <div>
               <h3 className="text-base font-semibold">Activity Heatmap</h3>
               <p className="text-xs text-muted-foreground">Opens by Day & Hour</p>
             </div>
             <div className="flex items-center gap-3 text-[11px] text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-full border border-border/50">
               <span>Less</span>
-              <div className="h-2 w-24 rounded-full" style={{ background: 'linear-gradient(to right, rgba(34,211,238,0.1), #22d3ee)' }} />
+              <div className="w-24 h-2 rounded-full" style={{ background: 'linear-gradient(to right, rgba(34,211,238,0.1), #22d3ee)' }} />
               <span>More</span>
             </div>
           </div>
@@ -258,7 +258,7 @@ export default function Dashboard() {
             {/* Rows */}
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, di) => (
               <Fragment key={day}>
-                <div className="text-xs text-muted-foreground flex items-center font-medium">{day}</div>
+                <div className="flex items-center text-xs font-medium text-muted-foreground">{day}</div>
                 {Array.from({ length: 24 }, (_, h) => {
                   const val = stats.heatmapData.find(d => ((d.day + 6) % 7) === di && d.hour === h)?.value ?? 0;
                   const opacity = Math.max(0.05, val / maxHeat);

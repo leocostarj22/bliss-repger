@@ -90,7 +90,7 @@ export function AppSidebar({
           onClick={() => opts?.onNavigate?.()}
           className={cn('nav-item group relative overflow-hidden', opts?.collapsed && 'justify-center', active && 'active')}
         >
-          {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+          {active && <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-50 from-cyan-400/10" />}
           <item.icon
             className={cn(
               'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
@@ -119,8 +119,8 @@ export function AppSidebar({
     };
 
     const Logo = ({ collapsed }: { collapsed: boolean }) => (
-      <div className="flex items-center gap-3 px-4 h-14 border-b border-sidebar-border shrink-0 relative overflow-hidden group">
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      <div className="flex overflow-hidden relative gap-3 items-center px-4 h-14 border-b border-sidebar-border shrink-0 group">
+        <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-0 transition-opacity duration-500 pointer-events-none from-cyan-500/10 via-purple-500/10 group-hover:opacity-100" />
         <div className="w-9 h-9 rounded-xl p-[2px] bg-gradient-to-br from-cyan-400 to-fuchsia-500 shrink-0 shadow-[0_0_15px_rgba(34,211,238,0.3)] group-hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] transition-shadow duration-300">
           <div className="w-full h-full rounded-[10px] bg-sidebar flex items-center justify-center backdrop-blur-sm">
             <Mail className="w-4 h-4 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
@@ -128,14 +128,14 @@ export function AppSidebar({
         </div>
         {!collapsed && (
           <span className="text-lg font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-fuchsia-500 drop-shadow-[0_0_10px_rgba(34,211,238,0.2)]">
-            GMC Mail
+            NextCRM
           </span>
         )}
       </div>
     );
 
     const Nav = ({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) => (
-      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
+      <nav className="overflow-y-auto flex-1 px-2 py-4 space-y-1">
         {navItems.map((item) => renderLink(item, { collapsed, onNavigate }))}
       </nav>
     );
@@ -159,7 +159,7 @@ export function AppSidebar({
         <button
           onClick={() => setCollapsed(!collapsed)}
           className={cn(
-            'flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors',
+            'flex justify-center items-center transition-colors text-muted-foreground hover:text-foreground hover:bg-sidebar-accent',
             collapsed ? 'flex-1' : 'w-12',
           )}
           title={collapsed ? 'Expandir' : 'Recolher'}
@@ -176,7 +176,7 @@ export function AppSidebar({
     <>
       <aside
         className={cn(
-          'hidden md:flex h-screen sticky top-0 flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 z-30',
+          'hidden sticky top-0 z-30 flex-col h-screen border-r transition-all duration-300 md:flex bg-sidebar border-sidebar-border',
           collapsed ? 'w-16' : 'w-60',
         )}
       >
@@ -187,13 +187,13 @@ export function AppSidebar({
 
       <Sheet open={mobileOpen} onOpenChange={onMobileOpenChange}>
         <SheetContent side="left" className="w-[18rem] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden">
-          <div className="flex h-full w-full flex-col">
+          <div className="flex flex-col w-full h-full">
             <content.Logo collapsed={false} />
             <content.Nav collapsed={false} onNavigate={() => onMobileOpenChange(false)} />
             <div className="border-t border-sidebar-border">
               <a
                 href="/admin"
-                className="flex h-12 items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+                className="flex justify-center items-center h-12 transition-colors text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
                 title="Voltar ao Painel Admin"
               >
                 <ArrowLeft className="w-4 h-4" />

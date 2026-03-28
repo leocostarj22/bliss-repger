@@ -73,16 +73,16 @@ export default function VideoCall() {
       <div className="page-header">
         <h1 className="page-title">Video Call</h1>
         <p className="page-subtitle">Criação e gestão de links de reunião</p>
-        <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+        <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
       </div>
 
-      <div className="glass-card p-6 space-y-4">
-        <div className="flex items-center gap-2 text-sm font-medium">
+      <div className="p-6 space-y-4 glass-card">
+        <div className="flex gap-2 items-center text-sm font-medium">
           <Video className="w-4 h-4 text-fuchsia-400" />
           Nova reunião
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título" />
           <Input
             type="datetime-local"
@@ -92,20 +92,20 @@ export default function VideoCall() {
           />
           <div className="flex gap-2">
             <Button onClick={onCreate} className="w-full">
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="mr-2 w-4 h-4" />
               Criar
             </Button>
             <Button variant="outline" onClick={() => window.open("/admin/video-call", "_blank", "noopener,noreferrer")}>
-              Abrir GMCentral
+              Abrir NextERP
             </Button>
           </div>
         </div>
 
-        <div className="text-xs text-muted-foreground">As reuniões são criadas no GMCentral e abertas via Jitsi.</div>
+        <div className="text-xs text-muted-foreground">As reuniões são criadas no NextERP e abertas via Jitsi.</div>
       </div>
 
-      <div className="glass-card p-6">
-        <div className="flex items-center justify-between gap-3 mb-4">
+      <div className="p-6 glass-card">
+        <div className="flex gap-3 justify-between items-center mb-4">
           <div>
             <div className="text-sm font-semibold">Reuniões</div>
             <div className="text-xs text-muted-foreground">Histórico</div>
@@ -122,8 +122,8 @@ export default function VideoCall() {
         ) : (
           <div className="space-y-3">
             {rows.map((m) => (
-              <div key={m.id} className="rounded-lg border border-border/60 bg-background/40 p-4">
-                <div className="flex items-start justify-between gap-3">
+              <div key={m.id} className="p-4 rounded-lg border border-border/60 bg-background/40">
+                <div className="flex gap-3 justify-between items-start">
                   <div>
                     <div className="text-sm font-medium">{m.title}</div>
                     <div className="text-xs text-muted-foreground">Agendada: {fmtDateTime(m.scheduled_at)}</div>
@@ -136,13 +136,13 @@ export default function VideoCall() {
                       size="sm"
                       onClick={() => window.open(m.meet_url, "_blank", "noopener,noreferrer")}
                     >
-                      <ExternalLink className="w-4 h-4 mr-2" />
+                      <ExternalLink className="mr-2 w-4 h-4" />
                       Entrar
                     </Button>
                   </div>
                 </div>
 
-                <div className="mt-2 text-xs text-muted-foreground break-all">{m.meet_url}</div>
+                <div className="mt-2 text-xs break-all text-muted-foreground">{m.meet_url}</div>
               </div>
             ))}
           </div>

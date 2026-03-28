@@ -19,21 +19,35 @@ class MessageSent implements ShouldBroadcast
 
     public function broadcastOn(): array
     {
-        return [
-            new PrivateChannel('messages.' . $this->message->recipient_id),
-            new PrivateChannel('messages.all')
-        ];
+        $this->message->loadMissing(['recipients:message_id,recipient_id', 'sender:id']);
+
+        $channels = [];
+        $senderId = (int) ($this->message->sender_id ?? 0);
+        if ($senderId > 0) {
+            $channels[] = new PrivateChannel('messages.' . $senderId);
+        }
+
+        foreach ($this->message->recipients as $r) {
+            $rid = (int) ($r->recipient_id ?? 0);
+            if ($rid > 0) {
+                $channels[] = new PrivateChannel('messages.' . $rid);
+            }
+        }
+
+        $channels[] = new PrivateChannel('messages.all');
+
+        return $channels;
     }
 
     public function broadcastWith(): array
     {
+        $this->message->loadMissing(['recipients:message_id,recipient_id']);
+
         return [
-            'id' => $this->message->id,
-            'subject' => $this->message->subject,
-            'sender' => $this->message->sender->name,
-            'sender_id' => $this->message->sender_id,
-            'recipient_id' => $this->message->recipient_id,
-            'created_at' => $this->message->created_at->toISOString(),
+            'message_id' => (string) $this->message->id,
+            'sender_id' => (string) ($this->message->sender_id ?? ''),
+            'recipient_ids' => $this->message->recipients->map(fn ($r) => (string) ($r->recipient_id ?? ''))->filter()->values()->all(),
+            'created_at' => $this->message->created_at?->toISOString(),
         ];
     }
 

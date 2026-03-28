@@ -8,7 +8,7 @@ import { HashRouter, Routes, Route, Navigate, Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { ShieldAlert } from "lucide-react";
-import { fetchMyAccess } from "@/services/api";
+import { fetchBranding, fetchMyAccess } from "@/services/api";
 import { hasEffectivePermission } from "@/lib/utils";
 import { ThemeProvider } from "@/hooks/use-theme";
 import Dashboard from "@/pages/Dashboard";
@@ -58,6 +58,7 @@ import CommVideoCall from "@/pages/communication/VideoCall";
 import CommInternalMessages from "@/pages/communication/InternalMessages";
 import CommChat from "@/pages/communication/Chat";
 import CommAdminPosts from "@/pages/communication/AdminPosts";
+import CommAdminPostEdit from "@/pages/communication/AdminPostEdit";
 import BlissNaturaDashboard from "@/pages/blissnatura/Dashboard";
 import BlissNaturaOrders from "@/pages/blissnatura/Orders";
 import BlissNaturaCustomers from "@/pages/blissnatura/Customers";
@@ -76,6 +77,7 @@ import MyFormulaProducts from "@/pages/myformula/Products";
 import MyFormulaProductEdit from "@/pages/myformula/ProductEdit";
 import MyFormulaQuizzes from "@/pages/myformula/Quizzes";
 import Profile from "@/pages/account/Profile";
+import AdminSettings from "@/pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -84,9 +86,9 @@ const ComingSoon = ({ title }: { title: string }) => (
     <div className="page-header">
       <h1 className="page-title">{title}</h1>
       <p className="page-subtitle">Em construção</p>
-      <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+      <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
     </div>
-    <div className="glass-card p-6">
+    <div className="p-6 glass-card">
       <div className="text-sm text-muted-foreground">Esta secção será implementada a seguir.</div>
     </div>
   </div>
@@ -101,9 +103,9 @@ function AccessDenied(props: { title?: string; description?: string }) {
       <div className="page-header">
         <h1 className="page-title">{title}</h1>
         <p className="page-subtitle">Permissões</p>
-        <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+        <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
       </div>
-      <div className="glass-card p-6 flex items-start gap-3">
+      <div className="flex gap-3 items-start p-6 glass-card">
         <ShieldAlert className="w-5 h-5 text-amber-400 mt-0.5" />
         <div className="space-y-3">
           <div>
@@ -152,9 +154,9 @@ function RequirePermission(props: { permission: string | string[]; children: Rea
         <div className="page-header">
           <h1 className="page-title">A carregar…</h1>
           <p className="page-subtitle">Permissões</p>
-          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+          <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
         </div>
-        <div className="glass-card p-6">
+        <div className="p-6 glass-card">
           <div className="text-sm text-muted-foreground">A validar acesso…</div>
         </div>
       </div>
@@ -196,9 +198,9 @@ function Home() {
         <div className="page-header">
           <h1 className="page-title">A carregar…</h1>
           <p className="page-subtitle">Início</p>
-          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+          <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
         </div>
-        <div className="glass-card p-6">
+        <div className="p-6 glass-card">
           <div className="text-sm text-muted-foreground">A preparar o painel…</div>
         </div>
       </div>
@@ -212,19 +214,70 @@ function Home() {
   return <Dashboard />
 }
 
-const App = () => (
-  <ThemeProvider>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <HotToaster toastOptions={{ duration: 5000 }} />
-        <HashRouter>
+const applyHeadBranding = (input: { title?: string | null; favicon_url?: string | null }) => {
+  if (typeof document === "undefined") return
 
-          <Routes>
+  const title = String(input?.title ?? "").trim()
+  if (title) document.title = title
+
+  const url = String(input?.favicon_url ?? "").trim()
+  if (!url) return
+
+  const href = `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`
+  const links = Array.from(document.querySelectorAll<HTMLLinkElement>("link[rel~='icon']"))
+
+  if (links.length === 0) {
+    const link = document.createElement("link")
+    link.rel = "icon"
+    link.type = "image/png"
+    link.href = href
+    document.head.appendChild(link)
+    return
+  }
+
+  for (const link of links) {
+    link.href = href
+    if (!link.type) link.type = "image/png"
+  }
+}
+
+const App = () => {
+  useEffect(() => {
+    let alive = true
+
+    fetchBranding()
+      .then((r) => {
+        if (!alive) return
+        try {
+          window.localStorage.setItem("nexterp:branding", JSON.stringify(r.data))
+          window.dispatchEvent(new Event("nexterp:branding:updated"))
+        } catch {
+          // ignore
+        }
+        applyHeadBranding(r.data?.app)
+      })
+      .catch(() => {
+        return
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  return (
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <HotToaster toastOptions={{ duration: 5000 }} />
+          <HashRouter>
+
+            <Routes>
             <Route path="/myformula/orders/:id/purchase-report" element={<MyFormulaPurchaseReport />} />
             <Route element={<AppLayout />}>
               <Route path="/" element={<Home />} />
-              <Route path="/gmcentral" element={<Navigate to="/" replace />} />
+              <Route path="/nexterp" element={<Navigate to="/" replace />} />
 
               <Route path="/admin" element={<Navigate to="/" replace />} />
               <Route
@@ -361,6 +414,15 @@ const App = () => (
                 element={
                   <RequirePermission permission="admin.roles.write">
                     <RoleForm />
+                  </RequirePermission>
+                }
+              />
+
+              <Route
+                path="/admin/settings"
+                element={
+                  <RequirePermission permission="admin.settings.manage">
+                    <AdminSettings />
                   </RequirePermission>
                 }
               />
@@ -641,6 +703,14 @@ const App = () => (
                   </RequirePermission>
                 }
               />
+              <Route
+                path="/communication/posts/:id/edit"
+                element={
+                  <RequirePermission permission="communication.posts.write">
+                    <CommAdminPostEdit />
+                  </RequirePermission>
+                }
+              />
 
               <Route
                 path="/blissnatura"
@@ -898,6 +968,7 @@ const App = () => (
       </TooltipProvider>
     </QueryClientProvider>
   </ThemeProvider>
-);
+  )
+}
 
 export default App;

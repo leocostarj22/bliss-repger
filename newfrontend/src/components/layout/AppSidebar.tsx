@@ -28,6 +28,7 @@ import {
   Package,
   ShoppingCart,
   Beaker,
+  Settings,
 } from 'lucide-react';
 import { cn, hasEffectivePermission } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -54,6 +55,7 @@ export const adminNavItems = [
   { label: 'Módulos', icon: Puzzle, path: '/admin/modules', color: 'fuchsia' },
   { label: 'Utilizadores', icon: Users, path: '/admin/users', color: 'emerald' },
   { label: 'Cargos', icon: BadgeCheck, path: '/admin/roles', color: 'sky' },
+  { label: 'Configurações', icon: Settings, path: '/admin/settings', color: 'cyan' },
 ] as const;
 
 export const supportNavItems = [
@@ -188,6 +190,9 @@ export function AppSidebar({
   const [accessIsEmployeeRole, setAccessIsEmployeeRole] = useState(false);
   const location = useLocation();
 
+  const [brandName, setBrandName] = useState('NextERP');
+  const [brandIconUrl, setBrandIconUrl] = useState<string>(() => `${import.meta.env.BASE_URL}gmfavicon.png`);
+
   const isModuleEnabled = (key: string) => moduleStatuses[key] !== false;
 
   useEffect(() => {
@@ -197,8 +202,8 @@ export function AppSidebar({
       setChatUnreadCount(Number.isFinite(raw) ? Math.max(0, raw) : 0);
     };
 
-    window.addEventListener('gmcentral:chat:unread', onUnread as EventListener);
-    return () => window.removeEventListener('gmcentral:chat:unread', onUnread as EventListener);
+    window.addEventListener('nexterp:chat:unread', onUnread as EventListener);
+    return () => window.removeEventListener('nexterp:chat:unread', onUnread as EventListener);
   }, []);
 
   useEffect(() => {
@@ -208,14 +213,14 @@ export function AppSidebar({
       setChatUnreadCount(Number.isFinite(raw) ? Math.max(0, raw) : 0)
     }
 
-    window.addEventListener('gmcentral:chat:unread', onUnread as EventListener)
-    return () => window.removeEventListener('gmcentral:chat:unread', onUnread as EventListener)
+    window.addEventListener('nexterp:chat:unread', onUnread as EventListener)
+    return () => window.removeEventListener('nexterp:chat:unread', onUnread as EventListener)
   }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      const raw = window.localStorage.getItem('bliss:sidebar:menu_groups');
+      const raw = window.localStorage.getItem('nexterp:sidebar:menu_groups');
       if (!raw) return;
       const parsed = JSON.parse(raw) as {
         personalOpen?: boolean;
@@ -249,7 +254,7 @@ export function AppSidebar({
   useEffect(() => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(
-      'bliss:sidebar:menu_groups',
+      'nexterp:sidebar:menu_groups',
       JSON.stringify({ personalOpen, adminOpen, supportOpen, financeOpen, humanResourcesOpen, communicationOpen, crmOpen, blissNaturaOpen, espacoAbsolutoOpen, myFormulaOpen, reportsOpen })
     );
   }, [personalOpen, adminOpen, supportOpen, financeOpen, humanResourcesOpen, communicationOpen, crmOpen, blissNaturaOpen, espacoAbsolutoOpen, myFormulaOpen, reportsOpen]);
@@ -273,7 +278,7 @@ export function AppSidebar({
 
     const fromStorage = () => {
       try {
-        const raw = window.localStorage.getItem('bliss:module-statuses');
+        const raw = window.localStorage.getItem('nexterp:module-statuses');
         if (!raw) return;
         const parsed = JSON.parse(raw) as Record<string, boolean>;
         setModuleStatuses(parsed);
@@ -290,7 +295,7 @@ export function AppSidebar({
           return acc;
         }, {});
         setModuleStatuses(map);
-        window.localStorage.setItem('bliss:module-statuses', JSON.stringify(map));
+        window.localStorage.setItem('nexterp:module-statuses', JSON.stringify(map));
       } catch {
         fromStorage();
       }
@@ -299,10 +304,10 @@ export function AppSidebar({
     const onUpdated = () => fromStorage();
 
     load();
-    window.addEventListener('bliss:modules:updated', onUpdated);
+    window.addEventListener('nexterp:modules:updated', onUpdated);
 
     return () => {
-      window.removeEventListener('bliss:modules:updated', onUpdated);
+      window.removeEventListener('nexterp:modules:updated', onUpdated);
     };
   }, []);
 
@@ -348,6 +353,7 @@ export function AppSidebar({
     '/admin/modules': 'admin.modules.manage',
     '/admin/users': ['admin.users.read', 'admin.users.write'],
     '/admin/roles': ['admin.roles.read', 'admin.roles.write'],
+    '/admin/settings': 'admin.settings.manage',
   };
 
   const supportPermissionByPath: Record<string, string | string[]> = {
@@ -427,6 +433,28 @@ export function AppSidebar({
   const showEspacoAbsolutoGroup = isModuleEnabled('EspacoAbsoluto') && espacoAbsolutoItems.length > 0;
   const showMyFormulaGroup = isModuleEnabled('MyFormula') && myFormulaItems.length > 0;
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const fromStorage = () => {
+      try {
+        const raw = window.localStorage.getItem('nexterp:branding');
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as any;
+        const nextName = String(parsed?.app?.name ?? '').trim();
+        const nextIcon = String(parsed?.app?.favicon_url ?? '').trim();
+        if (nextName) setBrandName(nextName);
+        if (nextIcon) setBrandIconUrl(nextIcon);
+      } catch {
+        return;
+      }
+    };
+
+    fromStorage();
+    window.addEventListener('nexterp:branding:updated', fromStorage as EventListener);
+    return () => window.removeEventListener('nexterp:branding:updated', fromStorage as EventListener);
+  }, []);
+
   return (
     <aside
       className={cn(
@@ -438,30 +466,30 @@ export function AppSidebar({
       {/* Logo */}
       <Link
         to="/"
-        className="flex items-center gap-3 px-4 h-14 border-b border-sidebar-border shrink-0 relative overflow-hidden group"
+        className="flex overflow-hidden relative gap-3 items-center px-4 h-14 border-b border-sidebar-border shrink-0 group"
         aria-label="Ir para a Dashboard"
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-0 transition-opacity duration-500 pointer-events-none from-cyan-500/10 via-purple-500/10 group-hover:opacity-100" />
         <div className="w-9 h-9 rounded-xl p-[2px] bg-gradient-to-br from-cyan-400 to-fuchsia-500 shrink-0 shadow-[0_0_15px_rgba(34,211,238,0.3)] group-hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] transition-shadow duration-300">
           <div className="w-full h-full rounded-[10px] bg-sidebar flex items-center justify-center backdrop-blur-sm overflow-hidden">
             <img
-              src={`${import.meta.env.BASE_URL}gmfavicon.png`}
-              alt="GMCentral"
-              className="w-6 h-6 object-contain"
+              src={brandIconUrl}
+              alt={brandName}
+              className="object-contain w-6 h-6"
               loading="eager"
             />
           </div>
         </div>
         {!collapsed && (
           <span className="text-lg font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-fuchsia-500 drop-shadow-[0_0_10px_rgba(34,211,238,0.2)]">
-            GMCentral
+            {brandName}
           </span>
         )}
       </Link>
 
       {/* Navigation */}
       <ScrollArea className="flex-1 min-h-0">
-        <nav className="py-4 px-2 space-y-3">
+        <nav className="px-2 py-4 space-y-3">
           <div className="space-y-1">
             {accessIsAdmin
               ? primaryNavItems.filter((it) => it.path !== "/me/hr").map((item) => {
@@ -474,7 +502,7 @@ export function AppSidebar({
                       to={item.path}
                       className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
                     >
-                      {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                      {active && <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-50 from-cyan-400/10" />}
                       <item.icon
                         className={cn(
                           'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
@@ -512,7 +540,7 @@ export function AppSidebar({
                       to={item.path}
                       className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
                     >
-                      {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                      {active && <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-50 from-cyan-400/10" />}
                       <item.icon
                         className={cn(
                           'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
@@ -547,7 +575,7 @@ export function AppSidebar({
                 <button
                   type="button"
                   onClick={() => setHumanResourcesOpen((v) => !v)}
-                  className="w-full flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-2 hover:text-foreground transition-colors"
+                  className="flex gap-2 justify-between items-center px-2 py-2 w-full text-xs font-semibold tracking-wider uppercase transition-colors text-muted-foreground hover:text-foreground"
                 >
                   <span>Meu RH</span>
                   {humanResourcesOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -566,7 +594,7 @@ export function AppSidebar({
                         to={item.path}
                         className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
                       >
-                        {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                        {active && <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-50 from-cyan-400/10" />}
                         <item.icon
                           className={cn(
                             'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
@@ -600,7 +628,7 @@ export function AppSidebar({
                 <button
                   type="button"
                   onClick={() => setSupportOpen((v) => !v)}
-                  className="w-full flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-2 hover:text-foreground transition-colors mt-2"
+                  className="flex gap-2 justify-between items-center px-2 py-2 mt-2 w-full text-xs font-semibold tracking-wider uppercase transition-colors text-muted-foreground hover:text-foreground"
                 >
                   <span>Suporte</span>
                   {supportOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -619,7 +647,7 @@ export function AppSidebar({
                         to={item.path}
                         className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
                       >
-                        {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                        {active && <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-50 from-cyan-400/10" />}
                         <item.icon
                           className={cn(
                             'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
@@ -656,7 +684,7 @@ export function AppSidebar({
             <button
               type="button"
               onClick={() => setAdminOpen((v) => !v)}
-              className="w-full flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-2 hover:text-foreground transition-colors"
+              className="flex gap-2 justify-between items-center px-2 py-2 w-full text-xs font-semibold tracking-wider uppercase transition-colors text-muted-foreground hover:text-foreground"
             >
               <span>Administração</span>
               {adminOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -674,7 +702,7 @@ export function AppSidebar({
                   to={item.path}
                   className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
                 >
-                  {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                  {active && <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-50 from-cyan-400/10" />}
                   <item.icon
                     className={cn(
                       'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
@@ -710,7 +738,7 @@ export function AppSidebar({
             <button
               type="button"
               onClick={() => setSupportOpen((v) => !v)}
-              className="w-full flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-2 hover:text-foreground transition-colors"
+              className="flex gap-2 justify-between items-center px-2 py-2 w-full text-xs font-semibold tracking-wider uppercase transition-colors text-muted-foreground hover:text-foreground"
             >
               <span>Suporte</span>
               {supportOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -728,7 +756,7 @@ export function AppSidebar({
                     to={item.path}
                     className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
                   >
-                    {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                    {active && <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-50 from-cyan-400/10" />}
                     <item.icon
                       className={cn(
                         'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
@@ -764,7 +792,7 @@ export function AppSidebar({
             <button
               type="button"
               onClick={() => setFinanceOpen((v) => !v)}
-              className="w-full flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-2 hover:text-foreground transition-colors"
+              className="flex gap-2 justify-between items-center px-2 py-2 w-full text-xs font-semibold tracking-wider uppercase transition-colors text-muted-foreground hover:text-foreground"
             >
               <span>Financeiro</span>
               {financeOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -782,7 +810,7 @@ export function AppSidebar({
                   to={item.path}
                   className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
                 >
-                  {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                  {active && <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-50 from-cyan-400/10" />}
                   <item.icon
                     className={cn(
                       'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
@@ -818,7 +846,7 @@ export function AppSidebar({
             <button
               type="button"
               onClick={() => setHumanResourcesOpen((v) => !v)}
-              className="w-full flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-2 hover:text-foreground transition-colors"
+              className="flex gap-2 justify-between items-center px-2 py-2 w-full text-xs font-semibold tracking-wider uppercase transition-colors text-muted-foreground hover:text-foreground"
             >
               <span>Recursos Humanos</span>
               {humanResourcesOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -836,7 +864,7 @@ export function AppSidebar({
                     to={item.path}
                     className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
                   >
-                    {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                    {active && <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-50 from-cyan-400/10" />}
                     <item.icon
                       className={cn(
                         'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
@@ -872,7 +900,7 @@ export function AppSidebar({
             <button
               type="button"
               onClick={() => setCommunicationOpen((v) => !v)}
-              className="w-full flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-2 hover:text-foreground transition-colors"
+              className="flex gap-2 justify-between items-center px-2 py-2 w-full text-xs font-semibold tracking-wider uppercase transition-colors text-muted-foreground hover:text-foreground"
             >
               <span>Comunicação</span>
               {communicationOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -890,7 +918,7 @@ export function AppSidebar({
                     to={item.path}
                     className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
                   >
-                    {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                    {active && <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-50 from-cyan-400/10" />}
                     <item.icon
                       className={cn(
                         'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
@@ -931,7 +959,7 @@ export function AppSidebar({
             <button
               type="button"
               onClick={() => setCrmOpen((v) => !v)}
-              className="w-full flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-2 hover:text-foreground transition-colors"
+              className="flex gap-2 justify-between items-center px-2 py-2 w-full text-xs font-semibold tracking-wider uppercase transition-colors text-muted-foreground hover:text-foreground"
             >
               <span>CRM</span>
               {crmOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -986,7 +1014,7 @@ export function AppSidebar({
             <button
               type="button"
               onClick={() => setPersonalOpen((v) => !v)}
-              className="w-full flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-2 hover:text-foreground transition-colors"
+              className="flex gap-2 justify-between items-center px-2 py-2 w-full text-xs font-semibold tracking-wider uppercase transition-colors text-muted-foreground hover:text-foreground"
             >
               <span>Pessoal</span>
               {personalOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -1004,7 +1032,7 @@ export function AppSidebar({
                     to={item.path}
                     className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
                   >
-                    {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                    {active && <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-50 from-cyan-400/10" />}
                     <item.icon
                       className={cn(
                         'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
@@ -1040,7 +1068,7 @@ export function AppSidebar({
             <button
               type="button"
               onClick={() => setReportsOpen((v) => !v)}
-              className="w-full flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-2 hover:text-foreground transition-colors"
+              className="flex gap-2 justify-between items-center px-2 py-2 w-full text-xs font-semibold tracking-wider uppercase transition-colors text-muted-foreground hover:text-foreground"
             >
               <span>Relatórios e Logs</span>
               {reportsOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -1058,7 +1086,7 @@ export function AppSidebar({
                     to={item.path}
                     className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
                   >
-                    {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                    {active && <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-50 from-cyan-400/10" />}
                     <item.icon
                       className={cn(
                         'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
@@ -1094,7 +1122,7 @@ export function AppSidebar({
             <button
               type="button"
               onClick={() => setBlissNaturaOpen((v) => !v)}
-              className="w-full flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-2 hover:text-foreground transition-colors"
+              className="flex gap-2 justify-between items-center px-2 py-2 w-full text-xs font-semibold tracking-wider uppercase transition-colors text-muted-foreground hover:text-foreground"
             >
               <span>Bliss Natura</span>
               {blissNaturaOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -1112,7 +1140,7 @@ export function AppSidebar({
                     to={item.path}
                     className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
                   >
-                    {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                    {active && <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-50 from-cyan-400/10" />}
                     <item.icon
                       className={cn(
                         'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
@@ -1148,7 +1176,7 @@ export function AppSidebar({
             <button
               type="button"
               onClick={() => setEspacoAbsolutoOpen((v) => !v)}
-              className="w-full flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-2 hover:text-foreground transition-colors"
+              className="flex gap-2 justify-between items-center px-2 py-2 w-full text-xs font-semibold tracking-wider uppercase transition-colors text-muted-foreground hover:text-foreground"
             >
               <span>Espaço Absoluto</span>
               {espacoAbsolutoOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -1166,7 +1194,7 @@ export function AppSidebar({
                     to={item.path}
                     className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
                   >
-                    {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                    {active && <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-50 from-cyan-400/10" />}
                     <item.icon
                       className={cn(
                         'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
@@ -1202,7 +1230,7 @@ export function AppSidebar({
             <button
               type="button"
               onClick={() => setMyFormulaOpen((v) => !v)}
-              className="w-full flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-2 hover:text-foreground transition-colors"
+              className="flex gap-2 justify-between items-center px-2 py-2 w-full text-xs font-semibold tracking-wider uppercase transition-colors text-muted-foreground hover:text-foreground"
             >
               <span>MyFormula</span>
               {myFormulaOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -1220,7 +1248,7 @@ export function AppSidebar({
                     to={item.path}
                     className={cn('nav-item group relative overflow-hidden', collapsed && 'justify-center', active && 'active')}
                   >
-                    {active && <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 to-transparent opacity-50" />}
+                    {active && <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-50 from-cyan-400/10" />}
                     <item.icon
                       className={cn(
                         'w-5 h-5 shrink-0 transition-all duration-300 group-hover:scale-110',
@@ -1258,7 +1286,7 @@ export function AppSidebar({
           <button
             type="button"
             onClick={() => onRequestClose?.()}
-            className="w-full flex items-center justify-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+            className="flex gap-2 justify-center items-center px-3 py-3 w-full text-sm font-semibold rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
           >
             <ChevronLeft className="w-4 h-4" />
             <span>Voltar</span>
@@ -1269,7 +1297,7 @@ export function AppSidebar({
           <button
             onClick={() => setCollapsed(!collapsed)}
             className={cn(
-              "flex-1 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors",
+              "flex flex-1 justify-center items-center transition-colors text-muted-foreground hover:text-foreground hover:bg-sidebar-accent",
             )}
             title={collapsed ? "Expandir" : "Recolher"}
           >

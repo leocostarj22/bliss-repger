@@ -5,12 +5,15 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use App\Models\Ticket;
 use App\Models\Post;
 use App\Models\PostLike;
 use App\Models\PostComment;
 use App\Models\InternalMessage;
 use App\Models\MessageRecipient;
+use App\Models\MessageAttachment;
+use App\Events\MessageReactionsUpdated;
 use App\Models\VideoCall;
 use App\Models\Company;
 use App\Models\Department;
@@ -212,11 +215,23 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                         $photo = asset('storage/' . ltrim(preg_replace('/^storage\//', '', $photo), '/'));
                     }
 
+                    $featured = $p->featured_image_url;
+                    if (is_string($featured) && $featured !== '') {
+                        $candidate = $featured;
+                        if (str_starts_with($candidate, '/posts/images/') || str_starts_with($candidate, 'posts/images/')) {
+                            $candidate = basename($candidate);
+                        }
+                        if (! str_contains($candidate, '/') && preg_match('/\.(png|jpe?g|gif|webp|svg)$/i', $candidate)) {
+                            $featured = url('api/v1/communication/posts/images/view/' . rawurlencode($candidate));
+                        }
+                    }
+
                     return [
                         'id' => (string) $p->id,
                         'title' => $p->title,
                         'content' => (string) ($p->content ?? ''),
                         'is_pinned' => (bool) $p->is_pinned,
+                        'featured_image_url' => $featured,
                         'published_at' => $p->published_at?->toIso8601String(),
                         'likes_count' => (int) ($p->likes_count ?? 0),
                         'liked_by_me' => isset($likedSet[$p->id]),
@@ -480,6 +495,155 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         return response()->json(['data' => $data]);
     });
 
+    $brandingPath = base_path('branding.json');
+
+    $defaultBranding = fn () => [
+        'app_name' => 'NextERP',
+        'app_title' => 'NextERP - ERP Solution for Business',
+        'app_favicon' => 'gmfavicon.png',
+        'crm_name' => 'NextCRM',
+        'crm_title' => 'NextCRM',
+        'crm_favicon' => 'images/nextfavicon.png',
+    ];
+
+    $readBranding = function () use ($brandingPath, $defaultBranding) {
+        $data = $defaultBranding();
+        if (File::exists($brandingPath)) {
+            $decoded = json_decode((string) File::get($brandingPath), true);
+            if (is_array($decoded)) $data = array_merge($data, $decoded);
+        }
+        return $data;
+    };
+
+    $toFaviconUrl = function (?string $path) {
+        $p = trim((string) $path);
+        if ($p === '') return null;
+        $p = ltrim($p, '/');
+        if (str_starts_with($p, 'branding/')) return asset('storage/' . $p);
+        if (str_starts_with($p, 'storage/')) return asset($p);
+        return asset($p);
+    };
+
+    $normalizeFaviconInput = function ($value) {
+        $v = trim((string) ($value ?? ''));
+        if ($v === '' || $v === 'null') return null;
+        if (str_starts_with($v, 'data:')) return $v;
+        $parsed = parse_url($v);
+        if (is_array($parsed) && isset($parsed['path'])) $v = (string) $parsed['path'];
+        $v = ltrim($v, '/');
+        if (str_starts_with($v, 'storage/')) $v = substr($v, strlen('storage/'));
+        return $v;
+    };
+
+    $storeFavicon = function (string $dataUrl, string $kind, ?string $fileName = null) {
+        if (!preg_match('/^data:(image\/[a-zA-Z0-9.+\-]+);base64,(.*)$/', $dataUrl, $m)) {
+            throw new \RuntimeException('Favicon inválido');
+        }
+
+        $mime = (string) $m[1];
+        $raw = base64_decode((string) $m[2], true);
+        if ($raw === false) throw new \RuntimeException('Favicon inválido');
+
+        $maxBytes = 512 * 1024;
+        if (strlen($raw) > $maxBytes) throw new \RuntimeException('O favicon deve ter no máximo 512KB.');
+
+        $ext = match ($mime) {
+            'image/png' => 'png',
+            'image/jpeg' => 'jpg',
+            'image/webp' => 'webp',
+            'image/svg+xml' => 'svg',
+            'image/x-icon', 'image/vnd.microsoft.icon' => 'ico',
+            default => null,
+        };
+
+        if (!$ext && $fileName) {
+            $n = strtolower((string) pathinfo($fileName, PATHINFO_EXTENSION));
+            if ($n !== '') $ext = $n;
+        }
+        if (!$ext) $ext = 'png';
+
+        $path = 'branding/' . $kind . '-' . (string) Str::uuid() . '.' . $ext;
+        Storage::disk('public')->put($path, $raw);
+        return $path;
+    };
+
+    Route::get('branding', function () use ($readBranding, $toFaviconUrl) {
+        $data = $readBranding();
+        return response()->json([
+            'data' => [
+                'app' => [
+                    'name' => (string) ($data['app_name'] ?? ''),
+                    'title' => (string) ($data['app_title'] ?? ''),
+                    'favicon_url' => $toFaviconUrl($data['app_favicon'] ?? null),
+                ],
+                'crm' => [
+                    'name' => (string) ($data['crm_name'] ?? ''),
+                    'title' => (string) ($data['crm_title'] ?? ''),
+                    'favicon_url' => $toFaviconUrl($data['crm_favicon'] ?? null),
+                ],
+            ],
+        ]);
+    });
+
+    Route::put('admin/branding', function () use ($brandingPath, $readBranding, $toFaviconUrl, $normalizeFaviconInput, $storeFavicon) {
+        $me = auth()->user();
+        abort_unless($me && $me->isAdmin(), 403);
+
+        $validated = request()->validate([
+            'app_name' => ['required', 'string', 'max:80'],
+            'app_title' => ['required', 'string', 'max:140'],
+            'app_favicon' => ['nullable', 'string'],
+            'app_favicon_file_name' => ['nullable', 'string', 'max:255'],
+            'crm_name' => ['required', 'string', 'max:80'],
+            'crm_title' => ['required', 'string', 'max:140'],
+            'crm_favicon' => ['nullable', 'string'],
+            'crm_favicon_file_name' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $current = $readBranding();
+
+        $next = $current;
+        $next['app_name'] = $validated['app_name'];
+        $next['app_title'] = $validated['app_title'];
+        $next['crm_name'] = $validated['crm_name'];
+        $next['crm_title'] = $validated['crm_title'];
+
+        $appFaviconIn = $normalizeFaviconInput($validated['app_favicon'] ?? null);
+        if (is_string($appFaviconIn) && str_starts_with($appFaviconIn, 'data:')) {
+            $old = (string) ($current['app_favicon'] ?? '');
+            if (str_starts_with($old, 'branding/')) Storage::disk('public')->delete($old);
+            $next['app_favicon'] = $storeFavicon($appFaviconIn, 'app-favicon', $validated['app_favicon_file_name'] ?? null);
+        } else {
+            $next['app_favicon'] = $appFaviconIn;
+        }
+
+        $crmFaviconIn = $normalizeFaviconInput($validated['crm_favicon'] ?? null);
+        if (is_string($crmFaviconIn) && str_starts_with($crmFaviconIn, 'data:')) {
+            $old = (string) ($current['crm_favicon'] ?? '');
+            if (str_starts_with($old, 'branding/')) Storage::disk('public')->delete($old);
+            $next['crm_favicon'] = $storeFavicon($crmFaviconIn, 'crm-favicon', $validated['crm_favicon_file_name'] ?? null);
+        } else {
+            $next['crm_favicon'] = $crmFaviconIn;
+        }
+
+        File::put($brandingPath, json_encode($next, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        return response()->json([
+            'data' => [
+                'app' => [
+                    'name' => (string) ($next['app_name'] ?? ''),
+                    'title' => (string) ($next['app_title'] ?? ''),
+                    'favicon_url' => $toFaviconUrl($next['app_favicon'] ?? null),
+                ],
+                'crm' => [
+                    'name' => (string) ($next['crm_name'] ?? ''),
+                    'title' => (string) ($next['crm_title'] ?? ''),
+                    'favicon_url' => $toFaviconUrl($next['crm_favicon'] ?? null),
+                ],
+            ],
+        ]);
+    });
+
     Route::prefix('espacoabsoluto')->group(function () {
         Route::get('overview', function () {
             $totalMessages = EspacoAbsolutoUserMessage::query()->where(function ($q) {
@@ -693,6 +857,147 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::prefix('communication')->middleware('auth:web')->group(function () {
+        Route::get('messages/thread', function () {
+            $user = auth('web')->user();
+            abort_unless($user, 401);
+
+            $otherId = trim((string) request('other_user_id', ''));
+            abort_unless($otherId !== '' && User::whereKey($otherId)->exists(), 422);
+
+            $limit = (int) request('limit', 30);
+            if ($limit < 1) $limit = 1;
+            if ($limit > 100) $limit = 100;
+
+            $cursorTs = trim((string) request('cursor_ts', ''));
+            $cursorId = trim((string) request('cursor_id', ''));
+
+            $q = MessageRecipient::query()
+                ->whereHas('message', function ($mq) {
+                    $mq->where('status', 'sent')->where('subject', '(Chat)');
+                })
+                ->where(function ($w) use ($user, $otherId) {
+                    $w->where(function ($w2) use ($user, $otherId) {
+                        $w2->where('recipient_id', $user->id)
+                            ->whereHas('message', fn ($mq) => $mq->where('sender_id', $otherId));
+                    })->orWhere(function ($w2) use ($user, $otherId) {
+                        $w2->where('recipient_id', $otherId)
+                            ->whereHas('message', fn ($mq) => $mq->where('sender_id', $user->id));
+                    });
+                })
+                ->join('internal_messages as im', 'im.id', '=', 'message_recipients.message_id')
+                ->select('message_recipients.*')
+                ->with(['message.attachments', 'message:id,sender_id,subject,body,sent_at,created_at', 'message.sender:id,name']);
+
+            if ($cursorTs !== '' && $cursorId !== '') {
+                $q->where(function ($w) use ($cursorTs, $cursorId) {
+                    $w->where('im.sent_at', '<', $cursorTs)
+                        ->orWhere(function ($w2) use ($cursorTs, $cursorId) {
+                            $w2->where('im.sent_at', '=', $cursorTs)
+                                ->where('message_recipients.id', '<', (int) $cursorId);
+                        });
+                });
+            } elseif ($cursorId !== '') {
+                $q->where('message_recipients.id', '<', (int) $cursorId);
+            }
+
+            $rows = $q
+                ->orderByDesc('im.sent_at')
+                ->orderByDesc('message_recipients.id')
+                ->limit($limit + 1)
+                ->get();
+
+            $hasMore = $rows->count() > $limit;
+            if ($hasMore) {
+                $rows = $rows->take($limit);
+            }
+
+            $data = $rows->map(function (MessageRecipient $r) use ($user) {
+                $m = $r->message;
+                $attachments = $m
+                    ? $m->attachments
+                        ->map(function (MessageAttachment $a) {
+                            return [
+                                'id' => (string) $a->id,
+                                'filename' => (string) ($a->filename ?? ''),
+                                'original_filename' => (string) ($a->original_filename ?? ''),
+                                'mime_type' => (string) ($a->mime_type ?? ''),
+                                'file_size' => (int) ($a->file_size ?? 0),
+                                'url' => url('api/v1/communication/messages/attachments/view/' . $a->id),
+                            ];
+                        })
+                        ->values()
+                        ->all()
+                    : [];
+
+                $fromId = $m?->sender_id !== null ? (string) $m->sender_id : null;
+                $toId = (string) $r->recipient_id;
+                $folder = $fromId !== null && (int) $fromId === (int) $user->id ? 'sent' : 'inbox';
+
+                return [
+                    'id' => (string) $r->id,
+                    'from_user_id' => $fromId,
+                    'to_user_id' => $toId,
+                    'subject' => (string) ($m?->subject ?? ''),
+                    'body' => (string) ($m?->body ?? ''),
+                    'folder' => $folder,
+                    'read_at' => $r->read_at?->toIso8601String(),
+                    'sent_at' => $m?->sent_at?->toIso8601String(),
+                    'created_at' => $m?->created_at?->toIso8601String(),
+                    'updated_at' => $m?->updated_at?->toIso8601String(),
+                    'attachments' => $attachments,
+                    'reactions' => [],
+                ];
+            })->values();
+
+            $ids = $data->pluck('id')->filter()->values()->all();
+            $reactionsByRecipientId = [];
+            if (count($ids) > 0) {
+                $reactionRows = DB::table('message_reactions')
+                    ->select('message_recipient_id', 'emoji', DB::raw('COUNT(*) as cnt'), DB::raw('SUM(CASE WHEN user_id = ' . (int) $user->id . ' THEN 1 ELSE 0 END) as mine'))
+                    ->whereIn('message_recipient_id', $ids)
+                    ->groupBy('message_recipient_id', 'emoji')
+                    ->get();
+
+                foreach ($reactionRows as $row) {
+                    $rid = (string) ($row->message_recipient_id ?? '');
+                    if ($rid === '') continue;
+                    $reactionsByRecipientId[$rid] ??= [];
+                    $reactionsByRecipientId[$rid][] = [
+                        'emoji' => (string) ($row->emoji ?? ''),
+                        'count' => (int) ($row->cnt ?? 0),
+                        'reacted_by_me' => ((int) ($row->mine ?? 0)) > 0,
+                    ];
+                }
+            }
+
+            $data = $data->map(function (array $row) use ($reactionsByRecipientId) {
+                $id = (string) ($row['id'] ?? '');
+                $row['reactions'] = $reactionsByRecipientId[$id] ?? [];
+                return $row;
+            })->values();
+
+            $nextCursor = null;
+            if ($hasMore && $rows->count() > 0) {
+                $last = $rows->last();
+                $ts = $last?->message?->sent_at?->toIso8601String();
+                if (!$ts) $ts = $last?->message?->created_at?->toIso8601String();
+                if ($ts) {
+                    $nextCursor = [
+                        'ts' => $ts,
+                        'id' => (string) $last->id,
+                    ];
+                }
+            }
+
+            return response()->json([
+                'data' => $data,
+                'meta' => [
+                    'has_more' => (bool) $hasMore,
+                    'next_cursor' => $nextCursor,
+                ],
+            ]);
+        });
+
         Route::get('messages', function () {
             $user = auth('web')->user();
             abort_unless($user, 401);
@@ -720,12 +1025,26 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                     });
                 }
 
-                $msgs = $q->orderByDesc('sent_at')->limit(50)->get();
+                $msgs = $q->with(['recipients', 'attachments'])->orderByDesc('sent_at')->limit(50)->get();
 
                 $data = $msgs->flatMap(function (InternalMessage $m) {
+                    $attachments = $m->attachments
+                        ->map(function (MessageAttachment $a) {
+                            return [
+                                'id' => (string) $a->id,
+                                'filename' => (string) ($a->filename ?? ''),
+                                'original_filename' => (string) ($a->original_filename ?? ''),
+                                'mime_type' => (string) ($a->mime_type ?? ''),
+                                'file_size' => (int) ($a->file_size ?? 0),
+                                'url' => url('api/v1/communication/messages/attachments/view/' . $a->id),
+                            ];
+                        })
+                        ->values()
+                        ->all();
+
                     return $m->recipients
                         ->where('is_deleted', false)
-                        ->map(function (MessageRecipient $r) use ($m) {
+                        ->map(function (MessageRecipient $r) use ($m, $attachments) {
                             return [
                                 'id' => (string) $r->id,
                                 'from_user_id' => (string) $m->sender_id,
@@ -737,8 +1056,37 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                                 'sent_at' => $m->sent_at?->toIso8601String(),
                                 'created_at' => $m->created_at?->toIso8601String(),
                                 'updated_at' => $m->updated_at?->toIso8601String(),
+                                'attachments' => $attachments,
+                                'reactions' => [],
                             ];
                         });
+                })->values();
+
+                $ids = $data->pluck('id')->filter()->values()->all();
+                $reactionsByRecipientId = [];
+                if (count($ids) > 0) {
+                    $rows = DB::table('message_reactions')
+                        ->select('message_recipient_id', 'emoji', DB::raw('COUNT(*) as cnt'), DB::raw('SUM(CASE WHEN user_id = ' . (int) $user->id . ' THEN 1 ELSE 0 END) as mine'))
+                        ->whereIn('message_recipient_id', $ids)
+                        ->groupBy('message_recipient_id', 'emoji')
+                        ->get();
+
+                    foreach ($rows as $row) {
+                        $rid = (string) ($row->message_recipient_id ?? '');
+                        if ($rid === '') continue;
+                        $reactionsByRecipientId[$rid] ??= [];
+                        $reactionsByRecipientId[$rid][] = [
+                            'emoji' => (string) ($row->emoji ?? ''),
+                            'count' => (int) ($row->cnt ?? 0),
+                            'reacted_by_me' => ((int) ($row->mine ?? 0)) > 0,
+                        ];
+                    }
+                }
+
+                $data = $data->map(function (array $row) use ($reactionsByRecipientId) {
+                    $id = (string) ($row['id'] ?? '');
+                    $row['reactions'] = $reactionsByRecipientId[$id] ?? [];
+                    return $row;
                 })->values();
 
                 return response()->json(['data' => $data]);
@@ -767,10 +1115,26 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 });
             }
 
-            $rows = $q->orderByDesc('created_at')->limit(50)->get();
+            $rows = $q->with(['message.attachments'])->orderByDesc('created_at')->limit(50)->get();
 
             $data = $rows->map(function (MessageRecipient $r) {
                 $m = $r->message;
+
+                $attachments = $m
+                    ? $m->attachments
+                        ->map(function (MessageAttachment $a) {
+                            return [
+                                'id' => (string) $a->id,
+                                'filename' => (string) ($a->filename ?? ''),
+                                'original_filename' => (string) ($a->original_filename ?? ''),
+                                'mime_type' => (string) ($a->mime_type ?? ''),
+                                'file_size' => (int) ($a->file_size ?? 0),
+                                'url' => url('api/v1/communication/messages/attachments/view/' . $a->id),
+                            ];
+                        })
+                        ->values()
+                        ->all()
+                    : [];
 
                 return [
                     'id' => (string) $r->id,
@@ -783,7 +1147,36 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                     'sent_at' => $m?->sent_at?->toIso8601String(),
                     'created_at' => $m?->created_at?->toIso8601String(),
                     'updated_at' => $m?->updated_at?->toIso8601String(),
+                    'attachments' => $attachments,
+                    'reactions' => [],
                 ];
+            })->values();
+
+            $ids = $data->pluck('id')->filter()->values()->all();
+            $reactionsByRecipientId = [];
+            if (count($ids) > 0) {
+                $rows = DB::table('message_reactions')
+                    ->select('message_recipient_id', 'emoji', DB::raw('COUNT(*) as cnt'), DB::raw('SUM(CASE WHEN user_id = ' . (int) $user->id . ' THEN 1 ELSE 0 END) as mine'))
+                    ->whereIn('message_recipient_id', $ids)
+                    ->groupBy('message_recipient_id', 'emoji')
+                    ->get();
+
+                foreach ($rows as $row) {
+                    $rid = (string) ($row->message_recipient_id ?? '');
+                    if ($rid === '') continue;
+                    $reactionsByRecipientId[$rid] ??= [];
+                    $reactionsByRecipientId[$rid][] = [
+                        'emoji' => (string) ($row->emoji ?? ''),
+                        'count' => (int) ($row->cnt ?? 0),
+                        'reacted_by_me' => ((int) ($row->mine ?? 0)) > 0,
+                    ];
+                }
+            }
+
+            $data = $data->map(function (array $row) use ($reactionsByRecipientId) {
+                $id = (string) ($row['id'] ?? '');
+                $row['reactions'] = $reactionsByRecipientId[$id] ?? [];
+                return $row;
             })->values();
 
             return response()->json(['data' => $data]);
@@ -796,7 +1189,8 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             $validated = request()->validate([
                 'to_user_id' => ['required', 'exists:users,id'],
                 'subject' => ['nullable', 'string', 'max:255'],
-                'body' => ['required', 'string'],
+                'body' => ['nullable', 'string', 'required_without:file'],
+                'file' => ['nullable', 'file', 'required_without:body', 'max:15360', 'mimes:png,jpg,jpeg,gif,webp'],
             ]);
 
             $subject = trim((string) ($validated['subject'] ?? ''));
@@ -806,7 +1200,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
             $message = InternalMessage::create([
                 'subject' => $subject,
-                'body' => (string) $validated['body'],
+                'body' => (string) ($validated['body'] ?? ''),
                 'priority' => 'normal',
                 'status' => 'sent',
                 'sender_id' => $user->id,
@@ -822,6 +1216,34 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 'is_archived' => false,
                 'is_starred' => false,
             ]);
+
+            $attachments = [];
+            if (request()->hasFile('file')) {
+                $file = request()->file('file');
+                abort_unless($file, 422);
+
+                $ext = strtolower((string) $file->getClientOriginalExtension());
+                $storedName = (string) \Illuminate\Support\Str::uuid() . ($ext ? ('.' . $ext) : '');
+                $storedPath = $file->storeAs('messages/attachments', $storedName, 'local');
+
+                $att = MessageAttachment::create([
+                    'message_id' => $message->id,
+                    'filename' => $storedName,
+                    'original_filename' => (string) $file->getClientOriginalName(),
+                    'mime_type' => (string) $file->getClientMimeType(),
+                    'file_size' => (int) $file->getSize(),
+                    'file_path' => (string) $storedPath,
+                ]);
+
+                $attachments[] = [
+                    'id' => (string) $att->id,
+                    'filename' => (string) ($att->filename ?? ''),
+                    'original_filename' => (string) ($att->original_filename ?? ''),
+                    'mime_type' => (string) ($att->mime_type ?? ''),
+                    'file_size' => (int) ($att->file_size ?? 0),
+                    'url' => url('api/v1/communication/messages/attachments/view/' . $att->id),
+                ];
+            }
 
             $recipientUser = User::find($validated['to_user_id']);
             if ($recipientUser && (int) $recipientUser->id !== (int) $user->id) {
@@ -849,8 +1271,130 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                     'sent_at' => $message->sent_at?->toIso8601String(),
                     'created_at' => $message->created_at?->toIso8601String(),
                     'updated_at' => $message->updated_at?->toIso8601String(),
+                    'attachments' => $attachments,
+                    'reactions' => [],
                 ],
             ], 201);
+        });
+
+        Route::get('messages/attachments/view/{attachment}', function (MessageAttachment $attachment) {
+            $user = auth('web')->user();
+            abort_unless($user, 401);
+
+            $attachment->load(['message:id,sender_id', 'message.recipients:id,message_id,recipient_id']);
+            $m = $attachment->message;
+            abort_unless($m, 404);
+
+            $isRecipient = $m->recipients->contains(fn (MessageRecipient $r) => (int) $r->recipient_id === (int) $user->id);
+            $isSender = (int) $m->sender_id === (int) $user->id;
+            abort_unless($isRecipient || $isSender, 403);
+
+            $disk = Storage::disk('local');
+            $relative = trim((string) ($attachment->file_path ?? ''));
+            abort_unless($relative !== '' && $disk->exists($relative), 404);
+
+            $path = $disk->path($relative);
+            abort_unless(is_file($path), 404);
+
+            return response()->file($path, [
+                'Cache-Control' => 'private, max-age=0, must-revalidate',
+            ]);
+        });
+
+        Route::post('messages/{recipient}/reactions', function (MessageRecipient $recipient) {
+            $user = auth('web')->user();
+            abort_unless($user, 401);
+
+            $validated = request()->validate([
+                'emoji' => ['nullable', 'string', 'max:32'],
+            ]);
+            $emoji = trim((string) ($validated['emoji'] ?? ''));
+            if ($emoji === '') $emoji = '👍';
+
+            $recipient->load('message');
+            $isRecipient = (int) $recipient->recipient_id === (int) $user->id;
+            $isSender = $recipient->message && (int) $recipient->message->sender_id === (int) $user->id;
+            abort_unless($isRecipient || $isSender, 403);
+
+            DB::table('message_reactions')->insertOrIgnore([
+                'message_recipient_id' => $recipient->id,
+                'user_id' => $user->id,
+                'emoji' => $emoji,
+                'created_at' => now(),
+            ]);
+
+            $rows = DB::table('message_reactions')
+                ->select('emoji', DB::raw('COUNT(*) as cnt'), DB::raw('SUM(CASE WHEN user_id = ' . (int) $user->id . ' THEN 1 ELSE 0 END) as mine'))
+                ->where('message_recipient_id', $recipient->id)
+                ->groupBy('emoji')
+                ->get();
+
+            $reactions = $rows->map(fn ($r) => [
+                'emoji' => (string) ($r->emoji ?? ''),
+                'count' => (int) ($r->cnt ?? 0),
+                'reacted_by_me' => ((int) ($r->mine ?? 0)) > 0,
+            ])->values();
+
+            $recipientId = (int) ($recipient->recipient_id ?? 0);
+            $senderId = (int) ($recipient->message?->sender_id ?? 0);
+            if ($recipientId > 0 || $senderId > 0) {
+                broadcast(new MessageReactionsUpdated(
+                    messageRecipientId: (string) $recipient->id,
+                    reactions: $reactions->all(),
+                    userIds: array_values(array_unique(array_filter([$recipientId, $senderId]))),
+                ));
+            }
+
+            return response()->json(['data' => [
+                'id' => (string) $recipient->id,
+                'reactions' => $reactions,
+            ]]);
+        });
+
+        Route::delete('messages/{recipient}/reactions', function (MessageRecipient $recipient) {
+            $user = auth('web')->user();
+            abort_unless($user, 401);
+
+            $emoji = trim((string) request('emoji', ''));
+            abort_unless($emoji !== '', 422);
+
+            $recipient->load('message');
+            $isRecipient = (int) $recipient->recipient_id === (int) $user->id;
+            $isSender = $recipient->message && (int) $recipient->message->sender_id === (int) $user->id;
+            abort_unless($isRecipient || $isSender, 403);
+
+            DB::table('message_reactions')
+                ->where('message_recipient_id', $recipient->id)
+                ->where('user_id', $user->id)
+                ->where('emoji', $emoji)
+                ->delete();
+
+            $rows = DB::table('message_reactions')
+                ->select('emoji', DB::raw('COUNT(*) as cnt'), DB::raw('SUM(CASE WHEN user_id = ' . (int) $user->id . ' THEN 1 ELSE 0 END) as mine'))
+                ->where('message_recipient_id', $recipient->id)
+                ->groupBy('emoji')
+                ->get();
+
+            $reactions = $rows->map(fn ($r) => [
+                'emoji' => (string) ($r->emoji ?? ''),
+                'count' => (int) ($r->cnt ?? 0),
+                'reacted_by_me' => ((int) ($r->mine ?? 0)) > 0,
+            ])->values();
+
+            $recipientId = (int) ($recipient->recipient_id ?? 0);
+            $senderId = (int) ($recipient->message?->sender_id ?? 0);
+            if ($recipientId > 0 || $senderId > 0) {
+                broadcast(new MessageReactionsUpdated(
+                    messageRecipientId: (string) $recipient->id,
+                    reactions: $reactions->all(),
+                    userIds: array_values(array_unique(array_filter([$recipientId, $senderId]))),
+                ));
+            }
+
+            return response()->json(['data' => [
+                'id' => (string) $recipient->id,
+                'reactions' => $reactions,
+            ]]);
         });
 
         Route::delete('messages/{recipient}', function (MessageRecipient $recipient) {
@@ -984,6 +1528,81 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             return response()->json(['data' => $items]);
         });
 
+        Route::prefix('posts/images')->group(function () {
+            Route::get('view/{filename}', function (string $filename) {
+                $user = auth()->user();
+                abort_unless($user, 401);
+
+                $filename = trim($filename);
+                abort_unless($filename !== '' && preg_match('/\A[a-z0-9][a-z0-9._-]*\z/i', $filename), 404);
+
+                $disk = Storage::disk('public');
+                $relative = 'posts/images/' . $filename;
+                abort_unless($disk->exists($relative), 404);
+
+                $path = $disk->path($relative);
+                abort_unless(is_file($path), 404);
+
+                return response()->file($path, [
+                    'Cache-Control' => 'private, max-age=0, must-revalidate',
+                ]);
+            });
+
+            Route::get('list', function () {
+                $user = auth()->user();
+                abort_unless($user, 401);
+                abort_unless($user->isAdmin(), 403);
+
+                $disk = Storage::disk('public');
+                $files = $disk->files('posts/images');
+
+                $items = collect($files)
+                    ->filter(fn ($path) => preg_match('/\.(png|jpe?g|gif|webp|svg)$/i', $path))
+                    ->map(function ($path) use ($disk) {
+                        $filename = basename($path);
+
+                        return [
+                            'filename' => $filename,
+                            'url' => url('api/v1/communication/posts/images/view/' . rawurlencode($filename)),
+                            'size' => $disk->size($path),
+                            'last_modified' => $disk->lastModified($path),
+                        ];
+                    })
+                    ->sortByDesc('last_modified')
+                    ->values();
+
+                return response()->json(['data' => $items]);
+            });
+
+            Route::post('upload', function () {
+                $user = auth()->user();
+                abort_unless($user, 401);
+                abort_unless($user->isAdmin(), 403);
+
+                $validated = request()->validate([
+                    'file' => ['required', 'file', 'max:15360', 'mimes:png,jpg,jpeg,gif,webp,svg'],
+                ]);
+
+                $file = $validated['file'];
+                $original = (string) $file->getClientOriginalName();
+                $ext = strtolower((string) $file->getClientOriginalExtension());
+                $base = pathinfo($original, PATHINFO_FILENAME);
+                $safe = Str::slug($base);
+                if ($safe === '') {
+                    $safe = (string) Str::uuid();
+                }
+
+                $filename = $safe . '-' . Str::uuid() . ($ext ? ('.' . $ext) : '');
+                $path = $file->storeAs('posts/images', $filename, 'public');
+                $stored = basename((string) $path);
+
+                return response()->json([
+                    'url' => url('api/v1/communication/posts/images/view/' . rawurlencode($stored)),
+                    'filename' => $stored,
+                ], 201);
+            });
+        });
+
         Route::get('posts', function () {
             $user = auth()->user();
             abort_unless($user, 401);
@@ -1008,11 +1627,22 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             return response()->json([
                 'data' => $posts->map(function (Post $p) use ($likedSet, $user) {
                     $canPin = (bool) $user->isAdmin();
-                    $canManage = $canPin || ((int) $p->author_id === (int) $user->id);
+                    $canManage = ((int) $p->author_id === (int) $user->id);
 
                     $photo = $p->author?->photo_path;
                     if (is_string($photo) && $photo !== '' && ! str_starts_with($photo, 'http://') && ! str_starts_with($photo, 'https://') && ! str_starts_with($photo, 'data:') && ! str_starts_with($photo, '/')) {
                         $photo = asset('storage/' . ltrim(preg_replace('/^storage\//', '', $photo), '/'));
+                    }
+
+                    $featured = $p->featured_image_url;
+                    if (is_string($featured) && $featured !== '') {
+                        $candidate = $featured;
+                        if (str_starts_with($candidate, '/posts/images/') || str_starts_with($candidate, 'posts/images/')) {
+                            $candidate = basename($candidate);
+                        }
+                        if (! str_contains($candidate, '/') && preg_match('/\.(png|jpe?g|gif|webp|svg)$/i', $candidate)) {
+                            $featured = url('api/v1/communication/posts/images/view/' . rawurlencode($candidate));
+                        }
                     }
 
                     return [
@@ -1022,7 +1652,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                         'type' => $p->type,
                         'priority' => $p->priority,
                         'is_pinned' => (bool) $p->is_pinned,
-                        'featured_image_url' => $p->featured_image_url,
+                        'featured_image_url' => $featured,
                         'youtube_video_url' => $p->youtube_video_url,
                         'attachment_urls' => is_array($p->attachment_urls) ? $p->attachment_urls : [],
                         'published_at' => $p->published_at?->toIso8601String(),
@@ -1088,6 +1718,17 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 $photo = asset('storage/' . ltrim(preg_replace('/^storage\//', '', $photo), '/'));
             }
 
+            $featured = $post->featured_image_url;
+            if (is_string($featured) && $featured !== '') {
+                $candidate = $featured;
+                if (str_starts_with($candidate, '/posts/images/') || str_starts_with($candidate, 'posts/images/')) {
+                    $candidate = basename($candidate);
+                }
+                if (! str_contains($candidate, '/') && preg_match('/\.(png|jpe?g|gif|webp|svg)$/i', $candidate)) {
+                    $featured = url('api/v1/communication/posts/images/view/' . rawurlencode($candidate));
+                }
+            }
+
             return response()->json([
                 'data' => [
                     'id' => (string) $post->id,
@@ -1096,7 +1737,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                     'type' => $post->type,
                     'priority' => $post->priority,
                     'is_pinned' => (bool) $post->is_pinned,
-                    'featured_image_url' => $post->featured_image_url,
+                    'featured_image_url' => $featured,
                     'youtube_video_url' => $post->youtube_video_url,
                     'attachment_urls' => is_array($post->attachment_urls) ? $post->attachment_urls : [],
                     'published_at' => $post->published_at?->toIso8601String(),
@@ -1271,6 +1912,17 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 $photo = asset('storage/' . ltrim(preg_replace('/^storage\//', '', $photo), '/'));
             }
 
+            $featured = $post->featured_image_url;
+            if (is_string($featured) && $featured !== '') {
+                $candidate = $featured;
+                if (str_starts_with($candidate, '/posts/images/') || str_starts_with($candidate, 'posts/images/')) {
+                    $candidate = basename($candidate);
+                }
+                if (! str_contains($candidate, '/') && preg_match('/\.(png|jpe?g|gif|webp|svg)$/i', $candidate)) {
+                    $featured = url('api/v1/communication/posts/images/view/' . rawurlencode($candidate));
+                }
+            }
+
             return response()->json([
                 'data' => [
                     'id' => (string) $post->id,
@@ -1279,7 +1931,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                     'type' => $post->type,
                     'priority' => $post->priority,
                     'is_pinned' => (bool) $post->is_pinned,
-                    'featured_image_url' => $post->featured_image_url,
+                    'featured_image_url' => $featured,
                     'youtube_video_url' => $post->youtube_video_url,
                     'attachment_urls' => is_array($post->attachment_urls) ? $post->attachment_urls : [],
                     'published_at' => $post->published_at?->toIso8601String(),
@@ -1292,6 +1944,86 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                         'photo_path' => $photo,
                     ],
                     'can_pin' => true,
+                    'can_manage' => ((int) $post->author_id === (int) $user->id),
+                    'created_at' => $post->created_at?->toIso8601String(),
+                    'updated_at' => $post->updated_at?->toIso8601String(),
+                ],
+            ]);
+        });
+
+        Route::put('posts/{post}', function (Post $post) {
+            $user = auth()->user();
+            abort_unless($user, 401);
+
+            abort_unless(((int) $post->author_id === (int) $user->id), 403);
+
+            $validated = request()->validate([
+                'title' => ['nullable', 'string', 'max:255'],
+                'content' => ['required', 'string'],
+                'type' => ['nullable', 'in:text,image,video,announcement'],
+                'priority' => ['nullable', 'in:low,normal,high,urgent'],
+                'featured_image_url' => ['nullable', 'url', 'max:2048'],
+                'youtube_video_url' => ['nullable', 'url', 'max:2048'],
+                'attachment_urls' => ['nullable', 'array'],
+                'attachment_urls.*' => ['string', 'url', 'max:2048'],
+                'expires_at' => ['nullable', 'date'],
+            ]);
+
+            $title = trim((string) ($validated['title'] ?? ''));
+            if ($title === '') {
+                $title = 'Comunicado';
+            }
+
+            $post->forceFill([
+                'title' => $title,
+                'content' => (string) $validated['content'],
+                'type' => $validated['type'] ?? $post->type,
+                'priority' => $validated['priority'] ?? $post->priority,
+                'featured_image_url' => $validated['featured_image_url'] ?? null,
+                'youtube_video_url' => $validated['youtube_video_url'] ?? null,
+                'attachment_urls' => $validated['attachment_urls'] ?? null,
+                'expires_at' => $validated['expires_at'] ?? null,
+            ])->save();
+
+            $post->load('author');
+
+            $photo = $post->author?->photo_path;
+            if (is_string($photo) && $photo !== '' && ! str_starts_with($photo, 'http://') && ! str_starts_with($photo, 'https://') && ! str_starts_with($photo, 'data:') && ! str_starts_with($photo, '/')) {
+                $photo = asset('storage/' . ltrim(preg_replace('/^storage\//', '', $photo), '/'));
+            }
+
+            $featured = $post->featured_image_url;
+            if (is_string($featured) && $featured !== '') {
+                $candidate = $featured;
+                if (str_starts_with($candidate, '/posts/images/') || str_starts_with($candidate, 'posts/images/')) {
+                    $candidate = basename($candidate);
+                }
+                if (! str_contains($candidate, '/') && preg_match('/\.(png|jpe?g|gif|webp|svg)$/i', $candidate)) {
+                    $featured = url('api/v1/communication/posts/images/view/' . rawurlencode($candidate));
+                }
+            }
+
+            return response()->json([
+                'data' => [
+                    'id' => (string) $post->id,
+                    'title' => $post->title,
+                    'content' => (string) ($post->content ?? ''),
+                    'type' => $post->type,
+                    'priority' => $post->priority,
+                    'is_pinned' => (bool) $post->is_pinned,
+                    'featured_image_url' => $featured,
+                    'youtube_video_url' => $post->youtube_video_url,
+                    'attachment_urls' => is_array($post->attachment_urls) ? $post->attachment_urls : [],
+                    'published_at' => $post->published_at?->toIso8601String(),
+                    'expires_at' => $post->expires_at?->toIso8601String(),
+                    'likes_count' => (int) ($post->likes_count ?? 0),
+                    'liked_by_me' => PostLike::where('post_id', $post->id)->where('user_id', $user->id)->exists(),
+                    'author' => [
+                        'id' => $post->author?->id !== null ? (string) $post->author->id : null,
+                        'name' => $post->author?->name,
+                        'photo_path' => $photo,
+                    ],
+                    'can_pin' => (bool) $user->isAdmin(),
                     'can_manage' => true,
                     'created_at' => $post->created_at?->toIso8601String(),
                     'updated_at' => $post->updated_at?->toIso8601String(),
@@ -1303,8 +2035,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             $user = auth()->user();
             abort_unless($user, 401);
 
-            $canManage = (bool) $user->isAdmin() || ((int) $post->author_id === (int) $user->id);
-            abort_unless($canManage, 403);
+            abort_unless(((int) $post->author_id === (int) $user->id), 403);
 
             $post->delete();
             return response()->json(['data' => true]);

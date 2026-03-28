@@ -63,6 +63,7 @@ const QUICK_PERMISSION_GROUPS = [
       { value: "admin.roles.read", label: "Cargos (ver)" },
       { value: "admin.roles.write", label: "Cargos (editar)" },
       { value: "admin.modules.manage", label: "Módulos (gerir)" },
+      { value: "admin.settings.manage", label: "Configurações (gerir)" },
     ],
   },
   {

@@ -19,6 +19,7 @@ use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Tabs;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Actions\Action;
+use Illuminate\Database\Eloquent\Model;
 
 class PostResource extends Resource
 {
@@ -92,9 +93,11 @@ class PostResource extends Resource
                                         Forms\Components\Select::make('priority')
                                             ->label('Prioridade')
                                             ->options([
+                                                'low' => 'Baixa',
                                                 'normal' => 'Normal',
-                                                'important' => 'Importante',
+                                                'high' => 'Alta',
                                                 'urgent' => 'Urgente',
+                                                'important' => 'Importante',
                                             ])
                                             ->default('normal')
                                             ->required(),
@@ -121,57 +124,38 @@ class PostResource extends Resource
                             ->schema([
                                 Section::make('Imagem em Destaque')
                                     ->schema([
-                                        // Na seção de formulário (linha ~120):
-                                        Forms\Components\FileUpload::make('featured_image_url') // Alterado de 'featured_image'
-                                        ->label('Imagem em Destaque')
-                                        ->image()
-                                        ->directory('posts/images')
-                                        ->visibility('public')
-                                        ->imageEditor()
-                                        ->imageEditorAspectRatios([
-                                            '16:9',
-                                            '4:3',
-                                            '1:1',
-                                        ])
-                                        ->columnSpanFull(),
+                                        Forms\Components\FileUpload::make('featured_image_url')
+                                            ->label('Imagem em Destaque')
+                                            ->image()
+                                            ->directory('posts/images')
+                                            ->visibility('public')
+                                            ->imageEditor()
+                                            ->imageEditorAspectRatios([
+                                                '16:9',
+                                                '4:3',
+                                                '1:1',
+                                            ])
+                                            ->columnSpanFull(),
                                     ]),
-                                    
+
                                 Section::make('Vídeo do YouTube')
                                     ->schema([
-                                        // Na seção de formulário para vídeo (linha ~140):
-                                        Forms\Components\TextInput::make('youtube_video_url') // Alterado de 'video_url'
+                                        Forms\Components\TextInput::make('youtube_video_url')
                                             ->label('URL do Vídeo YouTube')
                                             ->url()
                                             ->helperText('Cole a URL completa do vídeo do YouTube')
                                             ->placeholder('https://www.youtube.com/watch?v=...')
                                             ->columnSpanFull(),
-                                    
-                                    // Na seção de anexos (linha ~150):
-                                    Forms\Components\FileUpload::make('attachment_urls') // Alterado de 'attachments'
-                                        ->label('Anexos')
-                                        ->multiple()
-                                        ->directory('posts/attachments')
-                                        ->visibility('public')
-                                        ->acceptedFileTypes(['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'])
-                                        ->maxSize(10240)
-                                        ->columnSpanFull(),
                                     ]),
-                                    
+
                                 Section::make('Anexos')
                                     ->schema([
-                                        Forms\Components\Repeater::make('attachments')
+                                        Forms\Components\FileUpload::make('attachment_urls')
                                             ->label('Anexos')
-                                            ->schema([
-                                                Forms\Components\TextInput::make('name')
-                                                    ->label('Nome do Arquivo')
-                                                    ->required(),
-                                                Forms\Components\FileUpload::make('path')
-                                                    ->label('Arquivo')
-                                                    ->directory('posts/attachments')
-                                                    ->visibility('public')
-                                                    ->required(),
-                                            ])
-                                            ->columns(2)
+                                            ->multiple()
+                                            ->directory('posts/attachments')
+                                            ->visibility('public')
+                                            ->maxSize(10240)
                                             ->columnSpanFull(),
                                     ]),
                             ]),
@@ -180,7 +164,7 @@ class PostResource extends Resource
                             ->schema([
                                 Section::make('Controle de Acesso')
                                     ->schema([
-                                        Forms\Components\Select::make('visible_departments')
+                                        Forms\Components\Select::make('visible_to_departments')
                                             ->label('Departamentos com Acesso')
                                             ->multiple()
                                             ->options(Department::pluck('name', 'id'))
@@ -249,12 +233,16 @@ class PostResource extends Resource
                 Tables\Columns\BadgeColumn::make('priority')
                     ->label('Prioridade')
                     ->colors([
+                        'gray' => 'low',
                         'gray' => 'normal',
                         'warning' => 'important',
+                        'warning' => 'high',
                         'danger' => 'urgent',
                     ])
                     ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'low' => 'Baixa',
                         'normal' => 'Normal',
+                        'high' => 'Alta',
                         'important' => 'Importante',
                         'urgent' => 'Urgente',
                         default => $state,
@@ -330,7 +318,7 @@ class PostResource extends Resource
                     ->label('Publicar')
                     ->icon('heroicon-o-paper-airplane')
                     ->color('success')
-                    ->visible(fn (Post $record): bool => $record->status === 'draft')
+                    ->visible(fn (Post $record): bool => $record->status === 'draft' && static::canEdit($record))
                     ->action(function (Post $record) {
                         $record->update([
                             'status' => 'published',
@@ -338,28 +326,29 @@ class PostResource extends Resource
                         ]);
                     })
                     ->requiresConfirmation(),
-                    
+
                 Action::make('pin')
                     ->label(fn (Post $record): string => $record->is_pinned ? 'Desafixar' : 'Fixar')
                     ->icon(fn (Post $record): string => $record->is_pinned ? 'heroicon-o-bookmark-slash' : 'heroicon-o-bookmark')
                     ->color(fn (Post $record): string => $record->is_pinned ? 'warning' : 'primary')
+                    ->visible(fn (Post $record): bool => static::canEdit($record))
                     ->action(fn (Post $record) => $record->update(['is_pinned' => !$record->is_pinned])),
-                    
+
                 Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->visible(fn (Post $record): bool => static::canEdit($record)),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn (Post $record): bool => static::canDelete($record)),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                    
                     Tables\Actions\BulkAction::make('publish')
                         ->label('Publicar Selecionados')
                         ->icon('heroicon-o-paper-airplane')
                         ->color('success')
                         ->action(function ($records) {
                             $records->each(function ($record) {
-                                if ($record->status === 'draft') {
+                                if ($record->status === 'draft' && static::canEdit($record)) {
                                     $record->update([
                                         'status' => 'published',
                                         'published_at' => $record->published_at ?? now(),
@@ -372,6 +361,22 @@ class PostResource extends Resource
             ])
             ->defaultSort('created_at', 'desc');
     }
+
+    public static function canEdit(Model $record): bool
+    {
+        return (int) ($record->author_id ?? 0) === (int) Auth::id();
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return (int) ($record->author_id ?? 0) === (int) Auth::id();
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return false;
+    }
+
 
     public static function getRelations(): array
     {

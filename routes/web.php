@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 use App\Models\SystemLog;
 use App\Http\Controllers\TicketAttachmentController;
@@ -50,6 +51,44 @@ Route::get('/storage/{path}', function (string $path) {
     abort_unless(file_exists($full) && is_file($full), 404);
     return response()->file($full);
 })->where('path', '.*');
+
+Route::get('/posts/images/{filename}', function (string $filename) {
+    $u = auth('web')->user() ?? auth('employee')->user();
+    abort_unless($u, 401);
+
+    $filename = trim($filename);
+    abort_unless($filename !== '' && preg_match('/\A[a-z0-9][a-z0-9._-]*\z/i', $filename), 404);
+
+    $disk = Storage::disk('public');
+    $relative = 'posts/images/' . $filename;
+    abort_unless($disk->exists($relative), 404);
+
+    $path = $disk->path($relative);
+    abort_unless(is_file($path), 404);
+
+    return response()->file($path, [
+        'Cache-Control' => 'private, max-age=0, must-revalidate',
+    ]);
+})->middleware(['web', 'auth:web,employee']);
+
+Route::get('/posts/images/{filename}', function (string $filename) {
+    $u = auth('web')->user() ?? auth('employee')->user();
+    abort_unless($u, 401);
+
+    $filename = trim($filename);
+    abort_unless($filename !== '' && preg_match('/\A[a-z0-9][a-z0-9._-]*\z/i', $filename), 404);
+
+    $disk = Storage::disk('public');
+    $relative = 'posts/images/' . $filename;
+    abort_unless($disk->exists($relative), 404);
+
+    $path = $disk->path($relative);
+    abort_unless(is_file($path), 404);
+
+    return response()->file($path, [
+        'Cache-Control' => 'private, max-age=0, must-revalidate',
+    ]);
+})->middleware(['web', 'auth:web,employee']);
 
 // Compatibilidade de URLs do painel
 Route::get('/newadmin/login', fn () => redirect('/filament-admin/login'))->name('newadmin.login');

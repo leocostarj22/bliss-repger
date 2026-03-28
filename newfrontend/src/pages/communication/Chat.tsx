@@ -1,15 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useSearchParams } from "react-router-dom"
-import { MessageSquare, Send } from "lucide-react"
+import { ImagePlus, MessageSquare, Send, X } from "lucide-react"
 
 import type { InternalMessage } from "@/types"
 import {
+  addInternalMessageReaction,
   fetchAdminUser,
+  fetchChatThread,
   fetchCommunicationRecipients,
   fetchInternalMessages,
   fetchUser,
   markInternalMessageRead,
+  removeInternalMessageReaction,
   sendInternalMessage,
+  sendInternalMessageWithAttachment,
+  type ChatThreadCursor,
   type CommunicationRecipient,
 } from "@/services/api"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -67,6 +72,16 @@ export default function Chat() {
   const [draft, setDraft] = useState("")
   const [sending, setSending] = useState(false)
 
+  const [thread, setThread] = useState<InternalMessage[]>([])
+  const [threadCursor, setThreadCursor] = useState<ChatThreadCursor | null>(null)
+  const [threadHasMore, setThreadHasMore] = useState(false)
+  const [threadLoadingOlder, setThreadLoadingOlder] = useState(false)
+  const threadLoadingRef = useRef(false)
+
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string>("")
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
   const listRef = useRef<HTMLDivElement | null>(null)
   const lastIncomingIdRef = useRef<string | null>(null)
 
@@ -82,25 +97,8 @@ export default function Chat() {
   }, [users, meId])
 
   const conversation = useMemo(() => {
-    const other = String(activeUserId || "").trim()
-    if (!meId || !other) return []
-
-    const rows = all
-      .filter((m: any) => {
-        const from = String(m?.from_user_id ?? "").trim()
-        const to = String(m?.to_user_id ?? "").trim()
-        return (from === meId && to === other) || (from === other && to === meId)
-      })
-      .slice()
-
-    rows.sort((a: any, b: any) => {
-      const ta = Date.parse(msgWhenIso(a)) || 0
-      const tb = Date.parse(msgWhenIso(b)) || 0
-      return ta - tb
-    })
-
-    return rows
-  }, [activeUserId, all, meId])
+    return thread
+  }, [thread])
 
   const unreadByUserId = useMemo(() => {
     if (!meId) return {}
@@ -144,6 +142,88 @@ export default function Chat() {
       }))
     } catch {
       return
+    }
+  }
+
+  const scrollToBottom = () => {
+    const el = listRef.current
+    if (!el) return
+    el.scrollTop = el.scrollHeight
+  }
+
+  const loadThread = async (opts?: { reset?: boolean }) => {
+    const other = String(activeUserId || "").trim()
+    const me = String(meId || "").trim()
+    if (!other || !me) return
+
+    const reset = Boolean(opts?.reset)
+    if (!reset && !threadHasMore) return
+    if (threadLoadingRef.current) return
+
+    threadLoadingRef.current = true
+    setThreadLoadingOlder(true)
+
+    const el = listRef.current
+    const beforeHeight = el?.scrollHeight ?? 0
+    const beforeTop = el?.scrollTop ?? 0
+
+    try {
+      const resp = await fetchChatThread({
+        other_user_id: other,
+        limit: 40,
+        cursor: reset ? null : threadCursor,
+      })
+
+      const incoming = Array.isArray(resp.items) ? resp.items : []
+      const itemsAsc = incoming
+        .slice()
+        .sort((a: any, b: any) => {
+          const ta = Date.parse(msgWhenIso(a)) || 0
+          const tb = Date.parse(msgWhenIso(b)) || 0
+          if (ta !== tb) return ta - tb
+          return String(a?.id ?? "").localeCompare(String(b?.id ?? ""))
+        })
+
+      setThread((prev) => {
+        const map = new Map<string, any>()
+        const add = (m: any) => {
+          const id = String(m?.id ?? "").trim()
+          if (!id) return
+          map.set(id, m)
+        }
+        if (!reset) prev.forEach(add)
+        itemsAsc.forEach(add)
+        const next = Array.from(map.values())
+        next.sort((a: any, b: any) => {
+          const ta = Date.parse(msgWhenIso(a)) || 0
+          const tb = Date.parse(msgWhenIso(b)) || 0
+          if (ta !== tb) return ta - tb
+          return String(a?.id ?? "").localeCompare(String(b?.id ?? ""))
+        })
+        return next
+      })
+
+      setThreadCursor(resp.nextCursor)
+      setThreadHasMore(Boolean(resp.hasMore))
+
+      requestAnimationFrame(() => {
+        const el2 = listRef.current
+        if (!el2) return
+
+        if (reset) {
+          scrollToBottom()
+          return
+        }
+
+        const afterHeight = el2.scrollHeight
+        const delta = afterHeight - beforeHeight
+        el2.scrollTop = beforeTop + delta
+      })
+    } catch {
+      return
+    } finally {
+      threadLoadingRef.current = false
+      setThreadLoadingOlder(false)
     }
   }
 
@@ -207,12 +287,27 @@ export default function Chat() {
   }, [meId, searchParams])
 
   useEffect(() => {
-    if (!activeUserId) return
+    if (!activeUserId) {
+      setThread([])
+      setThreadCursor(null)
+      setThreadHasMore(false)
+      return
+    }
+
+    setThread([])
+    setThreadCursor(null)
+    setThreadHasMore(false)
+
     ensureUserDetails(activeUserId)
-    const id = window.setInterval(() => loadAll({ silent: true }), 4000)
+    loadThread({ reset: true })
+
+    const id = window.setInterval(() => {
+      loadAll({ silent: true })
+      loadThread({ reset: true })
+    }, 4000)
     return () => window.clearInterval(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeUserId])
+  }, [activeUserId, meId])
 
   useEffect(() => {
     if (!meId) return
@@ -246,6 +341,7 @@ export default function Chat() {
       const byId = new Map(updated.filter(Boolean).map((m: any) => [String(m.id), m]))
       if (byId.size === 0) return
       setAll((prev) => prev.map((m: any) => byId.get(String(m.id)) ?? m))
+      setThread((prev) => prev.map((m: any) => byId.get(String(m.id)) ?? m))
     })
   }, [activeUserId, conversation, meId])
 
@@ -263,21 +359,36 @@ export default function Chat() {
   }, [activeUserId, conversation, meId])
 
   useEffect(() => {
+    if (!pendingFile) {
+      setPendingPreviewUrl("")
+      return
+    }
+
+    const url = URL.createObjectURL(pendingFile)
+    setPendingPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [pendingFile])
+
+  useEffect(() => {
     if (!listRef.current) return
+    if (threadLoadingOlder) return
     requestAnimationFrame(() => {
       if (!listRef.current) return
       listRef.current.scrollTop = listRef.current.scrollHeight
     })
-  }, [conversation.length])
+  }, [conversation.length, threadLoadingOlder])
 
   const onSend = async () => {
     const to = String(activeUserId || "").trim()
     const text = draft.trim()
+    const file = pendingFile
+
     if (!to) {
       toast({ title: "Validação", description: "Seleciona um utilizador para conversar.", variant: "destructive" })
       return
     }
-    if (!text) return
+
+    if (!file && !text) return
 
     const otherIsAdmin = (() => {
       const rec: any = userById.get(to)
@@ -304,18 +415,61 @@ export default function Chat() {
 
     setSending(true)
     try {
-      await sendInternalMessage({
-        to_user_id: to,
-        subject: "(Chat)",
-        body: text,
-        thread_id: null,
-      })
+      if (file) {
+        await sendInternalMessageWithAttachment({
+          to_user_id: to,
+          subject: "(Chat)",
+          body: text,
+          file,
+        })
+      } else {
+        await sendInternalMessage({
+          to_user_id: to,
+          subject: "(Chat)",
+          body: text,
+          thread_id: null,
+        })
+      }
+
       setDraft("")
+      setPendingFile(null)
       await loadAll({ silent: true })
+      await loadThread({ reset: true })
     } catch (e: any) {
       toast({ title: "Erro", description: e?.message || "Não foi possível enviar a mensagem", variant: "destructive" })
     } finally {
       setSending(false)
+    }
+  }
+
+  const applyReactionUpdate = (recipientId: string, reactions: any[]) => {
+    const rid = String(recipientId || "").trim()
+    if (!rid) return
+
+    const patch = (m: any) => {
+      if (String(m?.id ?? "") !== rid) return m
+      return { ...m, reactions }
+    }
+
+    setAll((prev) => prev.map(patch))
+    setThread((prev) => prev.map(patch))
+  }
+
+  const toggleReaction = async (recipientId: string, emoji: string, reactedByMe: boolean) => {
+    const rid = String(recipientId || "").trim()
+    const e = String(emoji || "").trim()
+    if (!rid || !e) return
+
+    try {
+      if (reactedByMe) {
+        const resp = await removeInternalMessageReaction(rid, e)
+        applyReactionUpdate(rid, (resp.data as any)?.reactions ?? [])
+      } else {
+        const resp = await addInternalMessageReaction(rid, e)
+        applyReactionUpdate(rid, (resp.data as any)?.reactions ?? [])
+      }
+    } catch (err: any) {
+      toast({ title: "Erro", description: err?.message || "Não foi possível reagir", variant: "destructive" })
     }
   }
 
@@ -344,11 +498,11 @@ export default function Chat() {
       <div className="page-header">
         <h1 className="page-title">Chat</h1>
         <p className="page-subtitle">Conversas em tempo real (via mensagens internas)</p>
-        <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+        <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
       </div>
 
-      <div className="glass-card p-6 space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center gap-3">
+      <div className="p-6 space-y-4 glass-card">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
           <div className="flex-1 min-w-0">
             <Select value={activeUserId} onValueChange={setActiveUserId}>
               <SelectTrigger>
@@ -367,7 +521,7 @@ export default function Chat() {
             </Select>
           </div>
 
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex gap-2 justify-end items-center">
             <Button variant="outline" onClick={() => loadAll()} disabled={loading}>
               Atualizar
             </Button>
@@ -375,17 +529,29 @@ export default function Chat() {
         </div>
 
         <div className="rounded-lg border border-border/60 bg-background/40">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-border/60">
+          <div className="flex gap-2 items-center px-4 py-3 border-b border-border/60">
             <MessageSquare className="w-4 h-4 text-cyan-400" />
             <div className="min-w-0">
               <div className="text-sm font-semibold truncate">
                 {activeUser ? `Chat com ${activeUser.name}` : "Seleciona um utilizador"}
               </div>
-              <div className="text-xs text-muted-foreground truncate">{activeUser?.email ?? ""}</div>
+              <div className="text-xs truncate text-muted-foreground">{activeUser?.email ?? ""}</div>
             </div>
           </div>
 
-          <div ref={listRef} className="h-[420px] overflow-y-auto p-4 space-y-2">
+          <div
+            ref={listRef}
+            onScroll={() => {
+              const el = listRef.current
+              if (!el) return
+              if (!activeUserId) return
+              if (el.scrollTop > 60) return
+              if (!threadHasMore) return
+              if (threadLoadingRef.current) return
+              loadThread()
+            }}
+            className="h-[420px] overflow-y-auto p-4 space-y-2"
+          >
             {!activeUserId ? (
               <div className="text-sm text-muted-foreground">Seleciona um utilizador para ver a conversa.</div>
             ) : conversation.length === 0 ? (
@@ -396,6 +562,9 @@ export default function Chat() {
                 const mine = from === meId
                 const time = fmtTime(msgWhenIso(m))
                 const text = plainTextFromHtml(String(m?.body ?? ""))
+                const attachments = Array.isArray((m as any)?.attachments) ? ((m as any).attachments as any[]) : []
+                const imgAttachment = attachments.find((a) => String(a?.mime_type ?? "").toLowerCase().startsWith("image/")) ?? null
+                const reactions = Array.isArray((m as any)?.reactions) ? ((m as any).reactions as any[]) : []
 
                 const meta = mine
                   ? { name: meName || "Eu", photo_path: mePhotoPath }
@@ -412,7 +581,7 @@ export default function Chat() {
                   `https://ui-avatars.com/api/?name=${encodeURIComponent(meta.name || "User")}&background=random`
 
                 return (
-                  <div key={String(m.id)} className={cn("flex items-end gap-2", mine ? "justify-end" : "justify-start")}>
+                  <div key={String(m.id)} className={cn("flex gap-2 items-end", mine ? "justify-end" : "justify-start")}>
                     {!mine ? (
                       <Avatar className="w-8 h-8 border border-border shrink-0">
                         <AvatarImage src={img} alt={meta.name} />
@@ -423,14 +592,43 @@ export default function Chat() {
                     <div className="max-w-[82%]">
                       <div
                         className={cn(
-                          "rounded-lg px-3 py-2 text-sm border whitespace-pre-wrap break-words",
+                          "px-3 py-2 text-sm whitespace-pre-wrap break-words rounded-lg border",
                           mine
                             ? "bg-cyan-500/10 text-foreground border-cyan-500/20"
                             : "bg-muted text-foreground border-border",
                         )}
                       >
-                        {text}
+                        {imgAttachment ? (
+                          <div className={cn("overflow-hidden rounded-md bg-muted", text ? "mb-2" : "")}> 
+                            <img
+                              src={String(imgAttachment?.url ?? "")}
+                              alt={String(imgAttachment?.original_filename ?? "Imagem")}
+                              className="object-cover w-full h-auto max-h-[320px]"
+                              loading="lazy"
+                            />
+                          </div>
+                        ) : null}
+                        {text ? <div>{text}</div> : null}
                       </div>
+
+                      {reactions.length ? (
+                        <div className={cn("flex flex-wrap gap-1 mt-1", mine ? "justify-end" : "justify-start")}>
+                          {reactions.map((r: any) => (
+                            <button
+                              key={`${String(m.id)}_${String(r.emoji)}`}
+                              type="button"
+                              className={cn(
+                                "px-2 py-0.5 text-[12px] rounded-full border",
+                                r?.reacted_by_me ? "border-cyan-500/40 bg-cyan-500/10" : "border-border/60 bg-background/40",
+                              )}
+                              onClick={() => toggleReaction(String(m.id), String(r.emoji), Boolean(r?.reacted_by_me))}
+                            >
+                              {String(r.emoji)} {Number(r.count) || 0}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+
                       <div className={cn("mt-1 text-[11px] text-muted-foreground", mine ? "text-right" : "text-left")}>
                         {time}
                         {mine ? (
@@ -439,6 +637,26 @@ export default function Chat() {
                             {m?.read_at ? `Lida ${fmtTime(m.read_at)}` : "Enviada"}
                           </span>
                         ) : null}
+                      </div>
+
+                      <div className={cn("flex flex-wrap gap-1 mt-1", mine ? "justify-end" : "justify-start")}>
+                        {["👍", "😂", "❤️", "🔥"].map((emo) => {
+                          const existing = reactions.find((r: any) => String(r?.emoji ?? "") === emo)
+                          const reactedByMe = Boolean(existing?.reacted_by_me)
+                          return (
+                            <button
+                              key={`${String(m.id)}_${emo}_btn`}
+                              type="button"
+                              className={cn(
+                                "px-2 py-0.5 text-[12px] rounded-full border",
+                                reactedByMe ? "border-cyan-500/40 bg-cyan-500/10" : "border-border/60 bg-background/40",
+                              )}
+                              onClick={() => toggleReaction(String(m.id), emo, reactedByMe)}
+                            >
+                              {emo}
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
 
@@ -460,7 +678,7 @@ export default function Chat() {
             )}
           </div>
 
-          <div className="p-3 border-t border-border/60 space-y-2">
+          <div className="p-3 space-y-2 border-t border-border/60">
             <div className="flex flex-wrap gap-1">
               {["😀", "😂", "😍", "👍", "🙏", "🎉", "🔥", "😢"].map((emo) => (
                 <Button
@@ -468,7 +686,7 @@ export default function Chat() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-8 px-2"
+                  className="px-2 h-8"
                   disabled={!activeUserId || sending || !canSend}
                   onClick={() => setDraft((prev) => `${prev}${emo}`)}
                 >
@@ -477,7 +695,42 @@ export default function Chat() {
               ))}
             </div>
 
-            <div className="flex items-center gap-2">
+            {pendingFile && pendingPreviewUrl ? (
+              <div className="flex gap-2 items-center p-2 rounded-md border border-border/60 bg-background/40">
+                <div className="overflow-hidden w-12 h-12 rounded-md bg-muted">
+                  <img src={pendingPreviewUrl} alt="Pré-visualização" className="object-cover w-full h-full" />
+                </div>
+                <div className="flex-1 min-w-0 text-xs truncate text-muted-foreground">
+                  {pendingFile.name}
+                </div>
+                <Button type="button" variant="ghost" size="icon" className="w-8 h-8" onClick={() => setPendingFile(null)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : null}
+
+            <div className="flex gap-2 items-center">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null
+                  e.target.value = ""
+                  if (f) setPendingFile(f)
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={!activeUserId || sending || !canSend}
+                onClick={() => fileInputRef.current?.click()}
+                title="Enviar imagem"
+              >
+                <ImagePlus className="w-4 h-4" />
+              </Button>
               <Input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
@@ -489,7 +742,11 @@ export default function Chat() {
                   onSend()
                 }}
               />
-              <Button type="button" onClick={onSend} disabled={!activeUserId || sending || !draft.trim() || !canSend}>
+              <Button
+                type="button"
+                onClick={onSend}
+                disabled={!activeUserId || sending || (!draft.trim() && !pendingFile) || !canSend}
+              >
                 <Send className="w-4 h-4" />
               </Button>
             </div>
