@@ -289,9 +289,9 @@ export default function RoleForm() {
         <div className="page-header">
           <h1 className="page-title">{title}</h1>
           <p className="page-subtitle">Administração → Cargos</p>
-          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+          <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
         </div>
-        <div className="glass-card p-6">
+        <div className="p-6 glass-card">
           <div className="text-sm text-muted-foreground">A carregar…</div>
         </div>
       </div>
@@ -301,14 +301,14 @@ export default function RoleForm() {
   return (
     <div className="space-y-6 animate-slide-up">
       <div className="page-header">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex gap-4 justify-between items-start">
           <div>
             <h1 className="page-title">{title}</h1>
             <p className="page-subtitle">Administração → Cargos</p>
-            <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+            <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex gap-2 items-center">
             <Button variant="outline" asChild>
               <Link to="/admin/roles">
                 <ArrowLeft />
@@ -323,8 +323,8 @@ export default function RoleForm() {
         </div>
       </div>
 
-      <form id="role-form" onSubmit={onSubmit} className="glass-card p-6 space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <form id="role-form" onSubmit={onSubmit} className="p-6 space-y-6 glass-card">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="space-y-2">
             <label className="text-sm font-medium">Nome (interno)</label>
             <Input value={form.name} onChange={(e) => setField("name", e.target.value)} placeholder="admin / manager / agent ..." />
@@ -351,8 +351,8 @@ export default function RoleForm() {
             />
             <div className="text-xs text-muted-foreground">Guarda em permissions (array) como no cast do Laravel.</div>
 
-            <div className="mt-3 rounded-lg border border-border bg-background/30 p-4 space-y-3">
-              <div className="flex items-start justify-between gap-3">
+            <div className="p-4 mt-3 space-y-3 rounded-lg border border-border bg-background/30">
+              <div className="flex gap-3 justify-between items-start">
                 <div>
                   <div className="text-sm font-medium">Permissões rápidas</div>
                   <div className="text-xs text-muted-foreground">Selecionadas: {currentPermissions.length}</div>
@@ -365,7 +365,7 @@ export default function RoleForm() {
               <div className="space-y-3">
                 {QUICK_PERMISSION_GROUPS.map((g) => (
                   <div key={g.key} className="space-y-2">
-                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{g.label}</div>
+                    <div className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">{g.label}</div>
                     <div className="flex flex-wrap gap-2">
                       {g.items.map((it) => {
                         const selected = currentPermissions.includes(it.value)
@@ -394,7 +394,7 @@ export default function RoleForm() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg border border-border p-4 lg:col-span-2">
+          <div className="flex justify-between items-center p-4 rounded-lg border border-border lg:col-span-2">
             <div>
               <div className="text-sm font-medium">Ativo</div>
               <div className="text-xs text-muted-foreground">Controla o campo is_active</div>

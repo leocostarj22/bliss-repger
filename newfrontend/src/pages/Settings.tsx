@@ -218,12 +218,12 @@ export default function SettingsPage() {
         <div className="page-header">
           <h1 className="page-title">Configurações</h1>
           <p className="page-subtitle">Administração → Configurações</p>
-          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+          <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
         </div>
-        <div className="glass-card p-6 space-y-4">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
+        <div className="p-6 space-y-4 glass-card">
+          <Skeleton className="w-48 h-6" />
+          <Skeleton className="w-full h-10" />
+          <Skeleton className="w-full h-10" />
         </div>
       </div>
     )
@@ -232,14 +232,14 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6 animate-slide-up">
       <div className="page-header">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex gap-4 justify-between items-start">
           <div>
             <h1 className="page-title">Configurações</h1>
             <p className="page-subtitle">Administração → Configurações</p>
-            <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+            <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex gap-2 items-center">
             <Button variant="outline" asChild>
               <Link to="/">
                 <ArrowLeft />
@@ -254,9 +254,9 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <form id="admin-settings" onSubmit={onSubmit} className="glass-card p-6 space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400/15 to-fuchsia-500/15 border border-primary/20 flex items-center justify-center">
+      <form id="admin-settings" onSubmit={onSubmit} className="p-6 space-y-6 glass-card">
+        <div className="flex gap-3 items-center">
+          <div className="flex justify-center items-center w-10 h-10 bg-gradient-to-br rounded-xl border from-cyan-400/15 to-fuchsia-500/15 border-primary/20">
             <SettingsIcon className="w-5 h-5 text-primary" />
           </div>
           <div>
@@ -265,8 +265,8 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="rounded-lg border border-border p-4 space-y-4">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="p-4 space-y-4 rounded-lg border border-border">
             <div className="font-semibold">Sistema</div>
 
             <div className="space-y-2">
@@ -281,10 +281,10 @@ export default function SettingsPage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Favicon</label>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg border border-border bg-muted/20 flex items-center justify-center overflow-hidden">
+              <div className="flex gap-3 items-center">
+                <div className="flex overflow-hidden justify-center items-center w-10 h-10 rounded-lg border border-border bg-muted/20">
                   {form.app_favicon.trim() ? (
-                    <img src={form.app_favicon} alt={form.app_name || "Favicon"} className="w-6 h-6 object-contain" />
+                    <img src={form.app_favicon} alt={form.app_name || "Favicon"} className="object-contain w-6 h-6" />
                   ) : (
                     <div className="text-xs text-muted-foreground">—</div>
                   )}
@@ -304,7 +304,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-border p-4 space-y-4">
+          <div className="p-4 space-y-4 rounded-lg border border-border">
             <div className="font-semibold">CRM</div>
 
             <div className="space-y-2">
@@ -319,10 +319,10 @@ export default function SettingsPage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Favicon</label>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg border border-border bg-muted/20 flex items-center justify-center overflow-hidden">
+              <div className="flex gap-3 items-center">
+                <div className="flex overflow-hidden justify-center items-center w-10 h-10 rounded-lg border border-border bg-muted/20">
                   {form.crm_favicon.trim() ? (
-                    <img src={form.crm_favicon} alt={form.crm_name || "Favicon"} className="w-6 h-6 object-contain" />
+                    <img src={form.crm_favicon} alt={form.crm_name || "Favicon"} className="object-contain w-6 h-6" />
                   ) : (
                     <div className="text-xs text-muted-foreground">—</div>
                   )}
