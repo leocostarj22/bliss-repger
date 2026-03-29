@@ -43,12 +43,13 @@
     <meta name="theme-color" content="#0b0c0f" />
     <style>
       :root { color-scheme: dark light; }
+      *, *::before, *::after { box-sizing:border-box; }
       html { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
       body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: radial-gradient(1000px 400px at 20% -10%, rgba(34,211,238,.08), transparent), radial-gradient(800px 320px at 100% 0%, rgba(232,121,249,.08), transparent), #0b0c0f; color:#e6e7eb; }
       .wrap { min-height:100dvh; display:grid; place-items:center; padding:24px; }
       .stack { width:100%; max-width:720px; display:flex; flex-direction:column; gap:16px; }
       .card { width:100%; max-width:420px; background:#10131a; border:1px solid #1c2332; border-radius:14px; padding:28px; box-shadow: 0 12px 40px rgba(0,0,0,.30); backdrop-filter:saturate(120%) blur(6px); }
-      .form { max-width:320px; margin:0 auto; }
+      .form { max-width:320px; margin:0 auto; min-width:0; }
 
       .qr-card { max-width:420px; padding:18px; display:flex; align-items:center; justify-content:center; }
       .qr-img { width:min(240px, 80vw); height:auto; aspect-ratio:1 / 1; border-radius:0; border:0; background:transparent; display:block; }
@@ -76,7 +77,7 @@
       p { margin:0 0 18px; color:#a8afc0; font-size:13px; }
       label { display:block; font-size:12px; color:#9aa3b2; margin:12px 0 6px; }
       input[type="email"], input[type="password"] {
-        width:100%; padding:10px 12px; border-radius:8px; border:1px solid #253047; background:#0f1320; color:#e6e7eb; outline:none; transition:border-color .2s, box-shadow .2s; font-size:16px;
+        width:100%; min-width:0; padding:10px 12px; border-radius:8px; border:1px solid #253047; background:#0f1320; color:#e6e7eb; outline:none; transition:border-color .2s, box-shadow .2s; font-size:16px;
       }
       input[type="email"]::placeholder, input[type="password"]::placeholder { color:#6b7280; }
       input[type="email"]:focus, input[type="password"]:focus { border-color:#22d3ee; box-shadow:0 0 0 3px rgba(34,211,238,.15); }
