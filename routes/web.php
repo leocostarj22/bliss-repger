@@ -20,6 +20,67 @@ Route::get('/', function () {
     return redirect('/newadmin/login');
 });
 
+Route::get('/manifest.webmanifest', function () {
+    $brandingPath = base_path('branding.json');
+    $branding = [
+        'app_name' => config('app.name', 'GMCentral'),
+        'app_favicon' => 'images/gmfavicon.png',
+    ];
+
+    if (is_file($brandingPath)) {
+        $decoded = json_decode((string) file_get_contents($brandingPath), true);
+        if (is_array($decoded)) {
+            $branding = array_merge($branding, $decoded);
+        }
+    }
+
+    $name = trim((string) ($branding['app_name'] ?? '')) ?: config('app.name', 'GMCentral');
+
+    $raw = trim((string) ($branding['app_favicon'] ?? ''));
+    if ($raw === '') {
+        $icon = asset('images/gmfavicon.png');
+    } elseif (str_starts_with($raw, 'http://') || str_starts_with($raw, 'https://') || str_starts_with($raw, 'data:')) {
+        $icon = $raw;
+    } else {
+        $p = ltrim($raw, '/');
+        if (str_starts_with($p, 'branding/')) {
+            $icon = asset('storage/' . $p);
+        } elseif (str_starts_with($p, 'storage/')) {
+            $icon = asset($p);
+        } else {
+            $icon = asset($p);
+        }
+    }
+
+    $manifest = [
+        'name' => $name,
+        'short_name' => $name,
+        'start_url' => '/admin',
+        'scope' => '/',
+        'display' => 'standalone',
+        'background_color' => '#0b0c0f',
+        'theme_color' => '#0b0c0f',
+        'icons' => [
+            ['src' => $icon, 'sizes' => '192x192', 'type' => 'image/png'],
+            ['src' => $icon, 'sizes' => '512x512', 'type' => 'image/png'],
+        ],
+    ];
+
+    return response()->json($manifest)->header('Content-Type', 'application/manifest+json');
+});
+
+Route::get('/service-worker.js', function () {
+    $js = "self.addEventListener('install', (event) => { self.skipWaiting(); });\n" .
+          "self.addEventListener('activate', (event) => { event.waitUntil(self.clients.claim()); });\n" .
+          "self.addEventListener('fetch', (event) => {\n" .
+          "  const req = event.request;\n" .
+          "  if (req.method !== 'GET') return;\n" .
+          "  event.respondWith(fetch(req).catch(() => caches.match(req)));\n" .
+          "});\n";
+
+    return response($js, 200)->header('Content-Type', 'application/javascript');
+});
+
 // Rota para download de anexos
 Route::get('/tickets/attachments/{attachment}/download', [TicketAttachmentController::class, 'download'])
     ->name('tickets.attachments.download')

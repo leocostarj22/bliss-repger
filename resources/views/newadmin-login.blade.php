@@ -33,11 +33,14 @@
       $__faviconUrl = $__resolveAsset($__branding['app_favicon'] ?? null) ?? asset('images/gmfavicon.png');
 
       $__shortcutUrl = url('/admin');
-      $__qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' . urlencode($__shortcutUrl);
+      $__installUrl = url('/newadmin/login') . '?install=1';
+      $__qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' . urlencode($__installUrl);
     @endphp
 
     <title>Entrar — {{ $__appName }}</title>
     <link rel="icon" href="{{ $__faviconUrl }}" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0b0c0f" />
     <style>
       :root { color-scheme: dark light; }
       body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: radial-gradient(1000px 400px at 20% -10%, rgba(34,211,238,.08), transparent), radial-gradient(800px 320px at 100% 0%, rgba(232,121,249,.08), transparent), #0b0c0f; color:#e6e7eb; }
@@ -46,11 +49,20 @@
       .card { width:100%; max-width:420px; background:#10131a; border:1px solid #1c2332; border-radius:14px; padding:28px; box-shadow: 0 12px 40px rgba(0,0,0,.30); backdrop-filter:saturate(120%) blur(6px); }
       .form { max-width:320px; margin:0 auto; }
 
-      .qr-card { max-width:420px; padding:22px; }
-      .qr-title { margin:0 0 6px; font-size:16px; font-weight:700; }
-      .qr-sub { margin:0 0 14px; color:#a8afc0; font-size:12px; line-height:1.4; }
-      .qr-img { width:220px; height:220px; border-radius:14px; border:1px solid #253047; background:#0f1320; display:block; margin:0 auto; }
-      .qr-link { display:block; margin-top:12px; text-align:center; font-size:12px; color:#a8afc0; word-break:break-all; }
+      .qr-card { max-width:420px; padding:18px; display:flex; align-items:center; justify-content:center; }
+      .qr-img { width:min(240px, 80vw); height:auto; aspect-ratio:1 / 1; border-radius:0; border:0; background:transparent; display:block; }
+
+      .install-overlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.55); z-index:9999; }
+      .install-overlay[data-open="1"] { display:flex; }
+      .install-btn { width:76px; height:76px; border-radius:18px; border:1px solid #253047; background:linear-gradient(90deg,#22d3ee,#e879f9); color:#0b0c0f; display:grid; place-items:center; cursor:pointer; box-shadow: 0 12px 40px rgba(0,0,0,.35); }
+      .install-btn:active { transform: translateY(1px); }
+      .install-btn svg { width:34px; height:34px; }
+
+      @media (max-width: 480px) {
+        .wrap { padding:16px; }
+        .card { padding:20px; }
+        .qr-card { padding:18px; }
+      }
 
       @media (min-width: 900px) {
         .stack { flex-direction:row; align-items:flex-start; max-width:860px; }
@@ -114,12 +126,64 @@
         </form>
 
         <div class="card qr-card" aria-label="Atalho no telemóvel">
-          <div class="qr-title">Atalho no telemóvel</div>
-          <div class="qr-sub">Aponte a câmara para abrir o sistema e adicione à área de trabalho (Tela inicial).</div>
-          <img class="qr-img" src="{{ $__qrUrl }}" alt="QR Code para {{ $__appName }}" loading="lazy" />
-          <a class="qr-link" href="{{ $__shortcutUrl }}">{{ $__shortcutUrl }}</a>
+          <img class="qr-img" src="{{ $__qrUrl }}" alt="QR Code" loading="lazy" />
         </div>
       </div>
     </div>
+
+    <div id="install-overlay" class="install-overlay" aria-hidden="true">
+      <button id="install-btn" class="install-btn" type="button" aria-label="Instalar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3v10" />
+          <path d="m8 11 4 4 4-4" />
+          <path d="M4 21h16" />
+        </svg>
+      </button>
+    </div>
+
+    <script>
+      (function () {
+        try {
+          if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("/service-worker.js").catch(function () {});
+          }
+        } catch (e) {}
+
+        var params;
+        try {
+          params = new URLSearchParams(window.location.search || "");
+        } catch (e) {
+          params = null;
+        }
+        var shouldInstall = !!(params && params.get("install") === "1");
+
+        var deferredPrompt = null;
+        window.addEventListener("beforeinstallprompt", function (e) {
+          e.preventDefault();
+          deferredPrompt = e;
+          if (shouldInstall) {
+            var overlay = document.getElementById("install-overlay");
+            if (overlay) overlay.setAttribute("data-open", "1");
+          }
+        });
+
+        if (!shouldInstall) return;
+
+        var overlay = document.getElementById("install-overlay");
+        var btn = document.getElementById("install-btn");
+        if (!overlay || !btn) return;
+
+        var promptOnce = function () {
+          if (!deferredPrompt) return;
+          try {
+            deferredPrompt.prompt();
+          } catch (e) {}
+          deferredPrompt = null;
+          overlay.removeAttribute("data-open");
+        };
+
+        btn.addEventListener("click", promptOnce);
+      })();
+    </script>
   </body>
 </html>
