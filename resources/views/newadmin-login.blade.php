@@ -59,10 +59,13 @@
       .install-btn:active { transform: translateY(1px); }
       .install-btn svg { width:34px; height:34px; }
 
-      @media (max-width: 480px) {
+      @media (max-width: 768px) {
         .wrap { padding:16px; }
-        .card { padding:20px; }
-        .qr-card { padding:18px; }
+        .stack { max-width:420px; gap:12px; }
+        .card { max-width:100%; padding:20px; border-radius:12px; }
+        .form { max-width:100%; }
+        .row { flex-wrap:wrap; gap:10px; }
+        .qr-card { display:none; }
       }
 
       @media (min-width: 900px) {
