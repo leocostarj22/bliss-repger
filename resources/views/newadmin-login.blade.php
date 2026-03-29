@@ -31,6 +31,9 @@
 
       $__appName = trim((string) ($__branding['app_name'] ?? '')) ?: 'GMCentral';
       $__faviconUrl = $__resolveAsset($__branding['app_favicon'] ?? null) ?? asset('images/gmfavicon.png');
+
+      $__shortcutUrl = url('/admin');
+      $__qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' . urlencode($__shortcutUrl);
     @endphp
 
     <title>Entrar — {{ $__appName }}</title>
@@ -39,8 +42,20 @@
       :root { color-scheme: dark light; }
       body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: radial-gradient(1000px 400px at 20% -10%, rgba(34,211,238,.08), transparent), radial-gradient(800px 320px at 100% 0%, rgba(232,121,249,.08), transparent), #0b0c0f; color:#e6e7eb; }
       .wrap { min-height:100dvh; display:grid; place-items:center; padding:24px; }
+      .stack { width:100%; max-width:720px; display:flex; flex-direction:column; gap:16px; }
       .card { width:100%; max-width:420px; background:#10131a; border:1px solid #1c2332; border-radius:14px; padding:28px; box-shadow: 0 12px 40px rgba(0,0,0,.30); backdrop-filter:saturate(120%) blur(6px); }
       .form { max-width:320px; margin:0 auto; }
+
+      .qr-card { max-width:420px; padding:22px; }
+      .qr-title { margin:0 0 6px; font-size:16px; font-weight:700; }
+      .qr-sub { margin:0 0 14px; color:#a8afc0; font-size:12px; line-height:1.4; }
+      .qr-img { width:220px; height:220px; border-radius:14px; border:1px solid #253047; background:#0f1320; display:block; margin:0 auto; }
+      .qr-link { display:block; margin-top:12px; text-align:center; font-size:12px; color:#a8afc0; word-break:break-all; }
+
+      @media (min-width: 900px) {
+        .stack { flex-direction:row; align-items:flex-start; max-width:860px; }
+        .qr-card { max-width:320px; }
+      }
       h1 { margin:0 0 6px; font-size:22px; }
       p { margin:0 0 18px; color:#a8afc0; font-size:13px; }
       label { display:block; font-size:12px; color:#9aa3b2; margin:12px 0 6px; }
@@ -64,38 +79,47 @@
   </head>
   <body>
     <div class="wrap">
-      <form class="card" method="POST" action="/newadmin/login">
-        @csrf
-        <div class="logo" aria-label="Identidade visual">
-          <img src="{{ $__faviconUrl }}" alt="{{ $__appName }}">
-          <div>
-            <h1>Entrar</h1>
-            <p>Acesse o painel administrativo</p>
+      <div class="stack">
+        <form class="card" method="POST" action="/newadmin/login">
+          @csrf
+          <div class="logo" aria-label="Identidade visual">
+            <img src="{{ $__faviconUrl }}" alt="{{ $__appName }}">
+            <div>
+              <h1>Entrar</h1>
+              <p>Acesse o painel administrativo</p>
+            </div>
           </div>
-        </div>
-        <div class="form">
+          <div class="form">
 
-        @if ($errors->any())
-          <div class="err">
-            {{ $errors->first() }}
+          @if ($errors->any())
+            <div class="err">
+              {{ $errors->first() }}
+            </div>
+          @endif
+
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" value="{{ old('email') }}" placeholder="seu@email.com" autocomplete="username" required autofocus />
+
+          <label for="password">Senha</label>
+          <input id="password" name="password" type="password" placeholder="********" autocomplete="current-password" required />
+
+          <div class="row">
+            <label><input type="checkbox" name="remember" value="1" {{ old('remember') ? 'checked' : '' }}/> Lembrar‑me</label>
+            <a href="/filament-admin/forgot-password">Esqueci a senha</a>
           </div>
-        @endif
 
-        <label for="email">Email</label>
-        <input id="email" name="email" type="email" value="{{ old('email') }}" placeholder="seu@email.com" autocomplete="username" required autofocus />
+          <button type="submit" class="btn">Entrar</button>
+          <div class="muted">Após autenticar, será redirecionado para /admin (novo painel).</div>
+          </div>
+        </form>
 
-        <label for="password">Senha</label>
-        <input id="password" name="password" type="password" placeholder="********" autocomplete="current-password" required />
-
-        <div class="row">
-          <label><input type="checkbox" name="remember" value="1" {{ old('remember') ? 'checked' : '' }}/> Lembrar‑me</label>
-          <a href="/filament-admin/forgot-password">Esqueci a senha</a>
+        <div class="card qr-card" aria-label="Atalho no telemóvel">
+          <div class="qr-title">Atalho no telemóvel</div>
+          <div class="qr-sub">Aponte a câmara para abrir o sistema e adicione à área de trabalho (Tela inicial).</div>
+          <img class="qr-img" src="{{ $__qrUrl }}" alt="QR Code para {{ $__appName }}" loading="lazy" />
+          <a class="qr-link" href="{{ $__shortcutUrl }}">{{ $__shortcutUrl }}</a>
         </div>
-
-        <button type="submit" class="btn">Entrar</button>
-        <div class="muted">Após autenticar, será redirecionado para /admin (novo painel).</div>
-        </div>
-      </form>
+      </div>
     </div>
   </body>
 </html>
