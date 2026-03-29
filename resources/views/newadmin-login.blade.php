@@ -4,8 +4,37 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Entrar — GMCentral</title>
-    <link rel="icon" href="{{ asset('images/gmfavicon.png') }}" />
+
+    @php
+      $__brandingPath = base_path('branding.json');
+      $__defaults = [
+        'app_name' => 'GMCentral',
+        'app_title' => 'GMCentral',
+        'app_favicon' => 'images/gmfavicon.png',
+      ];
+
+      $__branding = $__defaults;
+      if (is_file($__brandingPath)) {
+        $__decoded = json_decode((string) file_get_contents($__brandingPath), true);
+        if (is_array($__decoded)) $__branding = array_merge($__branding, $__decoded);
+      }
+
+      $__resolveAsset = function ($path) {
+        $p = trim((string) $path);
+        if ($p === '') return null;
+        if (str_starts_with($p, 'http://') || str_starts_with($p, 'https://') || str_starts_with($p, 'data:')) return $p;
+        $p = ltrim($p, '/');
+        if (str_starts_with($p, 'branding/')) return asset('storage/' . $p);
+        if (str_starts_with($p, 'storage/')) return asset($p);
+        return asset($p);
+      };
+
+      $__appName = trim((string) ($__branding['app_name'] ?? '')) ?: 'GMCentral';
+      $__faviconUrl = $__resolveAsset($__branding['app_favicon'] ?? null) ?? asset('images/gmfavicon.png');
+    @endphp
+
+    <title>Entrar — {{ $__appName }}</title>
+    <link rel="icon" href="{{ $__faviconUrl }}" />
     <style>
       :root { color-scheme: dark light; }
       body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: radial-gradient(1000px 400px at 20% -10%, rgba(34,211,238,.08), transparent), radial-gradient(800px 320px at 100% 0%, rgba(232,121,249,.08), transparent), #0b0c0f; color:#e6e7eb; }
@@ -38,7 +67,7 @@
       <form class="card" method="POST" action="/newadmin/login">
         @csrf
         <div class="logo" aria-label="Identidade visual">
-          <img src="{{ asset('images/gmfavicon.png') }}" alt="GMCentral Logo">
+          <img src="{{ $__faviconUrl }}" alt="{{ $__appName }}">
           <div>
             <h1>Entrar</h1>
             <p>Acesse o painel administrativo</p>

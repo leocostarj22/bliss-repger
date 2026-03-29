@@ -31,8 +31,31 @@ use Illuminate\Support\Facades\File;
 
 class AdminPanelProvider extends PanelProvider
 {
-    public function panel(Panel $panel): Panel
+    private function getBrandLogoUrl(): string
     {
+        $brandingPath = base_path('branding.json');
+
+        $branding = [
+            'app_favicon' => 'images/gmfavicon.png',
+        ];
+
+        if (File::exists($brandingPath)) {
+            $decoded = json_decode((string) File::get($brandingPath), true);
+            if (is_array($decoded)) $branding = array_merge($branding, $decoded);
+        }
+
+        $raw = trim((string) ($branding['app_favicon'] ?? ''));
+        if ($raw === '') return asset('images/logocolors.png');
+        if (str_starts_with($raw, 'http://') || str_starts_with($raw, 'https://') || str_starts_with($raw, 'data:')) return $raw;
+
+        $p = ltrim($raw, '/');
+        if (str_starts_with($p, 'branding/')) return asset('storage/' . $p);
+        if (str_starts_with($p, 'storage/')) return asset($p);
+        return asset($p);
+    }
+
+    public function panel(Panel $panel): Panel
+    { 
         $panel = $panel
             ->default()
             ->id('admin')
@@ -59,7 +82,7 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
             ])
-            ->brandLogo(asset('images/logocolors.png'))
+            ->brandLogo($this->getBrandLogoUrl())
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
