@@ -85,7 +85,7 @@
                         @endif
                         
                         {{-- Conteúdo --}}
-                        <div class="prose dark:prose-invert max-w-none text-sm">
+                        <div class="prose dark:prose-invert max-w-none text-sm text-gray-900 dark:text-white">
                             {!! Str::limit(strip_tags($post->content), 200) !!}
                             @if(strlen(strip_tags($post->content)) > 200)
                                 <a href="{{ \App\Filament\Resources\PostResource::getUrl('view', ['record' => $post]) }}" 
