@@ -316,12 +316,32 @@ export default function MyFormulaPurchaseReport() {
                 />
               </div>
               <div>
-                <div className="label">Cor Capas</div>
-                <div className="value" data-mf-editable="true" data-mf-key="cover_color" contentEditable suppressContentEditableWarning />
+                <div className="label">PESO LÍQUIDO:</div>
+                <div
+                  className="value"
+                  data-mf-editable="true"
+                  data-mf-key="net_weight"
+                  contentEditable
+                  suppressContentEditableWarning
+                  dangerouslySetInnerHTML={{ __html: reportData?.net_weight ?? "" }}
+                />
               </div>
               <div>
-                <div className="label">PESO LÍQUIDO:</div>
-                <div className="value">{reportData?.net_weight ?? ""}</div>
+                <div className="label">Tipo de Saída</div>
+                <div className="value">
+                  <select
+                    data-mf-select="true"
+                    data-mf-key="tipo_saida"
+                    defaultValue={reportData?.tipo_saida ?? ""}
+                    style={{ border: 0, width: "100%", padding: 0, font: "inherit", background: "transparent" }}
+                  >
+                    <option value=""></option>
+                    <option value="MF - Pré paga">MF - Pré paga</option>
+                    <option value="MF - Paga / Pendente">MF - Paga / Pendente</option>
+                    <option value="CC - Pré paga">CC - Pré paga</option>
+                    <option value="CC - À cobrança">CC - À cobrança</option>
+                  </select>
+                </div>
               </div>
             </div>
 
