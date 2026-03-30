@@ -88,6 +88,21 @@
       <div>
         <div class="label">PLANO:</div>
         <div class="value" contenteditable="true">{{ $reportData['plan_name'] ?? '' }}</div>
+
+        <div class="label" style="margin-top:10px">NIF</div>
+        <div class="value" contenteditable="true">{{ $reportData['nif'] ?? '' }}</div>
+
+        <div class="label" style="margin-top:10px">Tipo de saída</div>
+        <div class="value">
+          <select class="js-save-select" style="border:0; width:100%; padding:0; font:inherit; background:transparent;">
+            @php($tipoSaida = (string)($reportData['tipo_saida'] ?? ''))
+            <option value="" {{ $tipoSaida === '' ? 'selected' : '' }}></option>
+            <option value="MF - Pré paga" {{ $tipoSaida === 'MF - Pré paga' ? 'selected' : '' }}>MF - Pré paga</option>
+            <option value="MF - Paga pendente" {{ $tipoSaida === 'MF - Paga pendente' ? 'selected' : '' }}>MF - Paga pendente</option>
+            <option value="CC - Pré paga" {{ $tipoSaida === 'CC - Pré paga' ? 'selected' : '' }}>CC - Pré paga</option>
+            <option value="CC - À cobrança" {{ $tipoSaida === 'CC - À cobrança' ? 'selected' : '' }}>CC - À cobrança</option>
+          </select>
+        </div>
       </div
       ><div>
         <div class="label">N.º DE CÁPSULAS POR DIA:</div>
@@ -239,7 +254,8 @@
     return {
       editables: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML),
       dates: Array.from(document.querySelectorAll('input[type="date"]')).map(el => el.value),
-      checks: Array.from(document.querySelectorAll('input.check')).map(el => el.checked)
+      checks: Array.from(document.querySelectorAll('input.check')).map(el => el.checked),
+      selects: Array.from(document.querySelectorAll('select.js-save-select')).map(el => el.value)
     };
   }
   function restore(){
@@ -253,6 +269,8 @@
       dts.forEach((el,i)=>{ if(s.dates && s.dates[i]!==undefined) el.value = s.dates[i]; });
       const chs = document.querySelectorAll('input.check');
       chs.forEach((el,i)=>{ if(s.checks && s.checks[i]!==undefined) el.checked = s.checks[i]; });
+      const sels = document.querySelectorAll('select.js-save-select');
+      sels.forEach((el,i)=>{ if(s.selects && s.selects[i]!==undefined) el.value = s.selects[i]; });
     }catch(e){}
   }
   document.getElementById('btn-save')?.addEventListener('click', function(ev){
