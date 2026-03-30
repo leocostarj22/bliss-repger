@@ -17,6 +17,37 @@ function formatDatePt(iso?: string | null) {
   return d.toLocaleString("pt-PT")
 }
 
+type SupplementRow = {
+  slug?: string | null
+  name?: string | null
+  letter?: unknown
+}
+
+function extractSupplementCode(item: SupplementRow) {
+  const explicit = String(item.letter ?? "").trim()
+  if (explicit) return explicit
+
+  const slug = String(item.slug ?? "").trim()
+  if (!slug) return ""
+
+  const alphaNum = slug.match(/^([a-z]{1,4}\d{1,6})/i)
+  if (alphaNum?.[1]) return alphaNum[1].toUpperCase()
+
+  const digits = slug.match(/^(\d{1,6})/)
+  if (digits?.[1]) return digits[1]
+
+  const alpha = slug.match(/^([a-z]{1,4})/i)
+  if (alpha?.[1]) return alpha[1].toUpperCase()
+
+  return slug.slice(0, 1).toUpperCase()
+}
+
+function formatSupplementLabel(item: SupplementRow) {
+  const code = extractSupplementCode(item)
+  const name = String(item.name ?? "")
+  return code ? `${code} - ${name}` : name
+}
+
 type ReportStateV2 = {
   v: 2
   editables: Record<string, string>
@@ -377,7 +408,7 @@ export default function MyFormulaPurchaseReport() {
                       {group.items.map((item, idx) => (
                         <li key={item.slug ?? `${item.name}-${idx}`}>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                            <span>{item.letter ? `${item.letter} - ` : ""}{item.name}</span>
+                            <span>{formatSupplementLabel(item)}</span>
                             <input
                               type="checkbox"
                               data-mf-check="true"
