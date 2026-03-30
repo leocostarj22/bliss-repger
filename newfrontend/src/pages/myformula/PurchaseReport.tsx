@@ -23,7 +23,7 @@ type SupplementRow = {
   letter?: unknown
 }
 
-function extractSupplementCode(item: SupplementRow) {
+function extractSupplementCode(item: SupplementRow, planLetters?: string) {
   const explicitRaw = String(item.letter ?? "").trim()
   const explicit = explicitRaw.replace(/\s+/g, "")
 
@@ -44,11 +44,19 @@ function extractSupplementCode(item: SupplementRow) {
     const sepMatch = (slug && slug.match(separated)) || (name && name.match(separated))
     if (sepMatch?.[1]) return `${explicitLetters}${sepMatch[1]}`
 
+    const planTok = String(planLetters ?? "").match(new RegExp(`\${base}\
+\\d{1,6}\`, "i"))
+    if (planTok?.[0]) return planTok[0].toUpperCase()
+
     return explicitLetters
   }
 
   if (explicit) return explicit
-  if (!slug) return ""
+  if (!slug) {
+    const planTok = String(planLetters ?? "").match(/\b([a-z]{1,4}\d{1,6})\b/i)
+    if (planTok?.[1]) return planTok[1].toUpperCase()
+    return ""
+  }
 
   const anyAlphaNum = slug.match(/(?:^|[^a-z0-9])([a-z]{1,4}\d{1,6})(?:[^a-z0-9]|$)/i)
   if (anyAlphaNum?.[1]) return anyAlphaNum[1].toUpperCase()
@@ -62,8 +70,8 @@ function extractSupplementCode(item: SupplementRow) {
   return slug.slice(0, 1).toUpperCase()
 }
 
-function formatSupplementLabel(item: SupplementRow) {
-  const code = extractSupplementCode(item)
+function formatSupplementLabel(item: SupplementRow, planLetters?: string) {
+  const code = extractSupplementCode(item, planLetters)
   const name = String(item.name ?? "")
   return code ? `${code} - ${name}` : name
 }
@@ -428,7 +436,7 @@ export default function MyFormulaPurchaseReport() {
                       {group.items.map((item, idx) => (
                         <li key={item.slug ?? `${item.name}-${idx}`}>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                            <span>{formatSupplementLabel(item)}</span>
+                            <span>{formatSupplementLabel(item, reportData?.plan_letters)}</span>
                             <input
                               type="checkbox"
                               data-mf-check="true"
