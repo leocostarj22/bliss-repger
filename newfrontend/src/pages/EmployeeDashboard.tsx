@@ -33,6 +33,56 @@ const plainTextFromHtml = (html: string) => {
 const sanitizeHtml = (html: string) => {
   const raw = (html ?? "").toString();
   if (!raw) return "";
+
+  const normalizeTextColor = (value: string) => {
+    const v = String(value ?? "").trim().toLowerCase();
+    if (!v) return null;
+    if (v === "black" || v === "#000" || v === "#000000") return "hsl(var(--foreground))";
+
+    const hex = v.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (hex) {
+      const h = hex[1].toLowerCase();
+      const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+      if (full === "000000") return "hsl(var(--foreground))";
+      return null;
+    }
+
+    const rgb = v.match(/^rgba?\((.+)\)$/i);
+    if (rgb) {
+      const parts = rgb[1].split(",").map((s) => s.trim());
+      const r = Number.parseFloat(parts[0] ?? "");
+      const g = Number.parseFloat(parts[1] ?? "");
+      const b = Number.parseFloat(parts[2] ?? "");
+      if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) return null;
+      if (r <= 32 && g <= 32 && b <= 32) return "hsl(var(--foreground))";
+      return null;
+    }
+
+    return null;
+  };
+
+  const normalizeInlineStyles = (style: string) => {
+    const parts = String(style ?? "")
+      .split(";")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    let changed = false;
+    const next = parts.map((decl) => {
+      const idx = decl.indexOf(":");
+      if (idx <= 0) return decl;
+      const prop = decl.slice(0, idx).trim().toLowerCase();
+      const val = decl.slice(idx + 1).trim();
+      if (prop !== "color") return decl;
+      const repl = normalizeTextColor(val);
+      if (!repl) return decl;
+      changed = true;
+      return `color: ${repl}`;
+    });
+
+    return changed ? next.join("; ") : style;
+  };
+
   try {
     const doc = new DOMParser().parseFromString(raw, "text/html");
     doc.querySelectorAll("script, style, iframe, object, embed").forEach((n) => n.remove());
@@ -44,6 +94,13 @@ const sanitizeHtml = (html: string) => {
         if ((name === "href" || name === "src") && /^\s*javascript:/i.test(value)) el.removeAttribute(attr.name);
         if (name === "srcdoc") el.removeAttribute(attr.name);
       });
+
+      const style = el.getAttribute("style");
+      if (style) {
+        const nextStyle = normalizeInlineStyles(style);
+        if (nextStyle.trim()) el.setAttribute("style", nextStyle);
+        else el.removeAttribute("style");
+      }
     });
     return doc.body.innerHTML;
   } catch {
