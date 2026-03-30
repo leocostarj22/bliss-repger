@@ -84,7 +84,7 @@
 
   <div class="section">
     <h2>Plano</h2>
-    <div class="grid-3" style="grid-template-columns: 2fr 0.8fr 0.8fr;">
+    <div class="grid-3" style="grid-template-columns: 2fr 0.8fr 0.8fr 0.8fr;">
       <div>
         <div class="label">PLANO:</div>
         <div class="value" contenteditable="true">{{ $reportData['plan_name'] ?? '' }}</div>
@@ -94,13 +94,22 @@
         <div class="value" contenteditable="true">{{ $reportData['capsules'] ?? '' }}</div>
       </div
       ><div>
-        <div class="label">Cor Capas</div>
-        <div class="value" contenteditable="true"></div>
+        <div class="label">PESO LÍQUIDO:</div>
+        <div class="value" contenteditable="true">{{ $reportData['net_weight'] ?? '' }}</div>
+      </div
+      ><div>
+        <div class="label">Tipo de Saída</div>
+        <div class="value">
+          @php($tipoSaida = (string)($reportData['tipo_saida'] ?? ''))
+          <select class="js-save-select" style="border:0; width:100%; padding:0; font:inherit; background:transparent;">
+            <option value="" {{ $tipoSaida === '' ? 'selected' : '' }}></option>
+            <option value="MF - Pré paga" {{ $tipoSaida === 'MF - Pré paga' ? 'selected' : '' }}>MF - Pré paga</option>
+            <option value="MF - Paga / Pendente" {{ $tipoSaida === 'MF - Paga / Pendente' ? 'selected' : '' }}>MF - Paga / Pendente</option>
+            <option value="CC - Pré paga" {{ $tipoSaida === 'CC - Pré paga' ? 'selected' : '' }}>CC - Pré paga</option>
+            <option value="CC - À cobrança" {{ $tipoSaida === 'CC - À cobrança' ? 'selected' : '' }}>CC - À cobrança</option>
+          </select>
+        </div>
       </div>
-    </div>
-    <div style="margin-top:10px">
-      <div class="label">PESO LÍQUIDO:</div>
-      <div class="value">{{ $reportData['net_weight'] ?? '' }}</div>
     </div>
     <div style="margin-top:10px">
       <div class="label">Como tomar MyFórmula {{ $reportData['plan_letters'] ?? '' }}</div>
@@ -239,7 +248,8 @@
     return {
       editables: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML),
       dates: Array.from(document.querySelectorAll('input[type="date"]')).map(el => el.value),
-      checks: Array.from(document.querySelectorAll('input.check')).map(el => el.checked)
+      checks: Array.from(document.querySelectorAll('input.check')).map(el => el.checked),
+      selects: Array.from(document.querySelectorAll('select.js-save-select')).map(el => el.value)
     };
   }
   function restore(){
@@ -253,6 +263,8 @@
       dts.forEach((el,i)=>{ if(s.dates && s.dates[i]!==undefined) el.value = s.dates[i]; });
       const chs = document.querySelectorAll('input.check');
       chs.forEach((el,i)=>{ if(s.checks && s.checks[i]!==undefined) el.checked = s.checks[i]; });
+      const sels = document.querySelectorAll('select.js-save-select');
+      sels.forEach((el,i)=>{ if(s.selects && s.selects[i]!==undefined) el.value = s.selects[i]; });
     }catch(e){}
   }
   document.getElementById('btn-save')?.addEventListener('click', function(ev){
