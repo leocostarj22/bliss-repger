@@ -386,30 +386,42 @@ class MyFormulaOrderController extends Controller
             return is_array($arr) ? array_map('intval', $arr) : [];
         };
 
-        $settings = DB::connection('myformula')
-            ->table('setting')
-            ->whereIn('key', ['config_processing_status', 'config_complete_status'])
-            ->pluck('value', 'key');
-
-        $processingIds = $parseStatusIds($settings['config_processing_status'] ?? null);
-        $completeIds = $parseStatusIds($settings['config_complete_status'] ?? null);
-        $statusIds = array_values(array_unique(array_merge($processingIds, $completeIds)));
-
-        $paymentDateRaw = null;
-        if ($statusIds) {
-            $paymentDateRaw = DB::connection('myformula')
-                ->table('order_history')
-                ->where('order_id', $order->order_id)
-                ->whereIn('order_status_id', $statusIds)
-                ->orderBy('date_added')
-                ->value('date_added');
+        $paymentAtRaw = $order->getAttribute('payment_at');
+        $paymentAtIso = null;
+        if (! empty($paymentAtRaw)) {
+            $ts = strtotime((string) $paymentAtRaw);
+            $paymentAtIso = $ts ? date('c', $ts) : (string) $paymentAtRaw;
         }
 
-        $paymentDate = $paymentDateRaw
-            ? date('d/m/Y H:i', strtotime((string) $paymentDateRaw))
-            : (! empty($order->getAttribute('approval_date'))
-                ? date('d/m/Y H:i', strtotime((string) $order->getAttribute('approval_date')))
-                : '');
+        $paymentDate = '';
+        if (! empty($paymentAtRaw)) {
+            $paymentDate = date('d/m/Y H:i', strtotime((string) $paymentAtRaw));
+        } else {
+            $settings = DB::connection('myformula')
+                ->table('setting')
+                ->whereIn('key', ['config_processing_status', 'config_complete_status'])
+                ->pluck('value', 'key');
+
+            $processingIds = $parseStatusIds($settings['config_processing_status'] ?? null);
+            $completeIds = $parseStatusIds($settings['config_complete_status'] ?? null);
+            $statusIds = array_values(array_unique(array_merge($processingIds, $completeIds)));
+
+            $paymentDateRaw = null;
+            if ($statusIds) {
+                $paymentDateRaw = DB::connection('myformula')
+                    ->table('order_history')
+                    ->where('order_id', $order->order_id)
+                    ->whereIn('order_status_id', $statusIds)
+                    ->orderBy('date_added')
+                    ->value('date_added');
+            }
+
+            $paymentDate = $paymentDateRaw
+                ? date('d/m/Y H:i', strtotime((string) $paymentDateRaw))
+                : (! empty($order->getAttribute('approval_date'))
+                    ? date('d/m/Y H:i', strtotime((string) $order->getAttribute('approval_date')))
+                    : '');
+        }
 
         $reportData = [
             'client_code' => $clientCode,
@@ -444,6 +456,7 @@ class MyFormulaOrderController extends Controller
             'date_modified' => $order->date_modified ? $order->date_modified->toIso8601String() : null,
             'payment_method' => $order->payment_method ?: null,
             'payment_code' => $order->payment_code ?: null,
+            'payment_at' => $paymentAtIso,
             'status' => $order->relationLoaded('status') && $order->status ? [
                 'order_status_id' => (string) $order->status->order_status_id,
                 'language_id' => isset($order->status->language_id) ? (int) $order->status->language_id : 0,

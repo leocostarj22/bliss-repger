@@ -534,7 +534,9 @@ export default function MyFormulaPurchaseReport() {
                 data-mf-key="payment_date"
                 contentEditable
                 suppressContentEditableWarning
-                dangerouslySetInnerHTML={{ __html: reportData?.payment_date ?? "" }}
+                dangerouslySetInnerHTML={{
+                  __html: formatDatePt((order as any)?.payment_at ?? null) || reportData?.payment_date || "",
+                }}
               />
             </div>
           </div>
