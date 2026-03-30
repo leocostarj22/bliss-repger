@@ -24,17 +24,37 @@ type SupplementRow = {
 }
 
 function extractSupplementCode(item: SupplementRow) {
-  const explicit = String(item.letter ?? "").trim()
-  if (explicit) return explicit
+  const explicitRaw = String(item.letter ?? "").trim()
+  const explicit = explicitRaw.replace(/\s+/g, "")
 
   const slug = String(item.slug ?? "").trim()
+  const name = String(item.name ?? "").trim()
+
+  if (explicit && /\d/.test(explicit)) return explicit
+
+  const explicitLetters = explicit && /^[a-z]{1,4}$/i.test(explicit) ? explicit.toUpperCase() : ""
+  if (explicitLetters) {
+    const base = explicitLetters.toLowerCase()
+
+    const direct = new RegExp(`(?:^|[^a-z0-9])(${base}\\d{1,6})(?:[^a-z0-9]|$)`, "i")
+    const directMatch = (slug && slug.match(direct)) || (name && name.match(direct))
+    if (directMatch?.[1]) return directMatch[1].toUpperCase()
+
+    const separated = new RegExp(`(?:^|[^a-z0-9])${base}[^0-9]{0,3}(\\d{1,6})(?:[^a-z0-9]|$)`, "i")
+    const sepMatch = (slug && slug.match(separated)) || (name && name.match(separated))
+    if (sepMatch?.[1]) return `${explicitLetters}${sepMatch[1]}`
+
+    return explicitLetters
+  }
+
+  if (explicit) return explicit
   if (!slug) return ""
 
-  const alphaNum = slug.match(/^([a-z]{1,4}\d{1,6})/i)
-  if (alphaNum?.[1]) return alphaNum[1].toUpperCase()
+  const anyAlphaNum = slug.match(/(?:^|[^a-z0-9])([a-z]{1,4}\d{1,6})(?:[^a-z0-9]|$)/i)
+  if (anyAlphaNum?.[1]) return anyAlphaNum[1].toUpperCase()
 
-  const digits = slug.match(/^(\d{1,6})/)
-  if (digits?.[1]) return digits[1]
+  const anyDigits = slug.match(/(?:^|[^0-9])(\d{1,6})(?:[^0-9]|$)/)
+  if (anyDigits?.[1]) return anyDigits[1]
 
   const alpha = slug.match(/^([a-z]{1,4})/i)
   if (alpha?.[1]) return alpha[1].toUpperCase()
