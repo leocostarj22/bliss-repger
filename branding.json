@@ -1,8 +1,8 @@
 {
-    "app_name": "NextERP",
-    "app_title": "NextERP - ERP Solution for Business",
-    "app_favicon": "branding/app-favicon-4e49a42e-9f76-49b5-b565-1b91d32ca91c.png",
-    "crm_name": "NextCRM",
-    "crm_title": "NextCRM",
-    "crm_favicon": "images/nextfavicon.png"
+    "app_name": "GMCentral",
+    "app_title": "GMCentral - ERP Solution for Business",
+    "app_favicon": "branding/app-favicon-010d06ff-ad5c-4b5e-9261-5f1ae21c1307.png",
+    "crm_name": "Mail Pulse",
+    "crm_title": "Mail Pulse",
+    "crm_favicon": "branding/crm-favicon-1b58edfb-b512-48ed-bdcc-4d4cf229f461.png"
 }

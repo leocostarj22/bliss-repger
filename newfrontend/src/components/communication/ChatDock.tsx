@@ -130,6 +130,7 @@ export function ChatDock() {
 
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string>('');
+  const [imgLoadingByMsgId, setImgLoadingByMsgId] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -691,6 +692,7 @@ export function ChatDock() {
 
     setInbox((prev) => prev.map((m: any) => (msgId(m) === rid ? ({ ...m, reactions } as any) : m)));
     setSent((prev) => prev.map((m: any) => (msgId(m) === rid ? ({ ...m, reactions } as any) : m)));
+    setThread((prev) => prev.map((m: any) => (msgId(m) === rid ? ({ ...m, reactions } as any) : m)));
   };
 
   const toggleReaction = async (recipientId: string, emoji: string, reactedByMe: boolean) => {
@@ -720,6 +722,40 @@ export function ChatDock() {
     if (!canSend) return;
     if (!file && !text) return;
 
+    const nowIso = new Date().toISOString();
+    const tempId = file ? `local_${Date.now()}_${Math.random().toString(16).slice(2)}` : '';
+
+    if (file && tempId) {
+      const optimistic = {
+        id: tempId,
+        from_user_id: String(me.id || '').trim(),
+        to_user_id: to,
+        subject: '(Chat)',
+        body: text,
+        folder: 'sent',
+        read_at: null,
+        sent_at: nowIso,
+        created_at: nowIso,
+        updated_at: nowIso,
+        attachments: [
+          {
+            id: tempId,
+            filename: file.name,
+            original_filename: file.name,
+            mime_type: file.type || 'image/*',
+            file_size: file.size || 0,
+            url: pendingPreviewUrl,
+          },
+        ],
+        reactions: [],
+        _local_status: 'uploading',
+      } as any;
+
+      setThread((prev) => [...prev, optimistic]);
+      setSent((prev) => [...prev, optimistic]);
+      setTimeout(scrollToBottom, 0);
+    }
+
     setSending(true);
     try {
       const res = file
@@ -737,10 +773,26 @@ export function ChatDock() {
           });
 
       const created = res?.data as any;
-      if (created) setSent((prev) => [...prev, created]);
+
+      if (created) {
+        if (tempId) {
+          setThread((prev) => prev.map((m: any) => (msgId(m) === tempId ? created : m)));
+          setSent((prev) => prev.map((m: any) => (msgId(m) === tempId ? created : m)));
+        } else {
+          setThread((prev) => [...prev, created]);
+          setSent((prev) => [...prev, created]);
+        }
+      }
+
       setDraft('');
       setPendingFile(null);
       setTimeout(scrollToBottom, 0);
+    } catch {
+      if (tempId) {
+        setThread((prev) => prev.filter((m: any) => msgId(m) !== tempId));
+        setSent((prev) => prev.filter((m: any) => msgId(m) !== tempId));
+      }
+      throw new Error('Falha ao enviar mensagem');
     } finally {
       setSending(false);
     }
@@ -917,14 +969,17 @@ export function ChatDock() {
                 <div className="text-xs text-muted-foreground">Sem mensagens ainda.</div>
               ) : (
                 conversation.map((m: any) => {
+                  const id = msgId(m);
                   const from = msgFromId(m);
                   const mine = from === me.id;
+                  const isLocal = Boolean((m as any)?._local_status);
                   const text = plainTextFromHtml(String(m?.body ?? ''));
                   const time = fmtTime(msgWhenIso(m));
                   const read = mine ? Boolean(msgReadAt(m)) : false;
                   const attachments = Array.isArray((m as any)?.attachments) ? ((m as any).attachments as any[]) : [];
                   const imgAttachment =
                     attachments.find((a) => String(a?.mime_type ?? '').toLowerCase().startsWith('image/')) ?? null;
+                  const imgLoading = Boolean(imgAttachment) && (isLocal || imgLoadingByMsgId[id] !== false);
                   const reactions = Array.isArray((m as any)?.reactions) ? ((m as any).reactions as any[]) : [];
 
                   const meta = mine
@@ -941,7 +996,7 @@ export function ChatDock() {
                   const img = resolvePhotoUrl(meta.photo_path) || '';
 
                   return (
-                    <div key={msgId(m)} className={cn('flex gap-2 items-end', mine ? 'justify-end' : 'justify-start')}>
+                    <div key={id} className={cn('flex gap-2 items-end', mine ? 'justify-end' : 'justify-start')}>
                       {!mine ? (
                         <Avatar className="w-8 h-8 border border-border shrink-0">
                           <AvatarImage src={img} alt={meta.name} />
@@ -958,13 +1013,20 @@ export function ChatDock() {
                         )}
                       >
                         {imgAttachment ? (
-                          <div className={cn('overflow-hidden rounded-xl bg-muted/70', text ? 'mb-2' : '')}>
+                          <div className={cn('relative overflow-hidden rounded-xl bg-muted/70', text ? 'mb-2' : '')}>
                             <img
                               src={String(imgAttachment?.url ?? '')}
                               alt={String(imgAttachment?.original_filename ?? 'Imagem')}
                               className="object-cover w-full h-auto max-h-[240px]"
                               loading="lazy"
+                              onLoad={() => setImgLoadingByMsgId((prev) => ({ ...prev, [id]: false }))}
+                              onError={() => setImgLoadingByMsgId((prev) => ({ ...prev, [id]: false }))}
                             />
+                            {imgLoading ? (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                <div className="h-6 w-6 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                              </div>
+                            ) : null}
                           </div>
                         ) : null}
                         {text ? <div className="whitespace-pre-wrap break-words">{text}</div> : null}
@@ -973,13 +1035,17 @@ export function ChatDock() {
                           <div className={cn('flex flex-wrap gap-1 mt-1', mine ? 'justify-end' : 'justify-start')}>
                             {reactions.map((r: any) => (
                               <button
-                                key={`${msgId(m)}_${String(r.emoji)}`}
+                                key={`${id}_${String(r.emoji)}`}
                                 type="button"
                                 className={cn(
                                   'px-2 py-0.5 text-[12px] rounded-full border',
                                   r?.reacted_by_me ? 'border-cyan-500/40 bg-cyan-500/10' : 'border-border/60 bg-background/40',
                                 )}
-                                onClick={() => toggleReaction(msgId(m), String(r.emoji), Boolean(r?.reacted_by_me))}
+                                disabled={isLocal}
+                                onClick={() => {
+                                  if (isLocal) return;
+                                  toggleReaction(id, String(r.emoji), Boolean(r?.reacted_by_me));
+                                }}
                               >
                                 {String(r.emoji)} {Number(r.count) || 0}
                               </button>
@@ -993,13 +1059,17 @@ export function ChatDock() {
                             const reactedByMe = Boolean(existing?.reacted_by_me);
                             return (
                               <button
-                                key={`${msgId(m)}_${emo}_btn`}
+                                key={`${id}_${emo}_btn`}
                                 type="button"
                                 className={cn(
                                   'px-2 py-0.5 text-[12px] rounded-full border',
                                   reactedByMe ? 'border-cyan-500/40 bg-cyan-500/10' : 'border-border/60 bg-background/40',
                                 )}
-                                onClick={() => toggleReaction(msgId(m), emo, reactedByMe)}
+                                disabled={isLocal}
+                                onClick={() => {
+                                  if (isLocal) return;
+                                  toggleReaction(id, emo, reactedByMe);
+                                }}
                               >
                                 {emo}
                               </button>
@@ -1010,16 +1080,18 @@ export function ChatDock() {
                         <div className="mt-1 flex items-center justify-end gap-2 text-[11px] opacity-70">
                           <span>{time}</span>
                           {mine ? <span>{read ? '✓✓' : '✓'}</span> : null}
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onDelete(m)}
-                            title="Apagar"
-                            className="p-0 w-6 h-6"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
+                          {!isLocal ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => onDelete(m)}
+                              title="Apagar"
+                              className="p-0 w-6 h-6"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          ) : null}
                         </div>
                       </div>
 
