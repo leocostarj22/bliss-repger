@@ -318,15 +318,18 @@ class MyFormulaCustomerController extends Controller
                 'newsletter' => 0,
                 'safe' => 0,
                 'approved' => 1,
+                'address_id' => 0,
+                'fax' => '',
+                'token' => '',
+                'code' => '',
                 'ip' => (string) $request->ip(),
                 'date_modified' => $now,
                 'password' => $hashed,
-                'salt' => $salt,
-                'custom_field' => $customField,
+                'salt' => $salt ?? '',
+                'custom_field' => $customField ?? '',
             ];
 
             foreach ($candidateCols as $col => $value) {
-                if ($value === null) continue;
                 try {
                     if (Schema::connection('myformula')->hasColumn('customer', $col)) {
                         $customerInsert[$col] = $value;
@@ -400,6 +403,9 @@ class MyFormulaCustomerController extends Controller
 
                 $candidateAddrCols = [
                     'address_2' => '',
+                    'custom_field' => '',
+                    'company_id' => 0,
+                    'tax_id' => '',
                 ];
 
                 foreach ($candidateAddrCols as $col => $value) {
