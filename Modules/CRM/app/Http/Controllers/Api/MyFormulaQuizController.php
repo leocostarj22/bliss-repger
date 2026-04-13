@@ -13,7 +13,9 @@ class MyFormulaQuizController extends Controller
     private function assertMyFormulaSalesAccess(): void
     {
         $user = auth('web')->user() ?? auth('employee')->user();
-        $allowed = false;
+        if (! $user) {
+            abort(401);
+        }
 
         if ($user instanceof \App\Models\EmployeeUser) {
             $allowed = strtolower((string) ($user->employee?->company?->slug ?? '')) === 'myformula';
@@ -21,38 +23,37 @@ class MyFormulaQuizController extends Controller
             return;
         }
 
-        if ($user) {
-            if (method_exists($user, 'isAdmin') && $user->isAdmin()) {
-                $allowed = true;
-            } else {
-                $role = strtolower(trim((string) ($user->role ?? '')));
-                $isEmployee = in_array($role, ['employee', 'funcionario', 'funcionário', 'colaborador'], true);
+        if (! ($user instanceof \App\Models\User)) {
+            abort(401);
+        }
 
-                if ($isEmployee) {
-                    $companyOk = false;
+        if ($user->isAdmin()) {
+            return;
+        }
 
-                    try {
-                        if ($user->company && strtolower((string) ($user->company->slug ?? '')) === 'myformula') {
-                            $companyOk = true;
-                        }
-                    } catch (\Throwable) {
-                        $companyOk = false;
-                    }
+        $role = strtolower(trim((string) ($user->role ?? '')));
+        $isEmployee = in_array($role, ['employee', 'funcionario', 'funcionário', 'colaborador'], true);
+        abort_unless($isEmployee, 403);
 
-                    if (! $companyOk) {
-                        try {
-                            $companyOk = $user->companies()->where('slug', 'myformula')->exists();
-                        } catch (\Throwable) {
-                            $companyOk = false;
-                        }
-                    }
+        $companyOk = false;
 
-                    $allowed = $companyOk;
-                }
+        try {
+            if ($user->company && strtolower((string) ($user->company->slug ?? '')) === 'myformula') {
+                $companyOk = true;
+            }
+        } catch (\Throwable) {
+            $companyOk = false;
+        }
+
+        if (! $companyOk) {
+            try {
+                $companyOk = $user->companies()->where('slug', 'myformula')->exists();
+            } catch (\Throwable) {
+                $companyOk = false;
             }
         }
 
-        abort_unless($allowed, 403);
+        abort_unless($companyOk, 403);
     }
 
     private function loadRows(Request $request)

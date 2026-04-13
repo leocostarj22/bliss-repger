@@ -25,6 +25,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
@@ -203,6 +204,120 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::prefix('myformula')->middleware(['web', 'auth:web,employee'])->group(function () {
+        $requireMyFormulaCompany = function () {
+            $u = auth('web')->user() ?? auth('employee')->user();
+            if (! $u) {
+                abort(401);
+            }
+
+            if ($u instanceof \App\Models\EmployeeUser) {
+                abort_unless(strtolower((string) ($u->employee?->company?->slug ?? '')) === 'myformula', 403);
+                return;
+            }
+
+            if (! ($u instanceof \App\Models\User)) {
+                abort(401);
+            }
+
+            if ($u->isAdmin()) {
+                return;
+            }
+
+            $role = strtolower(trim((string) ($u->role ?? '')));
+            $isEmployee = in_array($role, ['employee', 'funcionario', 'funcionário', 'colaborador'], true);
+            abort_unless($isEmployee, 403);
+
+            $companyOk = false;
+            try {
+                if ($u->company && strtolower((string) ($u->company->slug ?? '')) === 'myformula') {
+                    $companyOk = true;
+                }
+            } catch (\Throwable) {
+                $companyOk = false;
+            }
+
+            if (! $companyOk) {
+                try {
+                    $companyOk = $u->companies()->where('slug', 'myformula')->exists();
+                } catch (\Throwable) {
+                    $companyOk = false;
+                }
+            }
+
+            abort_unless($companyOk, 403);
+        };
+
+        Route::get('meta/countries', function () use ($requireMyFormulaCompany) {
+            $requireMyFormulaCompany();
+
+            try {
+                $rows = DB::connection('myformula')
+                    ->table('country')
+                    ->select(['country_id', 'name'])
+                    ->orderBy('name')
+                    ->get();
+
+                $data = $rows->map(fn ($r) => [
+                    'country_id' => (int) ($r->country_id ?? 0),
+                    'name' => (string) ($r->name ?? ''),
+                ])->filter(fn ($r) => $r['country_id'] > 0 && $r['name'] !== '')->values();
+
+                return response()->json(['data' => $data]);
+            } catch (\Throwable $e) {
+                Log::error('myformula.meta.countries_failed', ['error' => $e->getMessage()]);
+                return response()->json(['data' => []]);
+            }
+        });
+
+        Route::get('meta/zones', function () use ($requireMyFormulaCompany) {
+            $requireMyFormulaCompany();
+
+            $countryId = (int) request('country_id', 0);
+            $country = trim((string) request('country', ''));
+
+            if ($countryId <= 0 && $country !== '') {
+                try {
+                    $countryId = (int) (DB::connection('myformula')
+                        ->table('country')
+                        ->whereRaw('LOWER(name) = ?', [strtolower($country)])
+                        ->value('country_id') ?? 0);
+
+                    if ($countryId <= 0) {
+                        $countryId = (int) (DB::connection('myformula')
+                            ->table('country')
+                            ->where('name', 'like', '%' . $country . '%')
+                            ->orderBy('country_id')
+                            ->value('country_id') ?? 0);
+                    }
+                } catch (\Throwable) {
+                    $countryId = 0;
+                }
+            }
+
+            if ($countryId <= 0) {
+                return response()->json(['data' => []]);
+            }
+
+            try {
+                $rows = DB::connection('myformula')
+                    ->table('zone')
+                    ->select(['zone_id', 'name'])
+                    ->where('country_id', $countryId)
+                    ->orderBy('name')
+                    ->get();
+
+                $data = $rows->map(fn ($r) => [
+                    'zone_id' => (int) ($r->zone_id ?? 0),
+                    'name' => (string) ($r->name ?? ''),
+                ])->filter(fn ($r) => $r['zone_id'] > 0 && $r['name'] !== '')->values();
+
+                return response()->json(['data' => $data]);
+            } catch (\Throwable $e) {
+                Log::error('myformula.meta.zones_failed', ['error' => $e->getMessage()]);
+                return response()->json(['data' => []]);
+            }
+        });
+
         Route::get('dashboard', [MyFormulaDashboardApiController::class, 'index']);
         Route::get('customers', [MyFormulaCustomerController::class, 'index']);
         Route::post('customers', [MyFormulaCustomerController::class, 'store']);

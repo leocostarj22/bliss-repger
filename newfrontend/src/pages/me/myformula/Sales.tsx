@@ -6,7 +6,14 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import { fetchMyAccess, fetchMyCompanies } from "@/services/api"
-import { createMyFormulaCustomerReal, createMyFormulaQuizReal } from "@/services/myFormulaApi"
+import {
+  createMyFormulaCustomerReal,
+  createMyFormulaQuizReal,
+  fetchMyFormulaCountriesReal,
+  fetchMyFormulaZonesReal,
+  type MyFormulaCountryOption,
+  type MyFormulaZoneOption,
+} from "@/services/myFormulaApi"
 import type { MyFormulaCustomer, MyFormulaQuiz } from "@/types"
 
 export default function MyFormulaSales() {
@@ -28,6 +35,11 @@ export default function MyFormulaSales() {
   const [postcode, setPostcode] = useState("")
   const [country, setCountry] = useState("Portugal")
   const [district, setDistrict] = useState("")
+
+  const [countries, setCountries] = useState<MyFormulaCountryOption[]>([])
+  const [zones, setZones] = useState<MyFormulaZoneOption[]>([])
+  const [countriesLoading, setCountriesLoading] = useState(false)
+  const [zonesLoading, setZonesLoading] = useState(false)
 
   const [password, setPassword] = useState("")
   const [passwordConfirm, setPasswordConfirm] = useState("")
@@ -90,6 +102,62 @@ export default function MyFormulaSales() {
       alive = false
     }
   }, [])
+
+  useEffect(() => {
+    let alive = true
+
+    if (!allowed) return
+
+    setCountriesLoading(true)
+    fetchMyFormulaCountriesReal()
+      .then((r) => {
+        if (!alive) return
+        setCountries(Array.isArray(r.data) ? r.data : [])
+      })
+      .catch(() => {
+        if (!alive) return
+        setCountries([])
+      })
+      .finally(() => {
+        if (!alive) return
+        setCountriesLoading(false)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [allowed])
+
+  useEffect(() => {
+    let alive = true
+
+    if (!allowed) return
+
+    const isPt = country.trim().toLowerCase() === "portugal"
+    if (!isPt) {
+      setZones([])
+      return
+    }
+
+    setZonesLoading(true)
+    fetchMyFormulaZonesReal({ country })
+      .then((r) => {
+        if (!alive) return
+        setZones(Array.isArray(r.data) ? r.data : [])
+      })
+      .catch(() => {
+        if (!alive) return
+        setZones([])
+      })
+      .finally(() => {
+        if (!alive) return
+        setZonesLoading(false)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [allowed, country])
 
   const onCreateCustomer = async () => {
     if (!isReadyToCreate) return
@@ -275,12 +343,47 @@ export default function MyFormulaSales() {
 
           <div>
             <div className="text-xs text-muted-foreground mb-1">País *</div>
-            <Input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="Portugal" />
+            <div className="value">
+              <select
+                value={country}
+                onChange={(e) => {
+                  setCountry(e.target.value)
+                  setDistrict("")
+                }}
+                disabled={countriesLoading || countries.length === 0}
+                style={{ border: 0, width: "100%", padding: 0, font: "inherit", background: "transparent" }}
+              >
+                {countries.length === 0 ? <option value="Portugal">Portugal</option> : null}
+                {countries.map((c) => (
+                  <option key={c.country_id} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div>
             <div className="text-xs text-muted-foreground mb-1">Distrito *</div>
-            <Input value={district} onChange={(e) => setDistrict(e.target.value)} placeholder="Lisboa" />
+            {country.trim().toLowerCase() === "portugal" && zones.length > 0 ? (
+              <div className="value">
+                <select
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                  disabled={zonesLoading}
+                  style={{ border: 0, width: "100%", padding: 0, font: "inherit", background: "transparent" }}
+                >
+                  <option value=""></option>
+                  {zones.map((z) => (
+                    <option key={z.zone_id} value={z.name}>
+                      {z.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <Input value={district} onChange={(e) => setDistrict(e.target.value)} placeholder="Lisboa" />
+            )}
           </div>
 
           <div>

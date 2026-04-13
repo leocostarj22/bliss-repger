@@ -120,6 +120,22 @@ export async function fetchMyFormulaCustomers(params?: {
   return res.data
 }
 
+export type MyFormulaCountryOption = { country_id: number; name: string }
+export type MyFormulaZoneOption = { zone_id: number; name: string }
+
+export async function fetchMyFormulaCountriesReal(): Promise<ApiResponse<MyFormulaCountryOption[]>> {
+  const res = await axios.get('/api/v1/myformula/meta/countries', { withCredentials: true })
+  return res.data
+}
+
+export async function fetchMyFormulaZonesReal(params: {
+  country_id?: number
+  country?: string
+}): Promise<ApiResponse<MyFormulaZoneOption[]>> {
+  const res = await axios.get('/api/v1/myformula/meta/zones', { params, withCredentials: true })
+  return res.data
+}
+
 export async function createMyFormulaCustomerReal(payload: {
   telephone?: string | null
   email?: string | null
