@@ -80,8 +80,14 @@ class MyFormulaCustomerController extends Controller
 
     private function assertMyFormulaSalesAccess(): void
     {
-        $user = auth()->user();
+        $user = auth('web')->user() ?? auth('employee')->user();
         $allowed = false;
+
+        if ($user instanceof \App\Models\EmployeeUser) {
+            $allowed = strtolower((string) ($user->employee?->company?->slug ?? '')) === 'myformula';
+            abort_unless($allowed, 403);
+            return;
+        }
 
         if ($user) {
             if (method_exists($user, 'isAdmin') && $user->isAdmin()) {

@@ -12,8 +12,14 @@ class MyFormulaQuizController extends Controller
 {
     private function assertMyFormulaSalesAccess(): void
     {
-        $user = auth()->user();
+        $user = auth('web')->user() ?? auth('employee')->user();
         $allowed = false;
+
+        if ($user instanceof \App\Models\EmployeeUser) {
+            $allowed = strtolower((string) ($user->employee?->company?->slug ?? '')) === 'myformula';
+            abort_unless($allowed, 403);
+            return;
+        }
 
         if ($user) {
             if (method_exists($user, 'isAdmin') && $user->isAdmin()) {
@@ -180,7 +186,7 @@ class MyFormulaQuizController extends Controller
         try {
             $post = is_array($validated['post'] ?? null) ? $validated['post'] : [];
 
-            $user = auth()->user();
+            $user = auth('web')->user() ?? auth('employee')->user();
             $operator = [
                 'source' => 'gmcentral',
                 'operator_user_id' => $user ? (string) ($user->id ?? '') : '',

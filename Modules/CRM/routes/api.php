@@ -33,7 +33,7 @@ Route::prefix('v1')->group(function () {
     Route::middleware(['auth:sanctum'])->apiResource('crms', CRMController::class)->names('crm');
 
     // User & Notifications
-    Route::middleware(['web', 'auth'])->group(function () {
+    Route::middleware(['web', 'auth:web,employee'])->group(function () {
         Route::get('user', [UserController::class, 'me']);
         Route::get('notifications', [UserController::class, 'notifications']);
         Route::post('notifications/read', [UserController::class, 'markAsRead']);
@@ -193,7 +193,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('templates/{id}', [TemplateController::class, 'destroy']);
     });
 
-    Route::prefix('bliss')->middleware(['web', 'auth'])->group(function () {
+    Route::prefix('bliss')->middleware(['web', 'auth:web,employee'])->group(function () {
         Route::get('dashboard', [BlissDashboardApiController::class, 'index']);
         Route::get('products', [BlissProductController::class, 'index']);
         Route::get('customers', [BlissCustomerController::class, 'index']);
@@ -202,7 +202,7 @@ Route::prefix('v1')->group(function () {
         Route::get('order-statuses', [BlissOrderStatusController::class, 'index']);
     });
 
-    Route::prefix('myformula')->middleware(['web', 'auth'])->group(function () {
+    Route::prefix('myformula')->middleware(['web', 'auth:web,employee'])->group(function () {
         Route::get('dashboard', [MyFormulaDashboardApiController::class, 'index']);
         Route::get('customers', [MyFormulaCustomerController::class, 'index']);
         Route::post('customers', [MyFormulaCustomerController::class, 'store']);
@@ -223,7 +223,7 @@ Route::prefix('v1')->group(function () {
         Route::get('quizzes/stats', [MyFormulaQuizController::class, 'stats']);
     });
 
-    Route::prefix('espacoabsoluto')->middleware(['web', 'auth'])->group(function () {
+    Route::prefix('espacoabsoluto')->middleware(['web', 'auth:web,employee'])->group(function () {
         Route::get('overview', [EspacoAbsolutoController::class, 'overview']);
         Route::get('customers', [EspacoAbsolutoController::class, 'customers']);
         Route::get('user-groups', [EspacoAbsolutoController::class, 'userGroups']);
