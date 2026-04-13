@@ -4,9 +4,11 @@ namespace Modules\CRM\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Modules\CRM\Models\MyFormulaCustomer;
 use Modules\CRM\Models\Contact;
-use Illuminate\Support\Facades\Log;
 
 class MyFormulaCustomerController extends Controller
 {
@@ -146,23 +148,128 @@ class MyFormulaCustomerController extends Controller
         return strtolower($base . '+' . uniqid() . '@myformula.invalid');
     }
 
+    private function hashOcPassword(string $password, ?string &$saltOut = null): string
+    {
+        $hasSalt = false;
+        try {
+            $hasSalt = Schema::connection('myformula')->hasColumn('customer', 'salt');
+        } catch (\Throwable) {
+            $hasSalt = false;
+        }
+
+        if ($hasSalt) {
+            $salt = substr(bin2hex(random_bytes(8)), 0, 9);
+            $saltOut = $salt;
+            return sha1($salt . sha1($salt . sha1($password)));
+        }
+
+        $saltOut = null;
+        return password_hash($password, PASSWORD_BCRYPT);
+    }
+
+    private function resolveCountryId(string $country): int
+    {
+        $name = trim($country);
+        if ($name === '') return 0;
+
+        try {
+            $id = DB::connection('myformula')
+                ->table('country')
+                ->whereRaw('LOWER(name) = ?', [strtolower($name)])
+                ->value('country_id');
+            if ($id !== null) return (int) $id;
+
+            $id2 = DB::connection('myformula')
+                ->table('country')
+                ->where('name', 'like', '%' . $name . '%')
+                ->orderBy('country_id')
+                ->value('country_id');
+            return $id2 !== null ? (int) $id2 : 0;
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    private function resolveZoneId(int $countryId, string $district): int
+    {
+        $name = trim($district);
+        if ($countryId <= 0 || $name === '') return 0;
+
+        try {
+            $id = DB::connection('myformula')
+                ->table('zone')
+                ->where('country_id', $countryId)
+                ->whereRaw('LOWER(name) = ?', [strtolower($name)])
+                ->value('zone_id');
+            if ($id !== null) return (int) $id;
+
+            $id2 = DB::connection('myformula')
+                ->table('zone')
+                ->where('country_id', $countryId)
+                ->where('name', 'like', '%' . $name . '%')
+                ->orderBy('zone_id')
+                ->value('zone_id');
+            return $id2 !== null ? (int) $id2 : 0;
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    private function buildCustomerCustomField(?string $nif): ?string
+    {
+        $val = trim((string) ($nif ?? ''));
+        if ($val === '') return null;
+
+        try {
+            $ids = DB::connection('myformula')
+                ->table('custom_field as cf')
+                ->join('custom_field_description as cfd', function ($join) {
+                    $join->on('cfd.custom_field_id', '=', 'cf.custom_field_id')
+                        ->where('cfd.language_id', 2);
+                })
+                ->where('cf.status', 1)
+                ->where('cfd.name', 'like', '%NIF%')
+                ->pluck('cf.custom_field_id')
+                ->map(fn ($id) => (int) $id)
+                ->toArray();
+
+            if (! $ids) return null;
+
+            $payload = [];
+            foreach ($ids as $id) {
+                $payload[$id] = $val;
+            }
+
+            return serialize($payload);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     public function store(Request $request)
     {
         $this->assertMyFormulaSalesAccess();
 
+        $validated = $request->validate([
+            'firstname' => ['required', 'string', 'max:255'],
+            'lastname' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'nif' => ['nullable', 'string', 'max:64'],
+            'telephone' => ['required', 'string', 'max:64'],
+            'address.company' => ['nullable', 'string', 'max:255'],
+            'address.address_1' => ['required', 'string', 'max:255'],
+            'address.city' => ['required', 'string', 'max:255'],
+            'address.postcode' => ['required', 'string', 'max:32'],
+            'address.country' => ['required', 'string', 'max:128'],
+            'address.district' => ['required', 'string', 'max:128'],
+            'password' => ['required', 'string', 'min:6', 'confirmed'],
+        ]);
+
         try {
-            $telephone = trim((string) $request->input('telephone', ''));
-            if ($telephone === '') {
-                return response()->json(['message' => 'telephone é obrigatório'], 422);
-            }
-
-            $firstname = trim((string) $request->input('firstname', ''));
-            $lastname = trim((string) $request->input('lastname', ''));
-            $email = strtolower(trim((string) $request->input('email', '')));
-
-            if ($firstname === '') {
-                $firstname = 'Cliente';
-            }
+            $telephone = trim((string) ($validated['telephone'] ?? ''));
+            $firstname = trim((string) ($validated['firstname'] ?? ''));
+            $lastname = trim((string) ($validated['lastname'] ?? ''));
+            $email = strtolower(trim((string) ($validated['email'] ?? '')));
 
             if ($email === '') {
                 $email = $this->makeFakeEmail($telephone);
@@ -172,26 +279,129 @@ class MyFormulaCustomerController extends Controller
                 return response()->json(['message' => 'Já existe um cliente com este email'], 422);
             }
 
-            $row = MyFormulaCustomer::create([
+            $customField = null;
+            try {
+                $hasCustomField = Schema::connection('myformula')->hasColumn('customer', 'custom_field');
+                if ($hasCustomField) {
+                    $customField = $this->buildCustomerCustomField($validated['nif'] ?? null);
+                }
+            } catch (\Throwable) {
+                $customField = null;
+            }
+
+            $now = now();
+            $salt = null;
+            $hashed = $this->hashOcPassword((string) $validated['password'], $salt);
+
+            $customerInsert = [
                 'firstname' => $firstname,
                 'lastname' => $lastname,
                 'email' => $email,
                 'telephone' => $telephone,
                 'status' => 1,
-                'date_added' => now(),
-            ]);
+                'date_added' => $now,
+            ];
+
+            $candidateCols = [
+                'customer_group_id' => 1,
+                'store_id' => 0,
+                'newsletter' => 0,
+                'safe' => 0,
+                'approved' => 1,
+                'ip' => (string) $request->ip(),
+                'date_modified' => $now,
+                'password' => $hashed,
+                'salt' => $salt,
+                'custom_field' => $customField,
+            ];
+
+            foreach ($candidateCols as $col => $value) {
+                if ($value === null) continue;
+                try {
+                    if (Schema::connection('myformula')->hasColumn('customer', $col)) {
+                        $customerInsert[$col] = $value;
+                    }
+                } catch (\Throwable) {
+                }
+            }
+
+            $address = is_array($validated['address'] ?? null) ? $validated['address'] : [];
+            $companyName = trim((string) ($address['company'] ?? ''));
+            $address1 = trim((string) ($address['address_1'] ?? ''));
+            $city = trim((string) ($address['city'] ?? ''));
+            $postcode = trim((string) ($address['postcode'] ?? ''));
+            $countryName = trim((string) ($address['country'] ?? ''));
+            $districtName = trim((string) ($address['district'] ?? ''));
+
+            $countryId = $this->resolveCountryId($countryName);
+            $zoneId = $this->resolveZoneId($countryId, $districtName);
+
+            $customerId = null;
+            $addressId = null;
+
+            DB::connection('myformula')->transaction(function () use (
+                &$customerId,
+                &$addressId,
+                $customerInsert,
+                $firstname,
+                $lastname,
+                $companyName,
+                $address1,
+                $city,
+                $postcode,
+                $countryId,
+                $zoneId
+            ) {
+                $customerId = DB::connection('myformula')->table('customer')->insertGetId($customerInsert);
+
+                $addrInsert = [
+                    'customer_id' => $customerId,
+                    'firstname' => $firstname,
+                    'lastname' => $lastname,
+                    'company' => $companyName,
+                    'address_1' => $address1,
+                    'city' => $city,
+                    'postcode' => $postcode,
+                    'country_id' => $countryId,
+                    'zone_id' => $zoneId,
+                ];
+
+                $filtered = [];
+                foreach ($addrInsert as $col => $value) {
+                    try {
+                        if (Schema::connection('myformula')->hasColumn('address', $col)) {
+                            $filtered[$col] = $value;
+                        }
+                    } catch (\Throwable) {
+                    }
+                }
+
+                $addressId = DB::connection('myformula')->table('address')->insertGetId($filtered);
+
+                try {
+                    if (Schema::connection('myformula')->hasColumn('customer', 'address_id')) {
+                        DB::connection('myformula')
+                            ->table('customer')
+                            ->where('customer_id', $customerId)
+                            ->update(['address_id' => $addressId]);
+                    }
+                } catch (\Throwable) {
+                }
+            });
+
+            $row = MyFormulaCustomer::query()->where('customer_id', $customerId)->first();
 
             return response()->json([
                 'data' => [
-                    'customer_id' => (string) $row->customer_id,
-                    'firstname' => (string) ($row->firstname ?? ''),
-                    'lastname' => (string) ($row->lastname ?? ''),
-                    'email' => (string) ($row->email ?? ''),
-                    'telephone' => $row->telephone ?: null,
-                    'status' => isset($row->status) ? (bool) $row->status : null,
-                    'date_added' => $row->date_added ? $row->date_added->toIso8601String() : null,
+                    'customer_id' => (string) ($row?->customer_id ?? $customerId ?? ''),
+                    'firstname' => (string) ($row?->firstname ?? $firstname),
+                    'lastname' => (string) ($row?->lastname ?? $lastname),
+                    'email' => (string) ($row?->email ?? $email),
+                    'telephone' => $row?->telephone ?: null,
+                    'status' => isset($row?->status) ? (bool) $row?->status : true,
+                    'date_added' => $row?->date_added ? $row->date_added->toIso8601String() : null,
                 ],
-            ]);
+            ], 201);
         } catch (\Throwable $e) {
             Log::error('MyFormula customers store failed', ['error' => $e->getMessage()]);
             return response()->json(['message' => 'Não foi possível criar o cliente'], 500);

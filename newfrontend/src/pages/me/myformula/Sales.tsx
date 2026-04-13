@@ -21,9 +21,32 @@ export default function MyFormulaSales() {
   const [email, setEmail] = useState("")
   const [nif, setNif] = useState("")
 
+  const [companyName, setCompanyName] = useState("")
+  const [address1, setAddress1] = useState("")
+  const [city, setCity] = useState("")
+  const [postcode, setPostcode] = useState("")
+  const [country, setCountry] = useState("Portugal")
+  const [district, setDistrict] = useState("")
+
+  const [password, setPassword] = useState("")
+  const [passwordConfirm, setPasswordConfirm] = useState("")
+
   const [customer, setCustomer] = useState<MyFormulaCustomer | null>(null)
 
-  const isReadyToCreate = useMemo(() => telephone.trim().length > 0 && !busy, [telephone, busy])
+  const isReadyToCreate = useMemo(() => {
+    if (busy) return false
+    if (!telephone.trim()) return false
+    if (!firstname.trim()) return false
+    if (!lastname.trim()) return false
+    if (!address1.trim()) return false
+    if (!city.trim()) return false
+    if (!postcode.trim()) return false
+    if (!country.trim()) return false
+    if (!district.trim()) return false
+    if (!password) return false
+    if (password !== passwordConfirm) return false
+    return true
+  }, [address1, busy, city, country, district, firstname, lastname, password, passwordConfirm, postcode, telephone])
 
   useEffect(() => {
     let alive = true
@@ -65,10 +88,20 @@ export default function MyFormulaSales() {
     try {
       const res = await createMyFormulaCustomerReal({
         telephone: telephone.trim(),
-        firstname: firstname.trim() || null,
-        lastname: lastname.trim() || null,
+        firstname: firstname.trim(),
+        lastname: lastname.trim(),
         email: email.trim() || null,
         nif: nif.trim() || null,
+        address: {
+          company: companyName.trim() || null,
+          address_1: address1.trim(),
+          city: city.trim(),
+          postcode: postcode.trim(),
+          country: country.trim(),
+          district: district.trim(),
+        },
+        password,
+        password_confirmation: passwordConfirm,
       })
 
       setCustomer(res.data)
@@ -134,28 +167,68 @@ export default function MyFormulaSales() {
 
         <div className="grid gap-3 md:grid-cols-2">
           <div>
-            <div className="text-xs text-muted-foreground mb-1">Telefone (obrigatório)</div>
+            <div className="text-xs text-muted-foreground mb-1">Telefone *</div>
             <Input value={telephone} onChange={(e) => setTelephone(e.target.value)} placeholder="+351…" />
           </div>
 
           <div>
-            <div className="text-xs text-muted-foreground mb-1">Email (opcional)</div>
+            <div className="text-xs text-muted-foreground mb-1">Email</div>
             <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="(se vazio, será gerado automaticamente)" />
           </div>
 
           <div>
-            <div className="text-xs text-muted-foreground mb-1">Nome</div>
+            <div className="text-xs text-muted-foreground mb-1">Nome *</div>
             <Input value={firstname} onChange={(e) => setFirstname(e.target.value)} placeholder="Primeiro nome" />
           </div>
 
           <div>
-            <div className="text-xs text-muted-foreground mb-1">Apelido</div>
+            <div className="text-xs text-muted-foreground mb-1">Apelido *</div>
             <Input value={lastname} onChange={(e) => setLastname(e.target.value)} placeholder="Último nome" />
           </div>
 
           <div>
-            <div className="text-xs text-muted-foreground mb-1">NIF (opcional)</div>
+            <div className="text-xs text-muted-foreground mb-1">NIF</div>
             <Input value={nif} onChange={(e) => setNif(e.target.value)} placeholder="(não obrigatório)" />
+          </div>
+
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Empresa</div>
+            <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="(opcional)" />
+          </div>
+
+          <div className="md:col-span-2">
+            <div className="text-xs text-muted-foreground mb-1">Endereço *</div>
+            <Input value={address1} onChange={(e) => setAddress1(e.target.value)} placeholder="Rua, número…" />
+          </div>
+
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Localidade *</div>
+            <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Cidade" />
+          </div>
+
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Código postal *</div>
+            <Input value={postcode} onChange={(e) => setPostcode(e.target.value)} placeholder="0000-000" />
+          </div>
+
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">País *</div>
+            <Input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="Portugal" />
+          </div>
+
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Distrito *</div>
+            <Input value={district} onChange={(e) => setDistrict(e.target.value)} placeholder="Lisboa" />
+          </div>
+
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Senha *</div>
+            <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" />
+          </div>
+
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Confirmar senha *</div>
+            <Input value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} type="password" />
           </div>
         </div>
 
