@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { FolderOpen, Mail, Ticket } from "lucide-react";
+import { FolderOpen, Mail, Ticket, ShoppingCart } from "lucide-react";
 
 import type { AdminPost, SupportTicket } from "@/types";
 import { fetchMyDashboardPosts, fetchMySupportTickets } from "@/services/api";
@@ -236,6 +236,19 @@ export default function EmployeeDashboard() {
             </div>
           </>
         )}
+      </div>
+
+      <div className="glass-card p-4 flex items-center justify-between gap-4">
+        <div>
+          <div className="font-semibold">Vendas MyFormula</div>
+          <div className="text-xs text-muted-foreground">Zona de call center (criar cliente, preencher quiz e avançar para venda)</div>
+        </div>
+        <Button asChild variant="outline">
+          <Link to="/me/myformula/sales">
+            <ShoppingCart className="w-4 h-4" />
+            Nova venda
+          </Link>
+        </Button>
       </div>
 
       <div className="glass-card p-6 bg-gradient-to-b from-fuchsia-500/5 via-background to-background border-t-fuchsia-500/20 hover:shadow-[0_0_30px_hsl(var(--ring)/0.25)] hover:border-fuchsia-400/40 transition-all duration-300">

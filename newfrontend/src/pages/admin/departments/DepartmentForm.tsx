@@ -109,12 +109,18 @@ export default function DepartmentForm() {
       return
     }
 
+    const nextSlug = form.slug.trim() || slugify(form.name)
+    if (!nextSlug) {
+      toast({ title: "Erro", description: "O slug é obrigatório", variant: "destructive" })
+      return
+    }
+
     setSaving(true)
     try {
       if (isEdit && id) {
         const r = await updateDepartment(id, {
           name: form.name.trim(),
-          slug: form.slug.trim(),
+          slug: nextSlug,
           description: form.description.trim() || null,
           color: form.color.trim() || null,
           email: form.email.trim() || null,
@@ -126,7 +132,7 @@ export default function DepartmentForm() {
       } else {
         const r = await createDepartment({
           name: form.name.trim(),
-          slug: form.slug.trim(),
+          slug: nextSlug,
           description: form.description.trim() || null,
           color: form.color.trim() || null,
           email: form.email.trim() || null,
@@ -136,8 +142,8 @@ export default function DepartmentForm() {
         toast({ title: "Sucesso", description: "Departamento criado" })
         navigate(`/admin/departments/${r.data.id}`)
       }
-    } catch {
-      toast({ title: "Erro", description: "Falha ao guardar", variant: "destructive" })
+    } catch (e: any) {
+      toast({ title: "Erro", description: String(e?.message ?? "Falha ao guardar"), variant: "destructive" })
     } finally {
       setSaving(false)
     }

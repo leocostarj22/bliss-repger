@@ -4616,9 +4616,16 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $user = auth()->user();
         abort_unless($user && $user->isAdmin(), 403);
 
+        $companyId = (string) request('company_id');
+
         $validated = request()->validate([
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'unique:departments,slug'],
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('departments', 'slug')->where(fn ($q) => $q->where('company_id', $companyId)),
+            ],
             'description' => ['nullable', 'string'],
             'color' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
@@ -4648,9 +4655,19 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $user = auth()->user();
         abort_unless($user && $user->isAdmin(), 403);
 
+        $companyId = (string) request('company_id', $department->company_id);
+
         $validated = request()->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'slug' => ['sometimes', 'required', 'string', 'max:255', 'unique:departments,slug,' . $department->id],
+            'slug' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('departments', 'slug')
+                    ->ignore($department->id)
+                    ->where(fn ($q) => $q->where('company_id', $companyId)),
+            ],
             'description' => ['nullable', 'string'],
             'color' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],

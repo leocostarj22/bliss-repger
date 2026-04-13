@@ -120,6 +120,17 @@ export async function fetchMyFormulaCustomers(params?: {
   return res.data
 }
 
+export async function createMyFormulaCustomerReal(payload: {
+  telephone: string
+  firstname?: string | null
+  lastname?: string | null
+  email?: string | null
+  nif?: string | null
+}): Promise<ApiResponse<MyFormulaCustomer>> {
+  const res = await axios.post('/api/v1/myformula/customers', payload, { withCredentials: true })
+  return res.data
+}
+
 export async function createMyFormulaCustomer(payload: {
   firstname: string
   lastname: string

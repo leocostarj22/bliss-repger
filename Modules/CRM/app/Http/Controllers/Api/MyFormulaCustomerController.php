@@ -76,6 +76,128 @@ class MyFormulaCustomerController extends Controller
         }
     }
 
+    private function assertMyFormulaSalesAccess(): void
+    {
+        $user = auth()->user();
+        $allowed = false;
+
+        if ($user) {
+            if (method_exists($user, 'isAdmin') && $user->isAdmin()) {
+                $allowed = true;
+            } else {
+                $role = strtolower(trim((string) ($user->role ?? '')));
+                $isEmployee = in_array($role, ['employee', 'funcionario', 'funcionário', 'colaborador'], true);
+
+                if ($isEmployee) {
+                    $companyOk = false;
+
+                    try {
+                        if ($user->company && strtolower((string) ($user->company->slug ?? '')) === 'myformula') {
+                            $companyOk = true;
+                        }
+                    } catch (\Throwable) {
+                        $companyOk = false;
+                    }
+
+                    if (! $companyOk) {
+                        try {
+                            $companyOk = $user->companies()->where('slug', 'myformula')->exists();
+                        } catch (\Throwable) {
+                            $companyOk = false;
+                        }
+                    }
+
+                    $allowed = $companyOk;
+                }
+            }
+        }
+
+        abort_unless($allowed, 403);
+    }
+
+    private function phoneDigits(string $raw): string
+    {
+        $digits = preg_replace('/\D+/', '', $raw);
+        return $digits ? $digits : '';
+    }
+
+    private function makeFakeEmail(string $telephone): string
+    {
+        $digits = $this->phoneDigits($telephone);
+        if ($digits === '') {
+            $digits = (string) random_int(100000, 999999);
+        }
+
+        $base = 'tel' . $digits;
+        $email = strtolower($base . '@myformula.invalid');
+
+        if (! MyFormulaCustomer::whereRaw('LOWER(email) = ?', [$email])->exists()) {
+            return $email;
+        }
+
+        for ($i = 0; $i < 10; $i++) {
+            $suffix = (string) random_int(100, 999);
+            $candidate = strtolower($base . '+' . $suffix . '@myformula.invalid');
+            if (! MyFormulaCustomer::whereRaw('LOWER(email) = ?', [$candidate])->exists()) {
+                return $candidate;
+            }
+        }
+
+        return strtolower($base . '+' . uniqid() . '@myformula.invalid');
+    }
+
+    public function store(Request $request)
+    {
+        $this->assertMyFormulaSalesAccess();
+
+        try {
+            $telephone = trim((string) $request->input('telephone', ''));
+            if ($telephone === '') {
+                return response()->json(['message' => 'telephone é obrigatório'], 422);
+            }
+
+            $firstname = trim((string) $request->input('firstname', ''));
+            $lastname = trim((string) $request->input('lastname', ''));
+            $email = strtolower(trim((string) $request->input('email', '')));
+
+            if ($firstname === '') {
+                $firstname = 'Cliente';
+            }
+
+            if ($email === '') {
+                $email = $this->makeFakeEmail($telephone);
+            }
+
+            if (MyFormulaCustomer::whereRaw('LOWER(email) = ?', [$email])->exists()) {
+                return response()->json(['message' => 'Já existe um cliente com este email'], 422);
+            }
+
+            $row = MyFormulaCustomer::create([
+                'firstname' => $firstname,
+                'lastname' => $lastname,
+                'email' => $email,
+                'telephone' => $telephone,
+                'status' => 1,
+                'date_added' => now(),
+            ]);
+
+            return response()->json([
+                'data' => [
+                    'customer_id' => (string) $row->customer_id,
+                    'firstname' => (string) ($row->firstname ?? ''),
+                    'lastname' => (string) ($row->lastname ?? ''),
+                    'email' => (string) ($row->email ?? ''),
+                    'telephone' => $row->telephone ?: null,
+                    'status' => isset($row->status) ? (bool) $row->status : null,
+                    'date_added' => $row->date_added ? $row->date_added->toIso8601String() : null,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('MyFormula customers store failed', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Não foi possível criar o cliente'], 500);
+        }
+    }
+
     public function exportToContacts(Request $request)
     {
         try {

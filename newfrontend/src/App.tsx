@@ -8,7 +8,7 @@ import { HashRouter, Routes, Route, Navigate, Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { ShieldAlert } from "lucide-react";
-import { fetchBranding, fetchMyAccess } from "@/services/api";
+import { fetchBranding, fetchMyAccess, fetchMyCompanies } from "@/services/api";
 import { hasEffectivePermission } from "@/lib/utils";
 import { ThemeProvider } from "@/hooks/use-theme";
 import Dashboard from "@/pages/Dashboard";
@@ -76,6 +76,7 @@ import MyFormulaCustomers from "@/pages/myformula/Customers";
 import MyFormulaProducts from "@/pages/myformula/Products";
 import MyFormulaProductEdit from "@/pages/myformula/ProductEdit";
 import MyFormulaQuizzes from "@/pages/myformula/Quizzes";
+import MyFormulaSales from "@/pages/me/myformula/Sales";
 import Profile from "@/pages/account/Profile";
 import AdminSettings from "@/pages/Settings";
 
@@ -119,6 +120,66 @@ function AccessDenied(props: { title?: string; description?: string }) {
       </div>
     </div>
   )
+}
+
+function RequireCompanySlug(props: { slug: string; children: ReactElement }) {
+  const { slug, children } = props
+  const [allowed, setAllowed] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    setAllowed(null)
+
+    Promise.allSettled([fetchMyAccess(), fetchMyCompanies()])
+      .then(([accessRes, companiesRes]) => {
+        if (!alive) return
+
+        const isAdmin = accessRes.status === "fulfilled" ? Boolean(accessRes.value.data.isAdmin) : false
+        if (isAdmin) {
+          setAllowed(true)
+          return
+        }
+
+        const isEmployeeRole = accessRes.status === "fulfilled" ? Boolean(accessRes.value.data.isEmployeeRole) : false
+        if (!isEmployeeRole) {
+          setAllowed(false)
+          return
+        }
+
+        const companies = companiesRes.status === "fulfilled" ? companiesRes.value.data : []
+        const ok = Array.isArray(companies) && companies.some((c) => String((c as any)?.slug ?? "").toLowerCase() === String(slug).toLowerCase())
+        setAllowed(ok)
+      })
+      .catch(() => {
+        if (!alive) return
+        setAllowed(false)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [slug])
+
+  if (allowed === null) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="page-header">
+          <h1 className="page-title">A carregar…</h1>
+          <p className="page-subtitle">Permissões</p>
+          <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
+        </div>
+        <div className="p-6 glass-card">
+          <div className="text-sm text-muted-foreground">A validar acesso…</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!allowed) {
+    return <AccessDenied title="Acesso restrito" description="A tua empresa não tem acesso a esta funcionalidade." />
+  }
+
+  return children
 }
 
 function RequirePermission(props: { permission: string | string[]; children: ReactElement }) {
@@ -868,6 +929,14 @@ const App = () => {
                   <RequirePermission permission={["myformula.quizzes.read", "myformula.quizzes.write"]}>
                     <MyFormulaQuizzes />
                   </RequirePermission>
+                }
+              />
+              <Route
+                path="/me/myformula/sales"
+                element={
+                  <RequireCompanySlug slug="myformula">
+                    <MyFormulaSales />
+                  </RequireCompanySlug>
                 }
               />
 
