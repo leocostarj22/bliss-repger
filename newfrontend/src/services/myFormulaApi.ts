@@ -307,6 +307,13 @@ export async function fetchMyFormulaQuizStats(params?: {
   return res.data
 }
 
+export async function createMyFormulaQuizReal(payload: {
+  post: Record<string, any>
+}): Promise<ApiResponse<MyFormulaQuiz>> {
+  const res = await axios.post('/api/v1/myformula/quizzes', payload, { withCredentials: true })
+  return res.data
+}
+
 export interface MyFormulaDashboardData {
   products_count: number
   customers_count: number

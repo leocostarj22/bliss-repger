@@ -10,6 +10,45 @@ use Illuminate\Support\Facades\Log;
 
 class MyFormulaQuizController extends Controller
 {
+    private function assertMyFormulaSalesAccess(): void
+    {
+        $user = auth()->user();
+        $allowed = false;
+
+        if ($user) {
+            if (method_exists($user, 'isAdmin') && $user->isAdmin()) {
+                $allowed = true;
+            } else {
+                $role = strtolower(trim((string) ($user->role ?? '')));
+                $isEmployee = in_array($role, ['employee', 'funcionario', 'funcionário', 'colaborador'], true);
+
+                if ($isEmployee) {
+                    $companyOk = false;
+
+                    try {
+                        if ($user->company && strtolower((string) ($user->company->slug ?? '')) === 'myformula') {
+                            $companyOk = true;
+                        }
+                    } catch (\Throwable) {
+                        $companyOk = false;
+                    }
+
+                    if (! $companyOk) {
+                        try {
+                            $companyOk = $user->companies()->where('slug', 'myformula')->exists();
+                        } catch (\Throwable) {
+                            $companyOk = false;
+                        }
+                    }
+
+                    $allowed = $companyOk;
+                }
+            }
+        }
+
+        abort_unless($allowed, 403);
+    }
+
     private function loadRows(Request $request)
     {
         $from = (string) $request->query('from', '');
@@ -127,6 +166,49 @@ class MyFormulaQuizController extends Controller
         } catch (\Throwable $e) {
             Log::error('Quiz API index failed', ['error' => $e->getMessage()]);
             return response()->json(['data' => []]);
+        }
+    }
+
+    public function store(Request $request)
+    {
+        $this->assertMyFormulaSalesAccess();
+
+        $validated = $request->validate([
+            'post' => ['required', 'array'],
+        ]);
+
+        try {
+            $post = is_array($validated['post'] ?? null) ? $validated['post'] : [];
+
+            $user = auth()->user();
+            $operator = [
+                'source' => 'gmcentral',
+                'operator_user_id' => $user ? (string) ($user->id ?? '') : '',
+                'operator_name' => $user ? (string) ($user->name ?? '') : '',
+            ];
+
+            $payload = array_merge($operator, $post);
+            $encoded = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if (! is_string($encoded)) {
+                return response()->json(['message' => 'Payload inválido'], 422);
+            }
+
+            $now = now();
+            $id = DB::connection('myformula')->table('quiz')->insertGetId([
+                'post' => $encoded,
+                'date_added' => $now,
+            ]);
+
+            return response()->json([
+                'data' => [
+                    'quiz_id' => (string) $id,
+                    'post' => $payload,
+                    'date_added' => $now->toIso8601String(),
+                ],
+            ], 201);
+        } catch (\Throwable $e) {
+            Log::error('Quiz API store failed', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Não foi possível gravar o quiz'], 500);
         }
     }
 

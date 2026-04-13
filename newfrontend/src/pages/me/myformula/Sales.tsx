@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import { fetchMyAccess, fetchMyCompanies } from "@/services/api"
-import { createMyFormulaCustomerReal } from "@/services/myFormulaApi"
-import type { MyFormulaCustomer } from "@/types"
+import { createMyFormulaCustomerReal, createMyFormulaQuizReal } from "@/services/myFormulaApi"
+import type { MyFormulaCustomer, MyFormulaQuiz } from "@/types"
 
 export default function MyFormulaSales() {
   const { toast } = useToast()
@@ -32,6 +33,15 @@ export default function MyFormulaSales() {
   const [passwordConfirm, setPasswordConfirm] = useState("")
 
   const [customer, setCustomer] = useState<MyFormulaCustomer | null>(null)
+  const [quiz, setQuiz] = useState<MyFormulaQuiz | null>(null)
+
+  const [quizName, setQuizName] = useState("")
+  const [quizEmail, setQuizEmail] = useState("")
+  const [quizTelephone, setQuizTelephone] = useState("")
+  const [quizBirthdate, setQuizBirthdate] = useState("")
+  const [quizGender, setQuizGender] = useState("")
+  const [quizImproveHealth, setQuizImproveHealth] = useState("")
+  const [quizExtraJson, setQuizExtraJson] = useState("{}")
 
   const isReadyToCreate = useMemo(() => {
     if (busy) return false
@@ -105,6 +115,12 @@ export default function MyFormulaSales() {
       })
 
       setCustomer(res.data)
+      setQuiz(null)
+
+      setQuizName(`${res.data.firstname ?? ""} ${res.data.lastname ?? ""}`.trim() || `${firstname.trim()} ${lastname.trim()}`.trim())
+      setQuizEmail(String(res.data.email ?? "").trim())
+      setQuizTelephone(String(res.data.telephone ?? telephone).trim())
+
       toast({ title: "Cliente criado", description: `ID ${res.data.customer_id}` })
     } catch (e: any) {
       toast({
@@ -112,6 +128,52 @@ export default function MyFormulaSales() {
         description: String(e?.message ?? "Não foi possível criar o cliente"),
         variant: "destructive",
       })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const onCreateQuiz = async () => {
+    if (!customer || busy) return
+
+    const name = quizName.trim()
+    const emailVal = quizEmail.trim()
+    if (!name) {
+      toast({ title: "Erro", description: "Nome do quiz é obrigatório", variant: "destructive" })
+      return
+    }
+    if (!emailVal) {
+      toast({ title: "Erro", description: "Email do quiz é obrigatório", variant: "destructive" })
+      return
+    }
+
+    let extra: any = {}
+    try {
+      extra = quizExtraJson.trim() ? JSON.parse(quizExtraJson) : {}
+    } catch {
+      toast({ title: "Erro", description: "JSON extra inválido", variant: "destructive" })
+      return
+    }
+
+    const post = {
+      name,
+      email: emailVal,
+      telephone: quizTelephone.trim() || telephone.trim(),
+      birthdate: quizBirthdate || undefined,
+      gender: quizGender || undefined,
+      improve_health: quizImproveHealth.trim() || undefined,
+      step: "plans",
+      customer_id: customer.customer_id,
+      ...extra,
+    }
+
+    setBusy(true)
+    try {
+      const res = await createMyFormulaQuizReal({ post })
+      setQuiz(res.data)
+      toast({ title: "Quiz gravado", description: `ID ${res.data.quiz_id}` })
+    } catch (e: any) {
+      toast({ title: "Erro", description: String(e?.message ?? "Não foi possível gravar o quiz"), variant: "destructive" })
     } finally {
       setBusy(false)
     }
@@ -244,9 +306,68 @@ export default function MyFormulaSales() {
         </div>
       </div>
 
-      <div className="glass-card p-6 space-y-2">
+      <div className="glass-card p-6 space-y-4">
         <div className="text-sm font-semibold">2) Quiz do MyFormula</div>
-        <div className="text-sm text-muted-foreground">Próximo passo: criar o fluxo de preenchimento do quiz e gravar na BD MyFormula.</div>
+        {!customer ? (
+          <div className="text-sm text-muted-foreground">Crie o cliente primeiro para preencher o quiz.</div>
+        ) : (
+          <>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <div className="text-xs text-muted-foreground mb-1">Nome *</div>
+                <Input value={quizName} onChange={(e) => setQuizName(e.target.value)} />
+              </div>
+
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Email *</div>
+                <Input value={quizEmail} onChange={(e) => setQuizEmail(e.target.value)} />
+              </div>
+
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Telefone</div>
+                <Input value={quizTelephone} onChange={(e) => setQuizTelephone(e.target.value)} />
+              </div>
+
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Data de nascimento</div>
+                <Input value={quizBirthdate} onChange={(e) => setQuizBirthdate(e.target.value)} placeholder="YYYY-MM-DD" />
+              </div>
+
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Género</div>
+                <div className="value">
+                  <select
+                    value={quizGender}
+                    onChange={(e) => setQuizGender(e.target.value)}
+                    style={{ border: 0, width: "100%", padding: 0, font: "inherit", background: "transparent" }}
+                  >
+                    <option value=""></option>
+                    <option value="male">Masculino</option>
+                    <option value="female">Feminino</option>
+                    <option value="other">Outro</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <div className="text-xs text-muted-foreground mb-1">Planos (improve_health)</div>
+                <Input value={quizImproveHealth} onChange={(e) => setQuizImproveHealth(e.target.value)} placeholder="Ex.: A17, B02" />
+              </div>
+
+              <div className="md:col-span-2">
+                <div className="text-xs text-muted-foreground mb-1">JSON extra (opcional)</div>
+                <Textarea value={quizExtraJson} onChange={(e) => setQuizExtraJson(e.target.value)} rows={6} />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button type="button" variant="outline" onClick={onCreateQuiz} disabled={busy || !customer}>
+                {busy ? "A gravar…" : "Gravar quiz"}
+              </Button>
+              {quiz ? <div className="text-sm text-muted-foreground">Gravado: {quiz.quiz_id}</div> : null}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="glass-card p-6 space-y-2">
