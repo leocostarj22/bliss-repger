@@ -45,7 +45,7 @@ export default function MyFormulaSales() {
 
   const isReadyToCreate = useMemo(() => {
     if (busy) return false
-    if (!telephone.trim()) return false
+    if (!telephone.trim() && !email.trim()) return false
     if (!firstname.trim()) return false
     if (!lastname.trim()) return false
     if (!address1.trim()) return false
@@ -56,7 +56,7 @@ export default function MyFormulaSales() {
     if (!password) return false
     if (password !== passwordConfirm) return false
     return true
-  }, [address1, busy, city, country, district, firstname, lastname, password, passwordConfirm, postcode, telephone])
+  }, [address1, busy, city, country, district, email, firstname, lastname, password, passwordConfirm, postcode, telephone])
 
   useEffect(() => {
     let alive = true
@@ -97,7 +97,7 @@ export default function MyFormulaSales() {
     setBusy(true)
     try {
       const res = await createMyFormulaCustomerReal({
-        telephone: telephone.trim(),
+        telephone: telephone.trim() || null,
         firstname: firstname.trim(),
         lastname: lastname.trim(),
         email: email.trim() || null,

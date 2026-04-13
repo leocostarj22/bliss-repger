@@ -253,9 +253,9 @@ class MyFormulaCustomerController extends Controller
         $validated = $request->validate([
             'firstname' => ['required', 'string', 'max:255'],
             'lastname' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255', 'required_without:telephone'],
             'nif' => ['nullable', 'string', 'max:64'],
-            'telephone' => ['required', 'string', 'max:64'],
+            'telephone' => ['nullable', 'string', 'max:64', 'required_without:email'],
             'address.company' => ['nullable', 'string', 'max:255'],
             'address.address_1' => ['required', 'string', 'max:255'],
             'address.city' => ['required', 'string', 'max:255'],
@@ -273,6 +273,10 @@ class MyFormulaCustomerController extends Controller
 
             if ($email === '') {
                 $email = $this->makeFakeEmail($telephone);
+            }
+
+            if ($telephone === '') {
+                $telephone = '';
             }
 
             if (MyFormulaCustomer::whereRaw('LOWER(email) = ?', [$email])->exists()) {

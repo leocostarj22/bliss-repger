@@ -121,10 +121,10 @@ export async function fetchMyFormulaCustomers(params?: {
 }
 
 export async function createMyFormulaCustomerReal(payload: {
-  telephone: string
+  telephone?: string | null
+  email?: string | null
   firstname: string
   lastname: string
-  email?: string | null
   nif?: string | null
   address: {
     company?: string | null
