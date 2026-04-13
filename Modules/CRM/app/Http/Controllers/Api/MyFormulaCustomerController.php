@@ -344,7 +344,27 @@ class MyFormulaCustomerController extends Controller
             $districtName = trim((string) ($address['district'] ?? ''));
 
             $countryId = $this->resolveCountryId($countryName);
+            if ($countryId <= 0) {
+                return response()->json(['message' => 'País inválido'], 422);
+            }
+
             $zoneId = $this->resolveZoneId($countryId, $districtName);
+            if (trim($districtName) !== '' && $zoneId <= 0 && strtolower($countryName) === 'portugal') {
+                return response()->json(['message' => 'Distrito inválido'], 422);
+            }
+
+            $customerCols = null;
+            $addressCols = null;
+            try {
+                $customerCols = Schema::connection('myformula')->getColumnListing('customer');
+                $addressCols = Schema::connection('myformula')->getColumnListing('address');
+            } catch (\Throwable) {
+                $customerCols = null;
+                $addressCols = null;
+            }
+
+            $hasCustomerCol = static fn ($col) => is_array($customerCols) && in_array($col, $customerCols, true);
+            $hasAddressCol = static fn ($col) => is_array($addressCols) && in_array($col, $addressCols, true);
 
             $customerId = null;
             $addressId = null;
@@ -360,7 +380,9 @@ class MyFormulaCustomerController extends Controller
                 $city,
                 $postcode,
                 $countryId,
-                $zoneId
+                $zoneId,
+                $hasCustomerCol,
+                $hasAddressCol
             ) {
                 $customerId = DB::connection('myformula')->table('customer')->insertGetId($customerInsert);
 
@@ -376,26 +398,34 @@ class MyFormulaCustomerController extends Controller
                     'zone_id' => $zoneId,
                 ];
 
+                $candidateAddrCols = [
+                    'address_2' => '',
+                ];
+
+                foreach ($candidateAddrCols as $col => $value) {
+                    if ($hasAddressCol($col)) {
+                        $addrInsert[$col] = $value;
+                    }
+                }
+
                 $filtered = [];
                 foreach ($addrInsert as $col => $value) {
-                    try {
-                        if (Schema::connection('myformula')->hasColumn('address', $col)) {
-                            $filtered[$col] = $value;
-                        }
-                    } catch (\Throwable) {
+                    if ($hasAddressCol($col)) {
+                        $filtered[$col] = $value;
                     }
+                }
+
+                if (! $filtered) {
+                    $filtered = $addrInsert;
                 }
 
                 $addressId = DB::connection('myformula')->table('address')->insertGetId($filtered);
 
-                try {
-                    if (Schema::connection('myformula')->hasColumn('customer', 'address_id')) {
-                        DB::connection('myformula')
-                            ->table('customer')
-                            ->where('customer_id', $customerId)
-                            ->update(['address_id' => $addressId]);
-                    }
-                } catch (\Throwable) {
+                if ($hasCustomerCol('address_id')) {
+                    DB::connection('myformula')
+                        ->table('customer')
+                        ->where('customer_id', $customerId)
+                        ->update(['address_id' => $addressId]);
                 }
             });
 
@@ -413,7 +443,11 @@ class MyFormulaCustomerController extends Controller
                 ],
             ], 201);
         } catch (\Throwable $e) {
-            Log::error('MyFormula customers store failed', ['error' => $e->getMessage()]);
+            Log::error('MyFormula customers store failed', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
             return response()->json(['message' => 'Não foi possível criar o cliente'], 500);
         }
     }
