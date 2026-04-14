@@ -3226,6 +3226,13 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
         $query = Ticket::query()->orderByDesc('created_at');
 
+        if (! $user->isAdmin()) {
+            $query->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhere('assigned_to', $user->id);
+            });
+        }
+
         if ($companyId !== '') {
             $query->where('company_id', $companyId);
         }
@@ -3296,6 +3303,10 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
         if (! $user->isAdmin() && $user->company_id) {
             abort_unless((int) $ticket->company_id === (int) $user->company_id, 403);
+        }
+
+        if (! $user->isAdmin()) {
+            abort_unless((int) $ticket->user_id === (int) $user->id || (int) $ticket->assigned_to === (int) $user->id, 403);
         }
 
         return response()->json([
@@ -3399,6 +3410,10 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             abort_unless((int) $ticket->company_id === (int) $user->company_id, 403);
         }
 
+        if (! $user->isAdmin()) {
+            abort_unless((int) $ticket->user_id === (int) $user->id || (int) $ticket->assigned_to === (int) $user->id, 403);
+        }
+
         $validated = request()->validate([
             'company_id' => ['sometimes', 'required', 'exists:companies,id'],
             'title' => ['sometimes', 'required', 'string', 'max:255'],
@@ -3455,6 +3470,10 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
         if (! $user->isAdmin() && $user->company_id) {
             abort_unless((int) $ticket->company_id === (int) $user->company_id, 403);
+        }
+
+        if (! $user->isAdmin()) {
+            abort_unless((int) $ticket->user_id === (int) $user->id || (int) $ticket->assigned_to === (int) $user->id, 403);
         }
 
         $ticket->delete();
