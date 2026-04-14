@@ -47,7 +47,7 @@ class MyFormulaQuizEngine
             'post' => $encodedPost,
             'result' => $encodedResult,
             'type' => 'quiz',
-            'html' => '',
+            'html' => $this->renderBackofficeHtml($post),
             'is_valid' => 1,
             'token' => $this->generateUniqueToken(),
             'report_id' => $this->generateUniqueReportId(),
@@ -254,6 +254,55 @@ class MyFormulaQuizEngine
         if (! empty($post['lose_weight'])) $supplements['quiz']['M'] = 'M';
 
         return $supplements;
+    }
+
+    private function esc($value): string
+    {
+        return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+    }
+
+    private function renderBackofficeHtml(array $post): string
+    {
+        $html = '<div data-se="stepsItem"><h2>Quiz MyFormula</h2>';
+
+        $fields = [
+            'name' => 'Nome',
+            'email' => 'Email',
+            'telephone' => 'Telefone',
+            'birthdate' => 'Data de nascimento',
+            'gender' => 'Género',
+            'improve_health' => 'Objetivos',
+            'weight' => 'Peso (kg)',
+            'height' => 'Altura (cm)',
+            'waist_circumference' => 'Cintura (cm)',
+            'smokes' => 'Fuma',
+            'smokes_quantity' => 'Quantos cigarros',
+            'alcohol' => 'Álcool',
+            'exercise' => 'Exercício',
+            'exercise_quantity' => 'Exercício/semana',
+            'clinical_analysis' => 'Análises clínicas',
+            'lose_weight' => 'Pretende perder peso',
+            'lose_weight_ideal' => 'Peso ideal',
+        ];
+
+        foreach ($fields as $key => $label) {
+            if (! array_key_exists($key, $post)) {
+                continue;
+            }
+
+            $value = $post[$key];
+
+            if ($key === 'improve_health') {
+                $html .= '<div><label>' . $this->esc($label) . '</label><input type="text" name="improve_health" value="' . $this->esc($value) . '"><ol></ol></div>';
+                continue;
+            }
+
+            $html .= '<div><label>' . $this->esc($label) . '</label><input type="text" name="' . $this->esc($key) . '" value="' . $this->esc($value) . '"></div>';
+        }
+
+        $html .= '</div>';
+
+        return $html;
     }
 
     private function generateUniqueToken(): string
