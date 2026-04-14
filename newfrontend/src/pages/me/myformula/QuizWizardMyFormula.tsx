@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { GripVertical } from "lucide-react"
+import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd"
 
 const BASE_IMPROVE_ORDER = ["G", "H", "B", "A", "J", "C", "E", "F", "I", "K"] as const
 const IMPROVE_LABEL: Record<string, string> = {
@@ -178,14 +179,25 @@ export default function QuizWizard({
     return merged
   }, [data.improve_health_order, showMenopause])
 
-  const moveImprove = (idx: number, dir: -1 | 1) => {
-    const next = [...improveOrder]
-    const j = idx + dir
-    if (j < 0 || j >= next.length) return
-    const tmp = next[idx]
-    next[idx] = next[j]
-    next[j] = tmp
-    update("improve_health_order", next)
+  const [objectiveClicks, setObjectiveClicks] = useState<string[]>([])
+
+  const promoteObjective = (id: string) => {
+    const nextClicks = objectiveClicks.includes(id) ? objectiveClicks.filter((x) => x !== id) : [...objectiveClicks, id]
+    setObjectiveClicks(nextClicks)
+
+    const rest = improveOrder.filter((x) => !nextClicks.includes(x))
+    update("improve_health_order", [...nextClicks, ...rest])
+  }
+
+  const onDragObjectives = (result: DropResult) => {
+    if (!result.destination) return
+
+    const items = [...improveOrder]
+    const [moved] = items.splice(result.source.index, 1)
+    items.splice(result.destination.index, 0, moved)
+
+    setObjectiveClicks([])
+    update("improve_health_order", items)
   }
 
   const canProceedCondition = useMemo(() => {
@@ -230,6 +242,23 @@ export default function QuizWizard({
     }
 
     if (step === 2) {
+      const order = improveOrder
+      if (!order.length) {
+        toast({ title: "Validação", description: "Escolha os seus objetivos por ordem de prioridade.", variant: "destructive" })
+        return false
+      }
+      return true
+    }
+
+    if (step === 3) {
+      if (data.medication !== "0" && data.medication !== "1") {
+        toast({ title: "Validação", description: "Responda se toma medicamentos.", variant: "destructive" })
+        return false
+      }
+      return true
+    }
+
+    if (step === 8) {
       if (!canProceedCondition.requiredAny) {
         toast({ title: "Validação", description: "Indique se sofre de alguma condição.", variant: "destructive" })
         return false
@@ -246,14 +275,6 @@ export default function QuizWizard({
     }
 
     if (step === 4) {
-      if (data.medication !== "0" && data.medication !== "1") {
-        toast({ title: "Validação", description: "Responda se toma medicamentos.", variant: "destructive" })
-        return false
-      }
-      return true
-    }
-
-    if (step === 5) {
       const hasAnyIllness =
         Boolean(data.illness_none) ||
         Boolean(data.illness_diabetes_1) ||
@@ -357,7 +378,7 @@ export default function QuizWizard({
       return true
     }
 
-    if (step === 6) {
+    if (step === 5) {
       if (data.clinical_analysis !== "0" && data.clinical_analysis !== "1") {
         toast({ title: "Validação", description: "Responda sobre análises clínicas.", variant: "destructive" })
         return false
@@ -369,7 +390,7 @@ export default function QuizWizard({
       return true
     }
 
-    if (step === 7) {
+    if (step === 6) {
       if (data.smokes !== "0" && data.smokes !== "1") {
         toast({ title: "Validação", description: "Responda se fuma.", variant: "destructive" })
         return false
@@ -404,7 +425,7 @@ export default function QuizWizard({
       return true
     }
 
-    if (step === 8) {
+    if (step === 7) {
       const any =
         Boolean(data.symptoms_rhinitis) ||
         Boolean(data.symptoms_somnolence) ||
@@ -579,73 +600,67 @@ export default function QuizWizard({
 
         {step === 2 && (
           <div className="space-y-4 animate-fade-in">
-            <h3 className="text-lg font-semibold">Condições</h3>
-            <p className="text-sm text-muted-foreground">Indique se sofre de alguma das seguintes condições (pelo menos 1):</p>
+            <h3 className="text-lg font-semibold">Escolha seus objetivos por ordem de prioridade</h3>
+            <p className="text-sm text-muted-foreground">
+              Clique nos objetivos na ordem de prioridade (fica no topo). Se preferir, arraste para reorganizar.
+            </p>
 
-            <div className="grid gap-2 sm:grid-cols-2 text-sm">
-              {data.gender === "female" ? (
-                <label className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted cursor-pointer">
-                  <input type="checkbox" checked={Boolean(data.condition_pregnant)} onChange={(e) => update("condition_pregnant", e.target.checked)} />
-                  Grávida
-                </label>
-              ) : null}
-
-              <label className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted cursor-pointer">
-                <input type="checkbox" checked={Boolean(data.condition_autoimmune)} onChange={(e) => update("condition_autoimmune", e.target.checked)} />
-                Doença autoimune
-              </label>
-
-              <label className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted cursor-pointer">
-                <input type="checkbox" checked={Boolean(data.condition_anticoagulants)} onChange={(e) => update("condition_anticoagulants", e.target.checked)} />
-                Toma anticoagulantes
-              </label>
-
-              <label className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted cursor-pointer">
-                <input type="checkbox" checked={Boolean(data.condition_cancer)} onChange={(e) => update("condition_cancer", e.target.checked)} />
-                Cancro
-              </label>
-
-              <label className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted cursor-pointer sm:col-span-2">
-                <input type="checkbox" checked={Boolean(data.condition_none)} onChange={(e) => update("condition_none", e.target.checked)} />
-                Nenhuma das anteriores
-              </label>
-            </div>
-
-            {(data.condition_pregnant || data.condition_cancer || data.condition_anticoagulants) ? (
-              <div className="text-sm text-destructive">
-                No MyFormula, estas opções terminam o quiz. Desmarque para continuar.
-              </div>
-            ) : null}
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="space-y-4 animate-fade-in">
-            <h3 className="text-lg font-semibold">Objetivos (por prioridade)</h3>
-            <p className="text-sm text-muted-foreground">Ajuste a ordem (como no MyFormula).</p>
-
-            <div className="space-y-2">
-              {improveOrder.map((id, idx) => (
-                <div key={id} className="flex items-center gap-2 p-2 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="text-sm font-medium">{IMPROVE_LABEL[id] ?? id}</div>
-                    <div className="text-xs text-muted-foreground">Código: {id}</div>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button type="button" size="icon" variant="outline" onClick={() => moveImprove(idx, -1)} disabled={idx === 0}>
-                      <ChevronUp />
-                    </Button>
-                    <Button type="button" size="icon" variant="outline" onClick={() => moveImprove(idx, 1)} disabled={idx === improveOrder.length - 1}>
-                      <ChevronDown />
-                    </Button>
-                  </div>
-                </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {improveOrder.map((id) => (
+                <Button
+                  key={id}
+                  type="button"
+                  variant={objectiveClicks.includes(id) ? "default" : "outline"}
+                  className="justify-start"
+                  onClick={() => promoteObjective(id)}
+                >
+                  {IMPROVE_LABEL[id] ?? id}
+                </Button>
               ))}
             </div>
+
+            <div className="pt-2">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">Prioridade final</div>
+                <Button type="button" variant="ghost" size="sm" onClick={() => { setObjectiveClicks([]); update("improve_health_order", BASE_IMPROVE_ORDER.filter((x) => x !== "K" || showMenopause)); }}>
+                  Resetar
+                </Button>
+              </div>
+
+              <DragDropContext onDragEnd={onDragObjectives}>
+                <Droppable droppableId="improve-order">
+                  {(provided) => (
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="mt-2 space-y-2">
+                      {improveOrder.map((id, idx) => (
+                        <Draggable key={id} draggableId={id} index={idx}>
+                          {(prov, snapshot) => (
+                            <div
+                              ref={prov.innerRef}
+                              {...prov.draggableProps}
+                              className={`flex items-center gap-2 p-2 border rounded-lg bg-background ${snapshot.isDragging ? "shadow" : ""}`}
+                            >
+                              <div {...prov.dragHandleProps} className="text-muted-foreground">
+                                <GripVertical />
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-sm font-medium">{IMPROVE_LABEL[id] ?? id}</div>
+                              </div>
+                              <div className="text-xs text-muted-foreground">{idx + 1}º</div>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
+            </div>
           </div>
         )}
 
-        {step === 4 && (
+
+        {step === 3 && (
           <div className="space-y-4 animate-fade-in">
             <h3 className="text-lg font-semibold">Medicação</h3>
             <p className="text-sm text-muted-foreground">Encontra-se a tomar algum medicamento regularmente?</p>
@@ -668,7 +683,7 @@ export default function QuizWizard({
           </div>
         )}
 
-        {step === 5 && (
+        {step === 4 && (
           <div className="space-y-5 animate-fade-in">
             <h3 className="text-lg font-semibold">Histórico Médico</h3>
 
@@ -907,7 +922,7 @@ export default function QuizWizard({
           </div>
         )}
 
-        {step === 6 && (
+        {step === 5 && (
           <div className="space-y-4 animate-fade-in">
             <h3 className="text-lg font-semibold">Análises & Biometria</h3>
 
@@ -940,7 +955,7 @@ export default function QuizWizard({
           </div>
         )}
 
-        {step === 7 && (
+        {step === 6 && (
           <div className="space-y-5 animate-fade-in">
             <h3 className="text-lg font-semibold">Hábitos</h3>
 
@@ -1107,7 +1122,7 @@ export default function QuizWizard({
           </div>
         )}
 
-        {step === 8 && (
+        {step === 7 && (
           <div className="space-y-4 animate-fade-in">
             <h3 className="text-lg font-semibold">Sintomas</h3>
             <p className="text-sm text-muted-foreground">Selecione pelo menos 1 (ou “Nenhum”).</p>
@@ -1179,6 +1194,48 @@ export default function QuizWizard({
                 </>
               ) : null}
             </div>
+          </div>
+        )}
+
+        {step === 8 && (
+          <div className="space-y-4 animate-fade-in">
+            <h3 className="text-lg font-semibold">Indique se sofre de alguma das seguintes condições</h3>
+            <p className="text-sm text-muted-foreground">Selecione pelo menos 1 opção.</p>
+
+            <div className="grid gap-2 sm:grid-cols-2 text-sm">
+              <label className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted cursor-pointer">
+                <input type="checkbox" checked={Boolean(data.condition_autoimmune)} onChange={(e) => update("condition_autoimmune", e.target.checked)} />
+                Tenho uma doença autoimune
+              </label>
+
+              <label className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted cursor-pointer">
+                <input type="checkbox" checked={Boolean(data.condition_anticoagulants)} onChange={(e) => update("condition_anticoagulants", e.target.checked)} />
+                Tomo Anticoagulantes orais do tipo Varfine ou Ticlopidina
+              </label>
+
+              <label className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted cursor-pointer">
+                <input type="checkbox" checked={Boolean(data.condition_cancer)} onChange={(e) => update("condition_cancer", e.target.checked)} />
+                Tenho uma doença oncológica
+              </label>
+
+              {data.gender === "female" ? (
+                <label className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted cursor-pointer">
+                  <input type="checkbox" checked={Boolean(data.condition_pregnant)} onChange={(e) => update("condition_pregnant", e.target.checked)} />
+                  Estou grávida
+                </label>
+              ) : null}
+
+              <label className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted cursor-pointer sm:col-span-2">
+                <input type="checkbox" checked={Boolean(data.condition_none)} onChange={(e) => update("condition_none", e.target.checked)} />
+                Não tenho nenhuma destas condições
+              </label>
+            </div>
+
+            {(data.condition_pregnant || data.condition_cancer || data.condition_anticoagulants) ? (
+              <div className="text-sm text-destructive">
+                No MyFormula, estas opções terminam o quiz. Desmarque para continuar.
+              </div>
+            ) : null}
           </div>
         )}
 
