@@ -10,6 +10,7 @@ import {
   createMyFormulaCustomerReal,
   createMyFormulaQuizReal,
   fetchMyFormulaCountriesReal,
+  fetchMyFormulaCustomers,
   fetchMyFormulaZonesReal,
   type MyFormulaCountryOption,
   type MyFormulaZoneOption,
@@ -46,6 +47,9 @@ export default function MyFormulaSales() {
 
   const [customer, setCustomer] = useState<MyFormulaCustomer | null>(null)
   const [quiz, setQuiz] = useState<MyFormulaQuiz | null>(null)
+
+  const [myCustomers, setMyCustomers] = useState<MyFormulaCustomer[]>([])
+  const [myCustomersLoading, setMyCustomersLoading] = useState(false)
 
   const [quizName, setQuizName] = useState("")
   const [quizEmail, setQuizEmail] = useState("")
@@ -128,6 +132,23 @@ export default function MyFormulaSales() {
     }
   }, [allowed])
 
+  const reloadMyCustomers = async () => {
+    setMyCustomersLoading(true)
+    try {
+      const r = await fetchMyFormulaCustomers({ created_by: "me", per_page: 20, page: 1 })
+      setMyCustomers(Array.isArray(r.data) ? r.data : [])
+    } catch {
+      setMyCustomers([])
+    } finally {
+      setMyCustomersLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!allowed) return
+    reloadMyCustomers()
+  }, [allowed])
+
   useEffect(() => {
     let alive = true
 
@@ -184,6 +205,7 @@ export default function MyFormulaSales() {
 
       setCustomer(res.data)
       setQuiz(null)
+      await reloadMyCustomers()
 
       setQuizName(`${res.data.firstname ?? ""} ${res.data.lastname ?? ""}`.trim() || `${firstname.trim()} ${lastname.trim()}`.trim())
       setQuizEmail(String(res.data.email ?? "").trim())
@@ -293,7 +315,49 @@ export default function MyFormulaSales() {
       </div>
 
       <div className="glass-card p-6 space-y-4">
-        <div className="text-sm font-semibold">1) Registo do cliente</div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-sm font-semibold">1) Registo do cliente</div>
+          <Button type="button" variant="outline" onClick={reloadMyCustomers} disabled={myCustomersLoading || busy}>
+            {myCustomersLoading ? "A carregar…" : "Recarregar"}
+          </Button>
+        </div>
+
+        {myCustomers.length > 0 ? (
+          <div className="border rounded-lg overflow-hidden">
+            <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs text-muted-foreground bg-muted/30">
+              <div className="col-span-4">Cliente</div>
+              <div className="col-span-3">Telefone</div>
+              <div className="col-span-3">Email</div>
+              <div className="col-span-2">Criado</div>
+            </div>
+            <div className="divide-y">
+              {myCustomers.map((c) => {
+                const created = c.date_added ? new Date(c.date_added).toLocaleString("pt-PT") : "—"
+                return (
+                  <button
+                    key={c.customer_id}
+                    type="button"
+                    className="w-full text-left grid grid-cols-12 gap-2 px-3 py-2 text-sm hover:bg-muted/30"
+                    onClick={() => {
+                      setCustomer(c)
+                      setQuiz(null)
+                      setQuizName(`${c.firstname ?? ""} ${c.lastname ?? ""}`.trim())
+                      setQuizEmail(String(c.email ?? "").trim())
+                      setQuizTelephone(String(c.telephone ?? "").trim())
+                    }}
+                  >
+                    <div className="col-span-4 font-medium truncate">{`${c.firstname ?? ""} ${c.lastname ?? ""}`.trim() || `#${c.customer_id}`}</div>
+                    <div className="col-span-3 truncate">{c.telephone ?? "—"}</div>
+                    <div className="col-span-3 truncate">{c.email ?? "—"}</div>
+                    <div className="col-span-2 truncate">{created}</div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm text-muted-foreground">Ainda não existem clientes criados por ti.</div>
+        )}
 
         <div className="grid gap-3 md:grid-cols-2">
           <div>

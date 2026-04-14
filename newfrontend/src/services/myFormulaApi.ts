@@ -113,6 +113,7 @@ export async function deleteMyFormulaProduct(product_id: string): Promise<ApiRes
 export async function fetchMyFormulaCustomers(params?: {
   search?: string
   status?: 'all' | 'active' | 'inactive'
+  created_by?: 'me'
   page?: number
   per_page?: number
 }): Promise<ApiResponse<MyFormulaCustomer[]>> {

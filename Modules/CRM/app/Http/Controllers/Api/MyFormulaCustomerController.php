@@ -14,13 +14,24 @@ class MyFormulaCustomerController extends Controller
 {
     public function index(Request $request)
     {
+        $user = auth('web')->user() ?? auth('employee')->user();
+        $operatorUserId = $user ? (string) ($user->id ?? '') : '';
+
         try {
             $search   = trim((string) $request->query('search', ''));
             $status   = trim((string) $request->query('status', 'all'));
+            $createdBy = trim((string) $request->query('created_by', ''));
             $perPage  = min(100, max(5, (int) $request->query('per_page', 10)));
             $page     = max(1, (int) $request->query('page', 1));
 
             $q = MyFormulaCustomer::query();
+
+            if ($createdBy === 'me' && $operatorUserId !== '') {
+                $q->where(function ($x) use ($operatorUserId) {
+                    $x->where('custom_field', 'like', '%"gmcentral_operator_user_id"%')
+                        ->where('custom_field', 'like', '%"' . $operatorUserId . '"%');
+                });
+            }
 
             if ($status === 'active') {
                 $q->where('status', 1);
@@ -297,6 +308,24 @@ class MyFormulaCustomerController extends Controller
                 }
             } catch (\Throwable) {
                 $customField = null;
+            }
+
+            $operator = auth('web')->user() ?? auth('employee')->user();
+            $operatorId = $operator ? (string) ($operator->id ?? '') : '';
+            if ($operatorId !== '') {
+                $payload = [
+                    'source' => 'gmcentral',
+                    'gmcentral_operator_user_id' => $operatorId,
+                ];
+
+                if ($customField) {
+                    $payload['nif'] = $validated['nif'] ?? null;
+                }
+
+                $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                if (is_string($json)) {
+                    $customField = $json;
+                }
             }
 
             $now = now();
