@@ -4712,11 +4712,12 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::get('hr/employees/stats', function () {
-        $user = auth()->user();
+        $user = auth('web')->user() ?? auth('employee')->user();
         $allowed = $user && (
-            $user->isAdmin()
+            (method_exists($user, 'isAdmin') && $user->isAdmin())
+            || (method_exists($user, 'hasPermission') && $user->hasPermission('hr.employees.read'))
             || (
-                $user->isManager()
+                method_exists($user, 'isManager') && $user->isManager()
                 && $user->department
                 && in_array(Str::slug($user->department->name), ['recursos-humanos', 'rh'])
             )
@@ -4823,11 +4824,12 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::get('hr/employees', function () {
-        $user = auth()->user();
+        $user = auth('web')->user() ?? auth('employee')->user();
         $allowed = $user && (
-            $user->isAdmin()
+            (method_exists($user, 'isAdmin') && $user->isAdmin())
+            || (method_exists($user, 'hasPermission') && ($user->hasPermission('hr.employees.read') || $user->hasPermission('admin.roles.read')))
             || (
-                $user->isManager()
+                method_exists($user, 'isManager') && $user->isManager()
                 && $user->department
                 && in_array(Str::slug($user->department->name), ['recursos-humanos', 'rh'])
             )
@@ -5996,8 +5998,12 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::get('users', function () {
-        $me = auth()->user();
-        abort_unless($me && $me->isAdmin(), 403);
+        $me = auth('web')->user() ?? auth('employee')->user();
+        $isAllowed = $me && (
+            (method_exists($me, 'isAdmin') && $me->isAdmin()) ||
+            (method_exists($me, 'hasPermission') && ($me->hasPermission('admin.users.read') || $me->hasPermission('admin.roles.read')))
+        );
+        abort_unless($isAllowed, 403);
 
         $search = trim((string) request('search', ''));
         $companyId = trim((string) request('company_id', ''));
@@ -6069,8 +6075,12 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::get('users/{user}', function (User $user) {
-        $me = auth()->user();
-        abort_unless($me && $me->isAdmin(), 403);
+        $me = auth('web')->user() ?? auth('employee')->user();
+        $isAllowed = $me && (
+            (method_exists($me, 'isAdmin') && $me->isAdmin()) ||
+            (method_exists($me, 'hasPermission') && ($me->hasPermission('admin.users.read') || $me->hasPermission('admin.roles.read')))
+        );
+        abort_unless($isAllowed, 403);
 
         $user->loadMissing('companies:id');
 
@@ -6109,8 +6119,12 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::post('users', function () {
-        $me = auth()->user();
-        abort_unless($me && $me->isAdmin(), 403);
+        $me = auth('web')->user() ?? auth('employee')->user();
+        $isAllowed = $me && (
+            (method_exists($me, 'isAdmin') && $me->isAdmin()) ||
+            (method_exists($me, 'hasPermission') && $me->hasPermission('admin.users.write'))
+        );
+        abort_unless($isAllowed, 403);
 
         $validated = request()->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -6227,8 +6241,12 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::put('users/{user}', function (User $user) {
-        $me = auth()->user();
-        abort_unless($me && $me->isAdmin(), 403);
+        $me = auth('web')->user() ?? auth('employee')->user();
+        $isAllowed = $me && (
+            (method_exists($me, 'isAdmin') && $me->isAdmin()) ||
+            (method_exists($me, 'hasPermission') && $me->hasPermission('admin.users.write'))
+        );
+        abort_unless($isAllowed, 403);
 
         $validated = request()->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
@@ -6365,8 +6383,12 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::delete('users/{user}', function (User $user) {
-        $me = auth()->user();
-        abort_unless($me && $me->isAdmin(), 403);
+        $me = auth('web')->user() ?? auth('employee')->user();
+        $isAllowed = $me && (
+            (method_exists($me, 'isAdmin') && $me->isAdmin()) ||
+            (method_exists($me, 'hasPermission') && $me->hasPermission('admin.users.write'))
+        );
+        abort_unless($isAllowed, 403);
 
         if ($user->photo_path && is_string($user->photo_path) && $user->photo_path !== '' && ! str_starts_with($user->photo_path, 'http://') && ! str_starts_with($user->photo_path, 'https://') && ! str_starts_with($user->photo_path, 'data:') && ! str_starts_with($user->photo_path, '/')) {
             if (Storage::disk('public')->exists($user->photo_path)) {
@@ -6425,8 +6447,12 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::get('roles/{role}', function (Role $role) {
-        $me = auth()->user();
-        abort_unless($me && $me->isAdmin(), 403);
+        $me = auth('web')->user() ?? auth('employee')->user();
+        $isAllowed = $me && (
+            (method_exists($me, 'isAdmin') && $me->isAdmin()) ||
+            (method_exists($me, 'hasPermission') && $me->hasPermission('admin.roles.read'))
+        );
+        abort_unless($isAllowed, 403);
 
         return response()->json([
             'data' => [
@@ -6443,8 +6469,12 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::post('roles', function () {
-        $me = auth()->user();
-        abort_unless($me && $me->isAdmin(), 403);
+        $me = auth('web')->user() ?? auth('employee')->user();
+        $isAllowed = $me && (
+            (method_exists($me, 'isAdmin') && $me->isAdmin()) ||
+            (method_exists($me, 'hasPermission') && $me->hasPermission('admin.roles.write'))
+        );
+        abort_unless($isAllowed, 403);
 
         $validated = request()->validate([
             'name' => ['required', 'string', 'max:255', 'unique:roles,name'],
@@ -6478,8 +6508,12 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::put('roles/{role}', function (Role $role) {
-        $me = auth()->user();
-        abort_unless($me && $me->isAdmin(), 403);
+        $me = auth('web')->user() ?? auth('employee')->user();
+        $isAllowed = $me && (
+            (method_exists($me, 'isAdmin') && $me->isAdmin()) ||
+            (method_exists($me, 'hasPermission') && $me->hasPermission('admin.roles.write'))
+        );
+        abort_unless($isAllowed, 403);
 
         $validated = request()->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255', 'unique:roles,name,' . $role->id],
@@ -6512,8 +6546,12 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::delete('roles/{role}', function (Role $role) {
-        $me = auth()->user();
-        abort_unless($me && $me->isAdmin(), 403);
+        $me = auth('web')->user() ?? auth('employee')->user();
+        $isAllowed = $me && (
+            (method_exists($me, 'isAdmin') && $me->isAdmin()) ||
+            (method_exists($me, 'hasPermission') && $me->hasPermission('admin.roles.write'))
+        );
+        abort_unless($isAllowed, 403);
 
         $role->delete();
 
