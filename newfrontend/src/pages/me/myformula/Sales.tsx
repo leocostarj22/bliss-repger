@@ -16,6 +16,7 @@ import {
   type MyFormulaZoneOption,
 } from "@/services/myFormulaApi"
 import type { MyFormulaCustomer, MyFormulaQuiz } from "@/types"
+import QuizWizard from "./QuizWizard"
 
 export default function MyFormulaSales() {
   const { toast } = useToast()
@@ -47,17 +48,12 @@ export default function MyFormulaSales() {
 
   const [customer, setCustomer] = useState<MyFormulaCustomer | null>(null)
   const [quiz, setQuiz] = useState<MyFormulaQuiz | null>(null)
+  const [showWizard, setShowWizard] = useState(false)
 
   const [myCustomers, setMyCustomers] = useState<MyFormulaCustomer[]>([])
   const [myCustomersLoading, setMyCustomersLoading] = useState(false)
 
-  const [quizName, setQuizName] = useState("")
-  const [quizEmail, setQuizEmail] = useState("")
-  const [quizTelephone, setQuizTelephone] = useState("")
-  const [quizBirthdate, setQuizBirthdate] = useState("")
-  const [quizGender, setQuizGender] = useState("")
-  const [quizImproveHealth, setQuizImproveHealth] = useState("")
-  const [quizExtraJson, setQuizExtraJson] = useState("{}")
+  // Estados antigos do quiz básico foram removidos, usamos o Wizard agora
 
   const isReadyToCreate = useMemo(() => {
     if (busy) return false
@@ -206,11 +202,8 @@ export default function MyFormulaSales() {
 
       setCustomer(res.data)
       setQuiz(null)
+      setShowWizard(false)
       await reloadMyCustomers()
-
-      setQuizName(`${res.data.firstname ?? ""} ${res.data.lastname ?? ""}`.trim() || `${firstname.trim()} ${lastname.trim()}`.trim())
-      setQuizEmail(String(res.data.email ?? "").trim())
-      setQuizTelephone(String(res.data.telephone ?? telephone).trim())
 
       toast({ title: "Cliente criado", description: `ID ${res.data.customer_id}` })
     } catch (e: any) {
@@ -224,52 +217,19 @@ export default function MyFormulaSales() {
     }
   }
 
-  const onCreateQuiz = async () => {
+  const onCreateQuiz = async (payload: any) => {
     if (!customer || busy) return
 
-    const name = quizName.trim()
-    const emailVal = quizEmail.trim()
-    if (!name) {
-      toast({ title: "Erro", description: "Nome do quiz é obrigatório", variant: "destructive" })
-      return
-    }
-    if (!emailVal) {
-      toast({ title: "Erro", description: "Email do quiz é obrigatório", variant: "destructive" })
-      return
-    }
-
-    let extra: any = {}
-    try {
-      extra = quizExtraJson.trim() ? JSON.parse(quizExtraJson) : {}
-    } catch {
-      toast({ title: "Erro", description: "JSON extra inválido", variant: "destructive" })
-      return
-    }
-
-    const tokens = quizImproveHealth
-      .split(/[\s,;]+/)
-      .map((t) => t.trim())
-      .filter(Boolean)
-      .map((t) => t[0]?.toUpperCase() || "")
-      .filter((t) => /^[A-K]$/.test(t))
-
-    const improveHealth = Array.from(new Set(tokens)).join(",")
-
     const post = {
-      name,
-      email: emailVal,
-      telephone: quizTelephone.trim() || telephone.trim(),
-      birthdate: quizBirthdate || undefined,
-      gender: quizGender || undefined,
-      improve_health: improveHealth || undefined,
+      ...payload,
       customer_id: customer.customer_id,
-      ...extra,
     }
 
     setBusy(true)
     try {
       const res = await createMyFormulaQuizReal({ post })
       setQuiz(res.data)
+      setShowWizard(false)
       toast({ title: "Quiz gravado", description: `ID ${res.data.quiz_id}` })
     } catch (e: any) {
       toast({ title: "Erro", description: String(e?.message ?? "Não foi possível gravar o quiz"), variant: "destructive" })
@@ -350,9 +310,7 @@ export default function MyFormulaSales() {
                     onClick={() => {
                       setCustomer(c)
                       setQuiz(null)
-                      setQuizName(`${c.firstname ?? ""} ${c.lastname ?? ""}`.trim())
-                      setQuizEmail(String(c.email ?? "").trim())
-                      setQuizTelephone(String(c.telephone ?? "").trim())
+                      setShowWizard(false)
                     }}
                   >
                     <div className="col-span-4 font-medium truncate">{`${c.firstname ?? ""} ${c.lastname ?? ""}`.trim() || `#${c.customer_id}`}</div>
@@ -488,72 +446,42 @@ export default function MyFormulaSales() {
           <div className="text-sm text-muted-foreground">Crie o cliente primeiro para preencher o quiz.</div>
         ) : (
           <>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <div className="text-xs text-muted-foreground mb-1">Nome *</div>
-                <Input value={quizName} onChange={(e) => setQuizName(e.target.value)} />
-              </div>
-
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">Email *</div>
-                <Input value={quizEmail} onChange={(e) => setQuizEmail(e.target.value)} />
-              </div>
-
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">Telefone</div>
-                <Input value={quizTelephone} onChange={(e) => setQuizTelephone(e.target.value)} />
-              </div>
-
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">Data de nascimento</div>
-                <Input value={quizBirthdate} onChange={(e) => setQuizBirthdate(e.target.value)} placeholder="YYYY-MM-DD" />
-              </div>
-
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">Género</div>
-                <div className="value">
-                  <select
-                    value={quizGender}
-                    onChange={(e) => setQuizGender(e.target.value)}
-                    style={{ border: 0, width: "100%", padding: 0, font: "inherit", background: "transparent" }}
-                  >
-                    <option value=""></option>
-                    <option value="male">Masculino</option>
-                    <option value="female">Feminino</option>
-                    <option value="other">Outro</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="md:col-span-2">
-                <div className="text-xs text-muted-foreground mb-1">Planos (improve_health)</div>
-                <Input value={quizImproveHealth} onChange={(e) => setQuizImproveHealth(e.target.value)} placeholder="Ex.: A,B,C (ou A17,B02)" />
-              </div>
-
-              <div className="md:col-span-2">
-                <div className="text-xs text-muted-foreground mb-1">JSON extra (opcional)</div>
-                <Textarea value={quizExtraJson} onChange={(e) => setQuizExtraJson(e.target.value)} rows={6} />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Button type="button" variant="outline" onClick={onCreateQuiz} disabled={busy || !customer}>
-                {busy ? "A gravar…" : "Gravar quiz"}
+            {!quiz && !showWizard && (
+              <Button onClick={() => setShowWizard(true)}>
+                Iniciar Quiz para {customer.firstname}
               </Button>
-              {quiz ? (
-                <div className="text-sm text-muted-foreground">
-                  Gravado: {quiz.quiz_id}
-                  {quiz.report_id ? ` — Report ${quiz.report_id}` : ""}
-                </div>
-              ) : null}
-            </div>
+            )}
 
-            {quiz?.result ? (
-              <div className="mt-3 border rounded-lg p-3">
-                <div className="text-xs text-muted-foreground mb-2">Resultado (calculado)</div>
-                <pre className="text-xs overflow-auto whitespace-pre-wrap">{JSON.stringify(quiz.result, null, 2)}</pre>
+            {showWizard && !quiz && (
+              <div className="border rounded-lg p-6 bg-card/50">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-semibold">Questionário Clínico</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setShowWizard(false)}>Cancelar</Button>
+                </div>
+                <QuizWizard customer={customer} onComplete={onCreateQuiz} busy={busy} />
               </div>
-            ) : null}
+            )}
+
+            {quiz && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="text-sm text-muted-foreground">
+                    ✅ Gravado com sucesso: {quiz.quiz_id}
+                    {quiz.report_id ? ` — Relatório: ${quiz.report_id}` : ""}
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => { setQuiz(null); setShowWizard(true) }}>
+                    Refazer Quiz
+                  </Button>
+                </div>
+
+                {quiz.result ? (
+                  <div className="border rounded-lg p-4 bg-muted/20">
+                    <div className="text-sm font-semibold mb-2">Resultado da Análise</div>
+                    <pre className="text-xs overflow-auto whitespace-pre-wrap">{JSON.stringify(quiz.result, null, 2)}</pre>
+                  </div>
+                ) : null}
+              </div>
+            )}
           </>
         )}
       </div>
