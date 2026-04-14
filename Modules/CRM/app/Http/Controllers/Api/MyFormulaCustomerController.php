@@ -27,10 +27,31 @@ class MyFormulaCustomerController extends Controller
             $q = MyFormulaCustomer::query();
 
             if ($createdBy === 'me' && $operatorUserId !== '') {
-                $q->where(function ($x) use ($operatorUserId) {
-                    $x->where('custom_field', 'like', '%"gmcentral_operator_user_id"%')
-                        ->where('custom_field', 'like', '%"' . $operatorUserId . '"%');
-                });
+                $hasCustomField = false;
+                $hasFax = false;
+
+                try {
+                    $hasCustomField = Schema::connection('myformula')->hasColumn('customer', 'custom_field');
+                } catch (\Throwable) {
+                    $hasCustomField = false;
+                }
+
+                try {
+                    $hasFax = Schema::connection('myformula')->hasColumn('customer', 'fax');
+                } catch (\Throwable) {
+                    $hasFax = false;
+                }
+
+                if ($hasCustomField) {
+                    $q->where(function ($x) use ($operatorUserId) {
+                        $x->where('custom_field', 'like', '%"gmcentral_operator_user_id"%')
+                            ->where('custom_field', 'like', '%"' . $operatorUserId . '"%');
+                    });
+                } elseif ($hasFax) {
+                    $q->where('fax', 'like', '%gmcentral_operator_user_id:' . $operatorUserId . '%');
+                } else {
+                    $q->whereRaw('1 = 0');
+                }
             }
 
             if ($status === 'active') {
@@ -312,6 +333,8 @@ class MyFormulaCustomerController extends Controller
 
             $operator = auth('web')->user() ?? auth('employee')->user();
             $operatorId = $operator ? (string) ($operator->id ?? '') : '';
+            $operatorMarker = $operatorId !== '' ? ('gmcentral_operator_user_id:' . $operatorId) : '';
+
             if ($operatorId !== '') {
                 $payload = [
                     'source' => 'gmcentral',
@@ -348,7 +371,7 @@ class MyFormulaCustomerController extends Controller
                 'safe' => 0,
                 'approved' => 1,
                 'address_id' => 0,
-                'fax' => '',
+                'fax' => $operatorMarker,
                 'token' => '',
                 'code' => '',
                 'ip' => (string) $request->ip(),

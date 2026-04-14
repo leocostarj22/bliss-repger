@@ -481,10 +481,35 @@ export default function EmployeeForm() {
       medical_status: form.medical_status || null,
     }
 
+    const compactUpdatePayload = (input: Record<string, any>) => {
+      const out: Record<string, any> = {}
+      Object.entries(input).forEach(([k, v]) => {
+        if (v === null || v === undefined) {
+          if (k === "has_system_access") out[k] = v
+          return
+        }
+        if (typeof v === "string") {
+          const s = v.trim()
+          if (!s) {
+            if (k === "has_system_access") out[k] = false
+            return
+          }
+          out[k] = v
+          return
+        }
+        if (typeof v === "boolean") {
+          out[k] = v
+          return
+        }
+        out[k] = v
+      })
+      return out
+    }
+
     setSaving(true)
     try {
       if (isEdit && id) {
-        const resp = await updateEmployee(id, payload)
+        const resp = await updateEmployee(id, compactUpdatePayload(payload) as any)
         toast({ title: "Guardado", description: "Funcionário atualizado" })
         navigate(`/hr/employees/${resp.data.id}`)
       } else {

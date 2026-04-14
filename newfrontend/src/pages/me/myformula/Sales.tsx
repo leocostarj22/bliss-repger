@@ -137,8 +137,9 @@ export default function MyFormulaSales() {
     try {
       const r = await fetchMyFormulaCustomers({ created_by: "me", per_page: 20, page: 1 })
       setMyCustomers(Array.isArray(r.data) ? r.data : [])
-    } catch {
+    } catch (e: any) {
       setMyCustomers([])
+      toast({ title: "Erro", description: String(e?.message ?? "Não foi possível carregar os clientes"), variant: "destructive" })
     } finally {
       setMyCustomersLoading(false)
     }
