@@ -246,14 +246,22 @@ export default function MyFormulaSales() {
       return
     }
 
+    const tokens = quizImproveHealth
+      .split(/[\s,;]+/)
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .map((t) => t[0]?.toUpperCase() || "")
+      .filter((t) => /^[A-K]$/.test(t))
+
+    const improveHealth = Array.from(new Set(tokens)).join(",")
+
     const post = {
       name,
       email: emailVal,
       telephone: quizTelephone.trim() || telephone.trim(),
       birthdate: quizBirthdate || undefined,
       gender: quizGender || undefined,
-      improve_health: quizImproveHealth.trim() || undefined,
-      step: "plans",
+      improve_health: improveHealth || undefined,
       customer_id: customer.customer_id,
       ...extra,
     }
@@ -519,7 +527,7 @@ export default function MyFormulaSales() {
 
               <div className="md:col-span-2">
                 <div className="text-xs text-muted-foreground mb-1">Planos (improve_health)</div>
-                <Input value={quizImproveHealth} onChange={(e) => setQuizImproveHealth(e.target.value)} placeholder="Ex.: A17, B02" />
+                <Input value={quizImproveHealth} onChange={(e) => setQuizImproveHealth(e.target.value)} placeholder="Ex.: A,B,C (ou A17,B02)" />
               </div>
 
               <div className="md:col-span-2">
@@ -532,8 +540,20 @@ export default function MyFormulaSales() {
               <Button type="button" variant="outline" onClick={onCreateQuiz} disabled={busy || !customer}>
                 {busy ? "A gravar…" : "Gravar quiz"}
               </Button>
-              {quiz ? <div className="text-sm text-muted-foreground">Gravado: {quiz.quiz_id}</div> : null}
+              {quiz ? (
+                <div className="text-sm text-muted-foreground">
+                  Gravado: {quiz.quiz_id}
+                  {quiz.report_id ? ` — Report ${quiz.report_id}` : ""}
+                </div>
+              ) : null}
             </div>
+
+            {quiz?.result ? (
+              <div className="mt-3 border rounded-lg p-3">
+                <div className="text-xs text-muted-foreground mb-2">Resultado (calculado)</div>
+                <pre className="text-xs overflow-auto whitespace-pre-wrap">{JSON.stringify(quiz.result, null, 2)}</pre>
+              </div>
+            ) : null}
           </>
         )}
       </div>

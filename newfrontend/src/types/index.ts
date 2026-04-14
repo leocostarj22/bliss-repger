@@ -627,7 +627,10 @@ export interface MyFormulaOrderProduct {
 
 export interface MyFormulaQuiz {
   quiz_id: string;
+  token?: string;
+  report_id?: string;
   post: any;
+  result?: any;
   date_added?: string | null;
 }
 
