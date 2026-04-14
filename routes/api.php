@@ -4297,8 +4297,12 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::get('companies', function () {
-        $user = auth()->user();
-        abort_unless($user && $user->isAdmin(), 403);
+        $user = auth('web')->user() ?? auth('employee')->user();
+        $isAllowed = $user && (
+            (method_exists($user, 'isAdmin') && $user->isAdmin()) ||
+            (method_exists($user, 'hasPermission') && $user->hasPermission('admin.companies.read'))
+        );
+        abort_unless($isAllowed, 403);
 
         $search = trim((string) request('search', ''));
 
@@ -4552,8 +4556,12 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::get('departments', function () {
-        $user = auth()->user();
-        abort_unless($user && $user->isAdmin(), 403);
+        $user = auth('web')->user() ?? auth('employee')->user();
+        $isAllowed = $user && (
+            (method_exists($user, 'isAdmin') && $user->isAdmin()) ||
+            (method_exists($user, 'hasPermission') && $user->hasPermission('admin.departments.read'))
+        );
+        abort_unless($isAllowed, 403);
 
         $search = trim((string) request('search', ''));
         $companyId = trim((string) request('company_id', ''));
@@ -6372,8 +6380,12 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::get('roles', function () {
-        $me = auth()->user();
-        abort_unless($me && $me->isAdmin(), 403);
+        $me = auth('web')->user() ?? auth('employee')->user();
+        $isAllowed = $me && (
+            (method_exists($me, 'isAdmin') && $me->isAdmin()) ||
+            (method_exists($me, 'hasPermission') && $me->hasPermission('admin.roles.read'))
+        );
+        abort_unless($isAllowed, 403);
 
         $search = trim((string) request('search', ''));
         $hasIsActive = request()->has('is_active');
