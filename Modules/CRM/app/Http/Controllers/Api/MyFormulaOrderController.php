@@ -5,12 +5,335 @@ namespace Modules\CRM\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Modules\CRM\Models\MyFormulaOrder;
 use Modules\CRM\Models\Quiz;
 
 class MyFormulaOrderController extends Controller
 {
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'customer_id' => ['required'],
+            'order_status_id' => ['nullable'],
+            'quiz_id' => ['nullable'],
+            'products' => ['required', 'array', 'min:1'],
+            'products.*.product_id' => ['required'],
+            'products.*.quantity' => ['required', 'integer', 'min:1'],
+            'payment_method' => ['nullable', 'string', 'max:255'],
+            'payment_code' => ['nullable', 'string', 'max:255'],
+            'shipping_method' => ['nullable', 'string', 'max:255'],
+            'shipping_code' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $customerId = (int) $validated['customer_id'];
+        if ($customerId <= 0) {
+            return response()->json(['message' => 'customer_id inválido'], 422);
+        }
+
+        $orderStatusId = (int) ($validated['order_status_id'] ?? 0);
+        $quizId = isset($validated['quiz_id']) ? (int) $validated['quiz_id'] : 0;
+
+        $paymentMethod = (string) ($validated['payment_method'] ?? 'Manual');
+        $paymentCode = (string) ($validated['payment_code'] ?? 'manual');
+        $shippingMethod = (string) ($validated['shipping_method'] ?? '');
+        $shippingCode = (string) ($validated['shipping_code'] ?? '');
+
+        try {
+            $customer = DB::connection('myformula')->table('customer')->where('customer_id', $customerId)->first();
+            abort_unless($customer, 404);
+
+            $addressId = (int) ($customer->address_id ?? 0);
+            $address = null;
+            if ($addressId > 0) {
+                $addrRow = DB::connection('myformula')->table('address')->where('address_id', $addressId)->where('customer_id', $customerId)->first();
+                if ($addrRow) {
+                    $country = DB::connection('myformula')->table('country')->where('country_id', (int) ($addrRow->country_id ?? 0))->first();
+                    $zone = DB::connection('myformula')->table('zone')->where('zone_id', (int) ($addrRow->zone_id ?? 0))->first();
+
+                    $address = [
+                        'firstname' => (string) ($addrRow->firstname ?? $customer->firstname ?? ''),
+                        'lastname' => (string) ($addrRow->lastname ?? $customer->lastname ?? ''),
+                        'company' => (string) ($addrRow->company ?? ''),
+                        'address_1' => (string) ($addrRow->address_1 ?? ''),
+                        'address_2' => (string) ($addrRow->address_2 ?? ''),
+                        'city' => (string) ($addrRow->city ?? ''),
+                        'postcode' => (string) ($addrRow->postcode ?? ''),
+                        'country' => (string) ($country->name ?? ''),
+                        'country_id' => (int) ($addrRow->country_id ?? 0),
+                        'zone' => (string) ($zone->name ?? ''),
+                        'zone_id' => (int) ($addrRow->zone_id ?? 0),
+                        'zone_code' => (string) ($zone->code ?? ''),
+                        'iso_code_2' => (string) ($country->iso_code_2 ?? ''),
+                        'iso_code_3' => (string) ($country->iso_code_3 ?? ''),
+                        'address_format' => (string) ($country->address_format ?? ''),
+                        'custom_field' => (string) ($addrRow->custom_field ?? ''),
+                    ];
+                }
+            }
+
+            if (! $address) {
+                $address = [
+                    'firstname' => (string) ($customer->firstname ?? ''),
+                    'lastname' => (string) ($customer->lastname ?? ''),
+                    'company' => '',
+                    'address_1' => '',
+                    'address_2' => '',
+                    'city' => '',
+                    'postcode' => '',
+                    'country' => '',
+                    'country_id' => 0,
+                    'zone' => '',
+                    'zone_id' => 0,
+                    'zone_code' => '',
+                    'iso_code_2' => '',
+                    'iso_code_3' => '',
+                    'address_format' => '',
+                    'custom_field' => '',
+                ];
+            }
+
+            $currency = DB::connection('myformula')->table('currency')->where('code', 'EUR')->first();
+            $currencyId = (int) ($currency->currency_id ?? 0);
+            $currencyValue = (float) ($currency->value ?? 1.0);
+
+            $languageId = 2;
+
+            if ($orderStatusId <= 0) {
+                $orderStatusId = (int) (DB::connection('myformula')->table('setting')->where('key', 'config_order_status_id')->value('value') ?? 0);
+            }
+            if ($orderStatusId <= 0) {
+                $orderStatusId = 1;
+            }
+
+            $now = now();
+
+            $orderCols = [];
+            try {
+                $orderCols = Schema::connection('myformula')->getColumnListing('order');
+            } catch (\Throwable) {
+                $orderCols = [];
+            }
+            $hasOrderCol = static fn (string $c) => in_array($c, $orderCols, true);
+
+            $lines = collect($validated['products'] ?? [])->map(function ($p) {
+                return [
+                    'product_id' => (int) ($p['product_id'] ?? 0),
+                    'quantity' => (int) ($p['quantity'] ?? 0),
+                ];
+            })->filter(fn ($p) => $p['product_id'] > 0 && $p['quantity'] > 0)->values();
+
+            if ($lines->isEmpty()) {
+                return response()->json(['message' => 'products inválido'], 422);
+            }
+
+            $productIds = $lines->pluck('product_id')->all();
+            $products = DB::connection('myformula')
+                ->table('product')
+                ->whereIn('product_id', $productIds)
+                ->get()
+                ->keyBy(fn ($r) => (int) ($r->product_id ?? 0));
+
+            $subTotal = 0.0;
+            $orderProducts = [];
+
+            foreach ($lines as $line) {
+                $pid = (int) $line['product_id'];
+                $qty = (int) $line['quantity'];
+                $row = $products->get($pid);
+                if (! $row) {
+                    return response()->json(['message' => 'Produto não encontrado: ' . $pid], 422);
+                }
+
+                $price = isset($row->price) ? (float) $row->price : 0.0;
+                $total = $price * $qty;
+                $subTotal += $total;
+
+                $orderProducts[] = [
+                    'product_id' => $pid,
+                    'name' => (string) ($row->name ?? ''),
+                    'model' => (string) ($row->model ?? ''),
+                    'quantity' => $qty,
+                    'price' => $price,
+                    'total' => $total,
+                    'tax' => 0.0,
+                    'reward' => 0,
+                ];
+            }
+
+            $grandTotal = $subTotal;
+
+            $orderData = [
+                'invoice_no' => 0,
+                'invoice_prefix' => 'INV-',
+                'store_id' => 0,
+                'store_name' => 'MyFormula',
+                'store_url' => '',
+                'customer_id' => $customerId,
+                'customer_group_id' => (int) ($customer->customer_group_id ?? 1),
+                'firstname' => (string) ($customer->firstname ?? ''),
+                'lastname' => (string) ($customer->lastname ?? ''),
+                'email' => (string) ($customer->email ?? ''),
+                'telephone' => (string) ($customer->telephone ?? ''),
+                'custom_field' => (string) ($customer->custom_field ?? ''),
+                'payment_firstname' => $address['firstname'],
+                'payment_lastname' => $address['lastname'],
+                'payment_company' => $address['company'],
+                'payment_address_1' => $address['address_1'],
+                'payment_address_2' => $address['address_2'],
+                'payment_city' => $address['city'],
+                'payment_postcode' => $address['postcode'],
+                'payment_country' => $address['country'],
+                'payment_country_id' => $address['country_id'],
+                'payment_zone' => $address['zone'],
+                'payment_zone_id' => $address['zone_id'],
+                'payment_address_format' => $address['address_format'],
+                'payment_custom_field' => $address['custom_field'],
+                'payment_method' => $paymentMethod,
+                'payment_code' => $paymentCode,
+                'shipping_firstname' => $address['firstname'],
+                'shipping_lastname' => $address['lastname'],
+                'shipping_company' => $address['company'],
+                'shipping_address_1' => $address['address_1'],
+                'shipping_address_2' => $address['address_2'],
+                'shipping_city' => $address['city'],
+                'shipping_postcode' => $address['postcode'],
+                'shipping_country' => $address['country'],
+                'shipping_country_id' => $address['country_id'],
+                'shipping_zone' => $address['zone'],
+                'shipping_zone_id' => $address['zone_id'],
+                'shipping_address_format' => $address['address_format'],
+                'shipping_custom_field' => $address['custom_field'],
+                'shipping_method' => $shippingMethod,
+                'shipping_code' => $shippingCode,
+                'comment' => '',
+                'total' => $grandTotal,
+                'order_status_id' => $orderStatusId,
+                'affiliate_id' => 0,
+                'commission' => 0.0,
+                'marketing_id' => 0,
+                'tracking' => '',
+                'language_id' => $languageId,
+                'currency_id' => $currencyId,
+                'currency_code' => 'EUR',
+                'currency_value' => $currencyValue,
+                'ip' => (string) $request->ip(),
+                'forwarded_ip' => (string) ($request->headers->get('X-Forwarded-For') ?? ''),
+                'user_agent' => (string) ($request->userAgent() ?? ''),
+                'accept_language' => (string) ($request->headers->get('Accept-Language') ?? ''),
+                'date_added' => $now,
+                'date_modified' => $now,
+            ];
+
+            if ($quizId > 0 && (! $orderCols || $hasOrderCol('quiz_id'))) {
+                $orderData['quiz_id'] = $quizId;
+            }
+
+            if ($orderCols) {
+                $orderData = array_filter(
+                    $orderData,
+                    static fn ($v, $k) => $hasOrderCol((string) $k),
+                    ARRAY_FILTER_USE_BOTH
+                );
+            }
+
+            $orderId = DB::connection('myformula')->transaction(function () use ($orderData, $orderProducts, $grandTotal, $subTotal, $orderStatusId, $now) {
+                $orderId = (int) DB::connection('myformula')->table('order')->insertGetId($orderData);
+
+                foreach ($orderProducts as $p) {
+                    DB::connection('myformula')->table('order_product')->insert([
+                        'order_id' => $orderId,
+                        'product_id' => $p['product_id'],
+                        'name' => $p['name'],
+                        'model' => $p['model'],
+                        'quantity' => $p['quantity'],
+                        'price' => $p['price'],
+                        'total' => $p['total'],
+                        'tax' => $p['tax'],
+                        'reward' => $p['reward'],
+                    ]);
+                }
+
+                DB::connection('myformula')->table('order_total')->insert([
+                    [
+                        'order_id' => $orderId,
+                        'code' => 'sub_total',
+                        'title' => 'Sub-Total',
+                        'value' => $subTotal,
+                        'sort_order' => 1,
+                    ],
+                    [
+                        'order_id' => $orderId,
+                        'code' => 'total',
+                        'title' => 'Total',
+                        'value' => $grandTotal,
+                        'sort_order' => 9,
+                    ],
+                ]);
+
+                DB::connection('myformula')->table('order_history')->insert([
+                    'order_id' => $orderId,
+                    'order_status_id' => $orderStatusId,
+                    'notify' => 0,
+                    'comment' => 'Criado via GMCentral',
+                    'date_added' => $now,
+                ]);
+
+                return $orderId;
+            });
+
+            $order = MyFormulaOrder::query()->with(['status', 'products'])->where('order_id', $orderId)->first();
+            abort_unless($order, 500);
+
+            return response()->json([
+                'data' => [
+                    'order_id' => (string) $order->order_id,
+                    'invoice_no' => $order->invoice_no ?: null,
+                    'store_name' => $order->store_name ?: 'MyFormula',
+                    'customer_id' => (string) $order->customer_id,
+                    'firstname' => $order->firstname,
+                    'lastname' => $order->lastname,
+                    'email' => $order->email,
+                    'telephone' => $order->telephone ?: null,
+                    'total' => (float) $order->total,
+                    'order_status_id' => (string) $order->order_status_id,
+                    'date_added' => $order->date_added ? $order->date_added->toIso8601String() : null,
+                    'date_modified' => $order->date_modified ? $order->date_modified->toIso8601String() : null,
+                    'payment_method' => $order->payment_method ?: null,
+                    'payment_code' => $order->payment_code ?: null,
+                    'status' => $order->relationLoaded('status') && $order->status ? [
+                        'order_status_id' => (string) $order->status->order_status_id,
+                        'language_id' => isset($order->status->language_id) ? (int) $order->status->language_id : 0,
+                        'name' => $order->status->name,
+                    ] : null,
+                    'products' => $order->relationLoaded('products')
+                        ? $order->products->map(function ($p) {
+                            return [
+                                'order_product_id' => (string) $p->order_product_id,
+                                'order_id' => (string) $p->order_id,
+                                'product_id' => (string) $p->product_id,
+                                'name' => $p->name,
+                                'model' => $p->model,
+                                'quantity' => (int) $p->quantity,
+                                'price' => (float) $p->price,
+                                'total' => (float) $p->total,
+                                'tax' => isset($p->tax) ? (float) $p->tax : null,
+                            ];
+                        })->values()
+                        : [],
+                ],
+            ], 201);
+        } catch (\Throwable $e) {
+            Log::error('myformula.orders.store_failed', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json(['message' => 'Não foi possível criar a encomenda'], 500);
+        }
+    }
+
     public function index(Request $request)
     {
         $search         = trim((string) $request->query('search', ''));

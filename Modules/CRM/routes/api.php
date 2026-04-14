@@ -329,6 +329,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('products/{id}', [MyFormulaProductController::class, 'destroy']);
 
         Route::get('orders', [MyFormulaOrderController::class, 'index']);
+        Route::post('orders', [MyFormulaOrderController::class, 'store']);
         Route::get('orders/{id}', [MyFormulaOrderController::class, 'show']);
         Route::get('orders/{id}/purchase-report', [MyFormulaOrderController::class, 'purchaseReport']);
         Route::get('order-statuses', [MyFormulaOrderStatusController::class, 'index']);

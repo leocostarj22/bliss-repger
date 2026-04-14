@@ -278,15 +278,16 @@ export async function fetchMyFormulaPurchaseReport(
 
 export async function createMyFormulaOrder(payload: {
   customer_id: string
-  order_status_id: string
+  order_status_id?: string
+  quiz_id?: string
   products: { product_id: string; quantity: number }[]
   payment_method?: string | null
   payment_code?: string | null
+  shipping_method?: string | null
+  shipping_code?: string | null
 }): Promise<ApiResponse<MyFormulaOrder>> {
-  // TODO: Implement real API call
-  await delay(1000)
-  console.log('Creating order with', payload)
-  throw new Error('A cria\u00e7\u00e3o de pedidos ainda n\u00e3o foi implementada no backend.')
+  const res = await axios.post('/api/v1/myformula/orders', payload, { withCredentials: true })
+  return res.data
 }
 
 export async function updateMyFormulaOrderStatus(
