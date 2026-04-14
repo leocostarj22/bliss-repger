@@ -16,7 +16,7 @@ import {
   type MyFormulaZoneOption,
 } from "@/services/myFormulaApi"
 import type { MyFormulaCustomer, MyFormulaQuiz } from "@/types"
-import QuizWizard from "./QuizWizard"
+import QuizWizard from "./QuizWizardMyFormula"
 
 export default function MyFormulaSales() {
   const { toast } = useToast()
