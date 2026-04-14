@@ -482,7 +482,6 @@ export default function SupportTickets() {
                         <div className="space-y-1 max-w-[520px]">
                           <div className="font-medium truncate">{r.title}</div>
                           <div className="text-xs text-muted-foreground truncate">{r.description}</div>
-                          <div className="text-xs text-muted-foreground">{r.id}</div>
                         </div>
                       </td>
                       <td className="py-4 pr-4">{companyNameById[r.company_id] ?? r.company_id}</td>
