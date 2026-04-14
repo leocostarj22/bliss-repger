@@ -5,18 +5,18 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import { ChevronDown, ChevronUp } from "lucide-react"
 
-const BASE_IMPROVE_ORDER = ["A", "B", "C", "K", "E", "F", "G", "H", "I", "J"] as const
+const BASE_IMPROVE_ORDER = ["G", "H", "B", "A", "J", "C", "E", "F", "I", "K"] as const
 const IMPROVE_LABEL: Record<string, string> = {
-  A: "Energia e memória",
+  G: "Perder peso",
+  H: "Problemas Digestivos",
   B: "Ossos e articulações",
-  C: "Vida sexual",
-  K: "Menopausa",
-  E: "Cabelo, pele e unhas",
+  A: "Energia e memória",
+  J: "Longevidade",
+  C: "Saúde Sexual",
+  E: "Cabelo pele e unhas",
   F: "Sono",
-  G: "Peso",
-  H: "Digestivo",
-  I: "Coração, circulação e açúcar",
-  J: "Anti-aging",
+  I: "Coração, circulação e açúcar no sangue",
+  K: "Menopausa",
 }
 
 type Radio01 = "" | "0" | "1"
@@ -127,6 +127,14 @@ export default function QuizWizard({
 
     exercise: "" as Radio01,
     exercise_quantity: "",
+    exercise_type_walk: false,
+    exercise_type_swimming: false,
+    exercise_type_run: false,
+    exercise_type_dance: false,
+    exercise_type_football: false,
+    exercise_type_gym: false,
+    exercise_type_tenis: false,
+    exercise_type_other: false,
 
     symptoms_rhinitis: false,
     symptoms_somnolence: false,
@@ -366,9 +374,13 @@ export default function QuizWizard({
         toast({ title: "Validação", description: "Responda se fuma.", variant: "destructive" })
         return false
       }
-      if (data.smokes === "1" && !String(data.smokes_quantity ?? "").trim()) {
-        toast({ title: "Validação", description: "Informe quantos cigarros por dia.", variant: "destructive" })
-        return false
+      if (data.smokes === "1") {
+        const v = String(data.smokes_quantity ?? "").trim()
+        const ok = ["1_10", "10_20", "more_20", "electronic"].includes(v)
+        if (!ok) {
+          toast({ title: "Validação", description: "Selecione quantos cigarros (opções do MyFormula).", variant: "destructive" })
+          return false
+        }
       }
 
       if (data.alcohol !== "no" && data.alcohol !== "occasionally" && data.alcohol !== "every_days") {
@@ -380,9 +392,13 @@ export default function QuizWizard({
         toast({ title: "Validação", description: "Responda se pratica exercício.", variant: "destructive" })
         return false
       }
-      if (data.exercise === "1" && !String(data.exercise_quantity ?? "").trim()) {
-        toast({ title: "Validação", description: "Informe quantas vezes por semana.", variant: "destructive" })
-        return false
+      if (data.exercise === "1") {
+        const v = String(data.exercise_quantity ?? "").trim()
+        const ok = ["1", "2_3", "more_3"].includes(v)
+        if (!ok) {
+          toast({ title: "Validação", description: "Selecione quantas vezes por semana (opções do MyFormula).", variant: "destructive" })
+          return false
+        }
       }
 
       return true
@@ -468,6 +484,26 @@ export default function QuizWizard({
     })
 
     delete payload.improve_health_order
+
+    if (payload.smokes === "0") {
+      delete payload.smokes_quantity
+    }
+
+    if (payload.exercise === "0") {
+      delete payload.exercise_quantity
+      delete payload.exercise_type_walk
+      delete payload.exercise_type_swimming
+      delete payload.exercise_type_run
+      delete payload.exercise_type_dance
+      delete payload.exercise_type_football
+      delete payload.exercise_type_gym
+      delete payload.exercise_type_tenis
+      delete payload.exercise_type_other
+    }
+
+    if (payload.medication === "0") {
+      delete payload.medication_info
+    }
 
     if (payload.symptoms_none) {
       Object.keys(payload).forEach((k) => {
@@ -911,52 +947,160 @@ export default function QuizWizard({
             <div className="space-y-2">
               <div className="text-sm">Fuma? *</div>
               <div className="flex gap-2">
-                <Button type="button" variant={data.smokes === "1" ? "default" : "outline"} onClick={() => update("smokes", "1")}>
+                <Button
+                  type="button"
+                  variant={data.smokes === "1" ? "default" : "outline"}
+                  onClick={() => {
+                    update("smokes", "1")
+                    update("smokes_quantity", "")
+                  }}
+                >
                   Sim
                 </Button>
-                <Button type="button" variant={data.smokes === "0" ? "default" : "outline"} onClick={() => update("smokes", "0")}>
+                <Button
+                  type="button"
+                  variant={data.smokes === "0" ? "default" : "outline"}
+                  onClick={() => {
+                    update("smokes", "0")
+                    update("smokes_quantity", "")
+                  }}
+                >
                   Não
                 </Button>
               </div>
 
               {data.smokes === "1" ? (
-                <div className="mt-2">
-                  <div className="text-xs text-muted-foreground mb-1">Quantos por dia? *</div>
-                  <Input value={data.smokes_quantity} onChange={(e) => update("smokes_quantity", e.target.value)} />
+                <div className="mt-2 space-y-2">
+                  <div className="text-sm font-medium">Quantos cigarros? *</div>
+                  <div className="grid gap-2 sm:grid-cols-2 text-sm">
+                    {["1_10", "10_20", "more_20", "electronic"].map((v) => {
+                      const label =
+                        v === "1_10"
+                          ? "De 1 a 10 por dia"
+                          : v === "10_20"
+                            ? "De 10 a 20 por dia"
+                            : v === "more_20"
+                              ? "Mais de 20 por dia"
+                              : "Fumo cigarros eletrónicos ou vaping"
+
+                      return (
+                        <label key={v} className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted cursor-pointer">
+                          <input
+                            type="radio"
+                            name="smokes_quantity"
+                            checked={data.smokes_quantity === v}
+                            onChange={() => update("smokes_quantity", v)}
+                          />
+                          {label}
+                        </label>
+                      )
+                    })}
+                  </div>
                 </div>
               ) : null}
             </div>
 
             <div className="space-y-2">
-              <div className="text-sm">Consome álcool? *</div>
+              <div className="text-sm">Consome bebidas alcoólicas? *</div>
               <div className="flex flex-wrap gap-2">
-                <Button type="button" size="sm" variant={data.alcohol === "no" ? "default" : "outline"} onClick={() => update("alcohol", "no")}>
-                  Não
+                <Button type="button" size="sm" variant={data.alcohol === "every_days" ? "default" : "outline"} onClick={() => update("alcohol", "every_days")}>
+                  Sim, todos os dias
                 </Button>
                 <Button type="button" size="sm" variant={data.alcohol === "occasionally" ? "default" : "outline"} onClick={() => update("alcohol", "occasionally")}>
-                  Ocasionalmente
+                  Sim, ocasionalmente
                 </Button>
-                <Button type="button" size="sm" variant={data.alcohol === "every_days" ? "default" : "outline"} onClick={() => update("alcohol", "every_days")}>
-                  Todos os dias
+                <Button type="button" size="sm" variant={data.alcohol === "no" ? "default" : "outline"} onClick={() => update("alcohol", "no")}>
+                  Não
                 </Button>
               </div>
             </div>
 
             <div className="space-y-2">
-              <div className="text-sm">Pratica exercício físico? *</div>
+              <div className="text-sm">Faz exercício físico regularmente? *</div>
               <div className="flex gap-2">
-                <Button type="button" variant={data.exercise === "1" ? "default" : "outline"} onClick={() => update("exercise", "1")}>
+                <Button
+                  type="button"
+                  variant={data.exercise === "1" ? "default" : "outline"}
+                  onClick={() => {
+                    update("exercise", "1")
+                    update("exercise_quantity", "")
+                  }}
+                >
                   Sim
                 </Button>
-                <Button type="button" variant={data.exercise === "0" ? "default" : "outline"} onClick={() => update("exercise", "0")}>
+                <Button
+                  type="button"
+                  variant={data.exercise === "0" ? "default" : "outline"}
+                  onClick={() => {
+                    update("exercise", "0")
+                    update("exercise_quantity", "")
+                    update("exercise_type_walk", false)
+                    update("exercise_type_swimming", false)
+                    update("exercise_type_run", false)
+                    update("exercise_type_dance", false)
+                    update("exercise_type_football", false)
+                    update("exercise_type_gym", false)
+                    update("exercise_type_tenis", false)
+                    update("exercise_type_other", false)
+                  }}
+                >
                   Não
                 </Button>
               </div>
 
               {data.exercise === "1" ? (
-                <div className="mt-2">
-                  <div className="text-xs text-muted-foreground mb-1">Quantas vezes por semana? *</div>
-                  <Input value={data.exercise_quantity} onChange={(e) => update("exercise_quantity", e.target.value)} />
+                <div className="mt-2 space-y-3">
+                  <div>
+                    <div className="text-sm font-medium">Quantas vezes por semana? *</div>
+                    <div className="grid gap-2 sm:grid-cols-2 text-sm mt-2">
+                      {["1", "2_3", "more_3"].map((v) => {
+                        const label = v === "1" ? "1 vez" : v === "2_3" ? "2 a 3 vezes" : "Mais de 3 vezes"
+                        return (
+                          <label key={v} className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted cursor-pointer">
+                            <input
+                              type="radio"
+                              name="exercise_quantity"
+                              checked={data.exercise_quantity === v}
+                              onChange={() => update("exercise_quantity", v)}
+                            />
+                            {label}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-medium">Escolha os exercícios que efetua</div>
+                    <div className="grid gap-2 sm:grid-cols-2 text-sm mt-2">
+                      {["walk", "swimming", "run", "dance", "football", "gym", "tenis", "other"].map((k) => {
+                        const key = `exercise_type_${k}`
+                        const label =
+                          k === "walk"
+                            ? "Caminhada + 30 min seguidos"
+                            : k === "swimming"
+                              ? "Natação"
+                              : k === "run"
+                                ? "Corrida"
+                                : k === "dance"
+                                  ? "Dança"
+                                  : k === "football"
+                                    ? "Futebol ou similar"
+                                    : k === "gym"
+                                      ? "Ginásio"
+                                      : k === "tenis"
+                                        ? "Padle ou tenis"
+                                        : "Outro"
+
+                        return (
+                          <label key={k} className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted cursor-pointer">
+                            <input type="checkbox" checked={Boolean((data as any)[key])} onChange={(e) => update(key, e.target.checked)} />
+                            {label}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
                 </div>
               ) : null}
             </div>
