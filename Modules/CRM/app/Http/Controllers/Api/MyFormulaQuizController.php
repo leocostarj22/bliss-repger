@@ -7,6 +7,7 @@ use Illuminate\Routing\Controller;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Modules\CRM\Services\MyFormulaQuizEngine;
 
 class MyFormulaQuizController extends Controller
 {
@@ -194,27 +195,31 @@ class MyFormulaQuizController extends Controller
                 'operator_name' => $user ? (string) ($user->name ?? '') : '',
             ];
 
-            $payload = array_merge($operator, $post);
-            $encoded = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            if (! is_string($encoded)) {
-                return response()->json(['message' => 'Payload inválido'], 422);
-            }
+            $engine = app(MyFormulaQuizEngine::class);
+
+            $payload = $engine->normalizePost(array_merge($operator, $post));
+            $result = $engine->calculateSupplements($payload);
 
             $now = now();
-            $id = DB::connection('myformula')->table('quiz')->insertGetId([
-                'post' => $encoded,
-                'date_added' => $now,
-            ]);
+            $insert = $engine->buildInsertData($payload, $result, $now);
+            $id = DB::connection('myformula')->table('quiz')->insertGetId($insert);
 
             return response()->json([
                 'data' => [
                     'quiz_id' => (string) $id,
+                    'token' => (string) ($insert['token'] ?? ''),
+                    'report_id' => (string) ($insert['report_id'] ?? ''),
                     'post' => $payload,
+                    'result' => $result,
                     'date_added' => $now->toIso8601String(),
                 ],
             ], 201);
         } catch (\Throwable $e) {
-            Log::error('Quiz API store failed', ['error' => $e->getMessage()]);
+            Log::error('Quiz API store failed', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
             return response()->json(['message' => 'Não foi possível gravar o quiz'], 500);
         }
     }
