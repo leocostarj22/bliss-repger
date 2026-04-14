@@ -4268,10 +4268,18 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
     Route::get('companies', function () {
         $user = auth('web')->user() ?? auth('employee')->user();
-        $isAllowed = $user && (
-            (method_exists($user, 'isAdmin') && $user->isAdmin()) ||
-            (method_exists($user, 'hasPermission') && $user->hasPermission('admin.companies.read'))
-        );
+
+        $isAllowed = false;
+        if ($user instanceof \App\Models\EmployeeUser) {
+            $deptSlug = Str::slug((string) ($user->employee?->department?->name ?? ''));
+            $isAllowed = $user->isAdmin() || in_array($deptSlug, ['recursos-humanos', 'rh'], true);
+        } elseif ($user) {
+            $deptSlug = Str::slug((string) ($user->department?->name ?? ''));
+            $isAllowed = $user->isAdmin()
+                || ($user->isManager() && in_array($deptSlug, ['recursos-humanos', 'rh'], true))
+                || (method_exists($user, 'hasPermission') && ($user->hasPermission('admin.companies.read') || $user->hasPermission('hr.employees.read')));
+        }
+
         abort_unless($isAllowed, 403);
 
         $search = trim((string) request('search', ''));
@@ -4525,10 +4533,18 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
     Route::get('departments', function () {
         $user = auth('web')->user() ?? auth('employee')->user();
-        $isAllowed = $user && (
-            (method_exists($user, 'isAdmin') && $user->isAdmin()) ||
-            (method_exists($user, 'hasPermission') && $user->hasPermission('admin.departments.read'))
-        );
+
+        $isAllowed = false;
+        if ($user instanceof \App\Models\EmployeeUser) {
+            $deptSlug = Str::slug((string) ($user->employee?->department?->name ?? ''));
+            $isAllowed = $user->isAdmin() || in_array($deptSlug, ['recursos-humanos', 'rh'], true);
+        } elseif ($user) {
+            $deptSlug = Str::slug((string) ($user->department?->name ?? ''));
+            $isAllowed = $user->isAdmin()
+                || ($user->isManager() && in_array($deptSlug, ['recursos-humanos', 'rh'], true))
+                || (method_exists($user, 'hasPermission') && ($user->hasPermission('admin.departments.read') || $user->hasPermission('hr.employees.read')));
+        }
+
         abort_unless($isAllowed, 403);
 
         $search = trim((string) request('search', ''));
@@ -4681,15 +4697,21 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
     Route::get('hr/employees/stats', function () {
         $user = auth('web')->user() ?? auth('employee')->user();
-        $allowed = $user && (
-            (method_exists($user, 'isAdmin') && $user->isAdmin())
-            || (method_exists($user, 'hasPermission') && $user->hasPermission('hr.employees.read'))
-            || (
-                method_exists($user, 'isManager') && $user->isManager()
-                && $user->department
-                && in_array(Str::slug($user->department->name), ['recursos-humanos', 'rh'])
-            )
-        );
+
+        $allowed = false;
+        if ($user instanceof \App\Models\EmployeeUser) {
+            $deptSlug = Str::slug((string) ($user->employee?->department?->name ?? ''));
+            $allowed = $user->isAdmin() || in_array($deptSlug, ['recursos-humanos', 'rh'], true);
+        } elseif ($user) {
+            $allowed = $user->isAdmin()
+                || (method_exists($user, 'hasPermission') && $user->hasPermission('hr.employees.read'))
+                || (
+                    method_exists($user, 'isManager') && $user->isManager()
+                    && $user->department
+                    && in_array(Str::slug($user->department->name), ['recursos-humanos', 'rh'], true)
+                );
+        }
+
         abort_unless($allowed, 403);
 
         $search = trim((string) request('search', ''));
@@ -4797,7 +4819,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $allowed = false;
         if ($user instanceof \App\Models\EmployeeUser) {
             $deptSlug = Str::slug((string) ($user->employee?->department?->name ?? ''));
-            $allowed = $user->isAdmin() || ($user->isManager() && in_array($deptSlug, ['recursos-humanos', 'rh'], true));
+            $allowed = $user->isAdmin() || in_array($deptSlug, ['recursos-humanos', 'rh'], true);
         } elseif ($user) {
             $deptSlug = Str::slug((string) ($user->department?->name ?? ''));
             $allowed = $user->isAdmin()
@@ -6370,10 +6392,18 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
     Route::get('roles', function () {
         $me = auth('web')->user() ?? auth('employee')->user();
-        $isAllowed = $me && (
-            (method_exists($me, 'isAdmin') && $me->isAdmin()) ||
-            (method_exists($me, 'hasPermission') && $me->hasPermission('admin.roles.read'))
-        );
+
+        $isAllowed = false;
+        if ($me instanceof \App\Models\EmployeeUser) {
+            $deptSlug = Str::slug((string) ($me->employee?->department?->name ?? ''));
+            $isAllowed = $me->isAdmin() || in_array($deptSlug, ['recursos-humanos', 'rh'], true);
+        } elseif ($me) {
+            $deptSlug = Str::slug((string) ($me->department?->name ?? ''));
+            $isAllowed = $me->isAdmin()
+                || ($me->isManager() && in_array($deptSlug, ['recursos-humanos', 'rh'], true))
+                || (method_exists($me, 'hasPermission') && $me->hasPermission('admin.roles.read'));
+        }
+
         abort_unless($isAllowed, 403);
 
         $search = trim((string) request('search', ''));
@@ -6415,10 +6445,18 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
     Route::get('roles/{role}', function (Role $role) {
         $me = auth('web')->user() ?? auth('employee')->user();
-        $isAllowed = $me && (
-            (method_exists($me, 'isAdmin') && $me->isAdmin()) ||
-            (method_exists($me, 'hasPermission') && $me->hasPermission('admin.roles.read'))
-        );
+
+        $isAllowed = false;
+        if ($me instanceof \App\Models\EmployeeUser) {
+            $deptSlug = Str::slug((string) ($me->employee?->department?->name ?? ''));
+            $isAllowed = $me->isAdmin() || in_array($deptSlug, ['recursos-humanos', 'rh'], true);
+        } elseif ($me) {
+            $deptSlug = Str::slug((string) ($me->department?->name ?? ''));
+            $isAllowed = $me->isAdmin()
+                || ($me->isManager() && in_array($deptSlug, ['recursos-humanos', 'rh'], true))
+                || (method_exists($me, 'hasPermission') && $me->hasPermission('admin.roles.read'));
+        }
+
         abort_unless($isAllowed, 403);
 
         return response()->json([
