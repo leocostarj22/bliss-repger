@@ -12,6 +12,7 @@ import {
   fetchChatThread,
   fetchCommunicationRecipients,
   fetchInternalMessages,
+  fetchMyAccess,
   fetchUser,
   markInternalMessageRead,
   removeInternalMessageReaction,
@@ -337,9 +338,13 @@ export function ChatDock() {
           email: String(nextMe?.email ?? '').trim(),
           photo_path: (nextMe?.photo_path ?? null) as any,
         });
-        const role = String(nextMe?.role ?? '').trim().toLowerCase();
-        setMeIsAdmin(Boolean(nextMe?.is_admin) || role === 'admin');
-        setChatDisabled(role === 'employee');
+
+        const access = await fetchMyAccess();
+        const perms = Array.isArray(access?.data?.permissions) ? access.data.permissions : [];
+        const canWrite = perms.includes('*') || perms.includes('communication.messages.write');
+
+        setMeIsAdmin(Boolean(access?.data?.isAdmin));
+        setChatDisabled(!canWrite);
       } finally {
         setReady(true);
       }

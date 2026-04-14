@@ -9,6 +9,7 @@ import {
   fetchChatThread,
   fetchCommunicationRecipients,
   fetchInternalMessages,
+  fetchMyAccess,
   fetchUser,
   markInternalMessageRead,
   removeInternalMessageReaction,
@@ -60,6 +61,7 @@ export default function Chat() {
   const [meName, setMeName] = useState("")
   const [mePhotoPath, setMePhotoPath] = useState<string | null>(null)
   const [meIsAdmin, setMeIsAdmin] = useState(false)
+  const [meCanWrite, setMeCanWrite] = useState(false)
   const [users, setUsers] = useState<CommunicationRecipient[]>([])
   const [all, setAll] = useState<InternalMessage[]>([])
 
@@ -235,9 +237,14 @@ export default function Chat() {
       setMeId(nextMeId)
       setMeName(String((meResp as any)?.data?.name ?? "").trim())
       setMePhotoPath(((meResp as any)?.data?.photo_path ?? null) as any)
-      setMeIsAdmin(
-        Boolean((meResp as any)?.data?.is_admin) || String((meResp as any)?.data?.role ?? "").toLowerCase() === "admin",
-      )
+
+      const access = await fetchMyAccess()
+      const isAdmin = Boolean(access?.data?.isAdmin)
+      const perms = Array.isArray(access?.data?.permissions) ? access.data.permissions : []
+      const canWrite = isAdmin || perms.includes("*") || perms.includes("communication.messages.write")
+
+      setMeIsAdmin(isAdmin)
+      setMeCanWrite(canWrite)
 
       const recResp = await fetchCommunicationRecipients()
       setUsers(recResp.data)
@@ -478,20 +485,8 @@ export default function Chat() {
   const canSend = useMemo(() => {
     const other = String(activeUserId || "").trim()
     if (!other) return false
-    if (meIsAdmin) return true
-
-    const rec: any = userById.get(other)
-    const cached: any = userDetailsById[other]
-    const role = String(cached?.role ?? rec?.role ?? "").trim().toLowerCase()
-    const isAdminFlag = Boolean(cached?.is_admin ?? rec?.is_admin ?? false)
-    const otherIsAdmin = isAdminFlag || role === "admin"
-
-    const first = conversation[0] as any
-    const firstFrom = String(first?.from_user_id ?? "").trim()
-    const initiatedByOther = Boolean(first && firstFrom === other)
-
-    return initiatedByOther && otherIsAdmin
-  }, [activeUserId, conversation, meIsAdmin, userById, userDetailsById])
+    return meCanWrite
+  }, [activeUserId, meCanWrite])
 
   return (
     <div className="space-y-6 animate-slide-up">
