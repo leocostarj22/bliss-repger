@@ -263,42 +263,211 @@ class MyFormulaQuizEngine
 
     private function renderBackofficeHtml(array $post): string
     {
-        $html = '<div data-se="stepsItem"><h2>Quiz MyFormula</h2>';
+        $e = fn ($v) => $this->esc($v);
 
-        $fields = [
-            'name' => 'Nome',
-            'email' => 'Email',
-            'telephone' => 'Telefone',
-            'birthdate' => 'Data de nascimento',
-            'gender' => 'Género',
-            'improve_health' => 'Objetivos',
-            'weight' => 'Peso (kg)',
-            'height' => 'Altura (cm)',
-            'waist_circumference' => 'Cintura (cm)',
-            'smokes' => 'Fuma',
-            'smokes_quantity' => 'Quantos cigarros',
-            'alcohol' => 'Álcool',
-            'exercise' => 'Exercício',
-            'exercise_quantity' => 'Exercício/semana',
-            'clinical_analysis' => 'Análises clínicas',
-            'lose_weight' => 'Pretende perder peso',
-            'lose_weight_ideal' => 'Peso ideal',
+        $radio = function (string $name, string $value, string $label) use ($e): string {
+            return '<label><input type="radio" name="' . $e($name) . '" value="' . $e($value) . '"> ' . $e($label) . '</label>';
+        };
+
+        $checkbox = function (string $name, string $label) use ($e): string {
+            return '<label><input type="checkbox" name="' . $e($name) . '" value="1"> ' . $e($label) . '</label>';
+        };
+
+        $text = function (string $name, string $label, string $type = 'text', string $placeholder = '') use ($e): string {
+            return '<div><span class="fw-b">' . $e($label) . '</span><input type="' . $e($type) . '" class="form-control" name="' . $e($name) . '" placeholder="' . $e($placeholder) . '"></div>';
+        };
+
+        $gender = (string) ($post['gender'] ?? '');
+        $improve = (string) ($post['improve_health'] ?? '');
+        $improveCodes = array_values(array_filter(array_map('trim', explode(',', $improve)), static fn ($x) => $x !== ''));
+
+        $objectiveItems = [
+            'G' => 'Perder peso',
+            'H' => 'Problemas Digestivos',
+            'B' => 'Ossos e articulações',
+            'A' => 'Energia e memória',
+            'J' => 'Longevidade',
+            'C' => 'Saúde Sexual',
+            'E' => 'Cabelo pele e unhas',
+            'F' => 'Sono',
+            'I' => 'Coração, circulação e açúcar no sangue',
+            'K' => 'Menopausa',
         ];
 
-        foreach ($fields as $key => $label) {
-            if (! array_key_exists($key, $post)) {
-                continue;
-            }
-
-            $value = $post[$key];
-
-            if ($key === 'improve_health') {
-                $html .= '<div><label>' . $this->esc($label) . '</label><input type="text" name="improve_health" value="' . $this->esc($value) . '"><ol></ol></div>';
-                continue;
-            }
-
-            $html .= '<div><label>' . $this->esc($label) . '</label><input type="text" name="' . $this->esc($key) . '" value="' . $this->esc($value) . '"></div>';
+        $includeK = in_array('K', $improveCodes, true) || $gender === 'female';
+        if (! $includeK) {
+            unset($objectiveItems['K']);
         }
+
+        $objectiveList = '';
+        foreach ($objectiveItems as $code => $label) {
+            $objectiveList .= '<li data-id="' . $e($code) . '">' . $e($label) . '</li>';
+        }
+
+        $html = '';
+
+        $html .= '<div data-se="stepsItem">';
+
+        $html .= '<h2>Escolha seus objetivos por ordem de prioridade</h2>';
+        $html .= '<p>(Exemplo: Se entrou pelo plano <b>Menopausa</b>, insira Menopausa como primeira opção)</p>';
+        $html .= '<input type="hidden" id="improve-health-value" name="improve_health" value="' . $e($improve ?: implode(',', array_keys($objectiveItems))) . '">';
+        $html .= '<ol>' . $objectiveList . '</ol>';
+
+        $html .= '<h2>Encontra-se a tomar medicamentos ou suplementos regularmente?</h2>';
+        $html .= $radio('medication', '0', 'Não');
+        $html .= $radio('medication', '1', 'Sim');
+        $html .= $text('medication_info', 'Especifique (opcional)', 'text', 'Magnésio, Omega3, CQ10, VitD, VitC, Colagénio');
+
+        $html .= '<h2>Tem alguma das seguintes doenças?</h2>';
+        $html .= $checkbox('illness_none', 'Não tenho nenhuma destas condições');
+        $html .= $checkbox('illness_diabetes_1', 'Diabetes tipo 1');
+        $html .= $checkbox('illness_diabetes_2', 'Diabetes tipo 2');
+        $html .= $checkbox('illness_pre_diabetes', 'Pré Diabetes');
+
+        $html .= $checkbox('illness_colesterol', 'Colesterol alto');
+        $html .= '<div><p>Indique o seu último valor de colesterol em mg/dl</p>';
+        $html .= $radio('illness_colesterol_value', 'unknown', 'Não sei');
+        $html .= $radio('illness_colesterol_value', 'less_190', 'Menos de 190 mg/dl');
+        $html .= $radio('illness_colesterol_value', '190_240', 'Entre 190 - 240 mg/dl');
+        $html .= $radio('illness_colesterol_value', 'more_240', 'Mais de 240 mg/dl');
+        $html .= '</div>';
+
+        $html .= $checkbox('illness_anemia', 'Anemia');
+        $html .= $checkbox('illness_tired_eyes', 'Olhos irritados/cansados');
+
+        $html .= $checkbox('illness_hypertension', 'Hipertensão arterial');
+        $html .= '<div><p>Indique o Valor que melhor se adequa</p>';
+        $html .= $radio('illness_hypertension_value', 'more_180_100', 'Máxima maior que 180 mmHg e/ou mínima acima de 100 mmHg');
+        $html .= $radio('illness_hypertension_value', 'more_160_90', 'Máxima maior que 160 mmHg e/ou mínima acima de 90 mmHg');
+        $html .= $radio('illness_hypertension_value', 'more_140_80', 'Máxima maior que 140 mmHg e/ou mínima acima de 80 mmHg');
+        $html .= $radio('illness_hypertension_value', 'unknown', 'Não sei / Não tenho a certeza');
+        $html .= '</div>';
+
+        $html .= $checkbox('illness_muscle_aches', 'Dores osteoarticulares ou musculares');
+        $html .= $checkbox('illness_low_blood_pressure', 'Tensão baixa');
+
+        $html .= $checkbox('illness_insomnia', 'Insónia');
+        $html .= '<div><p>Indique as condições que melhor caracterizam as suas insónias</p>';
+        $html .= $checkbox('illness_insomnia_falling_asleep', 'Tenho dificuldade em adormecer');
+        $html .= $checkbox('illness_insomnia_wakeup', 'Acordo várias vezes durante a noite');
+        $html .= $checkbox('illness_insomnia_back_sleep', 'Quando acordo durante a noite tenho dificuldade em voltar a adormecer');
+        $html .= '</div>';
+
+        $html .= $checkbox('illness_digestive', 'Problemas digestivos ou intestinais');
+        $html .= '<div><p>Quais as condições que caracterizam melhor os problemas digestivos</p>';
+        $html .= $checkbox('illness_digestive_heartburn', 'Azia regularmente');
+        $html .= $checkbox('illness_digestive_reflux', 'Refluxo regularmente');
+        $html .= $checkbox('illness_digestive_constipation', 'Prisão de Ventre frequente');
+        $html .= $checkbox('illness_digestive_abdominal_pain', 'Dores abdominais');
+        $html .= $checkbox('illness_digestive_diarrhea', 'Diarreia mais de três episódios por semana');
+        $html .= '</div>';
+
+        $html .= $checkbox('illness_respiratory_infections', 'Infeções respiratórias recorrentes');
+
+        $html .= $checkbox('illness_allergies', 'Alergias');
+        $html .= '<div><p>Indique o tipo de Alergias</p>';
+        $html .= $checkbox('illness_allergies_medicines', 'Medicamentos');
+        $html .= '<div>';
+        $html .= $checkbox('illness_allergies_medicines_antibiotics', 'Antibióticos');
+        $html .= $checkbox('illness_allergies_medicines_aspirin', 'Aspirina e outros anti-inflamatórios (AINES)');
+        $html .= $checkbox('illness_allergies_medicines_iodinated_contrasts', 'Contrastes Iodados');
+        $html .= $checkbox('illness_allergies_medicines_others', 'Outros');
+        $html .= $text('illness_allergies_medicines_others_info', 'Nomes de medicamentos', 'text');
+        $html .= '<p>(Devido à sua alergia o seu plano irá ser avaliado a nível médico e farmacêutico. Em breve receberá o seu plano de saúde e bem estar)</p>';
+        $html .= '</div>';
+
+        $html .= $checkbox('illness_allergies_mites_pollens_dander', 'Ácaros, pólens e pêlos de animal');
+        $html .= $checkbox('illness_allergies_gluten', 'Intolerância ao gluten');
+        $html .= $checkbox('illness_allergies_lactose', 'Intolerância à lactose');
+        $html .= $checkbox('illness_allergies_egg', 'Alergia aos produtos contendo ovo');
+        $html .= $checkbox('illness_allergies_shellfish', 'Alergias ao marisco');
+        $html .= $checkbox('illness_allergies_others', 'Outras Quais?');
+        $html .= $text('illness_allergies_others_info', 'Especifique', 'text');
+        $html .= '<p>(Devido às suas alergias o seu plano irá ser avaliado a nível farmacêutico. Em breve receberá o seu plano de saúde e bem estar)</p>';
+        $html .= '</div>';
+
+        $html .= '<h2>Efetuou análises clínicas no último ano?</h2>';
+        $html .= $radio('clinical_analysis', '0', 'Não');
+        $html .= $radio('clinical_analysis', '1', 'Sim');
+        $html .= '<div data-fileupload="multiple"><input type="hidden" name="clinical_analysis_file_manual" value=""></div>';
+
+        $html .= '<h2>Inserção de peso (kg)</h2>';
+        $html .= '<input type="number" class="form-control" name="weight" placeholder="Peso" value="">';
+        $html .= '<h2>Inserção de altura (cm)</h2>';
+        $html .= '<input type="number" class="form-control" name="height" placeholder="Altura" value="">';
+        $html .= '<h2>Medida circunferência da cintura (cm)</h2>';
+        $html .= '<input type="number" class="form-control" name="waist_circumference" placeholder="Medida em cm" value="">';
+
+        $html .= '<h2>Fuma?</h2>';
+        $html .= $radio('smokes', '0', 'Não');
+        $html .= $radio('smokes', '1', 'Sim');
+        $html .= '<div><p>Quantos cigarros?</p>';
+        $html .= $radio('smokes_quantity', '1_10', 'De 1 a 10 por dia');
+        $html .= $radio('smokes_quantity', '10_20', 'De 10 a 20 por dia');
+        $html .= $radio('smokes_quantity', 'more_20', 'Mais de 20 por dia');
+        $html .= $radio('smokes_quantity', 'electronic', 'Fumo cigarros eletrónicos ou vaping');
+        $html .= '</div>';
+
+        $html .= '<h2>Consome bebidas Alcoólicas?</h2>';
+        $html .= $radio('alcohol', 'every_days', 'Sim, todos os dias');
+        $html .= $radio('alcohol', 'occasionally', 'Sim, ocasionalmente');
+        $html .= $radio('alcohol', 'no', 'Não');
+
+        $html .= '<h2>Faz exercício físico regularmente?</h2>';
+        $html .= $radio('exercise', '0', 'Não');
+        $html .= $radio('exercise', '1', 'Sim');
+        $html .= '<div><p>Quantas vezes por semana?</p>';
+        $html .= $radio('exercise_quantity', '1', '1 vez');
+        $html .= $radio('exercise_quantity', '2_3', '2 a 3 vezes');
+        $html .= $radio('exercise_quantity', 'more_3', 'Mais de 3 vezes');
+        $html .= '<p>Escolha os exercícios que efetua</p>';
+        $html .= $checkbox('exercise_type_walk', 'Caminhada + 30 min seguidos');
+        $html .= $checkbox('exercise_type_swimming', 'Natação');
+        $html .= $checkbox('exercise_type_run', 'Corrida');
+        $html .= $checkbox('exercise_type_dance', 'Dança');
+        $html .= $checkbox('exercise_type_football', 'Futebol ou similar');
+        $html .= $checkbox('exercise_type_gym', 'Ginásio');
+        $html .= $checkbox('exercise_type_tenis', 'Padle ou tenis');
+        $html .= $checkbox('exercise_type_other', 'Outro');
+        $html .= '</div>';
+
+        $html .= '<h2>Nos últimos tempos sentiu algum destes sintomas:</h2>';
+        $html .= $checkbox('symptoms_rhinitis', 'Rinite ou sinusite');
+        $html .= $checkbox('symptoms_somnolence', 'Sonolência');
+        $html .= $checkbox('symptoms_concentration', 'Dificuldades em concentrar-se');
+        $html .= $checkbox('symptoms_energy_lack', 'Falta de energia');
+        $html .= $checkbox('symptoms_depression', 'Depressão');
+        $html .= $checkbox('symptoms_anxiety', 'Ansiedade');
+        $html .= $checkbox('symptoms_bad_circulation', 'Má circulação');
+        $html .= $checkbox('symptoms_chronic_tiredness', 'Cansaço Crónico');
+        $html .= $checkbox('symptoms_cramps', 'Câibras');
+        $html .= $checkbox('symptoms_hair_fall', 'Queda de cabelo excessiva');
+        $html .= $checkbox('symptoms_sexual_desire', 'Falta de desejo sexual');
+        $html .= $checkbox('symptoms_muscle', 'Sente dores musculares ou nos ossos');
+        $html .= $checkbox('symptoms_difficulties_urinate', 'Tem dificuldades ao urinar');
+        $html .= $checkbox('symptoms_none', 'Não tenho nenhuma destas condições');
+
+        $html .= '<h2>Indique se sofre de alguma das seguintes condições.</h2>';
+        $html .= $checkbox('condition_autoimmune', 'Tenho uma doença autoimune');
+        $html .= $checkbox('condition_anticoagulants', 'Tomo Anticoagulantes orais do tipo Varfine ou Ticlopidina');
+        $html .= $checkbox('condition_cancer', 'Tenho uma doença oncológica');
+        if ($gender === 'female' || in_array('condition_pregnant', array_keys($post), true)) {
+            $html .= $checkbox('condition_pregnant', 'Estou grávida');
+        }
+        $html .= $checkbox('condition_none', 'Não tenho nenhuma destas condições');
+
+        $html .= '<h2>Como tem sido a sua dieta nos últimos meses?</h2>';
+        $html .= $checkbox('diet_vegetarian', 'Vegetariana');
+        $html .= $checkbox('diet_mediterranean', 'Dieta mediterrânica essencialmente');
+        $html .= $checkbox('diet_processed', 'Como muitas comidas processadas ou já pré-feitas');
+        $html .= $checkbox('diet_biscuits', 'Como regularmente bolachas, bolos e salgados');
+        $html .= $checkbox('diet_quiz_modal_diet_vegan', 'Vegan');
+        $html .= $checkbox('diet_others', 'Outras dietas');
+
+        $html .= '<h2>Pretende perder peso?</h2>';
+        $html .= $radio('lose_weight', '0', 'Não');
+        $html .= $radio('lose_weight', '1', 'Sim');
+        $html .= $text('lose_weight_ideal', 'Qual o seu peso ideal?', 'number');
 
         $html .= '</div>';
 
