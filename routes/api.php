@@ -1393,7 +1393,9 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 ->where('is_active', true)
                 ->whereKeyNot($me->id);
 
-            if (! $me->isAdmin() && $me->company_id) {
+            $canCrossCompany = $me->hasPermission('communication.messages.read') || $me->hasPermission('communication.messages.write');
+
+            if (! $me->isAdmin() && ! $canCrossCompany && $me->company_id) {
                 $q->where('company_id', $me->company_id);
             }
 
@@ -2089,16 +2091,26 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::get('support/categories', function () {
-        $user = auth()->user();
-        abort_unless($user && $user->isAdmin(), 403);
+        $user = auth('web')->user();
+        abort_unless($user, 401);
+
+        $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.read') || $user->hasPermission('support.tickets.write');
+        abort_unless($allowed, 403);
 
         $search = trim((string) request('search', ''));
         $companyId = trim((string) request('company_id', ''));
+        if (! $user->isAdmin() && $user->company_id) {
+            $companyId = (string) $user->company_id;
+        }
 
         $hasIsActive = request()->has('is_active');
         $isActive = $hasIsActive ? filter_var(request('is_active'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
 
         $query = Category::query()->orderByDesc('created_at');
+
+        if (! $user->isAdmin() && $user->company_id) {
+            $companyId = (string) $user->company_id;
+        }
 
         if ($companyId !== '') {
             $query->where('company_id', $companyId);
@@ -2134,8 +2146,15 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::get('support/categories/{category}', function (Category $category) {
-        $user = auth()->user();
-        abort_unless($user && $user->isAdmin(), 403);
+        $user = auth('web')->user();
+        abort_unless($user, 401);
+
+        $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.read') || $user->hasPermission('support.tickets.write');
+        abort_unless($allowed, 403);
+
+        if (! $user->isAdmin() && $user->company_id) {
+            abort_unless((int) $category->company_id === (int) $user->company_id, 403);
+        }
 
         return response()->json([
             'data' => [
@@ -3190,8 +3209,11 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::get('support/tickets', function () {
-        $user = auth()->user();
-        abort_unless($user && $user->isAdmin(), 403);
+        $user = auth('web')->user();
+        abort_unless($user, 401);
+
+        $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.read') || $user->hasPermission('support.tickets.write');
+        abort_unless($allowed, 403);
 
         $search = trim((string) request('search', ''));
         $status = trim((string) request('status', ''));
@@ -3266,8 +3288,15 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::get('support/tickets/{ticket}', function (Ticket $ticket) {
-        $user = auth()->user();
-        abort_unless($user && $user->isAdmin(), 403);
+        $user = auth('web')->user();
+        abort_unless($user, 401);
+
+        $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.read') || $user->hasPermission('support.tickets.write');
+        abort_unless($allowed, 403);
+
+        if (! $user->isAdmin() && $user->company_id) {
+            abort_unless((int) $ticket->company_id === (int) $user->company_id, 403);
+        }
 
         return response()->json([
             'data' => [
@@ -3291,8 +3320,11 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::post('support/tickets', function () {
-        $user = auth()->user();
-        abort_unless($user && $user->isAdmin(), 403);
+        $user = auth('web')->user();
+        abort_unless($user, 401);
+
+        $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.write');
+        abort_unless($allowed, 403);
 
         $validated = request()->validate([
             'company_id' => ['required', 'exists:companies,id'],
@@ -3314,6 +3346,10 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         }
         if ($status !== Ticket::STATUS_RESOLVED) {
             $resolvedAt = null;
+        }
+
+        if (! $user->isAdmin() && $user->company_id) {
+            abort_unless((int) $validated['company_id'] === (int) $user->company_id, 403);
         }
 
         $ticket = Ticket::create([
@@ -3353,8 +3389,15 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::put('support/tickets/{ticket}', function (Ticket $ticket) {
-        $user = auth()->user();
-        abort_unless($user && $user->isAdmin(), 403);
+        $user = auth('web')->user();
+        abort_unless($user, 401);
+
+        $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.write');
+        abort_unless($allowed, 403);
+
+        if (! $user->isAdmin() && $user->company_id) {
+            abort_unless((int) $ticket->company_id === (int) $user->company_id, 403);
+        }
 
         $validated = request()->validate([
             'company_id' => ['sometimes', 'required', 'exists:companies,id'],
@@ -3404,8 +3447,15 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     });
 
     Route::delete('support/tickets/{ticket}', function (Ticket $ticket) {
-        $user = auth()->user();
-        abort_unless($user && $user->isAdmin(), 403);
+        $user = auth('web')->user();
+        abort_unless($user, 401);
+
+        $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.write');
+        abort_unless($allowed, 403);
+
+        if (! $user->isAdmin() && $user->company_id) {
+            abort_unless((int) $ticket->company_id === (int) $user->company_id, 403);
+        }
 
         $ticket->delete();
 
