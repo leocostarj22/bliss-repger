@@ -11,6 +11,7 @@ import {
   createMyFormulaQuizReal,
   fetchMyFormulaCountriesReal,
   fetchMyFormulaCustomers,
+  fetchMyFormulaLatestQuizByCustomer,
   fetchMyFormulaZonesReal,
   type MyFormulaCountryOption,
   type MyFormulaZoneOption,
@@ -48,6 +49,7 @@ export default function MyFormulaSales() {
 
   const [customer, setCustomer] = useState<MyFormulaCustomer | null>(null)
   const [quiz, setQuiz] = useState<MyFormulaQuiz | null>(null)
+  const [quizLoading, setQuizLoading] = useState(false)
   const [showWizard, setShowWizard] = useState(false)
 
   const [myCustomers, setMyCustomers] = useState<MyFormulaCustomer[]>([])
@@ -216,6 +218,32 @@ export default function MyFormulaSales() {
       setBusy(false)
     }
   }
+
+  useEffect(() => {
+    let alive = true
+
+    const customerId = customer?.customer_id ? String(customer.customer_id) : ""
+    if (!allowed || !customerId) return
+
+    setQuizLoading(true)
+    fetchMyFormulaLatestQuizByCustomer({ customer_id: customerId })
+      .then((r) => {
+        if (!alive) return
+        setQuiz(r.data ?? null)
+      })
+      .catch(() => {
+        if (!alive) return
+        setQuiz(null)
+      })
+      .finally(() => {
+        if (!alive) return
+        setQuizLoading(false)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [allowed, customer?.customer_id])
 
   const onCreateQuiz = async (payload: any) => {
     if (!customer || busy) return
@@ -446,7 +474,11 @@ export default function MyFormulaSales() {
           <div className="text-sm text-muted-foreground">Crie o cliente primeiro para preencher o quiz.</div>
         ) : (
           <>
-            {!quiz && !showWizard && (
+            {quizLoading ? (
+              <div className="text-sm text-muted-foreground">A carregar quiz deste cliente…</div>
+            ) : null}
+
+            {!quiz && !showWizard && !quizLoading && (
               <Button onClick={() => setShowWizard(true)}>
                 Iniciar Quiz para {customer.firstname}
               </Button>

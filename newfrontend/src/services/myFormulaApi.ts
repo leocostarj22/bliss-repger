@@ -324,6 +324,13 @@ export async function fetchMyFormulaQuizStats(params?: {
   return res.data
 }
 
+export async function fetchMyFormulaLatestQuizByCustomer(params: {
+  customer_id: string
+}): Promise<ApiResponse<MyFormulaQuiz | null>> {
+  const res = await axios.get('/api/v1/myformula/quizzes/latest', { params, withCredentials: true })
+  return res.data
+}
+
 export async function createMyFormulaQuizReal(payload: {
   post: Record<string, any>
 }): Promise<ApiResponse<MyFormulaQuiz>> {

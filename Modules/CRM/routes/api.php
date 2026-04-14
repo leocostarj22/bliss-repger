@@ -334,6 +334,7 @@ Route::prefix('v1')->group(function () {
         Route::get('order-statuses', [MyFormulaOrderStatusController::class, 'index']);
 
         Route::get('quizzes', [MyFormulaQuizController::class, 'index']);
+        Route::get('quizzes/latest', [MyFormulaQuizController::class, 'latestByCustomer']);
         Route::post('quizzes', [MyFormulaQuizController::class, 'store']);
         Route::get('quizzes/stats', [MyFormulaQuizController::class, 'stats']);
     });

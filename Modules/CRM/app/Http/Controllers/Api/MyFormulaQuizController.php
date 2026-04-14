@@ -157,6 +157,54 @@ class MyFormulaQuizController extends Controller
         })->values();
     }
 
+    public function latestByCustomer(Request $request)
+    {
+        $this->assertMyFormulaSalesAccess();
+
+        $customerIdRaw = trim((string) $request->query('customer_id', ''));
+        $customerId = (int) $customerIdRaw;
+        if ($customerId <= 0) {
+            return response()->json(['message' => 'customer_id inválido'], 422);
+        }
+
+        try {
+            $patternNumber = '%"customer_id":' . $customerId . '%';
+            $patternString = '%"customer_id":"' . $customerId . '"%';
+
+            $row = DB::connection('myformula')
+                ->table('quiz')
+                ->select(['quiz_id', 'post', 'result', 'token', 'report_id', 'date_added'])
+                ->where(function ($q) use ($patternNumber, $patternString) {
+                    $q->where('post', 'like', $patternNumber)
+                      ->orWhere('post', 'like', $patternString);
+                })
+                ->orderByDesc('quiz_id')
+                ->first();
+
+            if (! $row) {
+                return response()->json(['data' => null]);
+            }
+
+            return response()->json([
+                'data' => [
+                    'quiz_id' => (string) ($row->quiz_id ?? ''),
+                    'token' => (string) ($row->token ?? ''),
+                    'report_id' => (string) ($row->report_id ?? ''),
+                    'post' => $this->safePost($row->post ?? null),
+                    'result' => $this->safePost($row->result ?? null),
+                    'date_added' => $this->safeDate($row->date_added ?? null),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Quiz API latestByCustomer failed', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json(['data' => null]);
+        }
+    }
+
     public function index(Request $request)
     {
         try {
