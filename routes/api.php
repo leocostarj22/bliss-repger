@@ -246,7 +246,40 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         ]);
     });
 
-    Route::get('me', function () {
+    // Normaliza um caminho de foto/avatar para URL pública.
+    $normalizePhotoUrl = function (?string $path): ?string {
+        if (! is_string($path) || $path === '') {
+            return $path;
+        }
+        $norm = str_replace('\\', '/', $path);
+        if (str_starts_with($norm, 'http://') || str_starts_with($norm, 'https://') || str_starts_with($norm, 'data:')) {
+            return $path;
+        }
+        if (str_starts_with($norm, '/storage/')) {
+            return url($norm);
+        }
+        return asset('storage/' . ltrim(preg_replace('/^storage\//', '', $norm), '/'));
+    };
+
+    // Constrói o array de dados do utilizador autenticado para respostas da API.
+    $buildUserResponse = function (User $u) use ($normalizePhotoUrl): array {
+        return [
+            'id' => (string) $u->id,
+            'name' => $u->name,
+            'email' => $u->email,
+            'role' => $u->role,
+            'is_admin' => (bool) $u->isAdmin(),
+            'photo_path' => $normalizePhotoUrl($u->photo_path),
+            'phone' => $u->phone,
+            'bio' => $u->bio,
+            'work_timezone' => Schema::hasColumn('users', 'work_timezone') ? ($u->work_timezone ?? null) : null,
+            'work_schedule' => Schema::hasColumn('users', 'work_schedule') ? ($u->work_schedule ?? null) : null,
+            'permissions_allow' => is_array($u->permissions_allow) ? array_values($u->permissions_allow) : [],
+            'permissions_deny' => is_array($u->permissions_deny) ? array_values($u->permissions_deny) : [],
+        ];
+    };
+
+    Route::get('me', function () use ($buildUserResponse) {
         $u = auth('web')->user() ?? auth('employee')->user();
         abort_unless($u, 401);
 
@@ -273,37 +306,10 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             return response()->json(['message' => 'Utilizador inválido'], 401);
         }
 
-        $photo = $u->photo_path;
-        if (is_string($photo) && $photo !== '') {
-            $norm = str_replace('\\', '/', $photo);
-            if (! str_starts_with($norm, 'http://') && ! str_starts_with($norm, 'https://') && ! str_starts_with($norm, 'data:')) {
-                if (str_starts_with($norm, '/storage/')) {
-                    $photo = url($norm);
-                } else {
-                    $photo = asset('storage/' . ltrim(preg_replace('/^storage\//', '', $norm), '/'));
-                }
-            }
-        }
-
-        return response()->json([
-            'data' => [
-                'id' => (string) $u->id,
-                'name' => $u->name,
-                'email' => $u->email,
-                'role' => $u->role,
-                'is_admin' => (bool) $u->isAdmin(),
-                'photo_path' => $photo,
-                'phone' => $u->phone,
-                'bio' => $u->bio,
-                'work_timezone' => Schema::hasColumn('users', 'work_timezone') ? ($u->work_timezone ?? null) : null,
-                'work_schedule' => Schema::hasColumn('users', 'work_schedule') ? ($u->work_schedule ?? null) : null,
-                'permissions_allow' => is_array($u->permissions_allow) ? array_values($u->permissions_allow) : [],
-                'permissions_deny' => is_array($u->permissions_deny) ? array_values($u->permissions_deny) : [],
-            ],
-        ]);
+        return response()->json(['data' => $buildUserResponse($u)]);
     });
 
-    Route::put('me', function () {
+    Route::put('me', function () use ($buildUserResponse) {
         $u = auth('web')->user() ?? auth('employee')->user();
         abort_unless($u, 401);
         abort_unless($u instanceof User, 403);
@@ -341,11 +347,9 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 if (preg_match('/^data:(image\/(png|jpe?g|webp));base64,/', $incoming, $m) !== 1) {
                     abort(422, 'Formato de imagem inválido');
                 }
-                $mime = $m[1];
-                $ext = match ($mime) {
+                $ext = match ($m[1]) {
                     'image/png' => 'png',
-                    'image/jpeg' => 'jpg',
-                    'image/jpg' => 'jpg',
+                    'image/jpeg', 'image/jpg' => 'jpg',
                     'image/webp' => 'webp',
                     default => 'png',
                 };
@@ -375,54 +379,27 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $u->fill($validated);
         $u->save();
 
-        $photo = $u->photo_path;
-        if (is_string($photo) && $photo !== '') {
-            $norm = str_replace('\\', '/', $photo);
-            if (! str_starts_with($norm, 'http://') && ! str_starts_with($norm, 'https://') && ! str_starts_with($norm, 'data:')) {
-                if (str_starts_with($norm, '/storage/')) {
-                    $photo = url($norm);
-                } else {
-                    $photo = asset('storage/' . ltrim(preg_replace('/^storage\//', '', $norm), '/'));
-                }
-            }
-        }
-
-        return response()->json([
-            'data' => [
-                'id' => (string) $u->id,
-                'name' => $u->name,
-                'email' => $u->email,
-                'role' => $u->role,
-                'is_admin' => (bool) $u->isAdmin(),
-                'photo_path' => $photo,
-                'phone' => $u->phone,
-                'bio' => $u->bio,
-                'work_timezone' => Schema::hasColumn('users', 'work_timezone') ? ($u->work_timezone ?? null) : null,
-                'work_schedule' => Schema::hasColumn('users', 'work_schedule') ? ($u->work_schedule ?? null) : null,
-                'permissions_allow' => is_array($u->permissions_allow) ? array_values($u->permissions_allow) : [],
-                'permissions_deny' => is_array($u->permissions_deny) ? array_values($u->permissions_deny) : [],
-            ],
-        ]);
+        return response()->json(['data' => $buildUserResponse($u)]);
     });
 
-    Route::get('admin/modules', function () {
+    $moduleLabels = [
+        'Administration' => 'Administração',
+        'Support' => 'Suporte',
+        'Finance' => 'Financeiro',
+        'HumanResources' => 'Recursos Humanos',
+        'Communication' => 'Comunicação',
+        'CRM' => 'CRM',
+        'Reports' => 'Relatórios e Logs',
+        'BlissNatura' => 'Bliss Natura',
+        'EspacoAbsoluto' => 'Espaço Absoluto',
+        'MyFormula' => 'MyFormula',
+        'Personal' => 'Pessoal',
+        'Products' => 'Produtos',
+    ];
+
+    Route::get('admin/modules', function () use ($moduleLabels) {
         $me = auth()->user();
         abort_unless($me, 401);
-
-        $moduleLabels = [
-            'Administration' => 'Administração',
-            'Support' => 'Suporte',
-            'Finance' => 'Financeiro',
-            'HumanResources' => 'Recursos Humanos',
-            'Communication' => 'Comunicação',
-            'CRM' => 'CRM',
-            'Reports' => 'Relatórios e Logs',
-            'BlissNatura' => 'Bliss Natura',
-            'EspacoAbsoluto' => 'Espaço Absoluto',
-            'MyFormula' => 'MyFormula',
-            'Personal' => 'Pessoal',
-            'Products' => 'Produtos',
-        ];
 
         $statusPath = base_path('modules_statuses.json');
         $savedStatuses = [];
@@ -460,16 +437,9 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         return response()->json(['data' => $data]);
     });
 
-    Route::put('admin/modules', function () {
+    Route::put('admin/modules', function () use ($moduleLabels) {
         $me = auth()->user();
         abort_unless($me && $me->isAdmin(), 403);
-
-        $moduleLabels = [
-            'Administration' => 'Administração', 'Support' => 'Suporte', 'Finance' => 'Financeiro',
-            'HumanResources' => 'Recursos Humanos', 'Communication' => 'Comunicação', 'CRM' => 'CRM',
-            'Reports' => 'Relatórios e Logs', 'BlissNatura' => 'Bliss Natura', 'EspacoAbsoluto' => 'Espaço Absoluto',
-            'MyFormula' => 'MyFormula', 'Personal' => 'Pessoal', 'Products' => 'Produtos',
-        ];
 
         $validated = request()->validate([
             'modules' => ['required', 'array', 'min:1'],
@@ -953,7 +923,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             $reactionsByRecipientId = [];
             if (count($ids) > 0) {
                 $reactionRows = DB::table('message_reactions')
-                    ->select('message_recipient_id', 'emoji', DB::raw('COUNT(*) as cnt'), DB::raw('SUM(CASE WHEN user_id = ' . (int) $user->id . ' THEN 1 ELSE 0 END) as mine'))
+                    ->selectRaw('message_recipient_id, emoji, COUNT(*) as cnt, SUM(CASE WHEN user_id = ? THEN 1 ELSE 0 END) as mine', [(int) $user->id])
                     ->whereIn('message_recipient_id', $ids)
                     ->groupBy('message_recipient_id', 'emoji')
                     ->get();
@@ -1066,7 +1036,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 $reactionsByRecipientId = [];
                 if (count($ids) > 0) {
                     $rows = DB::table('message_reactions')
-                        ->select('message_recipient_id', 'emoji', DB::raw('COUNT(*) as cnt'), DB::raw('SUM(CASE WHEN user_id = ' . (int) $user->id . ' THEN 1 ELSE 0 END) as mine'))
+                        ->selectRaw('message_recipient_id, emoji, COUNT(*) as cnt, SUM(CASE WHEN user_id = ? THEN 1 ELSE 0 END) as mine', [(int) $user->id])
                         ->whereIn('message_recipient_id', $ids)
                         ->groupBy('message_recipient_id', 'emoji')
                         ->get();
@@ -1156,7 +1126,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             $reactionsByRecipientId = [];
             if (count($ids) > 0) {
                 $rows = DB::table('message_reactions')
-                    ->select('message_recipient_id', 'emoji', DB::raw('COUNT(*) as cnt'), DB::raw('SUM(CASE WHEN user_id = ' . (int) $user->id . ' THEN 1 ELSE 0 END) as mine'))
+                    ->selectRaw('message_recipient_id, emoji, COUNT(*) as cnt, SUM(CASE WHEN user_id = ? THEN 1 ELSE 0 END) as mine', [(int) $user->id])
                     ->whereIn('message_recipient_id', $ids)
                     ->groupBy('message_recipient_id', 'emoji')
                     ->get();
@@ -1324,7 +1294,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             ]);
 
             $rows = DB::table('message_reactions')
-                ->select('emoji', DB::raw('COUNT(*) as cnt'), DB::raw('SUM(CASE WHEN user_id = ' . (int) $user->id . ' THEN 1 ELSE 0 END) as mine'))
+                ->selectRaw('emoji, COUNT(*) as cnt, SUM(CASE WHEN user_id = ? THEN 1 ELSE 0 END) as mine', [(int) $user->id])
                 ->where('message_recipient_id', $recipient->id)
                 ->groupBy('emoji')
                 ->get();
@@ -1370,7 +1340,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 ->delete();
 
             $rows = DB::table('message_reactions')
-                ->select('emoji', DB::raw('COUNT(*) as cnt'), DB::raw('SUM(CASE WHEN user_id = ' . (int) $user->id . ' THEN 1 ELSE 0 END) as mine'))
+                ->selectRaw('emoji, COUNT(*) as cnt, SUM(CASE WHEN user_id = ? THEN 1 ELSE 0 END) as mine', [(int) $user->id])
                 ->where('message_recipient_id', $recipient->id)
                 ->groupBy('emoji')
                 ->get();
@@ -4470,11 +4440,9 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 if (preg_match('/^data:(image\/(png|jpe?g|webp));base64,/', $incoming, $m) !== 1) {
                     abort(422, 'Formato de imagem inválido');
                 }
-                $mime = $m[1];
-                $ext = match ($mime) {
+                $ext = match ($m[1]) {
                     'image/png' => 'png',
-                    'image/jpeg' => 'jpg',
-                    'image/jpg' => 'jpg',
+                    'image/jpeg', 'image/jpg' => 'jpg',
                     'image/webp' => 'webp',
                     default => 'png',
                 };
@@ -4825,15 +4793,18 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
     Route::get('hr/employees', function () {
         $user = auth('web')->user() ?? auth('employee')->user();
-        $allowed = $user && (
-            (method_exists($user, 'isAdmin') && $user->isAdmin())
-            || (method_exists($user, 'hasPermission') && ($user->hasPermission('hr.employees.read') || $user->hasPermission('admin.roles.read')))
-            || (
-                method_exists($user, 'isManager') && $user->isManager()
-                && $user->department
-                && in_array(Str::slug($user->department->name), ['recursos-humanos', 'rh'])
-            )
-        );
+
+        $allowed = false;
+        if ($user instanceof \App\Models\EmployeeUser) {
+            $deptSlug = Str::slug((string) ($user->employee?->department?->name ?? ''));
+            $allowed = $user->isAdmin() || ($user->isManager() && in_array($deptSlug, ['recursos-humanos', 'rh'], true));
+        } elseif ($user) {
+            $deptSlug = Str::slug((string) ($user->department?->name ?? ''));
+            $allowed = $user->isAdmin()
+                || ($user->isManager() && in_array($deptSlug, ['recursos-humanos', 'rh'], true))
+                || (method_exists($user, 'hasPermission') && ($user->hasPermission('hr.employees.read') || $user->hasPermission('admin.roles.read')));
+        }
+
         abort_unless($allowed, 403);
 
         $search = trim((string) request('search', ''));
@@ -6165,11 +6136,9 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 if (preg_match('/^data:(image\/(png|jpe?g|webp));base64,/', $incoming, $m) !== 1) {
                     abort(422, 'Formato de imagem inválido');
                 }
-                $mime = $m[1];
-                $ext = match ($mime) {
+                $ext = match ($m[1]) {
                     'image/png' => 'png',
-                    'image/jpeg' => 'jpg',
-                    'image/jpg' => 'jpg',
+                    'image/jpeg', 'image/jpg' => 'jpg',
                     'image/webp' => 'webp',
                     default => 'png',
                 };
@@ -6297,11 +6266,9 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 if (preg_match('/^data:(image\/(png|jpe?g|webp));base64,/', $incoming, $m) !== 1) {
                     abort(422, 'Formato de imagem inválido');
                 }
-                $mime = $m[1];
-                $ext = match ($mime) {
+                $ext = match ($m[1]) {
                     'image/png' => 'png',
-                    'image/jpeg' => 'jpg',
-                    'image/jpg' => 'jpg',
+                    'image/jpeg', 'image/jpg' => 'jpg',
                     'image/webp' => 'webp',
                     default => 'png',
                 };
