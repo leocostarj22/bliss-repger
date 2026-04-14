@@ -5076,6 +5076,13 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             'medical_status' => ['nullable', 'string', 'max:50'],
         ]);
 
+        if (! array_key_exists('vacation_days_balance', $validated) || $validated['vacation_days_balance'] === null) {
+            $validated['vacation_days_balance'] = 0;
+        }
+        if (! array_key_exists('disability_dependents', $validated) || $validated['disability_dependents'] === null) {
+            $validated['disability_dependents'] = 0;
+        }
+
         $department = Department::query()->find($validated['department_id']);
         if (! $department) {
             return response()->json(['message' => 'Departamento inválido'], 422);
@@ -5274,6 +5281,13 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             'medical_aptitude_date' => ['nullable', 'date'],
             'medical_status' => ['nullable', 'string', 'max:50'],
         ]);
+
+        if (array_key_exists('vacation_days_balance', $validated) && $validated['vacation_days_balance'] === null) {
+            $validated['vacation_days_balance'] = 0;
+        }
+        if (array_key_exists('disability_dependents', $validated) && $validated['disability_dependents'] === null) {
+            $validated['disability_dependents'] = 0;
+        }
 
         $nextCompanyId = array_key_exists('company_id', $validated) ? (string) $validated['company_id'] : (string) $employee->company_id;
         $nextDepartmentId = array_key_exists('department_id', $validated) ? (string) $validated['department_id'] : (string) $employee->department_id;
