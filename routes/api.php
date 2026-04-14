@@ -5107,18 +5107,35 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             }
         }
 
-        $employee = Employee::create($validated);
+        try {
+            $cols = Schema::getColumnListing('employees');
+            if (is_array($cols) && $cols) {
+                $validated = array_intersect_key($validated, array_flip($cols));
+            }
+        } catch (\Throwable) {
+        }
 
-        if ($wantsSystemAccess) {
-            EmployeeUser::updateOrCreate(
-                ['employee_id' => $employee->id],
-                [
-                    'name' => $employee->name,
-                    'email' => $systemEmail,
-                    'password' => $systemPassword,
-                    'is_active' => true,
-                ]
-            );
+        try {
+            $employee = Employee::create($validated);
+
+            if ($wantsSystemAccess) {
+                EmployeeUser::updateOrCreate(
+                    ['employee_id' => $employee->id],
+                    [
+                        'name' => $employee->name,
+                        'email' => $systemEmail,
+                        'password' => $systemPassword,
+                        'is_active' => true,
+                    ]
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::error('hr.employees.store_failed', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json(['message' => 'Não foi possível criar o funcionário'], 500);
         }
 
         $employee->load(['employeeUser']);
@@ -5271,8 +5288,26 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             }
         }
 
-        $employee->fill($validated);
-        $employee->save();
+        try {
+            $cols = Schema::getColumnListing('employees');
+            if (is_array($cols) && $cols) {
+                $validated = array_intersect_key($validated, array_flip($cols));
+            }
+        } catch (\Throwable) {
+        }
+
+        try {
+            $employee->fill($validated);
+            $employee->save();
+        } catch (\Throwable $e) {
+            Log::error('hr.employees.update_failed', [
+                'employee_id' => (string) $employee->id,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json(['message' => 'Não foi possível atualizar o funcionário'], 500);
+        }
 
         $systemEmail = trim((string) request()->input('system_email', ''));
         $systemPassword = trim((string) request()->input('system_password', ''));
