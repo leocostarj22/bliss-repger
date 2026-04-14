@@ -61,6 +61,7 @@ export default function Chat() {
   const [meName, setMeName] = useState("")
   const [mePhotoPath, setMePhotoPath] = useState<string | null>(null)
   const [meIsAdmin, setMeIsAdmin] = useState(false)
+  const [meIsEmployeeRole, setMeIsEmployeeRole] = useState(false)
   const [meCanWrite, setMeCanWrite] = useState(false)
   const [users, setUsers] = useState<CommunicationRecipient[]>([])
   const [all, setAll] = useState<InternalMessage[]>([])
@@ -240,10 +241,12 @@ export default function Chat() {
 
       const access = await fetchMyAccess()
       const isAdmin = Boolean(access?.data?.isAdmin)
+      const isEmployeeRole = Boolean(access?.data?.isEmployeeRole)
       const perms = Array.isArray(access?.data?.permissions) ? access.data.permissions : []
       const canWrite = isAdmin || perms.includes("*") || perms.includes("communication.messages.write")
 
       setMeIsAdmin(isAdmin)
+      setMeIsEmployeeRole(isEmployeeRole)
       setMeCanWrite(canWrite)
 
       const recResp = await fetchCommunicationRecipients()
@@ -405,7 +408,7 @@ export default function Chat() {
       return isAdminFlag || role === "admin"
     })()
 
-    if (!meIsAdmin) {
+    if (meIsEmployeeRole && !meIsAdmin) {
       const first = conversation[0] as any
       const firstFrom = String(first?.from_user_id ?? "").trim()
       const initiatedByOther = Boolean(first && firstFrom === to)
