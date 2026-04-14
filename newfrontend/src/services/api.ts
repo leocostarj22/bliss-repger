@@ -8,7 +8,7 @@ import type { MainDashboardData } from '@/types';
  * Base URL pattern: /api/v1/email/...
  */
 
-import type { ApiResponse, Campaign, Contact, DashboardStats, Automation, AppNotification, EmailTemplate, Company, Department, User, Role, Employee, Payroll, Timesheet, Vacation, InternalMessage, AdminPost, AdminPostComment, VideoCallMeeting, BlissProduct, BlissCustomer, BlissOrder, BlissOrderProduct, BlissOrderStatus, MyFormulaProduct, MyFormulaCustomer, MyFormulaOrder, MyFormulaOrderProduct, MyFormulaOrderStatus, MyFormulaQuiz, SupportCategory, SupportTicket, EspacoAbsolutoCustomer, EspacoAbsolutoAppointment, EspacoAbsolutoUserGroup, EspacoAbsolutoUserMessage, SystemLog, Task, PersonalNote, TaskPriority, TaskStatus } from '@/types';
+import type { ApiResponse, Campaign, Contact, DashboardStats, Automation, AppNotification, EmailTemplate, Company, Department, User, Role, Employee, Payroll, Timesheet, Vacation, InternalMessage, AdminPost, AdminPostComment, VideoCallMeeting, BlissProduct, BlissCustomer, BlissOrder, BlissOrderProduct, BlissOrderStatus, MyFormulaProduct, MyFormulaCustomer, MyFormulaOrder, MyFormulaOrderProduct, MyFormulaOrderStatus, MyFormulaQuiz, SupportCategory, SupportTicket, SupportTicketStatus, SupportTicketPriority, EspacoAbsolutoCustomer, EspacoAbsolutoAppointment, EspacoAbsolutoUserGroup, EspacoAbsolutoUserMessage, SystemLog, Task, PersonalNote, TaskPriority, TaskStatus } from '@/types';
 import { mockCampaigns, mockContacts, mockDashboardStats, mockAutomations, mockNotifications, mockCompanies, mockDepartments, mockSupportCategories, mockSupportTickets, mockUsers, mockRoles, mockEmployees, mockPayrolls, mockTimesheets, mockVacations, mockInternalMessages, mockAdminPosts, mockVideoCallMeetings, mockBlissProducts, mockBlissCustomers, mockBlissOrders, mockBlissOrderProducts, mockBlissOrderStatuses, mockMyFormulaProducts, mockMyFormulaCustomers, mockMyFormulaOrders, mockMyFormulaOrderProducts, mockMyFormulaOrderStatuses, mockMyFormulaQuizzes, mockEspacoAbsolutoCustomers, mockEspacoAbsolutoAppointments, mockEspacoAbsolutoUserGroups, mockEspacoAbsolutoUserMessages, mockSystemLogs, mockTasks, mockPersonalNotes } from './mockData';
 
 const delay = (ms = 400) => new Promise(r => setTimeout(r, ms + Math.random() * 200));
@@ -1936,9 +1936,20 @@ export async function fetchSupportTicket(id: string): Promise<ApiResponse<Suppor
   return { data: json?.data as SupportTicket };
 }
 
-export async function createSupportTicket(
-  payload: Omit<SupportTicket, 'id' | 'created_at' | 'updated_at'>
-): Promise<ApiResponse<SupportTicket>> {
+export type CreateSupportTicketPayload = {
+  company_id: string
+  title: string
+  description: string
+  status: SupportTicketStatus
+  priority: SupportTicketPriority
+  category_id?: string | null
+  department_id?: string | null
+  assigned_to?: string | null
+  due_date?: string | null
+  resolved_at?: string | null
+}
+
+export async function createSupportTicket(payload: CreateSupportTicketPayload): Promise<ApiResponse<SupportTicket>> {
   const response = await apiFetch('/api/v1/support/tickets', {
     method: 'POST',
     headers: {

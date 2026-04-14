@@ -207,7 +207,21 @@ class User extends Authenticatable implements UserInterface, FilamentUser
 
     public function hasPermission(string $permission): bool
     {
-        return $this->roleModel?->hasPermission($permission) ?? false;
+        if ($this->roleModel?->hasPermission($permission)) {
+            return true;
+        }
+
+        $roleName = (string) ($this->role ?? '');
+        if ($roleName === '') {
+            return false;
+        }
+
+        try {
+            $role = Role::query()->where('name', $roleName)->first();
+            return $role?->hasPermission($permission) ?? false;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function getRoleDisplayName(): string

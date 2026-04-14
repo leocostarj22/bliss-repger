@@ -405,7 +405,7 @@ export default function Users() {
                                 asChild
                               >
                                 <Link
-                                  to={`/support/tickets?new=1&assigned_to=${encodeURIComponent(u.id)}`}
+                                  to={`/support/tickets/new?assigned_to=${encodeURIComponent(u.id)}`}
                                   aria-label={`Abrir um ticket para ${u.name}`}
                                   title="Ticket"
                                 >

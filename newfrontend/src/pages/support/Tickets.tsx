@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react"
-import { useSearchParams } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 
 import type { Company, Department, SupportCategory, SupportTicket, SupportTicketPriority, SupportTicketStatus, User } from "@/types"
 import {
@@ -77,6 +77,8 @@ export default function SupportTickets() {
       }
     | null
   >(null)
+
+  const navigate = useNavigate()
 
   const [search, setSearch] = useState("")
   const [companyFilter, setCompanyFilter] = useState<string>("all")
@@ -179,7 +181,12 @@ export default function SupportTickets() {
       company_id: assignee?.company_id ? String(assignee.company_id) : undefined,
       department_id: assignee?.department_id ? String(assignee.department_id) : undefined,
     })
-    setFormOpen(true)
+
+    const params = new URLSearchParams()
+    if (assigned_to) params.set("assigned_to", assigned_to)
+    if (assignee?.company_id) params.set("company_id", String(assignee.company_id))
+    if (assignee?.department_id) params.set("department_id", String(assignee.department_id))
+    navigate(`/support/tickets/new${params.toString() ? `?${params.toString()}` : ""}`)
 
     const next = new URLSearchParams(searchParams)
     next.delete("new")
@@ -188,9 +195,11 @@ export default function SupportTickets() {
   }, [companies.length, formOpen, searchParams, setSearchParams, users])
 
   const openCreate = () => {
-    setEditing(null)
-    setCreatePrefill(null)
-    setFormOpen(true)
+    const params = new URLSearchParams()
+    if (createPrefill?.assigned_to) params.set("assigned_to", String(createPrefill.assigned_to))
+    if (createPrefill?.company_id) params.set("company_id", String(createPrefill.company_id))
+    if (createPrefill?.department_id) params.set("department_id", String(createPrefill.department_id))
+    navigate(`/support/tickets/new${params.toString() ? `?${params.toString()}` : ""}`)
   }
 
   const openEdit = (row: SupportTicket) => {
@@ -694,8 +703,6 @@ function SupportTicketFormModal({
           priority,
           category_id: categoryId === "none" ? null : categoryId,
           department_id: departmentId === "none" ? null : departmentId,
-          user_id: currentUserId(),
-          user_type: "App\\Models\\User",
           assigned_to: assignedTo === "none" ? null : assignedTo,
           due_date: dueDate ? toIsoOrNull(dueDate) : null,
           resolved_at: status === "resolved" ? (resolvedAt ? toIsoOrNull(resolvedAt) : null) : null,

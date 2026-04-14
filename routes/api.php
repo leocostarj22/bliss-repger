@@ -3360,7 +3360,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         }
 
         if (! $user->isAdmin() && $user->company_id) {
-            abort_unless((int) $validated['company_id'] === (int) $user->company_id, 403);
+            $validated['company_id'] = (int) $user->company_id;
         }
 
         $ticket = Ticket::create([
