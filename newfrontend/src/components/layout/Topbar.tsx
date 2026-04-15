@@ -97,8 +97,22 @@ export function Topbar() {
       if (withSound && unreadRef.current !== null && unread > unreadRef.current) {
         const newestUnread = items.find((n) => !n.read);
         const hay = `${String(newestUnread?.title ?? '')} ${String(newestUnread?.message ?? '')}`.toLowerCase();
-        const isMessage = hay.includes('mensagem') || hay.includes('message');
-        playSound(isMessage ? '/sounds/message.mp3' : '/sounds/notification.mp3', { volume: 0.6 });
+
+        const looksLikeSent = hay.includes('mensagem enviada') || hay.includes('sua mensagem foi enviada') || hay.includes('message sent');
+        const looksLikeUpdated = hay.includes('mensagem atualizada') || hay.includes('message updated');
+        const looksLikeIncoming =
+          hay.includes('nova mensagem') ||
+          hay.includes('new message') ||
+          hay.includes('você recebeu') ||
+          hay.includes('voce recebeu') ||
+          hay.includes('you received');
+
+        if (looksLikeIncoming && !looksLikeSent && !looksLikeUpdated) {
+          playSound('/sounds/message.mp3', { volume: 0.6 });
+        } else if (!looksLikeSent && !looksLikeUpdated) {
+          const isMessage = hay.includes('mensagem') || hay.includes('message');
+          playSound(isMessage ? '/sounds/message.mp3' : '/sounds/notification.mp3', { volume: 0.6 });
+        }
       }
 
       unreadRef.current = unread;

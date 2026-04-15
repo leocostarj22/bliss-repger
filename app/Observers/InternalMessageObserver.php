@@ -16,37 +16,35 @@ class InternalMessageObserver
      */
     public function created(InternalMessage $internalMessage): void
     {
-        // Disparar broadcasting via Job assíncrono
         ProcessMessageBroadcast::dispatch($internalMessage);
 
-        // Notificar o remetente via Filament (banco de dados)
-        if ($internalMessage->sender) {
+        $isChat = $internalMessage->subject === '(Chat)';
+
+        if (! $isChat && $internalMessage->sender) {
             Notification::make()
                 ->title('Mensagem Enviada!')
                 ->success()
                 ->body('Sua mensagem foi enviada com sucesso')
                 ->sendToDatabase($internalMessage->sender);
 
-            // Notificar o remetente via e-mail
             $internalMessage->sender->notify(
                 new MessageSentNotification($internalMessage, $internalMessage->sender, true)
             );
         }
 
-        // Notificar todos os destinatários
         $recipients = $internalMessage->recipientUsers;
         foreach ($recipients as $recipient) {
-            // Notificação Filament (banco de dados)
             Notification::make()
-                ->title('Nova Mensagem!')
+                ->title($isChat ? 'Nova Mensagem (Chat)!' : 'Nova Mensagem!')
                 ->info()
-                ->body('Você recebeu uma nova mensagem interna')
+                ->body($isChat ? 'Você recebeu uma mensagem no chat' : 'Você recebeu uma nova mensagem interna')
                 ->sendToDatabase($recipient);
 
-            // Notificação por e-mail
-            $recipient->notify(
-                new MessageSentNotification($internalMessage, $internalMessage->sender, false)
-            );
+            if (! $isChat) {
+                $recipient->notify(
+                    new MessageSentNotification($internalMessage, $internalMessage->sender, false)
+                );
+            }
         }
     }
 
@@ -55,6 +53,10 @@ class InternalMessageObserver
      */
     public function updated(InternalMessage $internalMessage): void
     {
+        if ($internalMessage->subject === '(Chat)') {
+            return;
+        }
+
         // Verificar se houve mudanças significativas
         $significantFields = ['subject', 'body', 'priority', 'status'];
         $hasSignificantChanges = false;
