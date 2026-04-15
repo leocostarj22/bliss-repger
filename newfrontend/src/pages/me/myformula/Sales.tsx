@@ -25,6 +25,8 @@ import {
 import type { MyFormulaCustomer, MyFormulaOrder, MyFormulaOrderStatus, MyFormulaProduct, MyFormulaQuiz } from "@/types"
 import QuizWizard from "./QuizWizardMyFormula"
 
+const LAST_CUSTOMER_KEY = "bliss:myformula:lastCustomer"
+
 export default function MyFormulaSales() {
   const { toast } = useToast()
   const navigate = useNavigate()
@@ -106,6 +108,59 @@ export default function MyFormulaSales() {
     if (password !== passwordConfirm) return false
     return true
   }, [address1, busy, city, country, district, email, firstname, lastname, password, passwordConfirm, postcode, telephone])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const raw = window.localStorage.getItem(LAST_CUSTOMER_KEY)
+      if (!raw) return
+      const parsed = JSON.parse(raw)
+      const id = String(parsed?.customer_id ?? "").trim()
+      if (!id) return
+      setCustomer(parsed)
+    } catch {
+      return
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      if (customer) {
+        window.localStorage.setItem(LAST_CUSTOMER_KEY, JSON.stringify(customer))
+      } else {
+        window.localStorage.removeItem(LAST_CUSTOMER_KEY)
+      }
+    } catch {
+      return
+    }
+  }, [customer])
+
+  useEffect(() => {
+    if (!allowed) return
+    if (myCustomers.length === 0) return
+
+    const currentId = String(customer?.customer_id ?? "").trim()
+    if (currentId) {
+      const found = myCustomers.find((c) => String(c.customer_id) === currentId)
+      if (found && found !== customer) {
+        setCustomer(found)
+      }
+      return
+    }
+
+    try {
+      const raw = window.localStorage.getItem(LAST_CUSTOMER_KEY)
+      if (!raw) return
+      const parsed = JSON.parse(raw)
+      const id = String(parsed?.customer_id ?? "").trim()
+      if (!id) return
+      const found = myCustomers.find((c) => String(c.customer_id) === id)
+      setCustomer(found ?? parsed)
+    } catch {
+      return
+    }
+  }, [allowed, myCustomers, customer])
 
   useEffect(() => {
     let alive = true
