@@ -112,13 +112,16 @@ export default function MyFormulaSales() {
 
   useEffect(() => {
     if (typeof window === "undefined") return
+
     try {
       const raw = window.localStorage.getItem(LAST_CUSTOMER_KEY)
-      if (!raw) return
-      const parsed = JSON.parse(raw)
-      const id = String(parsed?.customer_id ?? "").trim()
-      if (!id) return
-      setCustomer(parsed)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        const id = String(parsed?.customer_id ?? "").trim()
+        if (id) {
+          setCustomer(parsed)
+        }
+      }
     } catch {
       return
     }
@@ -127,9 +130,14 @@ export default function MyFormulaSales() {
       const rawQuiz = window.localStorage.getItem(LAST_QUIZ_KEY)
       if (!rawQuiz) return
       const parsedQuiz = JSON.parse(rawQuiz)
+
+      const rawCustomer = window.localStorage.getItem(LAST_CUSTOMER_KEY)
+      const parsedCustomer = rawCustomer ? JSON.parse(rawCustomer) : null
+
       const cid = String(parsedQuiz?.customer_id ?? "").trim()
-      if (!cid) return
-      if (cid === String(customer?.customer_id ?? "").trim()) {
+      const customerId = String(parsedCustomer?.customer_id ?? "").trim()
+
+      if (cid && customerId && cid === customerId) {
         setQuiz(parsedQuiz?.quiz ?? null)
       }
     } catch {
@@ -156,6 +164,27 @@ export default function MyFormulaSales() {
       const cid = String(customer?.customer_id ?? "").trim()
       if (!cid || !quiz) return
       window.localStorage.setItem(LAST_QUIZ_KEY, JSON.stringify({ customer_id: cid, quiz }))
+    } catch {
+      return
+    }
+  }, [customer?.customer_id, quiz])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const cid = String(customer?.customer_id ?? "").trim()
+    if (!cid) return
+    if (quiz) return
+
+    try {
+      const raw = window.localStorage.getItem(LAST_QUIZ_KEY)
+      if (!raw) return
+      const parsed = JSON.parse(raw)
+      const cachedCid = String(parsed?.customer_id ?? "").trim()
+      if (cachedCid !== cid) return
+      const cachedQuiz = parsed?.quiz ?? null
+      if (cachedQuiz) {
+        setQuiz(cachedQuiz)
+      }
     } catch {
       return
     }

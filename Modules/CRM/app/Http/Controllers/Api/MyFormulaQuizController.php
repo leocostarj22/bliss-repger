@@ -177,18 +177,35 @@ class MyFormulaQuizController extends Controller
                 '%"customer_id": "' . $customerId . '"%',
             ];
 
-            $row = DB::connection('myformula')
-                ->table('quiz')
-                ->select(['quiz_id', 'post', 'result', 'token', 'report_id', 'date_added'])
-                ->where(function ($q) use ($customerId, $patterns) {
-                    $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(post, '$.customer_id')) = ?", [(string) $customerId]);
+            $row = null;
 
-                    foreach ($patterns as $p) {
-                        $q->orWhere('post', 'like', $p);
-                    }
-                })
-                ->orderByDesc('quiz_id')
-                ->first();
+            try {
+                $row = DB::connection('myformula')
+                    ->table('quiz')
+                    ->select(['quiz_id', 'post', 'result', 'token', 'report_id', 'date_added'])
+                    ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(post, '$.customer_id')) = ?", [(string) $customerId])
+                    ->orderByDesc('quiz_id')
+                    ->first();
+            } catch (\Throwable) {
+                $row = null;
+            }
+
+            if (! $row) {
+                $row = DB::connection('myformula')
+                    ->table('quiz')
+                    ->select(['quiz_id', 'post', 'result', 'token', 'report_id', 'date_added'])
+                    ->where(function ($q) use ($patterns) {
+                        foreach ($patterns as $idx => $p) {
+                            if ($idx === 0) {
+                                $q->where('post', 'like', $p);
+                                continue;
+                            }
+                            $q->orWhere('post', 'like', $p);
+                        }
+                    })
+                    ->orderByDesc('quiz_id')
+                    ->first();
+            }
 
             if (! $row) {
                 return response()->json(['data' => null]);
