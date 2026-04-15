@@ -13,6 +13,7 @@ use Filament\Infolists\Infolist;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 
 class VacationResource extends Resource
@@ -33,18 +34,16 @@ class VacationResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        $user = auth()->user();
-        
-        if (!$user) {
+        $user = Auth::user();
+
+        if (!($user instanceof \App\Models\User)) {
             return false;
         }
-        
-        // Administradores podem ver todos os recursos
+
         if ($user->isAdmin()) {
             return true;
         }
-        
-        // Gestores de RH podem ver recursos de RH
+
         if ($user->isManager() && $user->department) {
             $deptName = \Illuminate\Support\Str::slug($user->department->name);
             return in_array($deptName, ['recursos-humanos', 'rh']);
@@ -290,7 +289,7 @@ class VacationResource extends Resource
                     ->action(function ($record) {
                         $record->update([
                             'status' => 'approved',
-                            'approved_by' => auth()->id(),
+                            'approved_by' => Auth::id(),
                             'approved_at' => now(),
                         ]);
                     }),
@@ -309,7 +308,7 @@ class VacationResource extends Resource
                     ->action(function ($record, array $data) {
                         $record->update([
                             'status' => 'rejected',
-                            'approved_by' => auth()->id(),
+                            'approved_by' => Auth::id(),
                             'approved_at' => now(),
                             'rejection_reason' => $data['rejection_reason'],
                         ]);
@@ -465,31 +464,37 @@ class VacationResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()->can('viewAny', Vacation::class);
+        $user = Auth::user();
+        return $user instanceof \App\Models\User ? $user->can('viewAny', Vacation::class) : false;
     }
 
     public static function canViewAny(): bool
     {
-        return auth()->user()->can('viewAny', Vacation::class);
+        $user = Auth::user();
+        return $user instanceof \App\Models\User ? $user->can('viewAny', Vacation::class) : false;
     }
 
     public static function canCreate(): bool
     {
-        return auth()->user()->can('create', Vacation::class);
+        $user = Auth::user();
+        return $user instanceof \App\Models\User ? $user->can('create', Vacation::class) : false;
     }
 
     public static function canEdit(Model $record): bool
     {
-        return auth()->user()->can('update', $record);
+        $user = Auth::user();
+        return $user instanceof \App\Models\User ? $user->can('update', $record) : false;
     }
 
     public static function canDelete(Model $record): bool
     {
-        return auth()->user()->can('delete', $record);
+        $user = Auth::user();
+        return $user instanceof \App\Models\User ? $user->can('delete', $record) : false;
     }
 
     public static function canDeleteAny(): bool
     {
-        return auth()->user()->can('viewAny', Vacation::class);
+        $user = Auth::user();
+        return $user instanceof \App\Models\User ? $user->can('viewAny', Vacation::class) : false;
     }
 }

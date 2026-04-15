@@ -21,6 +21,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Auth;
 
 class MyVacations extends Page implements HasTable
 {
@@ -144,12 +145,15 @@ class MyVacations extends Page implements HasTable
                         }
                         
                         // Definir campos obrigatórios
-                        $data['employee_id'] = auth()->user()->employee_id;
-                        $data['company_id'] = auth()->user()->employee->company_id ?? 1;
+                        $employeeId = (int) (Auth::user()?->employee_id ?? 0);
+                        abort_unless($employeeId > 0, 403);
+
+                        $data['employee_id'] = $employeeId;
+                        $data['company_id'] = (int) (Auth::user()?->employee?->company_id ?? 1);
                         $data['requested_at'] = now();
                         $data['vacation_year'] = \Carbon\Carbon::parse($data['start_date'])->year;
                         $data['status'] = 'pending';
-                        $data['created_by'] = auth()->id();
+                        $data['created_by'] = Auth::id();
                         
                         return $data;
                     })
@@ -260,9 +264,9 @@ class MyVacations extends Page implements HasTable
 
     protected function getTableQuery(): Builder
     {
-        $employeeId = auth()->user()->employee_id;
-        
-        if (!$employeeId) {
+        $employeeId = (int) (Auth::user()?->employee_id ?? 0);
+
+        if ($employeeId <= 0) {
             return Vacation::query()->whereRaw('1 = 0');
         }
     

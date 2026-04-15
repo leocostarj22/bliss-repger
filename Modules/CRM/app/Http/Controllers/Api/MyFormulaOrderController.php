@@ -7,6 +7,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Modules\CRM\Models\MyFormulaOrder;
 use Modules\CRM\Models\Quiz;
 
@@ -135,8 +136,21 @@ class MyFormulaOrderController extends Controller
 
             $productIds = $lines->pluck('product_id')->all();
             $products = DB::connection('myformula')
-                ->table('product')
-                ->whereIn('product_id', $productIds)
+                ->table('product as p')
+                ->leftJoin('product_description as pd', function ($join) use ($languageId) {
+                    $join->on('pd.product_id', '=', 'p.product_id')->where('pd.language_id', $languageId);
+                })
+                ->select([
+                    'p.product_id',
+                    'p.model',
+                    'p.price',
+                    'p.is_plan',
+                    'p.capsules',
+                    'p.net_weight',
+                    'p.plan_name_letters',
+                    'pd.name as name',
+                ])
+                ->whereIn('p.product_id', $productIds)
                 ->get()
                 ->keyBy(fn ($r) => (int) ($r->product_id ?? 0));
 
@@ -189,9 +203,9 @@ class MyFormulaOrderController extends Controller
 
             $paymentMap = [
                 'free' => ['Free Checkout', 'free'],
-                'multibanco' => ['Multibanco', 'multibanco'],
-                'ifthenpaymbway' => ['MBWay', 'ifthenpaymbway'],
-                'stripe' => ['Cartões', 'stripe'],
+                'multibanco' => ['Pagamento por Multibanco', 'multibanco'],
+                'ifthenpaymbway' => ['Pagamento por MB Way', 'ifthenpaymbway'],
+                'stripe' => ['Pagamento por Cartões', 'stripe'],
                 'manual' => ['Manual', 'manual'],
             ];
 
@@ -201,19 +215,64 @@ class MyFormulaOrderController extends Controller
 
             [$paymentMethodTitle, $paymentCode] = $paymentMap[$paymentMethodCode];
 
+            $settings = DB::connection('myformula')
+                ->table('setting')
+                ->where('store_id', 0)
+                ->whereIn('key', ['config_url', 'config_invoice_prefix', 'config_name'])
+                ->pluck('value', 'key');
+
+            $storeUrl = trim((string) ($settings['config_url'] ?? ''));
+            if ($storeUrl === '') {
+                $storeUrl = 'https://myformula.pt';
+            }
+
+            $storeName = trim((string) ($settings['config_name'] ?? 'MyFormula'));
+            if ($storeName === '') {
+                $storeName = 'MyFormula';
+            }
+
+            $invoicePrefix = trim((string) ($settings['config_invoice_prefix'] ?? 'INV'));
+            if ($invoicePrefix === '') {
+                $invoicePrefix = 'INV';
+            }
+
+            $customerCustomField = trim((string) ($customer->custom_field ?? ''));
+            if ($customerCustomField === '') {
+                $customerCustomField = '{}';
+            } else {
+                $decoded = json_decode($customerCustomField, true);
+                if (! is_array($decoded)) {
+                    $customerCustomField = '{}';
+                }
+            }
+
+            $paymentCustomField = trim((string) ($address['custom_field'] ?? ''));
+            if ($paymentCustomField === '' || ! is_array(json_decode($paymentCustomField, true))) {
+                $paymentCustomField = json_encode([]);
+            }
+
+            $shippingCustomField = $paymentCustomField;
+
+            $countryPhoneId = (int) ($address['country_id'] ?? 0);
+            if ($countryPhoneId <= 0) {
+                $countryPhoneId = 171;
+            }
+
+            $planRow = $products->first(fn ($p) => (int) ($p->is_plan ?? 0) === 1);
+
             $orderData = [
                 'invoice_no' => 0,
-                'invoice_prefix' => 'INV-',
+                'invoice_prefix' => $invoicePrefix,
                 'store_id' => 0,
-                'store_name' => 'MyFormula',
-                'store_url' => '',
+                'store_name' => $storeName,
+                'store_url' => $storeUrl,
                 'customer_id' => $customerId,
                 'customer_group_id' => (int) ($customer->customer_group_id ?? 1),
                 'firstname' => (string) ($customer->firstname ?? ''),
                 'lastname' => (string) ($customer->lastname ?? ''),
                 'email' => (string) ($customer->email ?? ''),
                 'telephone' => (string) ($customer->telephone ?? ''),
-                'custom_field' => (string) ($customer->custom_field ?? ''),
+                'custom_field' => $customerCustomField,
                 'payment_firstname' => $address['firstname'],
                 'payment_lastname' => $address['lastname'],
                 'payment_company' => $address['company'],
@@ -226,7 +285,7 @@ class MyFormulaOrderController extends Controller
                 'payment_zone' => $address['zone'],
                 'payment_zone_id' => $address['zone_id'],
                 'payment_address_format' => $address['address_format'],
-                'payment_custom_field' => $address['custom_field'],
+                'payment_custom_field' => $paymentCustomField,
                 'payment_method' => $paymentMethodTitle,
                 'payment_code' => $paymentCode,
                 'shipping_firstname' => $address['firstname'],
@@ -241,7 +300,7 @@ class MyFormulaOrderController extends Controller
                 'shipping_zone' => $address['zone'],
                 'shipping_zone_id' => $address['zone_id'],
                 'shipping_address_format' => $address['address_format'],
-                'shipping_custom_field' => $address['custom_field'],
+                'shipping_custom_field' => $shippingCustomField,
                 'shipping_method' => $shippingMethod,
                 'shipping_code' => $shippingCode,
                 'comment' => '',
@@ -265,6 +324,84 @@ class MyFormulaOrderController extends Controller
 
             if ($orderCols && $hasOrderCol('telephoneMBWay')) {
                 $orderData['telephoneMBWay'] = (string) ($orderData['telephone'] ?? '');
+            }
+
+            if ($orderCols && $hasOrderCol('country_phone_id')) {
+                $orderData['country_phone_id'] = $countryPhoneId;
+            }
+
+            if ($orderCols && $hasOrderCol('approval')) {
+                $orderData['approval'] = 'pending';
+            }
+
+            if ($orderCols && $hasOrderCol('uuid')) {
+                $orderData['uuid'] = (string) Str::uuid();
+            }
+
+            if ($orderCols && $hasOrderCol('is_plan')) {
+                $orderData['is_plan'] = $planRow ? 1 : 0;
+            }
+
+            if ($planRow) {
+                if ($orderCols && $hasOrderCol('capsules')) {
+                    $orderData['capsules'] = (int) ($planRow->capsules ?? 0);
+                }
+
+                if ($orderCols && $hasOrderCol('net_weight')) {
+                    $orderData['net_weight'] = (float) ($planRow->net_weight ?? 0);
+                }
+
+                if ($orderCols && $hasOrderCol('plan_name_letters')) {
+                    $orderData['plan_name_letters'] = (string) ($planRow->plan_name_letters ?? '');
+                }
+            }
+
+            if ($quizId > 0 && $planRow && $orderCols && ($hasOrderCol('supplements') || $hasOrderCol('supplements_history'))) {
+                try {
+                    $quizRow = DB::connection('myformula')->table('quiz')->select(['result'])->where('quiz_id', $quizId)->first();
+                    $decodedResult = $quizRow ? json_decode((string) ($quizRow->result ?? ''), true) : null;
+                    $decodedResult = is_array($decodedResult) ? $decodedResult : [];
+
+                    $planProductId = (string) ((int) ($planRow->product_id ?? 0));
+                    $slugs = $decodedResult[$planProductId]['supplements'] ?? [];
+                    $slugs = is_array($slugs) ? array_values(array_filter(array_map('strval', $slugs))) : [];
+
+                    if ($hasOrderCol('supplements')) {
+                        $orderData['supplements'] = json_encode($slugs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    }
+
+                    if ($hasOrderCol('supplements_history')) {
+                        $map = DB::connection('myformula')
+                            ->table('plans_supplements')
+                            ->select(['supplement_id', 'slug'])
+                            ->whereIn('slug', $slugs)
+                            ->get()
+                            ->keyBy(fn ($r) => (string) ($r->slug ?? ''));
+
+                        $createdAt = $now instanceof \DateTimeInterface ? $now->format('Y-m-d H:i:s') : (string) $now;
+                        $history = [];
+                        foreach ($slugs as $slug) {
+                            $row = $map->get($slug);
+                            $history[] = [
+                                'supplement_id' => $row ? (string) ($row->supplement_id ?? null) : null,
+                                'slug' => $slug,
+                                'action' => 'add',
+                                'user_id' => null,
+                                'created_at' => $createdAt,
+                            ];
+                        }
+                        $history[] = [
+                            'supplement_id' => null,
+                            'slug' => null,
+                            'action' => 'authorized',
+                            'user_id' => null,
+                            'created_at' => $createdAt,
+                        ];
+
+                        $orderData['supplements_history'] = json_encode($history, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    }
+                } catch (\Throwable) {
+                }
             }
 
             if ($orderCols && $hasOrderCol('fax')) {
