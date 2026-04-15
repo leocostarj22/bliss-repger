@@ -15,6 +15,7 @@ import {
   fetchMyFormulaLatestQuizByCustomer,
   fetchMyFormulaOrderStatuses,
   fetchMyFormulaProducts,
+  fetchMyFormulaRecommendedPlansByQuiz,
   fetchMyFormulaZonesReal,
   type MyFormulaCountryOption,
   type MyFormulaZoneOption,
@@ -63,6 +64,8 @@ export default function MyFormulaSales() {
 
   const [products, setProducts] = useState<MyFormulaProduct[]>([])
   const [productsLoading, setProductsLoading] = useState(false)
+  const [recommendedPlans, setRecommendedPlans] = useState<MyFormulaProduct[]>([])
+  const [recommendedPlansLoading, setRecommendedPlansLoading] = useState(false)
   const [productSearch, setProductSearch] = useState("")
   const [selectedProductId, setSelectedProductId] = useState("")
   const [addQty, setAddQty] = useState(1)
@@ -252,6 +255,36 @@ export default function MyFormulaSales() {
     setCart([])
     setAddQty(1)
   }, [customer?.customer_id])
+
+  useEffect(() => {
+    let alive = true
+
+    const quizId = quiz?.quiz_id ? String(quiz.quiz_id) : ""
+    if (!allowed || !quizId) {
+      setRecommendedPlans([])
+      setRecommendedPlansLoading(false)
+      return
+    }
+
+    setRecommendedPlansLoading(true)
+    fetchMyFormulaRecommendedPlansByQuiz({ quiz_id: quizId })
+      .then((r) => {
+        if (!alive) return
+        setRecommendedPlans(Array.isArray(r.data) ? r.data : [])
+      })
+      .catch(() => {
+        if (!alive) return
+        setRecommendedPlans([])
+      })
+      .finally(() => {
+        if (!alive) return
+        setRecommendedPlansLoading(false)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [allowed, quiz?.quiz_id])
 
   const productLabel = (p?: MyFormulaProduct | null) => {
     if (!p) return ""
@@ -671,6 +704,40 @@ export default function MyFormulaSales() {
             {!quiz ? (
               <div className="text-sm text-amber-600">
                 Ainda não existe quiz associado a este cliente. Pode criar a encomenda na mesma, mas o recomendado é concluir o quiz antes.
+              </div>
+            ) : null}
+
+            {quiz ? (
+              <div className="border rounded-lg p-4 bg-muted/10 space-y-3">
+                <div className="text-sm font-semibold">Planos recomendados (baseado no Quiz)</div>
+                {recommendedPlansLoading ? (
+                  <div className="text-sm text-muted-foreground">A carregar planos recomendados…</div>
+                ) : recommendedPlans.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">Sem recomendação disponível para este quiz. Pode escolher manualmente abaixo.</div>
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {recommendedPlans.map((p) => (
+                      <div key={p.product_id} className="border rounded-lg p-3 bg-background">
+                        <div className="text-sm font-semibold truncate">{productLabel(p)}</div>
+                        <div className="text-xs text-muted-foreground truncate">{p.model ? p.model : `#${p.product_id}`}</div>
+                        <div className="mt-2 text-sm">{p.price != null ? `€${Number(p.price).toFixed(2)}` : "—"}</div>
+                        <div className="mt-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedProductId(String(p.product_id))
+                              setCart([{ product_id: String(p.product_id), quantity: 1 }])
+                            }}
+                          >
+                            Selecionar este plano
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : null}
 

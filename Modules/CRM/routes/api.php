@@ -328,6 +328,112 @@ Route::prefix('v1')->group(function () {
         Route::put('products/{id}', [MyFormulaProductController::class, 'update']);
         Route::delete('products/{id}', [MyFormulaProductController::class, 'destroy']);
 
+        Route::get('plans/recommended', function () use ($requireMyFormulaCompany) {
+            $requireMyFormulaCompany();
+
+            $quizId = (int) request('quiz_id', 0);
+            if ($quizId <= 0) {
+                return response()->json(['data' => []]);
+            }
+
+            try {
+                $quiz = DB::connection('myformula')->table('quiz')->where('quiz_id', $quizId)->first();
+                if (! $quiz) {
+                    return response()->json(['data' => []]);
+                }
+
+                $post = json_decode((string) ($quiz->post ?? ''), true);
+                if (! is_array($post)) {
+                    $post = [];
+                }
+
+                $improve = (string) ($post['improve_health'] ?? '');
+                $primary = strtoupper(trim(explode(',', $improve)[0] ?? ''));
+
+                $map = [
+                    'A' => ['Plan-16', 'Plan-17', 'Plan-18'],
+                    'B' => ['Plan-19', 'Plan-20', 'Plan-21'],
+                    'C' => ['Plan-22', 'Plan-23', 'Plan-24'],
+                    'K' => ['Plan-01', 'Plan-02', 'Plan-03'],
+                    'E' => ['Plan-10', 'Plan-11', 'Plan-12'],
+                    'F' => ['Plan-28', 'Plan-29', 'Plan-30'],
+                    'G' => ['Plan-04', 'Plan-05', 'Plan-06'],
+                    'H' => ['Plan-25', 'Plan-26', 'Plan-27'],
+                    'I' => ['Plan-13', 'Plan-14', 'Plan-15'],
+                    'J' => ['Plan-07', 'Plan-08', 'Plan-09'],
+                ];
+
+                $models = $map[$primary] ?? [];
+                if (! $models) {
+                    return response()->json(['data' => [], 'meta' => ['primary_preference' => $primary]]);
+                }
+
+                $rows = DB::connection('myformula')
+                    ->table('product as p')
+                    ->leftJoin('product_description as pd', function ($join) {
+                        $join->on('pd.product_id', '=', 'p.product_id')->where('pd.language_id', 2);
+                    })
+                    ->select([
+                        'p.product_id',
+                        'p.model',
+                        'p.price',
+                        'p.quantity',
+                        'p.status',
+                        'p.date_added',
+                        'pd.name as name',
+                        'pd.description as description',
+                    ])
+                    ->whereIn('p.model', $models)
+                    ->get();
+
+                $byModel = $rows->keyBy(fn ($r) => (string) ($r->model ?? ''));
+
+                $data = collect($models)
+                    ->map(fn ($m) => $byModel->get($m))
+                    ->filter()
+                    ->map(function ($r) {
+                        $rawDate = $r->date_added ?? null;
+                        $date = null;
+                        if ($rawDate instanceof \DateTimeInterface) {
+                            $date = $rawDate->format(DATE_ATOM);
+                        } elseif (is_string($rawDate) && $rawDate !== '') {
+                            try {
+                                $date = \Carbon\Carbon::parse($rawDate)->toIso8601String();
+                            } catch (\Throwable) {
+                                $date = null;
+                            }
+                        }
+
+                        return [
+                            'product_id' => (string) ($r->product_id ?? ''),
+                            'model' => (string) ($r->model ?? ''),
+                            'price' => $r->price !== null ? (float) $r->price : null,
+                            'quantity' => $r->quantity !== null ? (int) $r->quantity : null,
+                            'status' => isset($r->status) ? (bool) $r->status : null,
+                            'date_added' => $date,
+                            'description' => [
+                                'product_id' => (string) ($r->product_id ?? ''),
+                                'language_id' => 2,
+                                'name' => (string) ($r->name ?? ''),
+                                'description' => $r->description !== null ? (string) $r->description : null,
+                            ],
+                        ];
+                    })
+                    ->values();
+
+                return response()->json([
+                    'data' => $data,
+                    'meta' => [
+                        'primary_preference' => $primary,
+                        'models' => $models,
+                    ],
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('myformula.plans.recommended_failed', ['error' => $e->getMessage()]);
+                return response()->json(['data' => []]);
+            }
+        });
+
         Route::get('orders', [MyFormulaOrderController::class, 'index']);
         Route::post('orders', [MyFormulaOrderController::class, 'store']);
         Route::get('orders/{id}', [MyFormulaOrderController::class, 'show']);

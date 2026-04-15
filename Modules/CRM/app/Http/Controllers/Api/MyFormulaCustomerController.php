@@ -307,18 +307,47 @@ class MyFormulaCustomerController extends Controller
             $telephone = trim((string) ($validated['telephone'] ?? ''));
             $firstname = trim((string) ($validated['firstname'] ?? ''));
             $lastname = trim((string) ($validated['lastname'] ?? ''));
-            $email = strtolower(trim((string) ($validated['email'] ?? '')));
 
-            if ($email === '') {
-                $email = $this->makeFakeEmail($telephone);
+            $providedEmail = strtolower(trim((string) ($validated['email'] ?? '')));
+            $emailGenerated = $providedEmail === '';
+            $email = $emailGenerated ? $this->makeFakeEmail($telephone) : $providedEmail;
+
+            $digits = $this->phoneDigits($telephone);
+            if ($digits !== '') {
+                $expr = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(telephone,' ',''),'-',''),'(',''),')',''),'.',''),'+','')";
+                $existing = MyFormulaCustomer::query()->whereRaw($expr . ' = ?', [$digits])->first();
+                if ($existing) {
+                    return response()->json([
+                        'message' => 'Cliente já existe com este telefone',
+                        'data' => [
+                            'customer_id' => (string) $existing->customer_id,
+                            'firstname' => (string) ($existing->firstname ?? ''),
+                            'lastname' => (string) ($existing->lastname ?? ''),
+                            'email' => (string) ($existing->email ?? ''),
+                            'telephone' => $existing->telephone ?: null,
+                            'status' => isset($existing->status) ? (bool) $existing->status : null,
+                            'date_added' => $existing->date_added ? $existing->date_added->toIso8601String() : null,
+                        ],
+                    ], 409);
+                }
             }
 
-            if ($telephone === '') {
-                $telephone = '';
-            }
-
-            if (MyFormulaCustomer::whereRaw('LOWER(email) = ?', [$email])->exists()) {
-                return response()->json(['message' => 'Já existe um cliente com este email'], 422);
+            if (! $emailGenerated) {
+                $existing = MyFormulaCustomer::query()->whereRaw('LOWER(email) = ?', [$email])->first();
+                if ($existing) {
+                    return response()->json([
+                        'message' => 'Cliente já existe com este email',
+                        'data' => [
+                            'customer_id' => (string) $existing->customer_id,
+                            'firstname' => (string) ($existing->firstname ?? ''),
+                            'lastname' => (string) ($existing->lastname ?? ''),
+                            'email' => (string) ($existing->email ?? ''),
+                            'telephone' => $existing->telephone ?: null,
+                            'status' => isset($existing->status) ? (bool) $existing->status : null,
+                            'date_added' => $existing->date_added ? $existing->date_added->toIso8601String() : null,
+                        ],
+                    ], 409);
+                }
             }
 
             $customField = null;

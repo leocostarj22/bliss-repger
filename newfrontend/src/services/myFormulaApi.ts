@@ -76,6 +76,13 @@ export async function fetchMyFormulaProducts(params?: {
   return res.data
 }
 
+export async function fetchMyFormulaRecommendedPlansByQuiz(params: {
+  quiz_id: string
+}): Promise<ApiResponse<MyFormulaProduct[]>> {
+  const res = await axios.get('/api/v1/myformula/plans/recommended', { params, withCredentials: true })
+  return res.data
+}
+
 export async function createMyFormulaProduct(payload: {
   model: string
   sku?: string | null
@@ -154,8 +161,14 @@ export async function createMyFormulaCustomerReal(payload: {
   password: string
   password_confirmation: string
 }): Promise<ApiResponse<MyFormulaCustomer>> {
-  const res = await axios.post('/api/v1/myformula/customers', payload, { withCredentials: true })
-  return res.data
+  try {
+    const res = await axios.post('/api/v1/myformula/customers', payload, { withCredentials: true })
+    return res.data
+  } catch (e: any) {
+    const apiMsg = e?.response?.data?.message
+    const msg = apiMsg ? String(apiMsg) : String(e?.message ?? 'Não foi possível criar o cliente')
+    throw new Error(msg)
+  }
 }
 
 export async function createMyFormulaCustomer(payload: {
