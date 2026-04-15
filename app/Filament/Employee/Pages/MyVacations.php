@@ -140,7 +140,7 @@ class MyVacations extends Page implements HasTable
                         if (!isset($data['requested_days']) || $data['requested_days'] <= 0) {
                             $startDate = \Carbon\Carbon::parse($data['start_date']);
                             $endDate = \Carbon\Carbon::parse($data['end_date']);
-                            $data['requested_days'] = max(1, $startDate->diffInDays($endDate) + 1);
+                            $data['requested_days'] = max(1, $this->businessDaysInclusive($startDate, $endDate));
                         }
                         
                         // Definir campos obrigatórios
@@ -274,8 +274,27 @@ class MyVacations extends Page implements HasTable
         if ($startDate && $endDate) {
             $start = \Carbon\Carbon::parse($startDate);
             $end = \Carbon\Carbon::parse($endDate);
-            $days = $start->diffInDays($end) + 1;
-            $set('requested_days', $days);
+            $set('requested_days', $this->businessDaysInclusive($start, $end));
         }
+    }
+
+    private function businessDaysInclusive(\Carbon\Carbon $start, \Carbon\Carbon $end): int
+    {
+        $s = $start->copy()->startOfDay();
+        $e = $end->copy()->startOfDay();
+        if ($e->lessThan($s)) {
+            return 0;
+        }
+
+        $days = 0;
+        $cursor = $s->copy();
+        while ($cursor->lessThanOrEqualTo($e)) {
+            if ($cursor->isWeekday()) {
+                $days++;
+            }
+            $cursor->addDay();
+        }
+
+        return $days;
     }
 }

@@ -102,8 +102,23 @@ class Vacation extends Model
         if (!$this->start_date || !$this->end_date) {
             return 0;
         }
-        
-        return $this->start_date->diffInDays($this->end_date) + 1;
+
+        $start = $this->start_date->copy()->startOfDay();
+        $end = $this->end_date->copy()->startOfDay();
+        if ($end->lessThan($start)) {
+            return 0;
+        }
+
+        $days = 0;
+        $cursor = $start->copy();
+        while ($cursor->lessThanOrEqualTo($end)) {
+            if ($cursor->isWeekday()) {
+                $days++;
+            }
+            $cursor->addDay();
+        }
+
+        return $days;
     }
 
     public function getFormattedPeriodAttribute(): string

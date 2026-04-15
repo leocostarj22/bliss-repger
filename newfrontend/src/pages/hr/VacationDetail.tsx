@@ -54,9 +54,20 @@ const daysBetweenInclusive = (start: string, end: string) => {
   if (!start || !end) return 0
   const s = new Date(`${start}T00:00:00`)
   const e = new Date(`${end}T00:00:00`)
-  const ms = e.getTime() - s.getTime()
-  const days = Math.floor(ms / (24 * 60 * 60 * 1000)) + 1
-  return Number.isFinite(days) ? Math.max(0, days) : 0
+  if (!Number.isFinite(s.getTime()) || !Number.isFinite(e.getTime())) return 0
+  if (e.getTime() < s.getTime()) return 0
+
+  let days = 0
+  const cur = new Date(s)
+  while (cur.getTime() <= e.getTime()) {
+    const dow = cur.getDay()
+    if (dow >= 1 && dow <= 5) {
+      days++
+    }
+    cur.setDate(cur.getDate() + 1)
+  }
+
+  return days
 }
 
 const toDateInputValue = (raw: unknown) => {

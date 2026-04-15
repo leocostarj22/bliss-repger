@@ -100,7 +100,7 @@ class VacationResource extends Resource
                             ->afterStateUpdated(function ($state, callable $set, callable $get) {
                                 $endDate = $get('end_date');
                                 if ($state && $endDate) {
-                                    $days = \Carbon\Carbon::parse($state)->diffInDays(\Carbon\Carbon::parse($endDate)) + 1;
+                                    $days = self::businessDaysInclusive(\Carbon\Carbon::parse($state), \Carbon\Carbon::parse($endDate));
                                     $set('requested_days', $days);
                                 }
                             }),
@@ -112,7 +112,7 @@ class VacationResource extends Resource
                             ->afterStateUpdated(function ($state, callable $set, callable $get) {
                                 $startDate = $get('start_date');
                                 if ($startDate && $state) {
-                                    $days = \Carbon\Carbon::parse($startDate)->diffInDays(\Carbon\Carbon::parse($state)) + 1;
+                                    $days = self::businessDaysInclusive(\Carbon\Carbon::parse($startDate), \Carbon\Carbon::parse($state));
                                     $set('requested_days', $days);
                                 }
                             }),
@@ -431,6 +431,26 @@ class VacationResource extends Resource
         return [
             //
         ];
+    }
+
+    private static function businessDaysInclusive(\Carbon\Carbon $start, \Carbon\Carbon $end): int
+    {
+        $s = $start->copy()->startOfDay();
+        $e = $end->copy()->startOfDay();
+        if ($e->lessThan($s)) {
+            return 0;
+        }
+
+        $days = 0;
+        $cursor = $s->copy();
+        while ($cursor->lessThanOrEqualTo($e)) {
+            if ($cursor->isWeekday()) {
+                $days++;
+            }
+            $cursor->addDay();
+        }
+
+        return $days;
     }
 
     public static function getPages(): array
