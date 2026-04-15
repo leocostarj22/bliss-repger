@@ -36,8 +36,11 @@ class MyFormulaOrderController extends Controller
         $orderStatusId = (int) ($validated['order_status_id'] ?? 0);
         $quizId = isset($validated['quiz_id']) ? (int) $validated['quiz_id'] : 0;
 
-        $paymentMethod = (string) ($validated['payment_method'] ?? 'Manual');
-        $paymentCode = (string) ($validated['payment_code'] ?? 'manual');
+        $paymentMethodCode = strtolower(trim((string) ($validated['payment_method'] ?? '')));
+        if ($paymentMethodCode === '') {
+            $paymentMethodCode = 'multibanco';
+        }
+
         $couponCode = strtolower(trim((string) ($validated['coupon_code'] ?? '')));
         $shippingMethod = (string) ($validated['shipping_method'] ?? '');
         $shippingCode = (string) ($validated['shipping_code'] ?? '');
@@ -180,6 +183,24 @@ class MyFormulaOrderController extends Controller
 
             $grandTotal = max(0.0, $subTotal - $couponDiscount);
 
+            if ($grandTotal <= 0.01) {
+                $paymentMethodCode = 'free';
+            }
+
+            $paymentMap = [
+                'free' => ['Free Checkout', 'free'],
+                'multibanco' => ['Multibanco', 'multibanco'],
+                'ifthenpaymbway' => ['MBWay', 'ifthenpaymbway'],
+                'stripe' => ['Cartões', 'stripe'],
+                'manual' => ['Manual', 'manual'],
+            ];
+
+            if (! isset($paymentMap[$paymentMethodCode])) {
+                $paymentMethodCode = 'manual';
+            }
+
+            [$paymentMethodTitle, $paymentCode] = $paymentMap[$paymentMethodCode];
+
             $orderData = [
                 'invoice_no' => 0,
                 'invoice_prefix' => 'INV-',
@@ -206,7 +227,7 @@ class MyFormulaOrderController extends Controller
                 'payment_zone_id' => $address['zone_id'],
                 'payment_address_format' => $address['address_format'],
                 'payment_custom_field' => $address['custom_field'],
-                'payment_method' => $paymentMethod,
+                'payment_method' => $paymentMethodTitle,
                 'payment_code' => $paymentCode,
                 'shipping_firstname' => $address['firstname'],
                 'shipping_lastname' => $address['lastname'],
@@ -241,6 +262,10 @@ class MyFormulaOrderController extends Controller
                 'date_added' => $now,
                 'date_modified' => $now,
             ];
+
+            if ($orderCols && $hasOrderCol('telephoneMBWay')) {
+                $orderData['telephoneMBWay'] = (string) ($orderData['telephone'] ?? '');
+            }
 
             if ($quizId > 0 && (! $orderCols || $hasOrderCol('quiz_id'))) {
                 $orderData['quiz_id'] = $quizId;
