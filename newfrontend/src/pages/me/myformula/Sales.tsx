@@ -8,15 +8,18 @@ import { useToast } from "@/components/ui/use-toast"
 import { fetchMyAccess, fetchMyCompanies } from "@/services/api"
 import {
   createMyFormulaCustomerReal,
+  createMyFormulaOrder,
   createMyFormulaQuizReal,
   fetchMyFormulaCountriesReal,
   fetchMyFormulaCustomers,
   fetchMyFormulaLatestQuizByCustomer,
+  fetchMyFormulaOrderStatuses,
+  fetchMyFormulaProducts,
   fetchMyFormulaZonesReal,
   type MyFormulaCountryOption,
   type MyFormulaZoneOption,
 } from "@/services/myFormulaApi"
-import type { MyFormulaCustomer, MyFormulaQuiz } from "@/types"
+import type { MyFormulaCustomer, MyFormulaOrder, MyFormulaOrderStatus, MyFormulaProduct, MyFormulaQuiz } from "@/types"
 import QuizWizard from "./QuizWizardMyFormula"
 
 export default function MyFormulaSales() {
@@ -54,6 +57,24 @@ export default function MyFormulaSales() {
 
   const [myCustomers, setMyCustomers] = useState<MyFormulaCustomer[]>([])
   const [myCustomersLoading, setMyCustomersLoading] = useState(false)
+
+  const [order, setOrder] = useState<MyFormulaOrder | null>(null)
+  const [orderBusy, setOrderBusy] = useState(false)
+
+  const [products, setProducts] = useState<MyFormulaProduct[]>([])
+  const [productsLoading, setProductsLoading] = useState(false)
+  const [productSearch, setProductSearch] = useState("")
+  const [selectedProductId, setSelectedProductId] = useState("")
+  const [addQty, setAddQty] = useState(1)
+
+  const [cart, setCart] = useState<Array<{ product_id: string; quantity: number }>>([])
+
+  const [orderStatuses, setOrderStatuses] = useState<MyFormulaOrderStatus[]>([])
+  const [orderStatusesLoading, setOrderStatusesLoading] = useState(false)
+  const [orderStatusId, setOrderStatusId] = useState("")
+
+  const [paymentMethod, setPaymentMethod] = useState("Manual")
+  const [paymentCode, setPaymentCode] = useState("manual")
 
   // Estados antigos do quiz básico foram removidos, usamos o Wizard agora
 
@@ -178,6 +199,113 @@ export default function MyFormulaSales() {
       alive = false
     }
   }, [allowed, country])
+
+  useEffect(() => {
+    let alive = true
+    if (!allowed) return
+
+    setProductsLoading(true)
+    fetchMyFormulaProducts({ status: "active", per_page: 250, page: 1 })
+      .then((r) => {
+        if (!alive) return
+        const rows = Array.isArray(r.data) ? r.data : []
+        setProducts(rows)
+        if (!selectedProductId && rows.length > 0) {
+          setSelectedProductId(String(rows[0].product_id))
+        }
+      })
+      .catch(() => {
+        if (!alive) return
+        setProducts([])
+      })
+      .finally(() => {
+        if (!alive) return
+        setProductsLoading(false)
+      })
+
+    setOrderStatusesLoading(true)
+    fetchMyFormulaOrderStatuses()
+      .then((r) => {
+        if (!alive) return
+        const rows = Array.isArray(r.data) ? r.data : []
+        setOrderStatuses(rows)
+        if (!orderStatusId && rows.length > 0) {
+          setOrderStatusId(String(rows[0].order_status_id))
+        }
+      })
+      .catch(() => {
+        if (!alive) return
+        setOrderStatuses([])
+      })
+      .finally(() => {
+        if (!alive) return
+        setOrderStatusesLoading(false)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [allowed])
+
+  useEffect(() => {
+    setOrder(null)
+    setCart([])
+    setAddQty(1)
+  }, [customer?.customer_id])
+
+  const productLabel = (p?: MyFormulaProduct | null) => {
+    if (!p) return ""
+    const name = String(p.description?.name ?? "").trim()
+    if (name) return name
+    return String(p.model ?? p.product_id)
+  }
+
+  const productsFiltered = useMemo(() => {
+    const term = productSearch.trim().toLowerCase()
+    if (!term) return products
+    return products.filter((p) => {
+      const label = `${productLabel(p)} ${p.model ?? ""} ${p.product_id ?? ""}`.toLowerCase()
+      return label.includes(term)
+    })
+  }, [productSearch, products])
+
+  const productById = useMemo(() => {
+    const map = new Map<string, MyFormulaProduct>()
+    for (const p of products) map.set(String(p.product_id), p)
+    return map
+  }, [products])
+
+  const cartTotal = useMemo(() => {
+    return cart.reduce((sum, line) => {
+      const p = productById.get(String(line.product_id))
+      const price = p?.price ? Number(p.price) : 0
+      return sum + price * Number(line.quantity || 0)
+    }, 0)
+  }, [cart, productById])
+
+  const addToCart = () => {
+    const pid = String(selectedProductId || "").trim()
+    if (!pid) return
+    const qty = Math.max(1, Number(addQty || 1))
+
+    setCart((prev) => {
+      const idx = prev.findIndex((x) => String(x.product_id) === pid)
+      if (idx >= 0) {
+        const next = [...prev]
+        next[idx] = { ...next[idx], quantity: next[idx].quantity + qty }
+        return next
+      }
+      return [...prev, { product_id: pid, quantity: qty }]
+    })
+  }
+
+  const removeFromCart = (pid: string) => setCart((prev) => prev.filter((x) => String(x.product_id) !== String(pid)))
+
+  const updateCartQty = (pid: string, qty: number) => {
+    setCart((prev) =>
+      prev.map((x) => (String(x.product_id) === String(pid) ? { ...x, quantity: Math.max(1, qty) } : x))
+    )
+  }
 
   const onCreateCustomer = async () => {
     if (!isReadyToCreate) return
@@ -518,9 +646,189 @@ export default function MyFormulaSales() {
         )}
       </div>
 
-      <div className="glass-card p-6 space-y-2">
-        <div className="text-sm font-semibold">3) Venda (encomenda)</div>
-        <div className="text-sm text-muted-foreground">Próximo passo: criar encomenda (oc_order + tabelas relacionadas) na BD MyFormula.</div>
+      <div className="glass-card p-6 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold">3) Venda (encomenda)</div>
+            <div className="text-sm text-muted-foreground">Criar encomenda (oc_order + tabelas relacionadas) na BD MyFormula.</div>
+          </div>
+          {order ? (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => navigate(`/myformula/orders/${order.order_id}`)}>
+                Abrir encomenda
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate(`/myformula/orders/${order.order_id}/purchase-report`)}>
+                Abrir relatório
+              </Button>
+            </div>
+          ) : null}
+        </div>
+
+        {!customer ? (
+          <div className="text-sm text-muted-foreground">Crie/seleciona um cliente primeiro.</div>
+        ) : (
+          <>
+            {!quiz ? (
+              <div className="text-sm text-amber-600">
+                Ainda não existe quiz associado a este cliente. Pode criar a encomenda na mesma, mas o recomendado é concluir o quiz antes.
+              </div>
+            ) : null}
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <div className="text-xs text-muted-foreground mb-1">Pesquisar produto</div>
+                <Input value={productSearch} onChange={(e) => setProductSearch(e.target.value)} placeholder="Pesquisar por nome/modelo/ID…" />
+              </div>
+
+              <div className="md:col-span-2">
+                <div className="text-xs text-muted-foreground mb-1">Produto</div>
+                <div className="value">
+                  <select
+                    value={selectedProductId}
+                    onChange={(e) => setSelectedProductId(e.target.value)}
+                    disabled={productsLoading || products.length === 0}
+                    style={{ border: 0, width: "100%", padding: 0, font: "inherit", background: "transparent" }}
+                  >
+                    {productsFiltered.map((p) => (
+                      <option key={p.product_id} value={p.product_id}>
+                        {productLabel(p)} — #{p.product_id}{p.price != null ? ` — €${Number(p.price).toFixed(2)}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Quantidade</div>
+                <Input type="number" min={1} value={String(addQty)} onChange={(e) => setAddQty(Math.max(1, Number(e.target.value || 1)))} />
+              </div>
+
+              <div className="flex items-end">
+                <Button type="button" variant="outline" onClick={addToCart} disabled={productsLoading || !selectedProductId}>
+                  Adicionar
+                </Button>
+              </div>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs text-muted-foreground bg-muted/30">
+                <div className="col-span-6">Produto</div>
+                <div className="col-span-2">Qtd</div>
+                <div className="col-span-3">Total</div>
+                <div className="col-span-1"></div>
+              </div>
+              <div className="divide-y">
+                {cart.length === 0 ? (
+                  <div className="px-3 py-3 text-sm text-muted-foreground">Nenhum produto adicionado.</div>
+                ) : (
+                  cart.map((line) => {
+                    const p = productById.get(String(line.product_id))
+                    const price = p?.price ? Number(p.price) : 0
+                    const total = price * Number(line.quantity || 0)
+                    return (
+                      <div key={line.product_id} className="grid grid-cols-12 gap-2 px-3 py-2 items-center">
+                        <div className="col-span-6 text-sm">
+                          <div className="font-medium truncate">{productLabel(p)}</div>
+                          <div className="text-xs text-muted-foreground truncate">#{line.product_id}{p?.model ? ` — ${p.model}` : ""}</div>
+                        </div>
+                        <div className="col-span-2">
+                          <Input
+                            type="number"
+                            min={1}
+                            value={String(line.quantity)}
+                            onChange={(e) => updateCartQty(String(line.product_id), Number(e.target.value || 1))}
+                          />
+                        </div>
+                        <div className="col-span-3 text-sm">€{total.toFixed(2)}</div>
+                        <div className="col-span-1 flex justify-end">
+                          <Button type="button" variant="ghost" size="sm" onClick={() => removeFromCart(String(line.product_id))}>
+                            Remover
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">Total estimado</div>
+              <div className="text-lg font-semibold">€{cartTotal.toFixed(2)}</div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Estado da encomenda</div>
+                <div className="value">
+                  <select
+                    value={orderStatusId}
+                    onChange={(e) => setOrderStatusId(e.target.value)}
+                    disabled={orderStatusesLoading || orderStatuses.length === 0}
+                    style={{ border: 0, width: "100%", padding: 0, font: "inherit", background: "transparent" }}
+                  >
+                    {orderStatuses.map((s) => (
+                      <option key={s.order_status_id} value={s.order_status_id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Método de pagamento</div>
+                <Input value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} />
+              </div>
+
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Código de pagamento</div>
+                <Input value={paymentCode} onChange={(e) => setPaymentCode(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                onClick={async () => {
+                  if (orderBusy || busy) return
+                  if (cart.length === 0) {
+                    toast({ title: "Validação", description: "Adicione pelo menos um produto.", variant: "destructive" })
+                    return
+                  }
+
+                  setOrderBusy(true)
+                  try {
+                    const res = await createMyFormulaOrder({
+                      customer_id: String(customer.customer_id),
+                      order_status_id: orderStatusId || undefined,
+                      quiz_id: quiz?.quiz_id ? String(quiz.quiz_id) : undefined,
+                      products: cart.map((x) => ({ product_id: String(x.product_id), quantity: Number(x.quantity) })),
+                      payment_method: paymentMethod || null,
+                      payment_code: paymentCode || null,
+                    })
+
+                    setOrder(res.data)
+                    toast({ title: "Encomenda criada", description: `Order #${res.data.order_id}` })
+                  } catch (e: any) {
+                    toast({ title: "Erro", description: String(e?.message ?? "Não foi possível criar a encomenda"), variant: "destructive" })
+                  } finally {
+                    setOrderBusy(false)
+                  }
+                }}
+                disabled={orderBusy || busy || !customer}
+              >
+                {orderBusy ? "A criar…" : "Criar encomenda"}
+              </Button>
+
+              {order ? (
+                <div className="text-sm text-muted-foreground">
+                  ✅ Criada: #{order.order_id} — €{Number(order.total ?? 0).toFixed(2)}
+                </div>
+              ) : null}
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
