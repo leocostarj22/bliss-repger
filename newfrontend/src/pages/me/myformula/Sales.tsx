@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import { fetchMyAccess, fetchMyCompanies } from "@/services/api"
@@ -668,10 +670,133 @@ export default function MyFormulaSales() {
                 </div>
 
                 {quiz.result ? (
-                  <div className="border rounded-lg p-4 bg-muted/20">
-                    <div className="text-sm font-semibold mb-2">Resultado da Análise</div>
-                    <pre className="text-xs overflow-auto whitespace-pre-wrap">{JSON.stringify(quiz.result, null, 2)}</pre>
-                  </div>
+                  <Accordion type="single" collapsible className="border rounded-lg bg-muted/20">
+                    <AccordionItem value="analysis" className="border-b-0">
+                      <AccordionTrigger className="px-4">Resultado da análise</AccordionTrigger>
+                      <AccordionContent className="px-4">
+                        <Tabs defaultValue="report">
+                          <TabsList>
+                            <TabsTrigger value="report">Relatório</TabsTrigger>
+                            <TabsTrigger value="json">JSON</TabsTrigger>
+                          </TabsList>
+
+                          <TabsContent value="report">
+                            {(() => {
+                              const post: any = quiz.post ?? {}
+                              const result: any = quiz.result ?? {}
+
+                              const improveMap: Record<string, string> = {
+                                G: "Perder peso",
+                                H: "Problemas Digestivos",
+                                B: "Ossos e articulações",
+                                A: "Energia e memória",
+                                J: "Longevidade",
+                                C: "Saúde Sexual",
+                                E: "Cabelo pele e unhas",
+                                F: "Sono",
+                                I: "Coração, circulação e açúcar no sangue",
+                                K: "Menopausa",
+                              }
+
+                              const genderRaw = String(post.gender ?? "").toLowerCase()
+                              const gender = genderRaw === "female" ? "Mulher" : genderRaw === "male" ? "Homem" : "—"
+
+                              const improveStr = String(post.improve_health ?? "")
+                              const improveCodes = improveStr
+                                .split(",")
+                                .map((x) => x.trim())
+                                .filter(Boolean)
+
+                              const objectives = improveCodes.map((c) => improveMap[c] ?? c)
+
+                              const recommended = Array.isArray(recommendedPlans) ? recommendedPlans : []
+                              const shownPlans = recommended.length > 0 ? recommended : []
+
+                              const planBlocks = shownPlans.map((p) => {
+                                const pid = String(p.product_id)
+                                const supp = Array.isArray(result?.[pid]?.supplements) ? result[pid].supplements : []
+                                return {
+                                  pid,
+                                  name: String(p.description?.name ?? p.model ?? `#${pid}`),
+                                  supplements: supp,
+                                }
+                              })
+
+                              return (
+                                <div className="space-y-4">
+                                  <div className="grid gap-3 md:grid-cols-2">
+                                    <div>
+                                      <div className="text-xs text-muted-foreground mb-1">Nome</div>
+                                      <div className="value">{String(post.name ?? "").trim() || "—"}</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-xs text-muted-foreground mb-1">Data de nascimento</div>
+                                      <div className="value">{String(post.birthdate ?? "").trim() || "—"}</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-xs text-muted-foreground mb-1">Género</div>
+                                      <div className="value">{gender}</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-xs text-muted-foreground mb-1">Email</div>
+                                      <div className="value">{String(post.email ?? "").trim() || "—"}</div>
+                                    </div>
+                                  </div>
+
+                                  <div>
+                                    <div className="text-sm font-semibold">Escolha seus objetivos por ordem de prioridade</div>
+                                    <div className="text-xs text-muted-foreground">(Exemplo: Se entrou pelo plano Menopausa, insira Menopausa como primeira opção)</div>
+                                    {objectives.length > 0 ? (
+                                      <ol className="list-decimal ml-5 mt-2 text-sm space-y-0.5">
+                                        {objectives.map((o, idx) => (
+                                          <li key={`${o}-${idx}`}>{o}</li>
+                                        ))}
+                                      </ol>
+                                    ) : (
+                                      <div className="text-sm text-muted-foreground mt-2">—</div>
+                                    )}
+                                  </div>
+
+                                  <div className="grid gap-3 md:grid-cols-2">
+                                    <div>
+                                      <div className="text-xs text-muted-foreground mb-1">Necessita aprovação</div>
+                                      <div className="value">{result?.need_approval ? "Sim" : "Não"}</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-xs text-muted-foreground mb-1">Bullets (health)</div>
+                                      <div className="value">{Array.isArray(result?.health) ? result.health.join(", ") : "—"}</div>
+                                    </div>
+                                  </div>
+
+                                  {planBlocks.length > 0 ? (
+                                    <div className="border rounded-lg p-3 bg-background">
+                                      <div className="text-sm font-semibold mb-2">Planos recomendados (suplementos calculados)</div>
+                                      <div className="space-y-2">
+                                        {planBlocks.map((b) => (
+                                          <div key={b.pid} className="flex flex-col gap-1">
+                                            <div className="text-sm font-medium">{b.name}</div>
+                                            <div className="text-xs text-muted-foreground">{b.supplements.length ? b.supplements.join(", ") : "—"}</div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="text-sm text-muted-foreground">
+                                      Os planos recomendados aparecem no Passo 3; aqui o sistema mostra o resumo do quiz.
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })()}
+                          </TabsContent>
+
+                          <TabsContent value="json">
+                            <pre className="text-xs overflow-auto whitespace-pre-wrap">{JSON.stringify(quiz.result, null, 2)}</pre>
+                          </TabsContent>
+                        </Tabs>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 ) : null}
               </div>
             )}
