@@ -850,8 +850,15 @@ export default function MyFormulaSales() {
                   <div className="text-sm text-muted-foreground">Sem recomendação disponível para este quiz. Pode escolher manualmente abaixo.</div>
                 ) : (
                   <div className="grid gap-3 md:grid-cols-3">
-                    {recommendedPlans.map((p) => (
-                      <div key={p.product_id} className="border rounded-lg p-3 bg-background">
+                    {recommendedPlans.map((p) => {
+                      const isSelected = String(selectedProductId) === String(p.product_id) && cart.some((x) => String(x.product_id) === String(p.product_id))
+                      return (
+                        <div
+                          key={p.product_id}
+                          className={`border rounded-lg p-3 transition-colors ${
+                            isSelected ? "border-primary bg-primary/10" : "bg-background"
+                          }`}
+                        >
                         <div className="text-sm font-semibold truncate">{productLabel(p)}</div>
                         <div className="text-xs text-muted-foreground truncate">{p.model ? p.model : `#${p.product_id}`}</div>
                         <div className="mt-2 text-sm">{p.price != null ? `€${Number(p.price).toFixed(2)}` : "—"}</div>
@@ -871,8 +878,9 @@ export default function MyFormulaSales() {
                             Selecionar este plano
                           </Button>
                         </div>
-                      </div>
-                    ))}
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>
