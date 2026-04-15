@@ -80,6 +80,7 @@ export default function MyFormulaSales() {
 
   const [paymentMethod, setPaymentMethod] = useState("Manual")
   const [paymentCode, setPaymentCode] = useState("manual")
+  const [paymentCodePreset, setPaymentCodePreset] = useState<string>("__custom__")
 
   // Estados antigos do quiz básico foram removidos, usamos o Wizard agora
 
@@ -975,7 +976,31 @@ export default function MyFormulaSales() {
 
               <div>
                 <div className="text-xs text-muted-foreground mb-1">Código de pagamento</div>
-                <Input value={paymentCode} onChange={(e) => setPaymentCode(e.target.value)} />
+                <div className="value">
+                  <select
+                    value={paymentCodePreset}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setPaymentCodePreset(v)
+                      if (v !== "__custom__") {
+                        setPaymentCode(v)
+                      }
+                    }}
+                    style={{ border: 0, width: "100%", padding: 0, font: "inherit", background: "transparent" }}
+                  >
+                    <option value="">Sem código</option>
+                    <option value="climyf50">climyf50</option>
+                    <option value="climyf80">climyf80</option>
+                    <option value="climyf125">climyf125</option>
+                    <option value="__custom__">Inserir manualmente</option>
+                  </select>
+                </div>
+
+                {paymentCodePreset === "__custom__" ? (
+                  <div className="mt-2">
+                    <Input value={paymentCode} onChange={(e) => setPaymentCode(e.target.value)} placeholder="Código" />
+                  </div>
+                ) : null}
               </div>
             </div>
 
