@@ -82,6 +82,14 @@ export default function MyFormulaSales() {
   const [paymentCode, setPaymentCode] = useState("manual")
   const [paymentCodePreset, setPaymentCodePreset] = useState<string>("__custom__")
 
+  const pendingOrderStatusId = useMemo(() => {
+    const byPt = orderStatuses.find((s) => String(s.name ?? "").trim().toLowerCase().includes("pendente"))
+    if (byPt) return String(byPt.order_status_id)
+
+    const byEn = orderStatuses.find((s) => String(s.name ?? "").trim().toLowerCase().includes("pending"))
+    return byEn ? String(byEn.order_status_id) : ""
+  }, [orderStatuses])
+
   // Estados antigos do quiz básico foram removidos, usamos o Wizard agora
 
   const isReadyToCreate = useMemo(() => {
@@ -855,6 +863,9 @@ export default function MyFormulaSales() {
                             onClick={() => {
                               setSelectedProductId(String(p.product_id))
                               setCart([{ product_id: String(p.product_id), quantity: 1 }])
+                              if (pendingOrderStatusId) {
+                                setOrderStatusId(pendingOrderStatusId)
+                              }
                             }}
                           >
                             Selecionar este plano
