@@ -23,6 +23,12 @@ class MessageSentNotification extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
+        $subjectNorm = strtolower(trim((string) ($this->message->subject ?? '')));
+        $isChat = $subjectNorm === '(chat)' || str_contains($subjectNorm, '(chat)');
+        if ($isChat) {
+            return [];
+        }
+
         return ['mail'];
     }
 

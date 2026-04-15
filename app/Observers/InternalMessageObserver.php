@@ -18,7 +18,8 @@ class InternalMessageObserver
     {
         ProcessMessageBroadcast::dispatch($internalMessage);
 
-        $isChat = $internalMessage->subject === '(Chat)';
+        $subjectNorm = strtolower(trim((string) ($internalMessage->subject ?? '')));
+        $isChat = $subjectNorm === '(chat)' || str_contains($subjectNorm, '(chat)');
 
         if (! $isChat && $internalMessage->sender) {
             Notification::make()
@@ -53,7 +54,8 @@ class InternalMessageObserver
      */
     public function updated(InternalMessage $internalMessage): void
     {
-        if ($internalMessage->subject === '(Chat)') {
+        $subjectNorm = strtolower(trim((string) ($internalMessage->subject ?? '')));
+        if ($subjectNorm === '(chat)' || str_contains($subjectNorm, '(chat)')) {
             return;
         }
 
@@ -77,7 +79,14 @@ class InternalMessageObserver
 
         // Construir array de mudanças
         $changes = $this->buildChangesArray($internalMessage);
-        $updatedBy = auth()->user() ?? $internalMessage->sender;
+
+        $updatedBy = Auth::user();
+        if (!($updatedBy instanceof \App\Models\User)) {
+            $updatedBy = $internalMessage->sender;
+        }
+        if (!$updatedBy) {
+            return;
+        }
 
         // Notificar o remetente
         if ($internalMessage->sender) {

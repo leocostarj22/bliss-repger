@@ -1215,19 +1215,6 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 ];
             }
 
-            $recipientUser = User::find($validated['to_user_id']);
-            if ($recipientUser && (int) $recipientUser->id !== (int) $user->id) {
-                $senderName = trim((string) ($user->name ?? ''));
-                if ($senderName === '') $senderName = 'Utilizador';
-
-                \Filament\Notifications\Notification::make()
-                    ->title("Nova mensagem de {$senderName}")
-                    ->info()
-                    ->body("Assunto: {$subject}")
-                    ->sendToDatabase($recipientUser);
-
-                $recipientUser->notify(new \App\Notifications\MessageSentNotification($message, $user, false));
-            }
 
             return response()->json([
                 'data' => [
