@@ -26,6 +26,7 @@ import type { MyFormulaCustomer, MyFormulaOrder, MyFormulaOrderStatus, MyFormula
 import QuizWizard from "./QuizWizardMyFormula"
 
 const LAST_CUSTOMER_KEY = "bliss:myformula:lastCustomer"
+const LAST_QUIZ_KEY = "bliss:myformula:lastQuiz"
 
 export default function MyFormulaSales() {
   const { toast } = useToast()
@@ -121,6 +122,19 @@ export default function MyFormulaSales() {
     } catch {
       return
     }
+
+    try {
+      const rawQuiz = window.localStorage.getItem(LAST_QUIZ_KEY)
+      if (!rawQuiz) return
+      const parsedQuiz = JSON.parse(rawQuiz)
+      const cid = String(parsedQuiz?.customer_id ?? "").trim()
+      if (!cid) return
+      if (cid === String(customer?.customer_id ?? "").trim()) {
+        setQuiz(parsedQuiz?.quiz ?? null)
+      }
+    } catch {
+      return
+    }
   }, [])
 
   useEffect(() => {
@@ -135,6 +149,17 @@ export default function MyFormulaSales() {
       return
     }
   }, [customer])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const cid = String(customer?.customer_id ?? "").trim()
+      if (!cid || !quiz) return
+      window.localStorage.setItem(LAST_QUIZ_KEY, JSON.stringify({ customer_id: cid, quiz }))
+    } catch {
+      return
+    }
+  }, [customer?.customer_id, quiz])
 
   useEffect(() => {
     if (!allowed) return
@@ -487,7 +512,19 @@ export default function MyFormulaSales() {
       })
       .catch(() => {
         if (!alive) return
-        setQuiz(null)
+        setQuiz((prev) => {
+          if (prev) return prev
+          try {
+            const raw = window.localStorage.getItem(LAST_QUIZ_KEY)
+            if (!raw) return null
+            const parsed = JSON.parse(raw)
+            const cid = String(parsed?.customer_id ?? "").trim()
+            if (cid !== customerId) return null
+            return parsed?.quiz ?? null
+          } catch {
+            return null
+          }
+        })
       })
       .finally(() => {
         if (!alive) return

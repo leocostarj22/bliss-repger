@@ -168,15 +168,24 @@ class MyFormulaQuizController extends Controller
         }
 
         try {
-            $patternNumber = '%"customer_id":' . $customerId . '%';
-            $patternString = '%"customer_id":"' . $customerId . '"%';
+            $patterns = [
+                '%"customer_id":' . $customerId . '%',
+                '%"customer_id": ' . $customerId . '%',
+                '%"customer_id" : ' . $customerId . '%',
+                '%"customer_id" :' . $customerId . '%',
+                '%"customer_id":"' . $customerId . '"%',
+                '%"customer_id": "' . $customerId . '"%',
+            ];
 
             $row = DB::connection('myformula')
                 ->table('quiz')
                 ->select(['quiz_id', 'post', 'result', 'token', 'report_id', 'date_added'])
-                ->where(function ($q) use ($patternNumber, $patternString) {
-                    $q->where('post', 'like', $patternNumber)
-                      ->orWhere('post', 'like', $patternString);
+                ->where(function ($q) use ($customerId, $patterns) {
+                    $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(post, '$.customer_id')) = ?", [(string) $customerId]);
+
+                    foreach ($patterns as $p) {
+                        $q->orWhere('post', 'like', $p);
+                    }
                 })
                 ->orderByDesc('quiz_id')
                 ->first();
