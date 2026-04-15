@@ -296,6 +296,7 @@ export async function createMyFormulaOrder(payload: {
   products: { product_id: string; quantity: number }[]
   payment_method?: string | null
   payment_code?: string | null
+  coupon_code?: string | null
   shipping_method?: string | null
   shipping_code?: string | null
 }): Promise<ApiResponse<MyFormulaOrder>> {

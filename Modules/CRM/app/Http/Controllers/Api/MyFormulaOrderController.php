@@ -23,6 +23,7 @@ class MyFormulaOrderController extends Controller
             'products.*.quantity' => ['required', 'integer', 'min:1'],
             'payment_method' => ['nullable', 'string', 'max:255'],
             'payment_code' => ['nullable', 'string', 'max:255'],
+            'coupon_code' => ['nullable', 'string', 'max:64'],
             'shipping_method' => ['nullable', 'string', 'max:255'],
             'shipping_code' => ['nullable', 'string', 'max:255'],
         ]);
@@ -37,6 +38,7 @@ class MyFormulaOrderController extends Controller
 
         $paymentMethod = (string) ($validated['payment_method'] ?? 'Manual');
         $paymentCode = (string) ($validated['payment_code'] ?? 'manual');
+        $couponCode = strtolower(trim((string) ($validated['coupon_code'] ?? '')));
         $shippingMethod = (string) ($validated['shipping_method'] ?? '');
         $shippingCode = (string) ($validated['shipping_code'] ?? '');
 
@@ -162,7 +164,21 @@ class MyFormulaOrderController extends Controller
                 ];
             }
 
-            $grandTotal = $subTotal;
+            $couponMap = [
+                'climyf50' => 50.0,
+                'climyf80' => 80.0,
+                'climyf125' => 125.0,
+            ];
+
+            $couponDiscount = 0.0;
+            if ($couponCode !== '' && isset($couponMap[$couponCode])) {
+                $expected = (float) $couponMap[$couponCode];
+                if (abs($subTotal - $expected) < 0.01) {
+                    $couponDiscount = $expected;
+                }
+            }
+
+            $grandTotal = max(0.0, $subTotal - $couponDiscount);
 
             $orderData = [
                 'invoice_no' => 0,
@@ -238,7 +254,7 @@ class MyFormulaOrderController extends Controller
                 );
             }
 
-            $orderId = DB::connection('myformula')->transaction(function () use ($orderData, $orderProducts, $grandTotal, $subTotal, $orderStatusId, $now) {
+            $orderId = DB::connection('myformula')->transaction(function () use ($orderData, $orderProducts, $grandTotal, $subTotal, $couponDiscount, $couponCode, $orderStatusId, $now) {
                 $orderId = (int) DB::connection('myformula')->table('order')->insertGetId($orderData);
 
                 foreach ($orderProducts as $p) {
@@ -255,7 +271,7 @@ class MyFormulaOrderController extends Controller
                     ]);
                 }
 
-                DB::connection('myformula')->table('order_total')->insert([
+                $totals = [
                     [
                         'order_id' => $orderId,
                         'code' => 'sub_total',
@@ -263,14 +279,27 @@ class MyFormulaOrderController extends Controller
                         'value' => $subTotal,
                         'sort_order' => 1,
                     ],
-                    [
+                ];
+
+                if ($couponDiscount > 0 && $couponCode !== '') {
+                    $totals[] = [
                         'order_id' => $orderId,
-                        'code' => 'total',
-                        'title' => 'Total',
-                        'value' => $grandTotal,
-                        'sort_order' => 9,
-                    ],
-                ]);
+                        'code' => 'coupon',
+                        'title' => 'Cupão (' . $couponCode . ')',
+                        'value' => -$couponDiscount,
+                        'sort_order' => 5,
+                    ];
+                }
+
+                $totals[] = [
+                    'order_id' => $orderId,
+                    'code' => 'total',
+                    'title' => 'Total',
+                    'value' => $grandTotal,
+                    'sort_order' => 9,
+                ];
+
+                DB::connection('myformula')->table('order_total')->insert($totals);
 
                 DB::connection('myformula')->table('order_history')->insert([
                     'order_id' => $orderId,

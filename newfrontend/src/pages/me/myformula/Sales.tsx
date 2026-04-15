@@ -78,7 +78,7 @@ export default function MyFormulaSales() {
   const [orderStatusesLoading, setOrderStatusesLoading] = useState(false)
   const [orderStatusId, setOrderStatusId] = useState("")
 
-  const [paymentMethod, setPaymentMethod] = useState("Manual")
+  const [paymentMethod, setPaymentMethod] = useState("multibanco")
   const [paymentCode, setPaymentCode] = useState("manual")
   const [paymentCodePreset, setPaymentCodePreset] = useState<string>("__custom__")
 
@@ -326,6 +326,33 @@ export default function MyFormulaSales() {
       return sum + price * Number(line.quantity || 0)
     }, 0)
   }, [cart, productById])
+
+  const couponFixedValue = useMemo(() => {
+    const code = String(paymentCode ?? "").trim().toLowerCase()
+    if (code === "climyf50") return 50
+    if (code === "climyf80") return 80
+    if (code === "climyf125") return 125
+    return 0
+  }, [paymentCode])
+
+  const couponDiscount = useMemo(() => {
+    if (!couponFixedValue) return 0
+    return Math.abs(cartTotal - couponFixedValue) < 0.01 ? couponFixedValue : 0
+  }, [cartTotal, couponFixedValue])
+
+  const finalTotal = useMemo(() => Math.max(0, cartTotal - couponDiscount), [cartTotal, couponDiscount])
+
+  const paymentMethodOptions = useMemo(() => {
+    const base = [
+      { value: "multibanco", label: "Multibanco" },
+      { value: "ifthenpaymbway", label: "MBWay" },
+      { value: "stripe", label: "Cartões" },
+    ]
+    if (couponDiscount > 0) {
+      return [{ value: "free", label: "Free Checkout" }, ...base]
+    }
+    return base
+  }, [couponDiscount])
 
   const addToCart = () => {
     const pid = String(selectedProductId || "").trim()
@@ -964,9 +991,19 @@ export default function MyFormulaSales() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">Total estimado</div>
-              <div className="text-lg font-semibold">€{cartTotal.toFixed(2)}</div>
+            <div className="space-y-1 border rounded-lg p-3 bg-muted/10">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span>€{cartTotal.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Desconto cupão</span>
+                <span>{couponDiscount > 0 ? `-€${couponDiscount.toFixed(2)}` : "€0.00"}</span>
+              </div>
+              <div className="flex items-center justify-between text-base font-semibold pt-1 border-t">
+                <span>Total final</span>
+                <span>€{finalTotal.toFixed(2)}</span>
+              </div>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
@@ -990,7 +1027,19 @@ export default function MyFormulaSales() {
 
               <div>
                 <div className="text-xs text-muted-foreground mb-1">Método de pagamento</div>
-                <Input value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} />
+                <div className="value">
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    style={{ border: 0, width: "100%", padding: 0, font: "inherit", background: "transparent" }}
+                  >
+                    {paymentMethodOptions.map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -1000,9 +1049,20 @@ export default function MyFormulaSales() {
                     value={paymentCodePreset}
                     onChange={(e) => {
                       const v = e.target.value
+                      const validCoupons = ["climyf50", "climyf80", "climyf125"]
+                      const normalized = String(v ?? "").trim().toLowerCase()
+                      const isValidCoupon = validCoupons.includes(normalized)
+
                       setPaymentCodePreset(v)
+
                       if (v !== "__custom__") {
                         setPaymentCode(v)
+                      }
+
+                      if (isValidCoupon) {
+                        setPaymentMethod("Free Checkout")
+                      } else if (v === "" && paymentMethod === "Free Checkout") {
+                        setPaymentMethod("Manual")
                       }
                     }}
                     style={{ border: 0, width: "100%", padding: 0, font: "inherit", background: "transparent" }}
@@ -1017,7 +1077,24 @@ export default function MyFormulaSales() {
 
                 {paymentCodePreset === "__custom__" ? (
                   <div className="mt-2">
-                    <Input value={paymentCode} onChange={(e) => setPaymentCode(e.target.value)} placeholder="Código" />
+                    <Input
+                      value={paymentCode}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        const validCoupons = ["climyf50", "climyf80", "climyf125"]
+                        const normalized = v.trim().toLowerCase()
+                        const isValidCoupon = validCoupons.includes(normalized)
+
+                        setPaymentCode(v)
+
+                        if (isValidCoupon) {
+                          setPaymentMethod("Free Checkout")
+                        } else if (!normalized && paymentMethod === "Free Checkout") {
+                          setPaymentMethod("Manual")
+                        }
+                      }}
+                      placeholder="Código"
+                    />
                   </div>
                 ) : null}
               </div>
@@ -1042,6 +1119,7 @@ export default function MyFormulaSales() {
                       products: cart.map((x) => ({ product_id: String(x.product_id), quantity: Number(x.quantity) })),
                       payment_method: paymentMethod || null,
                       payment_code: paymentCode || null,
+                      coupon_code: couponDiscount > 0 ? paymentCode : null,
                     })
 
                     setOrder(res.data)
