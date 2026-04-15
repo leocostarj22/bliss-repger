@@ -347,8 +347,19 @@ Route::prefix('v1')->group(function () {
                     $post = [];
                 }
 
+                $gender = strtolower(trim((string) ($post['gender'] ?? '')));
+
                 $improve = (string) ($post['improve_health'] ?? '');
-                $primary = strtoupper(trim(explode(',', $improve)[0] ?? ''));
+                $codes = collect(explode(',', $improve))
+                    ->map(fn ($x) => strtoupper(trim((string) $x)))
+                    ->filter(fn ($x) => $x !== '' && preg_match('/^[A-K]$/', $x))
+                    ->values();
+
+                if ($gender !== 'female') {
+                    $codes = $codes->reject(fn ($x) => $x === 'K')->values();
+                }
+
+                $primary = (string) ($codes->first() ?? '');
 
                 $map = [
                     'A' => ['Plan-16', 'Plan-17', 'Plan-18'],
@@ -363,34 +374,79 @@ Route::prefix('v1')->group(function () {
                     'J' => ['Plan-07', 'Plan-08', 'Plan-09'],
                 ];
 
-                $models = $map[$primary] ?? [];
-                if (! $models) {
-                    return response()->json(['data' => [], 'meta' => ['primary_preference' => $primary]]);
+                $models = [];
+                $usedObjectives = [];
+
+                foreach ($codes as $code) {
+                    if (! isset($map[$code])) {
+                        continue;
+                    }
+
+                    foreach ($map[$code] as $m) {
+                        $models[] = $m;
+                    }
+
+                    $usedObjectives[] = $code;
+                    if (count($usedObjectives) >= 3) {
+                        break;
+                    }
                 }
 
-                $rows = DB::connection('myformula')
-                    ->table('product as p')
-                    ->leftJoin('product_description as pd', function ($join) {
-                        $join->on('pd.product_id', '=', 'p.product_id')->where('pd.language_id', 2);
-                    })
-                    ->select([
-                        'p.product_id',
-                        'p.model',
-                        'p.price',
-                        'p.quantity',
-                        'p.status',
-                        'p.date_added',
-                        'pd.name as name',
-                        'pd.description as description',
-                    ])
-                    ->whereIn('p.model', $models)
-                    ->get();
+                if (! $models) {
+                    return response()->json([
+                        'data' => [],
+                        'meta' => [
+                            'primary_preference' => $primary,
+                            'used_objectives' => $usedObjectives,
+                            'models' => [],
+                        ],
+                    ]);
+                }
 
-                $byModel = $rows->keyBy(fn ($r) => (string) ($r->model ?? ''));
+                $picked = [];
+
+                foreach ($models as $modelKey) {
+                    if (isset($picked[$modelKey])) {
+                        continue;
+                    }
+
+                    $row = DB::connection('myformula')
+                        ->table('product as p')
+                        ->leftJoin('product_description as pd', function ($join) {
+                            $join->on('pd.product_id', '=', 'p.product_id')->where('pd.language_id', 2);
+                        })
+                        ->select([
+                            'p.product_id',
+                            'p.model',
+                            'p.price',
+                            'p.quantity',
+                            'p.status',
+                            'p.date_added',
+                            'pd.name as name',
+                            'pd.description as description',
+                        ])
+                        ->where('p.status', 1)
+                        ->where('p.is_plan', 1)
+                        ->where(function ($q) use ($modelKey) {
+                            $q->where('p.model', 'like', '%' . $modelKey . '%')
+                              ->orWhere('pd.name', 'like', '%' . $modelKey . '%');
+                        })
+                        ->orderBy('p.product_id')
+                        ->first();
+
+                    if ($row) {
+                        $picked[$modelKey] = $row;
+                    }
+
+                    if (count($picked) >= 3) {
+                        break;
+                    }
+                }
 
                 $data = collect($models)
-                    ->map(fn ($m) => $byModel->get($m))
+                    ->map(fn ($m) => $picked[$m] ?? null)
                     ->filter()
+                    ->take(3)
                     ->map(function ($r) {
                         $rawDate = $r->date_added ?? null;
                         $date = null;
@@ -424,8 +480,11 @@ Route::prefix('v1')->group(function () {
                 return response()->json([
                     'data' => $data,
                     'meta' => [
+                        'gender' => $gender,
                         'primary_preference' => $primary,
+                        'used_objectives' => $usedObjectives,
                         'models' => $models,
+                        'returned' => $data->count(),
                     ],
                 ]);
             } catch (\Throwable $e) {
