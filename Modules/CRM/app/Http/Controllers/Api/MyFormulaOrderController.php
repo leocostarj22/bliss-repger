@@ -267,6 +267,10 @@ class MyFormulaOrderController extends Controller
                 $orderData['telephoneMBWay'] = (string) ($orderData['telephone'] ?? '');
             }
 
+            if ($orderCols && $hasOrderCol('fax')) {
+                $orderData['fax'] = (string) ($orderData['fax'] ?? '');
+            }
+
             if ($quizId > 0 && (! $orderCols || $hasOrderCol('quiz_id'))) {
                 $orderData['quiz_id'] = $quizId;
             }
