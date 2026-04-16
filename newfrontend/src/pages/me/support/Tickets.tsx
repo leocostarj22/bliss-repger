@@ -4,10 +4,40 @@ import { Eye, Plus, Search } from "lucide-react"
 
 import type { SupportTicket, SupportTicketPriority, SupportTicketStatus } from "@/types"
 import { fetchMySupportTickets } from "@/services/api"
+
+
+const statusBadgeClass = (s: SupportTicketStatus) => {
+  switch (s) {
+    case "open":
+      return "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-300 dark:border-emerald-400/30"
+    case "in_progress":
+      return "bg-sky-500/10 text-sky-700 border-sky-500/30 dark:text-sky-300 dark:border-sky-400/30"
+    case "pending":
+      return "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-300 dark:border-amber-400/30"
+    case "resolved":
+      return "bg-slate-500/10 text-slate-700 border-slate-500/30 dark:text-slate-300 dark:border-slate-400/30"
+    case "closed":
+      return "bg-zinc-500/10 text-zinc-700 border-zinc-500/30 dark:text-zinc-300 dark:border-zinc-400/30"
+  }
+}
+
+const priorityBadgeClass = (p: SupportTicketPriority) => {
+  switch (p) {
+    case "low":
+      return "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-300 dark:border-emerald-400/30"
+    case "medium":
+      return "bg-slate-500/10 text-slate-700 border-slate-500/30 dark:text-slate-300 dark:border-slate-400/30"
+    case "high":
+      return "bg-orange-500/10 text-orange-700 border-orange-500/30 dark:text-orange-300 dark:border-orange-400/30"
+    case "urgent":
+      return "bg-red-500/10 text-red-700 border-red-500/30 dark:text-red-300 dark:border-red-400/30"
+  }
+}
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/components/ui/use-toast"
 
 const statusLabel = (s: SupportTicketStatus) =>
@@ -28,6 +58,9 @@ export default function MeSupportTickets() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<"all" | SupportTicketStatus>("all")
+  const [priorityFilter, setPriorityFilter] = useState<"all" | SupportTicketPriority>("all")
+  const [overdueFilter, setOverdueFilter] = useState<"all" | "overdue">("all")
   const [rows, setRows] = useState<SupportTicket[]>([])
 
   useEffect(() => {
@@ -54,10 +87,19 @@ export default function MeSupportTickets() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return rows.filter((r) => {
+      if (statusFilter !== "all" && r.status !== statusFilter) return false
+      if (priorityFilter !== "all" && r.priority !== priorityFilter) return false
+
+      const due = r.due_date ? new Date(r.due_date) : null
+      const dueMs = due && !Number.isNaN(due.getTime()) ? due.getTime() : null
+      const isOverdue = Boolean(dueMs && dueMs < Date.now() && r.status !== "resolved" && r.status !== "closed")
+      if (overdueFilter === "overdue" && !isOverdue) return false
+
       if (!q) return true
-      return (r.title ?? "").toLowerCase().includes(q) || (r.description ?? "").toLowerCase().includes(q) || String(r.id).toLowerCase().includes(q)
+      const hay = `${r.title ?? ""} ${stripHtml(r.description) ?? ""} ${String(r.id)}`.toLowerCase()
+      return hay.includes(q)
     })
-  }, [rows, search])
+  }, [rows, search, statusFilter, priorityFilter, overdueFilter])
 
   const dueLabel = (iso?: string | null) => {
     if (!iso) return "—"
@@ -95,6 +137,72 @@ export default function MeSupportTickets() {
           />
         </div>
 
+        <div className="mb-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm font-medium">Filtros</div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setStatusFilter("all")
+                setPriorityFilter("all")
+                setOverdueFilter("all")
+              }}
+            >
+              Limpar
+            </Button>
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">Status</div>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="open">Aberto</SelectItem>
+                  <SelectItem value="in_progress">Em progresso</SelectItem>
+                  <SelectItem value="pending">Pendente</SelectItem>
+                  <SelectItem value="resolved">Resolvido</SelectItem>
+                  <SelectItem value="closed">Fechado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">Prioridade</div>
+              <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="low">Baixa</SelectItem>
+                  <SelectItem value="medium">Média</SelectItem>
+                  <SelectItem value="high">Alta</SelectItem>
+                  <SelectItem value="urgent">Urgente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">Vencimento</div>
+              <Select value={overdueFilter} onValueChange={(v) => setOverdueFilter(v as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="overdue">Vencidos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
         <div className="w-full overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -123,20 +231,27 @@ export default function MeSupportTickets() {
                 </tr>
               ) : (
                 filtered.map((r) => {
-                  const statusVariant = r.status === "resolved" || r.status === "closed" ? "secondary" : r.status === "open" ? "default" : "outline"
-                  const priorityVariant = r.priority === "urgent" || r.priority === "high" ? "destructive" : "secondary"
-                  const descriptionShort = truncate(stripHtml(r.description), 90)
                   return (
                     <tr key={r.id} className="border-b border-border/60 hover:bg-white/5 transition-colors">
                       <td className="py-4 pr-4">
                         <div className="space-y-1 max-w-[520px]">
                           <div className="font-medium truncate">{r.title}</div>
-                          <div className="text-xs text-muted-foreground truncate">{descriptionShort || "—"}</div>
+                          <div className="text-xs text-muted-foreground truncate">{truncate(stripHtml(r.description), 90) || "—"}</div>
                           <div className="text-xs text-muted-foreground">{r.id}</div>
                         </div>
                       </td>
-                      <td className="py-4 pr-4"><Badge variant={statusVariant as any}>{statusLabel(r.status as SupportTicketStatus)}</Badge></td>
-                      <td className="py-4 pr-4"><Badge variant={priorityVariant as any}>{priorityLabel(r.priority as SupportTicketPriority)}</Badge></td>
+                      <td className="py-4 pr-4">
+                        <Badge variant="outline" className={statusBadgeClass(r.status as SupportTicketStatus)}>
+                          <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-current/70" />
+                          {statusLabel(r.status as SupportTicketStatus)}
+                        </Badge>
+                      </td>
+                      <td className="py-4 pr-4">
+                        <Badge variant="outline" className={priorityBadgeClass(r.priority as SupportTicketPriority)}>
+                          <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-current/70" />
+                          {priorityLabel(r.priority as SupportTicketPriority)}
+                        </Badge>
+                      </td>
                       <td className="py-4 pr-4">{dueLabel(r.due_date)}</td>
                       <td className="py-4 pr-4">
                         <Button asChild type="button" size="sm" variant="outline">

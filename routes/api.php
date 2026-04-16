@@ -3918,80 +3918,95 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             $companyId = $user->employee?->company_id;
             abort_unless($companyId && (int) $ticket->company_id === (int) $companyId, 422);
 
-            $validated = request()->validate([
-                'title' => ['required', 'string', 'max:255'],
-                'description' => ['required', 'string'],
-                'priority' => ['required', 'in:' . implode(',', [Ticket::PRIORITY_LOW, Ticket::PRIORITY_MEDIUM, Ticket::PRIORITY_HIGH, Ticket::PRIORITY_URGENT])],
-                'category_id' => [
-                    'nullable',
-                    Rule::exists('categories', 'id')->where(fn ($q) => $q->where('company_id', $companyId)),
-                ],
-                'department_id' => [
-                    'nullable',
-                    Rule::exists('departments', 'id')->where(fn ($q) => $q->where('company_id', $companyId)),
-                ],
-                'assigned_to' => ['nullable'],
-                'due_date' => ['nullable', 'date'],
-            ]);
+            try {
+                $validated = request()->validate([
+                    'title' => ['required', 'string', 'max:255'],
+                    'description' => ['required', 'string'],
+                    'priority' => ['required', 'in:' . implode(',', [Ticket::PRIORITY_LOW, Ticket::PRIORITY_MEDIUM, Ticket::PRIORITY_HIGH, Ticket::PRIORITY_URGENT])],
+                    'category_id' => [
+                        'nullable',
+                        Rule::exists('categories', 'id')->where(fn ($q) => $q->where('company_id', $companyId)),
+                    ],
+                    'department_id' => [
+                        'nullable',
+                        Rule::exists('departments', 'id')->where(fn ($q) => $q->where('company_id', $companyId)),
+                    ],
+                    'assigned_to' => ['nullable'],
+                    'due_date' => ['nullable', 'date'],
+                ]);
 
-            $assignedTo = isset($validated['assigned_to']) ? (int) $validated['assigned_to'] : 0;
-            if ($assignedTo > 0) {
-                $assignee = User::query()
-                    ->where('id', $assignedTo)
-                    ->where('is_active', true)
-                    ->where(function ($q) use ($companyId) {
-                        $q->where('company_id', $companyId)
-                          ->orWhereHas('companies', fn ($c) => $c->where('companies.id', $companyId))
-                          ->orWhere(function ($qq) {
-                              $qq->whereNull('company_id')
-                                 ->where(function ($r) {
-                                     $r->where('role', 'admin')
-                                       ->orWhereHas('roleModel', fn ($m) => $m->where('name', 'admin'));
-                                 });
-                          });
-                    })
-                    ->where(function ($q) {
-                        $q->whereIn('role', ['admin', 'manager', 'supervisor', 'agent'])
-                          ->orWhereHas('roleModel', fn ($r) => $r->whereIn('name', ['admin', 'manager', 'supervisor', 'agent']));
-                    })
-                    ->first();
+                $assignedTo = isset($validated['assigned_to']) ? (int) $validated['assigned_to'] : 0;
+                if ($assignedTo > 0) {
+                    $assignee = User::query()
+                        ->where('id', $assignedTo)
+                        ->where('is_active', true)
+                        ->where(function ($q) use ($companyId) {
+                            $q->where('company_id', $companyId)
+                              ->orWhereHas('companies', fn ($c) => $c->where('companies.id', $companyId))
+                              ->orWhere(function ($qq) {
+                                  $qq->whereNull('company_id')
+                                     ->where(function ($r) {
+                                         $r->where('role', 'admin')
+                                           ->orWhereHas('roleModel', fn ($m) => $m->where('name', 'admin'));
+                                     });
+                              });
+                        })
+                        ->where(function ($q) {
+                            $q->whereIn('role', ['admin', 'manager', 'supervisor', 'agent'])
+                              ->orWhereHas('roleModel', fn ($r) => $r->whereIn('name', ['admin', 'manager', 'supervisor', 'agent']));
+                        })
+                        ->first();
 
-                if (! $assignee) {
-                    return response()->json(['message' => 'assigned_to inválido'], 422);
+                    if (! $assignee) {
+                        return response()->json(['message' => 'assigned_to inválido'], 422);
+                    }
+                } else {
+                    $assignedTo = null;
                 }
-            } else {
-                $assignedTo = null;
+
+                $dueDate = null;
+                if (isset($validated['due_date']) && $validated['due_date']) {
+                    $dueDate = \Carbon\Carbon::parse($validated['due_date'])->toDateTimeString();
+                }
+
+                $ticket->update([
+                    'title' => $validated['title'],
+                    'description' => $validated['description'],
+                    'priority' => $validated['priority'],
+                    'category_id' => $validated['category_id'] ?? null,
+                    'department_id' => $validated['department_id'] ?? null,
+                    'assigned_to' => $assignedTo,
+                    'due_date' => $dueDate,
+                ]);
+
+                return response()->json([
+                    'data' => [
+                        'id' => (string) $ticket->id,
+                        'company_id' => (string) $ticket->company_id,
+                        'title' => $ticket->title,
+                        'description' => $ticket->description,
+                        'status' => $ticket->status,
+                        'priority' => $ticket->priority,
+                        'category_id' => $ticket->category_id !== null ? (string) $ticket->category_id : null,
+                        'department_id' => $ticket->department_id !== null ? (string) $ticket->department_id : null,
+                        'user_id' => (string) $ticket->user_id,
+                        'user_type' => $ticket->user_type,
+                        'assigned_to' => $ticket->assigned_to !== null ? (string) $ticket->assigned_to : null,
+                        'due_date' => $ticket->due_date?->toIso8601String(),
+                        'resolved_at' => $ticket->resolved_at?->toIso8601String(),
+                        'created_at' => $ticket->created_at?->toIso8601String(),
+                        'updated_at' => $ticket->updated_at?->toIso8601String(),
+                    ],
+                ]);
+            } catch (\Throwable $e) {
+                report($e);
+                logger()->error('me.support.tickets.update_failed', [
+                    'ticket_id' => (int) $ticket->id,
+                    'employee_user_id' => (int) ($user->id ?? 0),
+                ]);
+
+                return response()->json(['message' => 'Erro ao atualizar ticket'], 500);
             }
-
-            $ticket->update([
-                'title' => $validated['title'],
-                'description' => $validated['description'],
-                'priority' => $validated['priority'],
-                'category_id' => $validated['category_id'] ?? null,
-                'department_id' => $validated['department_id'] ?? null,
-                'assigned_to' => $assignedTo,
-                'due_date' => $validated['due_date'] ?? null,
-            ]);
-
-            return response()->json([
-                'data' => [
-                    'id' => (string) $ticket->id,
-                    'company_id' => (string) $ticket->company_id,
-                    'title' => $ticket->title,
-                    'description' => $ticket->description,
-                    'status' => $ticket->status,
-                    'priority' => $ticket->priority,
-                    'category_id' => $ticket->category_id !== null ? (string) $ticket->category_id : null,
-                    'department_id' => $ticket->department_id !== null ? (string) $ticket->department_id : null,
-                    'user_id' => (string) $ticket->user_id,
-                    'user_type' => $ticket->user_type,
-                    'assigned_to' => $ticket->assigned_to !== null ? (string) $ticket->assigned_to : null,
-                    'due_date' => $ticket->due_date?->toIso8601String(),
-                    'resolved_at' => $ticket->resolved_at?->toIso8601String(),
-                    'created_at' => $ticket->created_at?->toIso8601String(),
-                    'updated_at' => $ticket->updated_at?->toIso8601String(),
-                ],
-            ]);
         });
 
         Route::post('me/support/tickets/{ticket}/attachments', function (Ticket $ticket) {

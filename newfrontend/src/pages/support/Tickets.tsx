@@ -7,7 +7,6 @@ import {
   createSupportTicket,
   deleteSupportTicket,
   fetchCompanies,
-  fetchDepartments,
   fetchSupportCategories,
   fetchSupportTickets,
   fetchUsers,
@@ -60,6 +59,34 @@ const priorityLabel = (p: SupportTicketPriority) => {
   }
 }
 
+const statusBadgeClass = (s: SupportTicketStatus) => {
+  switch (s) {
+    case "open":
+      return "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-300 dark:border-emerald-400/30"
+    case "in_progress":
+      return "bg-sky-500/10 text-sky-700 border-sky-500/30 dark:text-sky-300 dark:border-sky-400/30"
+    case "pending":
+      return "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-300 dark:border-amber-400/30"
+    case "resolved":
+      return "bg-slate-500/10 text-slate-700 border-slate-500/30 dark:text-slate-300 dark:border-slate-400/30"
+    case "closed":
+      return "bg-zinc-500/10 text-zinc-700 border-zinc-500/30 dark:text-zinc-300 dark:border-zinc-400/30"
+  }
+}
+
+const priorityBadgeClass = (p: SupportTicketPriority) => {
+  switch (p) {
+    case "low":
+      return "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-300 dark:border-emerald-400/30"
+    case "medium":
+      return "bg-slate-500/10 text-slate-700 border-slate-500/30 dark:text-slate-300 dark:border-slate-400/30"
+    case "high":
+      return "bg-orange-500/10 text-orange-700 border-orange-500/30 dark:text-orange-300 dark:border-orange-400/30"
+    case "urgent":
+      return "bg-red-500/10 text-red-700 border-red-500/30 dark:text-red-300 dark:border-red-400/30"
+  }
+}
+
 const stripHtml = (input?: string | null) =>
   String(input ?? "")
     .replace(/<[^>]*>/g, " ")
@@ -72,7 +99,6 @@ export default function SupportTickets() {
   const { toast } = useToast()
   const [rows, setRows] = useState<SupportTicket[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
-  const [departments, setDepartments] = useState<Department[]>([])
   const [categories, setCategories] = useState<SupportCategory[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
@@ -94,7 +120,6 @@ export default function SupportTickets() {
   const [statusFilter, setStatusFilter] = useState<"all" | SupportTicketStatus>("all")
   const [priorityFilter, setPriorityFilter] = useState<"all" | SupportTicketPriority>("all")
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
-  const [departmentFilter, setDepartmentFilter] = useState<string>("all")
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
   const [overdueFilter, setOverdueFilter] = useState<"all" | "overdue">("all")
 
@@ -107,11 +132,6 @@ export default function SupportTickets() {
     return map
   }, [companies])
 
-  const deptNameById = useMemo(() => {
-    const map: Record<string, string> = {}
-    departments.forEach((d) => (map[d.id] = d.name))
-    return map
-  }, [departments])
 
   const catById = useMemo(() => {
     const map: Record<string, SupportCategory> = {}
@@ -139,31 +159,28 @@ export default function SupportTickets() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [ticketsResp, comps, deps, cats, us] = await Promise.all([
+      const [ticketsResp, comps, cats, us] = await Promise.all([
         fetchSupportTickets({
           search,
           company_id: companyFilter === "all" ? undefined : companyFilter,
           status: statusFilter === "all" ? undefined : statusFilter,
           priority: priorityFilter === "all" ? undefined : priorityFilter,
           category_id: categoryFilter === "all" ? undefined : categoryFilter,
-          department_id: departmentFilter === "all" ? undefined : departmentFilter,
           assigned_to: assigneeFilter === "all" ? undefined : assigneeFilter,
           overdue: overdueFilter === "overdue" ? true : undefined,
         }),
         fetchCompanies(),
-        fetchDepartments(),
         fetchSupportCategories(),
         fetchUsers(),
       ])
       setRows(ticketsResp.data)
       setCompanies(comps.data)
-      setDepartments(deps.data)
       setCategories(cats.data)
       setUsers(us.data)
     } finally {
       setLoading(false)
     }
-  }, [assigneeFilter, categoryFilter, companyFilter, departmentFilter, overdueFilter, priorityFilter, search, statusFilter])
+  }, [assigneeFilter, categoryFilter, companyFilter, overdueFilter, priorityFilter, search, statusFilter])
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -236,7 +253,6 @@ export default function SupportTickets() {
     statusFilter !== "all" ||
     priorityFilter !== "all" ||
     categoryFilter !== "all" ||
-    departmentFilter !== "all" ||
     assigneeFilter !== "all" ||
     overdueFilter !== "all"
 
@@ -246,7 +262,6 @@ export default function SupportTickets() {
     setStatusFilter("all")
     setPriorityFilter("all")
     setCategoryFilter("all")
-    setDepartmentFilter("all")
     setAssigneeFilter("all")
     setOverdueFilter("all")
   }
@@ -285,122 +300,115 @@ export default function SupportTickets() {
       <div className="glass-card p-4">
         <div className="flex flex-col gap-3 mb-4">
           <div className="flex items-center justify-between gap-3">
-            <div className="text-sm text-muted-foreground">{resultLabel}</div>
+            <div className="space-y-0.5">
+              <div className="text-sm font-medium">Filtros</div>
+              <div className="text-xs text-muted-foreground">{resultLabel}</div>
+            </div>
             {hasFilters && (
               <Button type="button" variant="outline" size="sm" onClick={clearFilters} className="shrink-0">
                 <X />
-                Limpar filtros
+                Limpar
               </Button>
             )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
             <div className="w-full">
-            <Select value={companyFilter} onValueChange={setCompanyFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Empresa" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as empresas</SelectItem>
-                {companies.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <div className="text-xs text-muted-foreground mb-1">Empresa</div>
+              <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as empresas</SelectItem>
+                  {companies.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             <div className="w-full">
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="open">Aberto</SelectItem>
-                <SelectItem value="in_progress">Em progresso</SelectItem>
-                <SelectItem value="pending">Pendente</SelectItem>
-                <SelectItem value="resolved">Resolvido</SelectItem>
-                <SelectItem value="closed">Fechado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+              <div className="text-xs text-muted-foreground mb-1">Status</div>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="open">Aberto</SelectItem>
+                  <SelectItem value="in_progress">Em progresso</SelectItem>
+                  <SelectItem value="pending">Pendente</SelectItem>
+                  <SelectItem value="resolved">Resolvido</SelectItem>
+                  <SelectItem value="closed">Fechado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             <div className="w-full">
-            <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as any)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Prioridade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="low">Baixa</SelectItem>
-                <SelectItem value="medium">Média</SelectItem>
-                <SelectItem value="high">Alta</SelectItem>
-                <SelectItem value="urgent">Urgente</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+              <div className="text-xs text-muted-foreground mb-1">Prioridade</div>
+              <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="low">Baixa</SelectItem>
+                  <SelectItem value="medium">Média</SelectItem>
+                  <SelectItem value="high">Alta</SelectItem>
+                  <SelectItem value="urgent">Urgente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             <div className="w-full">
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                {categoriesForFilter.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <div className="text-xs text-muted-foreground mb-1">Categoria</div>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {categoriesForFilter.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             <div className="w-full">
-            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Departamento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {departments.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>
-                    {d.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <div className="text-xs text-muted-foreground mb-1">Atribuído a</div>
+              <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="none">Sem atribuição</SelectItem>
+                  {users.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             <div className="w-full">
-            <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Atribuído a" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="none">Sem atribuição</SelectItem>
-                {users.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>
-                    {u.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-            <div className="w-full">
-            <Select value={overdueFilter} onValueChange={(v) => setOverdueFilter(v as any)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Vencimento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="overdue">Vencidos</SelectItem>
-              </SelectContent>
-            </Select>
+              <div className="text-xs text-muted-foreground mb-1">Vencimento</div>
+              <Select value={overdueFilter} onValueChange={(v) => setOverdueFilter(v as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="overdue">Vencidos</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
@@ -474,8 +482,6 @@ export default function SupportTickets() {
                   const dueMs = due && !Number.isNaN(due.getTime()) ? due.getTime() : null
                   const overdue = Boolean(dueMs && dueMs < Date.now() && r.status !== "resolved" && r.status !== "closed")
 
-                  const statusVariant = r.status === "resolved" || r.status === "closed" ? "secondary" : r.status === "open" ? "default" : "outline"
-                  const priorityVariant = r.priority === "urgent" || r.priority === "high" ? "destructive" : "secondary"
 
                   return (
                     <tr
@@ -493,10 +499,16 @@ export default function SupportTickets() {
                       </td>
                       <td className="py-4 pr-4">{companyNameById[r.company_id] ?? r.company_id}</td>
                       <td className="py-4 pr-4">
-                        <Badge variant={statusVariant as any}>{statusLabel(r.status)}</Badge>
+                        <Badge variant="outline" className={statusBadgeClass(r.status)}>
+                          <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-current/70" />
+                          {statusLabel(r.status)}
+                        </Badge>
                       </td>
                       <td className="py-4 pr-4">
-                        <Badge variant={priorityVariant as any}>{priorityLabel(r.priority)}</Badge>
+                        <Badge variant="outline" className={priorityBadgeClass(r.priority)}>
+                          <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-current/70" />
+                          {priorityLabel(r.priority)}
+                        </Badge>
                       </td>
                       <td className="py-4 pr-4">
                         {cat ? (
