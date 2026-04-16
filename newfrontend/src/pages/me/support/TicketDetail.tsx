@@ -265,7 +265,7 @@ export default function MeSupportTicketDetail() {
                 if (!att?.id) {
                   throw new Error("Upload falhou")
                 }
-                return `/ticket-attachments/${att.id}/download`
+                return `/tickets/attachments/${att.id}/view`
               }}
             />
           </div>

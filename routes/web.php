@@ -81,10 +81,12 @@ Route::get('/service-worker.js', function () {
     return response($js, 200)->header('Content-Type', 'application/javascript');
 });
 
-// Rota para download de anexos
+// Rotas de anexos (view inline + download)
+Route::get('/tickets/attachments/{attachment}/view', [TicketAttachmentController::class, 'view'])
+    ->name('tickets.attachments.view');
+
 Route::get('/tickets/attachments/{attachment}/download', [TicketAttachmentController::class, 'download'])
-    ->name('tickets.attachments.download')
-    ->middleware('auth');
+    ->name('tickets.attachments.download');
 
 Route::get('/system-log/{systemLog}/download', [SystemLogController::class, 'downloadJson'])
     ->name('system-log.download')
