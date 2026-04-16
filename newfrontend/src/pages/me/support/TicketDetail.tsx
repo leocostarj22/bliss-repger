@@ -92,7 +92,7 @@ export default function MeSupportTicketDetail() {
   const categoriesForCompany = useMemo(() => categories.filter((c) => c.company_id === companyId), [categories, companyId])
   const departmentsForCompany = useMemo(() => departments.filter((d) => d.company_id === companyId), [departments, companyId])
   const assigneesForCompany = useMemo(
-    () => users.filter((u) => String(u.company_id) === companyId && ["manager", "supervisor", "agent"].includes(String(u.role ?? '').toLowerCase())),
+    () => users.filter((u) => String(u.company_id) === companyId),
     [users, companyId],
   )
 

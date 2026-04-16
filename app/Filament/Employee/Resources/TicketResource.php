@@ -166,9 +166,16 @@ class TicketResource extends Resource
                             ->relationship(
                                 name: 'assignedTo',
                                 titleAttribute: 'name',
-                                modifyQueryUsing: fn ($query) => $query
-                                    ->where('is_active', true)
-                                    ->whereHas('roleModel', fn ($q) => $q->where('name', 'agent'))
+                                modifyQueryUsing: function ($query) {
+                                    $companyId = Auth::user()?->employee?->company_id;
+
+                                    $query->where('is_active', true)
+                                        ->when($companyId, fn ($q) => $q->where('company_id', $companyId))
+                                        ->where(function ($q) {
+                                            $q->whereIn('role', ['manager', 'supervisor', 'agent'])
+                                              ->orWhereHas('roleModel', fn ($r) => $r->whereIn('name', ['manager', 'supervisor', 'agent']));
+                                        });
+                                }
                             )
                             ->searchable()
                             ->preload()
@@ -317,10 +324,9 @@ class TicketResource extends Resource
 
     public static function getNavigationBadgeColor(): string|array|null
     {
-        $user = auth()->user();
-        
-        // Verificar se o usuário está autenticado
-        if (!$user) {
+        $user = Auth::guard('employee')->user();
+
+        if (!($user instanceof EmployeeUser)) {
             return null;
         }
         

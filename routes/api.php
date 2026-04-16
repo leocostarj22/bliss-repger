@@ -3643,7 +3643,10 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             $rows = User::query()
                 ->where('company_id', $companyId)
                 ->where('is_active', true)
-                ->whereIn('role', ['manager', 'supervisor', 'agent'])
+                ->where(function ($q) {
+                    $q->whereIn('role', ['manager', 'supervisor', 'agent'])
+                      ->orWhereHas('roleModel', fn ($r) => $r->whereIn('name', ['manager', 'supervisor', 'agent']));
+                })
                 ->orderBy('name')
                 ->get();
 
