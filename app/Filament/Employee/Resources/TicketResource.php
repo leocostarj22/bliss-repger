@@ -173,6 +173,7 @@ class TicketResource extends Resource
                                         ->where(function ($q) use ($companyId) {
                                             if ($companyId) {
                                                 $q->where('company_id', $companyId)
+                                                  ->orWhereHas('companies', fn ($c) => $c->where('companies.id', $companyId))
                                                   ->orWhere(function ($qq) {
                                                       $qq->whereNull('company_id')
                                                          ->where(function ($r) {
@@ -193,7 +194,7 @@ class TicketResource extends Resource
                             ->searchable()
                             ->preload()
                             ->nullable()
-                            ->helperText('Apenas usuários com cargo de agente podem ser atribuídos'),
+                            ->helperText('Apenas Admin/Gestor/Supervisor/Agente da sua empresa podem ser atribuídos'),
 
                         Forms\Components\DateTimePicker::make('due_date')
                             ->label('Data de Vencimento')

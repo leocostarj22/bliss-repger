@@ -3644,6 +3644,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 ->where('is_active', true)
                 ->where(function ($q) use ($companyId) {
                     $q->where('company_id', $companyId)
+                      ->orWhereHas('companies', fn ($c) => $c->where('companies.id', $companyId))
                       ->orWhere(function ($qq) {
                           $qq->whereNull('company_id')
                              ->where(function ($r) {
@@ -3783,12 +3784,38 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                     'nullable',
                     Rule::exists('departments', 'id')->where(fn ($q) => $q->where('company_id', $companyId)),
                 ],
-                'assigned_to' => [
-                    'nullable',
-                    Rule::exists('users', 'id')->where(fn ($q) => $q->where('company_id', $companyId)->where('is_active', true)->whereIn('role', ['manager', 'supervisor', 'agent'])),
-                ],
+                'assigned_to' => ['nullable'],
                 'due_date' => ['nullable', 'date'],
             ]);
+
+            $assignedTo = isset($validated['assigned_to']) ? (int) $validated['assigned_to'] : 0;
+            if ($assignedTo > 0) {
+                $assignee = User::query()
+                    ->where('id', $assignedTo)
+                    ->where('is_active', true)
+                    ->where(function ($q) use ($companyId) {
+                        $q->where('company_id', $companyId)
+                          ->orWhereHas('companies', fn ($c) => $c->where('companies.id', $companyId))
+                          ->orWhere(function ($qq) {
+                              $qq->whereNull('company_id')
+                                 ->where(function ($r) {
+                                     $r->where('role', 'admin')
+                                       ->orWhereHas('roleModel', fn ($m) => $m->where('name', 'admin'));
+                                 });
+                          });
+                    })
+                    ->where(function ($q) {
+                        $q->whereIn('role', ['admin', 'manager', 'supervisor', 'agent'])
+                          ->orWhereHas('roleModel', fn ($r) => $r->whereIn('name', ['admin', 'manager', 'supervisor', 'agent']));
+                    })
+                    ->first();
+
+                if (! $assignee) {
+                    return response()->json(['message' => 'assigned_to inválido'], 422);
+                }
+            } else {
+                $assignedTo = null;
+            }
 
             $ticket = Ticket::create([
                 'company_id' => $validated['company_id'],
@@ -3800,7 +3827,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 'department_id' => $validated['department_id'] ?? null,
                 'user_id' => $user->id,
                 'user_type' => \App\Models\EmployeeUser::class,
-                'assigned_to' => $validated['assigned_to'] ?? null,
+                'assigned_to' => $assignedTo,
                 'due_date' => $validated['due_date'] ?? null,
                 'resolved_at' => null,
             ]);
