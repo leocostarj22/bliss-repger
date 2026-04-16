@@ -4629,44 +4629,59 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             return response()->json(['message' => 'Tabela employee_personal_notes não existe. Execute as migrations.'], 500);
         }
 
-        $validated = request()->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'content' => ['nullable', 'string'],
-            'color' => ['nullable', 'string', 'max:32'],
-            'is_favorite' => ['required', 'boolean'],
-            'remind_at' => ['nullable', 'date'],
-        ]);
+        try {
+            $validated = request()->validate([
+                'title' => ['required', 'string', 'max:255'],
+                'content' => ['nullable', 'string'],
+                'color' => ['nullable', 'string', 'max:32'],
+                'is_favorite' => ['required', 'boolean'],
+                'remind_at' => ['nullable', 'date'],
+            ]);
 
-        $now = now();
-        $id = DB::table('employee_personal_notes')->insertGetId([
-            'employee_user_id' => $u->id,
-            'title' => $validated['title'],
-            'content' => $validated['content'] ?? null,
-            'color' => $validated['color'] ?? null,
-            'is_favorite' => (bool) $validated['is_favorite'],
-            'remind_at' => $validated['remind_at'] ?? null,
-            'last_modified_by_employee_user_id' => $u->id,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
+            $now = now();
+            $id = DB::table('employee_personal_notes')->insertGetId([
+                'employee_user_id' => $u->id,
+                'title' => $validated['title'],
+                'content' => $validated['content'] ?? null,
+                'color' => $validated['color'] ?? null,
+                'is_favorite' => (bool) $validated['is_favorite'],
+                'remind_at' => $validated['remind_at'] ?? null,
+                'last_modified_by_employee_user_id' => $u->id,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
 
-        $n = DB::table('employee_personal_notes')->where('id', $id)->first();
+            $n = DB::table('employee_personal_notes')->where('id', $id)->first();
+            abort_unless($n, 500);
 
-        return response()->json([
-            'data' => [
-                'id' => (string) ($n->id ?? ''),
-                'user_id' => (string) ($n->employee_user_id ?? ''),
-                'title' => (string) ($n->title ?? ''),
-                'content' => (string) ($n->content ?? ''),
-                'color' => $n->color ?? null,
-                'is_favorite' => (bool) ($n->is_favorite ?? false),
-                'remind_at' => isset($n->remind_at) ? (\Carbon\Carbon::parse($n->remind_at)->toIso8601String()) : null,
-                'last_modified_by' => $n->last_modified_by_employee_user_id !== null ? (string) $n->last_modified_by_employee_user_id : null,
-                'shared_with_user_ids' => [],
-                'createdAt' => isset($n->created_at) ? (\Carbon\Carbon::parse($n->created_at)->toIso8601String()) : null,
-                'updatedAt' => isset($n->updated_at) ? (\Carbon\Carbon::parse($n->updated_at)->toIso8601String()) : null,
-            ],
-        ], 201);
+            return response()->json([
+                'data' => [
+                    'id' => (string) ($n->id ?? ''),
+                    'user_id' => (string) ($n->employee_user_id ?? ''),
+                    'title' => (string) ($n->title ?? ''),
+                    'content' => (string) ($n->content ?? ''),
+                    'color' => $n->color ?? null,
+                    'is_favorite' => (bool) ($n->is_favorite ?? false),
+                    'remind_at' => isset($n->remind_at) ? (\Carbon\Carbon::parse($n->remind_at)->toIso8601String()) : null,
+                    'last_modified_by' => $n->last_modified_by_employee_user_id !== null ? (string) $n->last_modified_by_employee_user_id : null,
+                    'shared_with_user_ids' => [],
+                    'createdAt' => isset($n->created_at) ? (\Carbon\Carbon::parse($n->created_at)->toIso8601String()) : null,
+                    'updatedAt' => isset($n->updated_at) ? (\Carbon\Carbon::parse($n->updated_at)->toIso8601String()) : null,
+                ],
+            ], 201);
+        } catch (\Throwable $e) {
+            report($e);
+            logger()->error('me.personal_notes.create_failed', [
+                'employee_user_id' => (int) ($u->id ?? 0),
+            ]);
+
+            $msg = strtolower($e->getMessage());
+            if (str_contains($msg, 'doesn\'t exist') || str_contains($msg, 'base table') || str_contains($msg, 'employee_personal_notes')) {
+                return response()->json(['message' => 'Erro ao salvar anotação. Verifique se a migration de employee_personal_notes foi executada no servidor.'], 500);
+            }
+
+            return response()->json(['message' => 'Erro ao salvar anotação'], 500);
+        }
     });
 
     Route::put('me/personal-notes/{noteId}', function ($noteId) {
