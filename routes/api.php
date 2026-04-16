@@ -4543,6 +4543,10 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $u = auth('employee')->user();
         abort_unless($u && $u instanceof \App\Models\EmployeeUser, 403);
 
+        if (!Schema::hasTable('employee_personal_notes')) {
+            return response()->json(['message' => 'Tabela employee_personal_notes não existe. Execute as migrations.'], 500);
+        }
+
         $search = trim((string) request('search', ''));
         $isFavorite = request()->has('is_favorite') ? filter_var(request('is_favorite'), FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) : null;
 
@@ -4586,6 +4590,10 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $u = auth('employee')->user();
         abort_unless($u && $u instanceof \App\Models\EmployeeUser, 403);
 
+        if (!Schema::hasTable('employee_personal_notes')) {
+            return response()->json(['message' => 'Tabela employee_personal_notes não existe. Execute as migrations.'], 500);
+        }
+
         $id = (int) $noteId;
         abort_unless($id > 0, 404);
 
@@ -4616,6 +4624,10 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     Route::post('me/personal-notes', function () {
         $u = auth('employee')->user();
         abort_unless($u && $u instanceof \App\Models\EmployeeUser, 403);
+
+        if (!Schema::hasTable('employee_personal_notes')) {
+            return response()->json(['message' => 'Tabela employee_personal_notes não existe. Execute as migrations.'], 500);
+        }
 
         $validated = request()->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -4660,6 +4672,10 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     Route::put('me/personal-notes/{noteId}', function ($noteId) {
         $u = auth('employee')->user();
         abort_unless($u && $u instanceof \App\Models\EmployeeUser, 403);
+
+        if (!Schema::hasTable('employee_personal_notes')) {
+            return response()->json(['message' => 'Tabela employee_personal_notes não existe. Execute as migrations.'], 500);
+        }
 
         $id = (int) $noteId;
         abort_unless($id > 0, 404);
@@ -4709,6 +4725,10 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     Route::delete('me/personal-notes/{noteId}', function ($noteId) {
         $u = auth('employee')->user();
         abort_unless($u && $u instanceof \App\Models\EmployeeUser, 403);
+
+        if (!Schema::hasTable('employee_personal_notes')) {
+            return response()->json(['message' => 'Tabela employee_personal_notes não existe. Execute as migrations.'], 500);
+        }
 
         $id = (int) $noteId;
         abort_unless($id > 0, 404);
