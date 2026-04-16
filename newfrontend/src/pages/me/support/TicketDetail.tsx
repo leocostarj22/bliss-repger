@@ -16,7 +16,7 @@ import {
 } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -249,7 +249,24 @@ export default function MeSupportTicketDetail() {
 
           <div className="md:col-span-2">
             <div className="text-xs text-muted-foreground mb-1">Mensagem</div>
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} />
+            <RichTextEditor
+              value={description}
+              onChange={setDescription}
+              placeholder="Escreve a mensagem…"
+              onImageUpload={async (file) => {
+                if (!ticket?.id) {
+                  toast({ title: "Aviso", description: "Guarde o ticket antes de inserir imagens no texto.", variant: "default" })
+                  throw new Error("Ticket ainda não foi guardado")
+                }
+
+                const res = await uploadMySupportTicketAttachments(ticket.id, [file])
+                const att = Array.isArray(res.data) ? res.data[0] : null
+                if (!att?.id) {
+                  throw new Error("Upload falhou")
+                }
+                return `/ticket-attachments/${att.id}/download`
+              }}
+            />
           </div>
 
           <div>
@@ -376,7 +393,7 @@ export default function MeSupportTicketDetail() {
 
         <div className="md:col-span-2">
           <div className="text-xs text-muted-foreground mb-1">Mensagem</div>
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} placeholder="Descreve o problema/solicitação…" />
+          <RichTextEditor value={description} onChange={setDescription} placeholder="Descreve o problema/solicitação…" />
         </div>
 
         <div>

@@ -31,6 +31,7 @@ interface RichTextEditorProps {
   onChange: (value: string) => void
   placeholder?: string
   className?: string
+  onImageUpload?: (file: File) => Promise<string>
 }
 
 type ToolbarButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -54,7 +55,7 @@ const ToolbarButton = forwardRef<HTMLButtonElement, ToolbarButtonProps>(
 )
 ToolbarButton.displayName = "ToolbarButton"
 
-export function RichTextEditor({ value, onChange, placeholder, className }: RichTextEditorProps) {
+export function RichTextEditor({ value, onChange, placeholder, className, onImageUpload }: RichTextEditorProps) {
   const { toast } = useToast()
   const imageUploadInputRef = useRef<HTMLInputElement>(null)
   const [imageUploading, setImageUploading] = useState(false)
@@ -142,7 +143,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
 
       setImageUploading(true)
       try {
-        const url = await handleImageUpload(file)
+        const url = onImageUpload ? await onImageUpload(file) : await handleImageUpload(file)
         editor.chain().focus().setImage({ src: url }).run()
       } catch (err: any) {
         toast({
