@@ -3195,6 +3195,36 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         return response()->json(['ok' => true]);
     });
 
+    Route::post('support/images/upload', function () {
+        $user = auth('web')->user();
+        abort_unless($user, 401);
+
+        $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.write');
+        abort_unless($allowed, 403);
+
+        $validated = request()->validate([
+            'file' => ['required', 'file', 'max:15360', 'mimes:png,jpg,jpeg,gif,webp,svg'],
+        ]);
+
+        $file = $validated['file'];
+        $original = (string) $file->getClientOriginalName();
+        $ext = strtolower((string) $file->getClientOriginalExtension());
+        $base = pathinfo($original, PATHINFO_FILENAME);
+        $safe = Str::slug($base);
+        if ($safe === '') {
+            $safe = (string) Str::uuid();
+        }
+
+        $filename = $safe . '-' . Str::uuid() . ($ext ? ('.' . $ext) : '');
+        $path = $file->storeAs('tickets/inline-images', $filename, 'public');
+
+        return response()->json([
+            'url' => Storage::disk('public')->url($path),
+            'filename' => $filename,
+            'path' => $path,
+        ], 201);
+    });
+
     Route::get('support/tickets', function () {
         $user = auth('web')->user();
         abort_unless($user, 401);
@@ -3256,9 +3286,11 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             });
         }
 
-        $rows = $query->get();
+        $rows = $query->with('user')->get();
 
         $data = $rows->map(function (Ticket $t) {
+            $creatorName = $t->user ? (string) ($t->user->name ?? '') : '';
+
             return [
                 'id' => (string) $t->id,
                 'company_id' => (string) $t->company_id,
@@ -3270,6 +3302,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 'department_id' => $t->department_id !== null ? (string) $t->department_id : null,
                 'user_id' => (string) $t->user_id,
                 'user_type' => $t->user_type,
+                'creator_name' => $creatorName !== '' ? $creatorName : null,
                 'assigned_to' => $t->assigned_to !== null ? (string) $t->assigned_to : null,
                 'due_date' => $t->due_date?->toIso8601String(),
                 'resolved_at' => $t->resolved_at?->toIso8601String(),
@@ -3296,6 +3329,9 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             abort_unless((int) $ticket->user_id === (int) $user->id || (int) $ticket->assigned_to === (int) $user->id, 403);
         }
 
+        $ticket->load('user');
+        $creatorName = $ticket->user ? (string) ($ticket->user->name ?? '') : '';
+
         return response()->json([
             'data' => [
                 'id' => (string) $ticket->id,
@@ -3308,6 +3344,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 'department_id' => $ticket->department_id !== null ? (string) $ticket->department_id : null,
                 'user_id' => (string) $ticket->user_id,
                 'user_type' => $ticket->user_type,
+                'creator_name' => $creatorName !== '' ? $creatorName : null,
                 'assigned_to' => $ticket->assigned_to !== null ? (string) $ticket->assigned_to : null,
                 'due_date' => $ticket->due_date?->toIso8601String(),
                 'resolved_at' => $ticket->resolved_at?->toIso8601String(),
@@ -3744,8 +3781,10 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 });
             }
 
-            $rows = $query->get();
+            $rows = $query->with('user')->get();
             $data = $rows->map(function (Ticket $t) {
+                $creatorName = $t->user ? (string) ($t->user->name ?? '') : '';
+
                 return [
                     'id' => (string) $t->id,
                     'company_id' => (string) $t->company_id,
@@ -3757,6 +3796,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                     'department_id' => $t->department_id !== null ? (string) $t->department_id : null,
                     'user_id' => (string) $t->user_id,
                     'user_type' => $t->user_type,
+                    'creator_name' => $creatorName !== '' ? $creatorName : null,
                     'assigned_to' => $t->assigned_to !== null ? (string) $t->assigned_to : null,
                     'due_date' => $t->due_date?->toIso8601String(),
                     'resolved_at' => $t->resolved_at?->toIso8601String(),
@@ -3773,6 +3813,9 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             abort_unless($user, 401);
             abort_unless($ticket->user_type === \App\Models\EmployeeUser::class && (string) $ticket->user_id === (string) $user->id, 403);
 
+            $ticket->load('user');
+            $creatorName = $ticket->user ? (string) ($ticket->user->name ?? '') : '';
+
             return response()->json([
                 'data' => [
                     'id' => (string) $ticket->id,
@@ -3785,6 +3828,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                     'department_id' => $ticket->department_id !== null ? (string) $ticket->department_id : null,
                     'user_id' => (string) $ticket->user_id,
                     'user_type' => $ticket->user_type,
+                    'creator_name' => $creatorName !== '' ? $creatorName : null,
                     'assigned_to' => $ticket->assigned_to !== null ? (string) $ticket->assigned_to : null,
                     'due_date' => $ticket->due_date?->toIso8601String(),
                     'resolved_at' => $ticket->resolved_at?->toIso8601String(),

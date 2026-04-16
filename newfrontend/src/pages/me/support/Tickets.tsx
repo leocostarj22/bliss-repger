@@ -16,6 +16,14 @@ const statusLabel = (s: SupportTicketStatus) =>
 const priorityLabel = (p: SupportTicketPriority) =>
   p === "low" ? "Baixa" : p === "medium" ? "Média" : p === "high" ? "Alta" : "Urgente"
 
+const stripHtml = (input?: string | null) =>
+  String(input ?? "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+
+const truncate = (text: string, max = 90) => (text.length > max ? `${text.slice(0, max)}…` : text)
+
 export default function MeSupportTickets() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
@@ -117,12 +125,13 @@ export default function MeSupportTickets() {
                 filtered.map((r) => {
                   const statusVariant = r.status === "resolved" || r.status === "closed" ? "secondary" : r.status === "open" ? "default" : "outline"
                   const priorityVariant = r.priority === "urgent" || r.priority === "high" ? "destructive" : "secondary"
+                  const descriptionShort = truncate(stripHtml(r.description), 90)
                   return (
                     <tr key={r.id} className="border-b border-border/60 hover:bg-white/5 transition-colors">
                       <td className="py-4 pr-4">
                         <div className="space-y-1 max-w-[520px]">
                           <div className="font-medium truncate">{r.title}</div>
-                          <div className="text-xs text-muted-foreground truncate">{r.description}</div>
+                          <div className="text-xs text-muted-foreground truncate">{descriptionShort || "—"}</div>
                           <div className="text-xs text-muted-foreground">{r.id}</div>
                         </div>
                       </td>

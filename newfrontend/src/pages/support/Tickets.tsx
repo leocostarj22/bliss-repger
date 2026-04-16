@@ -12,6 +12,7 @@ import {
   fetchSupportTickets,
   fetchUsers,
   updateSupportTicket,
+  uploadSupportInlineImage,
 } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -97,9 +98,6 @@ export default function SupportTickets() {
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
   const [overdueFilter, setOverdueFilter] = useState<"all" | "overdue">("all")
 
-  const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState<SupportTicket | null>(null)
-
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<SupportTicket | null>(null)
 
@@ -177,13 +175,11 @@ export default function SupportTickets() {
   useEffect(() => {
     const wantNew = String(searchParams.get("new") ?? "") === "1"
     if (!wantNew) return
-    if (formOpen) return
     if (companies.length === 0) return
 
     const assigned_to = String(searchParams.get("assigned_to") ?? "").trim()
     const assignee = assigned_to ? users.find((u) => String(u.id) === assigned_to) : null
 
-    setEditing(null)
     setCreatePrefill({
       assigned_to: assigned_to || undefined,
       company_id: assignee?.company_id ? String(assignee.company_id) : undefined,
@@ -200,7 +196,7 @@ export default function SupportTickets() {
     next.delete("new")
     next.delete("assigned_to")
     setSearchParams(next, { replace: true })
-  }, [companies.length, formOpen, searchParams, setSearchParams, users])
+  }, [companies.length, searchParams, setSearchParams, users])
 
   const openCreate = () => {
     const params = new URLSearchParams()
@@ -211,8 +207,7 @@ export default function SupportTickets() {
   }
 
   const openEdit = (row: SupportTicket) => {
-    setEditing(row)
-    setFormOpen(true)
+    navigate(`/support/tickets/${row.id}`)
   }
 
   const requestDelete = (row: SupportTicket) => {
@@ -471,7 +466,9 @@ export default function SupportTickets() {
                   const due = r.due_date ? new Date(r.due_date) : null
                   const dueLabel = due && !Number.isNaN(due.getTime()) ? due.toLocaleString("pt-PT") : "—"
                   const assignedLabel = r.assigned_to ? userNameById[String(r.assigned_to)] ?? String(r.assigned_to) : "—"
-                  const createdByLabel = userNameById[String(r.user_id)] ?? (r.user_type?.includes("Employee") ? `Colaborador #${r.user_id}` : `Utilizador #${r.user_id}`)
+                  const createdByLabel =
+                    String(r.creator_name ?? "").trim() ||
+                    (r.user_type?.includes("Employee") ? `Colaborador #${r.user_id}` : `Utilizador #${r.user_id}`)
                   const descriptionShort = truncate(stripHtml(r.description), 90)
 
                   const dueMs = due && !Number.isNaN(due.getTime()) ? due.getTime() : null
@@ -523,7 +520,7 @@ export default function SupportTickets() {
                         <div className="inline-flex items-center gap-2">
                           <Button variant="outline" size="sm" onClick={() => openEdit(r)}>
                             <Pencil />
-                            Editar
+                            Ver
                           </Button>
                           <Button variant="destructive" size="sm" onClick={() => requestDelete(r)}>
                             <Trash2 />
@@ -539,28 +536,6 @@ export default function SupportTickets() {
           </table>
         </div>
       </div>
-
-      {formOpen && (
-        <SupportTicketFormModal
-          companies={companies}
-          departments={departments}
-          categories={categories}
-          users={users}
-          editing={editing}
-          prefill={createPrefill}
-          onClose={() => {
-            setFormOpen(false)
-            setEditing(null)
-            setCreatePrefill(null)
-          }}
-          onSaved={() => {
-            setFormOpen(false)
-            setEditing(null)
-            setCreatePrefill(null)
-            load()
-          }}
-        />
-      )}
 
       {deleteOpen && (
         <div
@@ -758,7 +733,15 @@ function SupportTicketFormModal({
 
           <div className="md:col-span-2">
             <div className="text-xs text-muted-foreground mb-1">Mensagem</div>
-            <RichTextEditor value={description} onChange={setDescription} placeholder="Descreva o problema/solicitação…" />
+            <RichTextEditor
+              value={description}
+              onChange={setDescription}
+              placeholder="Descreva o problema/solicitação…"
+              onImageUpload={async (file) => {
+                const res = await uploadSupportInlineImage(file)
+                return res.url
+              }}
+            />
           </div>
 
           <div>

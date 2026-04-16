@@ -69,6 +69,7 @@ import EspacoAbsolutoCustomers from "@/pages/espacoabsoluto/Customers";
 import SupportCategories from "@/pages/support/SupportCategories";
 import SupportTickets from "@/pages/support/Tickets";
 import SupportTicketNew from "@/pages/support/TicketNew";
+import SupportTicketDetail from "@/pages/support/TicketDetail";
 import MyFormulaDashboard from "@/pages/myformula/Dashboard";
 import MyFormulaOrders from "@/pages/myformula/Orders";
 import MyFormulaOrderDetail from "@/pages/myformula/OrderDetail";
@@ -526,6 +527,14 @@ const App = () => {
                 element={
                   <RequirePermission permission={["support.tickets.write"]}>
                     <SupportTicketNew />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/support/tickets/:id"
+                element={
+                  <RequirePermission permission={["support.tickets.read", "support.tickets.write"]}>
+                    <SupportTicketDetail />
                   </RequirePermission>
                 }
               />

@@ -1981,6 +1981,28 @@ export async function createSupportTicket(payload: CreateSupportTicketPayload): 
   return { data: json?.data as SupportTicket };
 }
 
+export async function uploadSupportInlineImage(file: File): Promise<{ url: string }> {
+  const form = new FormData();
+  form.append('file', file);
+
+  const response = await apiFetch('/api/v1/support/images/upload', {
+    method: 'POST',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+    body: form,
+  });
+
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to upload support inline image: ${response.statusText}`);
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  const url = String(json?.url ?? '');
+  if (!url) throw new Error('Upload sem URL retornada');
+  return { url };
+}
+
 export async function updateSupportTicket(
   id: string,
   payload: Partial<Omit<SupportTicket, 'id' | 'created_at'>>

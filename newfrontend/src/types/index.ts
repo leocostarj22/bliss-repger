@@ -754,6 +754,7 @@ export interface SupportTicket {
   department_id?: string | null;
   user_id: string;
   user_type: string;
+  creator_name?: string | null;
   assigned_to?: string | null;
   due_date?: string | null;
   resolved_at?: string | null;

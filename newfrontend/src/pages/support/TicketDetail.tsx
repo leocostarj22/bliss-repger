@@ -1,33 +1,40 @@
 import { useEffect, useMemo, useState } from "react"
-import { ArrowLeft } from "lucide-react"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { ArrowLeft, Save } from "lucide-react"
+import { Link, useNavigate, useParams } from "react-router-dom"
 
-import type { Company, Department, SupportCategory, SupportTicketPriority, SupportTicketStatus, User } from "@/types"
-import { createSupportTicket, fetchCompanies, fetchDepartments, fetchSupportCategories, fetchUsers, uploadSupportInlineImage } from "@/services/api"
+import type { Company, Department, SupportCategory, SupportTicket, SupportTicketPriority, SupportTicketStatus, User } from "@/types"
+import {
+  fetchCompanies,
+  fetchDepartments,
+  fetchSupportCategories,
+  fetchSupportTicket,
+  fetchUsers,
+  updateSupportTicket,
+  uploadSupportInlineImage,
+} from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
+import { Skeleton } from "@/components/ui/skeleton"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 
 const toLocalInput = (iso?: string | null) => (iso ? String(iso).slice(0, 16) : "")
 const toIsoOrNull = (val: string) => (val ? new Date(val).toISOString() : null)
 
-export default function SupportTicketNew() {
-  const { toast } = useToast()
+export default function SupportTicketDetail() {
+  const { id } = useParams()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const { toast } = useToast()
 
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  const [ticket, setTicket] = useState<SupportTicket | null>(null)
   const [companies, setCompanies] = useState<Company[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [categories, setCategories] = useState<SupportCategory[]>([])
   const [users, setUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-
-  const prefillCompanyId = String(searchParams.get("company_id") ?? "").trim()
-  const prefillDepartmentId = String(searchParams.get("department_id") ?? "").trim()
-  const prefillAssignedTo = String(searchParams.get("assigned_to") ?? "").trim()
 
   const [companyId, setCompanyId] = useState<string>("")
   const [title, setTitle] = useState("")
@@ -41,26 +48,47 @@ export default function SupportTicketNew() {
   const [resolvedAt, setResolvedAt] = useState<string>("")
 
   useEffect(() => {
+    let alive = true
+    const ticketId = String(id ?? "").trim()
+    if (!ticketId) {
+      navigate("/support/tickets", { replace: true })
+      return
+    }
+
     setLoading(true)
-    Promise.all([fetchCompanies(), fetchDepartments(), fetchSupportCategories(), fetchUsers()])
-      .then(([comps, deps, cats, us]) => {
+    Promise.all([fetchSupportTicket(ticketId), fetchCompanies(), fetchDepartments(), fetchSupportCategories(), fetchUsers()])
+      .then(([t, comps, deps, cats, us]) => {
+        if (!alive) return
+        setTicket(t.data)
         setCompanies(comps.data)
         setDepartments(deps.data)
         setCategories(cats.data)
         setUsers(us.data)
 
-        const firstCompany = String(comps.data?.[0]?.id ?? "")
-        const nextCompany = prefillCompanyId || firstCompany
-        setCompanyId(nextCompany)
-
-        if (prefillDepartmentId) setDepartmentId(prefillDepartmentId)
-        if (prefillAssignedTo) setAssignedTo(prefillAssignedTo)
+        setCompanyId(String(t.data.company_id ?? ""))
+        setTitle(t.data.title ?? "")
+        setDescription(t.data.description ?? "")
+        setStatus((t.data.status ?? "open") as any)
+        setPriority((t.data.priority ?? "medium") as any)
+        setCategoryId(t.data.category_id ? String(t.data.category_id) : "none")
+        setDepartmentId(t.data.department_id ? String(t.data.department_id) : "none")
+        setAssignedTo(t.data.assigned_to ? String(t.data.assigned_to) : "none")
+        setDueDate(toLocalInput(t.data.due_date))
+        setResolvedAt(toLocalInput(t.data.resolved_at))
       })
       .catch((e: any) => {
-        toast({ title: "Erro", description: String(e?.message ?? "Não foi possível carregar dados"), variant: "destructive" })
+        if (!alive) return
+        toast({ title: "Erro", description: String(e?.message ?? "Não foi possível carregar o ticket"), variant: "destructive" })
       })
-      .finally(() => setLoading(false))
-  }, [prefillAssignedTo, prefillCompanyId, prefillDepartmentId, toast])
+      .finally(() => {
+        if (!alive) return
+        setLoading(false)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [id, navigate, toast])
 
   const categoriesForCompany = useMemo(() => categories.filter((c) => c.company_id === companyId), [categories, companyId])
   const departmentsForCompany = useMemo(() => departments.filter((d) => d.company_id === companyId), [departments, companyId])
@@ -82,6 +110,7 @@ export default function SupportTicketNew() {
   }, [status])
 
   const submit = async () => {
+    if (!ticket?.id) return
     if (!companyId) {
       toast({ title: "Validação", description: "Empresa é obrigatória", variant: "destructive" })
       return
@@ -97,7 +126,7 @@ export default function SupportTicketNew() {
 
     setSaving(true)
     try {
-      await createSupportTicket({
+      const res = await updateSupportTicket(ticket.id, {
         company_id: companyId,
         title,
         description,
@@ -109,42 +138,91 @@ export default function SupportTicketNew() {
         due_date: dueDate ? toIsoOrNull(dueDate) : null,
         resolved_at: status === "resolved" ? (resolvedAt ? toIsoOrNull(resolvedAt) : null) : null,
       })
-      toast({ title: "Sucesso", description: "Ticket criado" })
-      navigate("/support/tickets")
+      setTicket(res.data)
+      toast({ title: "Sucesso", description: "Ticket atualizado" })
     } catch (e: any) {
-      toast({ title: "Erro", description: String(e?.message ?? "Falha ao criar ticket"), variant: "destructive" })
+      toast({ title: "Erro", description: String(e?.message ?? "Falha ao atualizar ticket"), variant: "destructive" })
     } finally {
       setSaving(false)
     }
   }
+
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="page-header">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="page-title">Ticket</h1>
+              <p className="page-subtitle">Suporte → Detalhes</p>
+              <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+            </div>
+            <Button asChild variant="outline">
+              <Link to="/support/tickets">
+                <ArrowLeft /> Voltar
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        <div className="glass-card p-4 space-y-3">
+          <Skeleton className="h-6 w-72" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-56" />
+        </div>
+      </div>
+    )
+  }
+
+  if (!ticket) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="page-header">
+          <h1 className="page-title">Ticket</h1>
+          <p className="page-subtitle">Suporte</p>
+          <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
+        </div>
+        <div className="glass-card p-6">
+          <div className="text-sm text-muted-foreground">Ticket não encontrado.</div>
+        </div>
+      </div>
+    )
+  }
+
+  const companyName = companies.find((c) => c.id === companyId)?.name ?? ""
+  const createdBy = String(ticket.creator_name ?? "").trim() || "—"
 
   return (
     <div className="space-y-6 animate-slide-up">
       <div className="page-header">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h1 className="page-title">Novo ticket</h1>
-            <p className="page-subtitle">Suporte → Tickets</p>
+            <h1 className="page-title">Ticket #{ticket.id}</h1>
+            <p className="page-subtitle">Suporte → Detalhes</p>
             <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
           </div>
 
           <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" onClick={() => navigate("/support/tickets")}>
-              <ArrowLeft />
-              Voltar
+            <Button asChild variant="outline">
+              <Link to="/support/tickets">
+                <ArrowLeft /> Voltar
+              </Link>
             </Button>
-            <Button type="button" onClick={submit} disabled={loading || saving}>
-              {saving ? "A guardar…" : "Criar ticket"}
+            <Button type="button" onClick={submit} disabled={saving}>
+              <Save />
+              Guardar
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="glass-card p-6">
+      <div className="glass-card p-6 space-y-4">
+        <div className="text-sm text-muted-foreground">Criado por: {createdBy}</div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="md:col-span-2">
             <div className="text-xs text-muted-foreground mb-1">Empresa</div>
-            <Select value={companyId} onValueChange={setCompanyId} disabled={loading || companies.length === 0}>
+            <Select value={companyId} onValueChange={setCompanyId}>
               <SelectTrigger>
                 <SelectValue placeholder="Empresa" />
               </SelectTrigger>
@@ -156,11 +234,12 @@ export default function SupportTicketNew() {
                 ))}
               </SelectContent>
             </Select>
+            {companyName ? null : <div className="text-xs text-muted-foreground mt-1">Empresa: {companyId}</div>}
           </div>
 
           <div className="md:col-span-2">
             <div className="text-xs text-muted-foreground mb-1">Título</div>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Erro ao acessar" />
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
 
           <div className="md:col-span-2">
