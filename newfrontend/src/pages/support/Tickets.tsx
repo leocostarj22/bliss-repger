@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/components/ui/use-toast"
@@ -58,6 +58,14 @@ const priorityLabel = (p: SupportTicketPriority) => {
       return "Urgente"
   }
 }
+
+const stripHtml = (input?: string | null) =>
+  String(input ?? "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+
+const truncate = (text: string, max = 120) => (text.length > max ? `${text.slice(0, max)}…` : text)
 
 export default function SupportTickets() {
   const { toast } = useToast()
@@ -411,7 +419,7 @@ export default function SupportTickets() {
                 <th className="py-3 pr-4">Status</th>
                 <th className="py-3 pr-4">Prioridade</th>
                 <th className="py-3 pr-4">Categoria</th>
-                <th className="py-3 pr-4">Departamento</th>
+                <th className="py-3 pr-4">Criado por</th>
                 <th className="py-3 pr-4">Atribuído a</th>
                 <th className="py-3 pr-4">Vence em</th>
                 <th className="py-3 text-right">Ações</th>
@@ -463,6 +471,8 @@ export default function SupportTickets() {
                   const due = r.due_date ? new Date(r.due_date) : null
                   const dueLabel = due && !Number.isNaN(due.getTime()) ? due.toLocaleString("pt-PT") : "—"
                   const assignedLabel = r.assigned_to ? userNameById[String(r.assigned_to)] ?? String(r.assigned_to) : "—"
+                  const createdByLabel = userNameById[String(r.user_id)] ?? (r.user_type?.includes("Employee") ? `Colaborador #${r.user_id}` : `Utilizador #${r.user_id}`)
+                  const descriptionShort = truncate(stripHtml(r.description), 90)
 
                   const dueMs = due && !Number.isNaN(due.getTime()) ? due.getTime() : null
                   const overdue = Boolean(dueMs && dueMs < Date.now() && r.status !== "resolved" && r.status !== "closed")
@@ -481,7 +491,7 @@ export default function SupportTickets() {
                       <td className="py-4 pr-4">
                         <div className="space-y-1 max-w-[520px]">
                           <div className="font-medium truncate">{r.title}</div>
-                          <div className="text-xs text-muted-foreground truncate">{r.description}</div>
+                          <div className="text-xs text-muted-foreground truncate">{descriptionShort || "—"}</div>
                         </div>
                       </td>
                       <td className="py-4 pr-4">{companyNameById[r.company_id] ?? r.company_id}</td>
@@ -501,7 +511,7 @@ export default function SupportTickets() {
                           "—"
                         )}
                       </td>
-                      <td className="py-4 pr-4">{r.department_id ? deptNameById[String(r.department_id)] ?? String(r.department_id) : "—"}</td>
+                      <td className="py-4 pr-4">{createdByLabel}</td>
                       <td className="py-4 pr-4">{assignedLabel}</td>
                       <td className="py-4 pr-4">
                         <div className="flex items-center gap-2">
@@ -748,7 +758,7 @@ function SupportTicketFormModal({
 
           <div className="md:col-span-2">
             <div className="text-xs text-muted-foreground mb-1">Mensagem</div>
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} placeholder="Descreva o problema/solicitação…" />
+            <RichTextEditor value={description} onChange={setDescription} placeholder="Descreva o problema/solicitação…" />
           </div>
 
           <div>

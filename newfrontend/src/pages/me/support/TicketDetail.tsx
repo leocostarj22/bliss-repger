@@ -12,6 +12,7 @@ import {
   fetchMySupportCategories,
   fetchMySupportTicket,
   updateMySupportTicket,
+  uploadMySupportInlineImage,
   uploadMySupportTicketAttachments,
 } from "@/services/api"
 import { Button } from "@/components/ui/button"
@@ -255,17 +256,8 @@ export default function MeSupportTicketDetail() {
               onChange={setDescription}
               placeholder="Escreve a mensagem…"
               onImageUpload={async (file) => {
-                if (!ticket?.id) {
-                  toast({ title: "Aviso", description: "Guarde o ticket antes de inserir imagens no texto.", variant: "default" })
-                  throw new Error("Ticket ainda não foi guardado")
-                }
-
-                const res = await uploadMySupportTicketAttachments(ticket.id, [file])
-                const att = Array.isArray(res.data) ? res.data[0] : null
-                if (!att?.id) {
-                  throw new Error("Upload falhou")
-                }
-                return `/tickets/attachments/${att.id}/view`
+                const res = await uploadMySupportInlineImage(file)
+                return res.url
               }}
             />
           </div>
@@ -398,9 +390,9 @@ export default function MeSupportTicketDetail() {
               value={description}
               onChange={setDescription}
               placeholder="Descreve o problema/solicitação…"
-              onImageUpload={async () => {
-                toast({ title: "Aviso", description: "Crie o ticket primeiro para inserir imagens no texto.", variant: "default" })
-                throw new Error("Ticket ainda não foi guardado")
+              onImageUpload={async (file) => {
+                const res = await uploadMySupportInlineImage(file)
+                return res.url
               }}
             />
         </div>

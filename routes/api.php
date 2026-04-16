@@ -3689,6 +3689,36 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             return response()->json(['data' => $data]);
         });
 
+        Route::post('me/support/images/upload', function () {
+            $user = auth()->guard('employee')->user();
+            abort_unless($user, 401);
+
+            $companyId = $user->employee?->company_id;
+            abort_unless($companyId, 422);
+
+            $validated = request()->validate([
+                'file' => ['required', 'file', 'max:15360', 'mimes:png,jpg,jpeg,gif,webp,svg'],
+            ]);
+
+            $file = $validated['file'];
+            $original = (string) $file->getClientOriginalName();
+            $ext = strtolower((string) $file->getClientOriginalExtension());
+            $base = pathinfo($original, PATHINFO_FILENAME);
+            $safe = Str::slug($base);
+            if ($safe === '') {
+                $safe = (string) Str::uuid();
+            }
+
+            $filename = $safe . '-' . Str::uuid() . ($ext ? ('.' . $ext) : '');
+            $path = $file->storeAs('tickets/inline-images', $filename, 'public');
+
+            return response()->json([
+                'url' => Storage::disk('public')->url($path),
+                'filename' => $filename,
+                'path' => $path,
+            ], 201);
+        });
+
         Route::get('me/support/tickets', function () {
             $user = auth()->guard('employee')->user();
             abort_unless($user, 401);

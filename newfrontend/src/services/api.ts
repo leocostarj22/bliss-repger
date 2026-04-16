@@ -2201,6 +2201,28 @@ export async function uploadMySupportTicketAttachments(id: string, files: File[]
   return { data: Array.isArray(json?.data) ? (json.data as SupportTicketAttachment[]) : [] };
 }
 
+export async function uploadMySupportInlineImage(file: File): Promise<{ url: string }> {
+  const form = new FormData();
+  form.append('file', file);
+
+  const response = await apiFetch('/api/v1/me/support/images/upload', {
+    method: 'POST',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+    body: form,
+  });
+
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to upload support inline image: ${response.statusText}`);
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  const url = String(json?.url ?? '');
+  if (!url) throw new Error('Upload sem URL retornada');
+  return { url };
+}
+
 const mapEmployee = (raw: any): Employee => {
   const createdAt = raw?.createdAt ?? raw?.created_at ?? new Date().toISOString();
   const updatedAt = raw?.updatedAt ?? raw?.updated_at ?? new Date().toISOString();

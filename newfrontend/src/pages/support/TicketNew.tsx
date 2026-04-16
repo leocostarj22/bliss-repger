@@ -6,7 +6,7 @@ import type { Company, Department, SupportCategory, SupportTicketPriority, Suppo
 import { createSupportTicket, fetchCompanies, fetchDepartments, fetchSupportCategories, fetchUsers } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -165,7 +165,7 @@ export default function SupportTicketNew() {
 
           <div className="md:col-span-2">
             <div className="text-xs text-muted-foreground mb-1">Mensagem</div>
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={5} placeholder="Descreva o problema/solicitação…" />
+            <RichTextEditor value={description} onChange={setDescription} placeholder="Descreva o problema/solicitação…" />
           </div>
 
           <div>
