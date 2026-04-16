@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/use-toast"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { createPersonalNote, fetchPersonalNote, fetchUser, fetchUsers, updatePersonalNote } from "@/services/api"
+import { createPersonalNote, fetchPersonalNote, fetchUser, updatePersonalNote } from "@/services/api"
 import type { PersonalNote, User } from "@/types"
 import { cn } from "@/lib/utils"
 
@@ -75,6 +75,7 @@ export default function NoteForm() {
 
   const [currentUserId, setCurrentUserId] = useState("")
   const [ownerUserId, setOwnerUserId] = useState("")
+  const [isEmployeeRole, setIsEmployeeRole] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -83,6 +84,8 @@ export default function NoteForm() {
         if (!alive) return
         const id = String(r?.data?.id ?? "").trim()
         if (id) setCurrentUserId(id)
+        const roleName = String(r?.data?.role ?? "").trim().toLowerCase()
+        setIsEmployeeRole(["employee", "funcionario", "funcionário", "colaborador"].includes(roleName))
       })
       .catch(() => {})
     return () => {
@@ -111,8 +114,18 @@ export default function NoteForm() {
   useEffect(() => {
     let alive = true
 
+    if (isEmployeeRole) {
+      setUsers([])
+      setUsersLoading(false)
+      setSharedWithUserIds([])
+      return () => {
+        alive = false
+      }
+    }
+
     setUsersLoading(true)
-    fetchUsers({ is_active: true })
+    import("@/services/api")
+      .then((m) => m.fetchUsers({ is_active: true }))
       .then((r) => {
         if (!alive) return
         setUsers(r.data ?? [])
@@ -129,7 +142,7 @@ export default function NoteForm() {
     return () => {
       alive = false
     }
-  }, [])
+  }, [isEmployeeRole])
 
   const toggleSharedUser = useCallback((userId: string) => {
     setSharedWithUserIds((current) => (current.includes(userId) ? current.filter((x) => x !== userId) : [...current, userId]))
@@ -227,7 +240,7 @@ export default function NoteForm() {
         color: (color || "").trim() ? color.trim() : null,
         is_favorite: Boolean(isFavorite),
         remind_at: fromLocalDateTimeInput(remindAtLocal),
-        shared_with_user_ids: sharedWithUserIds,
+        shared_with_user_ids: isEmployeeRole ? [] : sharedWithUserIds,
       } as any
 
       if (isEditing) {

@@ -4539,6 +4539,185 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         return response()->json(['ok' => true]);
     });
 
+    Route::get('me/personal-notes', function () {
+        $u = auth('employee')->user();
+        abort_unless($u && $u instanceof \App\Models\EmployeeUser, 403);
+
+        $search = trim((string) request('search', ''));
+        $isFavorite = request()->has('is_favorite') ? filter_var(request('is_favorite'), FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) : null;
+
+        $query = DB::table('employee_personal_notes')
+            ->where('employee_user_id', $u->id)
+            ->orderByDesc('updated_at');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('content', 'like', "%{$search}%");
+            });
+        }
+
+        if (is_bool($isFavorite)) {
+            $query->where('is_favorite', $isFavorite);
+        }
+
+        $rows = $query->get();
+
+        $data = $rows->map(function ($n) {
+            return [
+                'id' => (string) ($n->id ?? ''),
+                'user_id' => (string) ($n->employee_user_id ?? ''),
+                'title' => (string) ($n->title ?? ''),
+                'content' => (string) ($n->content ?? ''),
+                'color' => $n->color ?? null,
+                'is_favorite' => (bool) ($n->is_favorite ?? false),
+                'remind_at' => isset($n->remind_at) ? (\Carbon\Carbon::parse($n->remind_at)->toIso8601String()) : null,
+                'last_modified_by' => $n->last_modified_by_employee_user_id !== null ? (string) $n->last_modified_by_employee_user_id : null,
+                'shared_with_user_ids' => [],
+                'createdAt' => isset($n->created_at) ? (\Carbon\Carbon::parse($n->created_at)->toIso8601String()) : null,
+                'updatedAt' => isset($n->updated_at) ? (\Carbon\Carbon::parse($n->updated_at)->toIso8601String()) : null,
+            ];
+        })->values();
+
+        return response()->json(['data' => $data]);
+    });
+
+    Route::get('me/personal-notes/{noteId}', function ($noteId) {
+        $u = auth('employee')->user();
+        abort_unless($u && $u instanceof \App\Models\EmployeeUser, 403);
+
+        $id = (int) $noteId;
+        abort_unless($id > 0, 404);
+
+        $n = DB::table('employee_personal_notes')
+            ->where('id', $id)
+            ->where('employee_user_id', $u->id)
+            ->first();
+
+        abort_unless($n, 404);
+
+        return response()->json([
+            'data' => [
+                'id' => (string) ($n->id ?? ''),
+                'user_id' => (string) ($n->employee_user_id ?? ''),
+                'title' => (string) ($n->title ?? ''),
+                'content' => (string) ($n->content ?? ''),
+                'color' => $n->color ?? null,
+                'is_favorite' => (bool) ($n->is_favorite ?? false),
+                'remind_at' => isset($n->remind_at) ? (\Carbon\Carbon::parse($n->remind_at)->toIso8601String()) : null,
+                'last_modified_by' => $n->last_modified_by_employee_user_id !== null ? (string) $n->last_modified_by_employee_user_id : null,
+                'shared_with_user_ids' => [],
+                'createdAt' => isset($n->created_at) ? (\Carbon\Carbon::parse($n->created_at)->toIso8601String()) : null,
+                'updatedAt' => isset($n->updated_at) ? (\Carbon\Carbon::parse($n->updated_at)->toIso8601String()) : null,
+            ],
+        ]);
+    });
+
+    Route::post('me/personal-notes', function () {
+        $u = auth('employee')->user();
+        abort_unless($u && $u instanceof \App\Models\EmployeeUser, 403);
+
+        $validated = request()->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'content' => ['nullable', 'string'],
+            'color' => ['nullable', 'string', 'max:32'],
+            'is_favorite' => ['required', 'boolean'],
+            'remind_at' => ['nullable', 'date'],
+        ]);
+
+        $now = now();
+        $id = DB::table('employee_personal_notes')->insertGetId([
+            'employee_user_id' => $u->id,
+            'title' => $validated['title'],
+            'content' => $validated['content'] ?? null,
+            'color' => $validated['color'] ?? null,
+            'is_favorite' => (bool) $validated['is_favorite'],
+            'remind_at' => $validated['remind_at'] ?? null,
+            'last_modified_by_employee_user_id' => $u->id,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $n = DB::table('employee_personal_notes')->where('id', $id)->first();
+
+        return response()->json([
+            'data' => [
+                'id' => (string) ($n->id ?? ''),
+                'user_id' => (string) ($n->employee_user_id ?? ''),
+                'title' => (string) ($n->title ?? ''),
+                'content' => (string) ($n->content ?? ''),
+                'color' => $n->color ?? null,
+                'is_favorite' => (bool) ($n->is_favorite ?? false),
+                'remind_at' => isset($n->remind_at) ? (\Carbon\Carbon::parse($n->remind_at)->toIso8601String()) : null,
+                'last_modified_by' => $n->last_modified_by_employee_user_id !== null ? (string) $n->last_modified_by_employee_user_id : null,
+                'shared_with_user_ids' => [],
+                'createdAt' => isset($n->created_at) ? (\Carbon\Carbon::parse($n->created_at)->toIso8601String()) : null,
+                'updatedAt' => isset($n->updated_at) ? (\Carbon\Carbon::parse($n->updated_at)->toIso8601String()) : null,
+            ],
+        ], 201);
+    });
+
+    Route::put('me/personal-notes/{noteId}', function ($noteId) {
+        $u = auth('employee')->user();
+        abort_unless($u && $u instanceof \App\Models\EmployeeUser, 403);
+
+        $id = (int) $noteId;
+        abort_unless($id > 0, 404);
+
+        $exists = DB::table('employee_personal_notes')
+            ->where('id', $id)
+            ->where('employee_user_id', $u->id)
+            ->exists();
+        abort_unless($exists, 404);
+
+        $validated = request()->validate([
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'content' => ['nullable', 'string'],
+            'color' => ['nullable', 'string', 'max:32'],
+            'is_favorite' => ['sometimes', 'required', 'boolean'],
+            'remind_at' => ['nullable', 'date'],
+        ]);
+
+        $update = ['updated_at' => now(), 'last_modified_by_employee_user_id' => $u->id];
+        if (array_key_exists('title', $validated)) $update['title'] = $validated['title'];
+        if (array_key_exists('content', $validated)) $update['content'] = $validated['content'];
+        if (array_key_exists('color', $validated)) $update['color'] = $validated['color'];
+        if (array_key_exists('is_favorite', $validated)) $update['is_favorite'] = (bool) $validated['is_favorite'];
+        if (array_key_exists('remind_at', $validated)) $update['remind_at'] = $validated['remind_at'];
+
+        DB::table('employee_personal_notes')->where('id', $id)->where('employee_user_id', $u->id)->update($update);
+
+        $n = DB::table('employee_personal_notes')->where('id', $id)->first();
+
+        return response()->json([
+            'data' => [
+                'id' => (string) ($n->id ?? ''),
+                'user_id' => (string) ($n->employee_user_id ?? ''),
+                'title' => (string) ($n->title ?? ''),
+                'content' => (string) ($n->content ?? ''),
+                'color' => $n->color ?? null,
+                'is_favorite' => (bool) ($n->is_favorite ?? false),
+                'remind_at' => isset($n->remind_at) ? (\Carbon\Carbon::parse($n->remind_at)->toIso8601String()) : null,
+                'last_modified_by' => $n->last_modified_by_employee_user_id !== null ? (string) $n->last_modified_by_employee_user_id : null,
+                'shared_with_user_ids' => [],
+                'createdAt' => isset($n->created_at) ? (\Carbon\Carbon::parse($n->created_at)->toIso8601String()) : null,
+                'updatedAt' => isset($n->updated_at) ? (\Carbon\Carbon::parse($n->updated_at)->toIso8601String()) : null,
+            ],
+        ]);
+    });
+
+    Route::delete('me/personal-notes/{noteId}', function ($noteId) {
+        $u = auth('employee')->user();
+        abort_unless($u && $u instanceof \App\Models\EmployeeUser, 403);
+
+        $id = (int) $noteId;
+        abort_unless($id > 0, 404);
+
+        DB::table('employee_personal_notes')->where('id', $id)->where('employee_user_id', $u->id)->delete();
+
+        return response()->json(['ok' => true]);
+    });
+
     Route::get('personal-notes', function () {
         $user = auth()->user();
         abort_unless($user && $user instanceof \App\Models\User, 403);

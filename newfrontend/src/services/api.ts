@@ -1137,6 +1137,25 @@ export async function fetchMyAccess(opts?: { force?: boolean }): Promise<ApiResp
 
   const normalizeCmp = (v: unknown) => normalize(v).toLowerCase()
 
+  if (isEmployeeRole) {
+    const merged: string[] = []
+    ;[...DEFAULT_PERSONAL_PERMISSIONS, ...permissionsAllow].forEach((p) => {
+      if (!merged.includes(p)) merged.push(p)
+    })
+
+    const value: MyAccessSnapshot = {
+      userId,
+      role,
+      isAdmin: false,
+      isEmployeeRole: true,
+      permissions: merged,
+      permissionsAllow,
+      permissionsDeny,
+    }
+    myAccessCache = { key, value, ts: Date.now() }
+    return { data: value }
+  }
+
   try {
     const rolesResp = await fetchRoles()
     const found = rolesResp.data.find((r) => normalizeCmp(r.name) === roleName || normalizeCmp(r.display_name) === roleName)
@@ -5272,7 +5291,12 @@ export async function fetchPersonalNotes(params?: {
   if (search) qs.set('search', search);
   if (typeof isFavorite === 'boolean') qs.set('is_favorite', isFavorite ? '1' : '0');
 
-  const url = `/api/v1/personal-notes${qs.toString() ? `?${qs.toString()}` : ''}`;
+  const me = await fetchUser();
+  const roleName = String(me.data.role ?? '').trim().toLowerCase();
+  const isEmployeeRole = ['employee', 'funcionario', 'funcionário', 'colaborador'].includes(roleName);
+  const base = isEmployeeRole ? '/api/v1/me/personal-notes' : '/api/v1/personal-notes';
+
+  const url = `${base}${qs.toString() ? `?${qs.toString()}` : ''}`;
   const response = await apiFetch(url, { method: 'GET' });
 
   if (!response.ok) {
@@ -5285,7 +5309,12 @@ export async function fetchPersonalNotes(params?: {
 }
 
 export async function fetchPersonalNote(id: string): Promise<ApiResponse<PersonalNote>> {
-  const response = await apiFetch(`/api/v1/personal-notes/${encodeURIComponent(id)}`, { method: 'GET' });
+  const me = await fetchUser();
+  const roleName = String(me.data.role ?? '').trim().toLowerCase();
+  const isEmployeeRole = ['employee', 'funcionario', 'funcionário', 'colaborador'].includes(roleName);
+  const base = isEmployeeRole ? '/api/v1/me/personal-notes' : '/api/v1/personal-notes';
+
+  const response = await apiFetch(`${base}/${encodeURIComponent(id)}`, { method: 'GET' });
 
   if (!response.ok) {
     const fallback = `Failed to fetch note: ${response.statusText}`;
@@ -5304,7 +5333,12 @@ export async function createPersonalNote(payload: {
   remind_at?: string | null;
   shared_with_user_ids?: string[];
 }): Promise<ApiResponse<PersonalNote>> {
-  const response = await apiFetch('/api/v1/personal-notes', {
+  const me = await fetchUser();
+  const roleName = String(me.data.role ?? '').trim().toLowerCase();
+  const isEmployeeRole = ['employee', 'funcionario', 'funcionário', 'colaborador'].includes(roleName);
+  const base = isEmployeeRole ? '/api/v1/me/personal-notes' : '/api/v1/personal-notes';
+
+  const response = await apiFetch(base, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -5329,7 +5363,12 @@ export async function updatePersonalNote(
     shared_with_user_ids: string[];
   }>
 ): Promise<ApiResponse<PersonalNote>> {
-  const response = await apiFetch(`/api/v1/personal-notes/${encodeURIComponent(id)}`, {
+  const me = await fetchUser();
+  const roleName = String(me.data.role ?? '').trim().toLowerCase();
+  const isEmployeeRole = ['employee', 'funcionario', 'funcionário', 'colaborador'].includes(roleName);
+  const base = isEmployeeRole ? '/api/v1/me/personal-notes' : '/api/v1/personal-notes';
+
+  const response = await apiFetch(`${base}/${encodeURIComponent(id)}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
   });
@@ -5344,7 +5383,12 @@ export async function updatePersonalNote(
 }
 
 export async function deletePersonalNote(id: string): Promise<void> {
-  const response = await apiFetch(`/api/v1/personal-notes/${encodeURIComponent(id)}`, {
+  const me = await fetchUser();
+  const roleName = String(me.data.role ?? '').trim().toLowerCase();
+  const isEmployeeRole = ['employee', 'funcionario', 'funcionário', 'colaborador'].includes(roleName);
+  const base = isEmployeeRole ? '/api/v1/me/personal-notes' : '/api/v1/personal-notes';
+
+  const response = await apiFetch(`${base}/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
 

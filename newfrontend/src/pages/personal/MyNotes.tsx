@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { Loader2, Pencil, Plus, Search, Star, Trash2 } from "lucide-react"
 
 import type { PersonalNote, User } from "@/types"
-import { createPersonalNote, deletePersonalNote, fetchPersonalNotes, fetchUser, fetchUsers, updatePersonalNote } from "@/services/api"
+import { createPersonalNote, deletePersonalNote, fetchPersonalNotes, fetchUser, updatePersonalNote } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -113,10 +113,19 @@ export default function MyNotes() {
 
   useEffect(() => {
     let alive = true
-    fetchUsers({ is_active: true })
+    fetchUser()
       .then((r) => {
         if (!alive) return
-        setUsers(r.data ?? [])
+        const u: User = {
+          id: String(r.data.id),
+          name: r.data.name,
+          email: r.data.email,
+          role: r.data.role ?? null,
+          is_active: true,
+          company_id: null,
+          department_id: null,
+        } as any
+        setUsers([u])
       })
       .catch(() => {
         if (!alive) return
