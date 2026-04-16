@@ -3764,6 +3764,170 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             ]);
         });
 
+        Route::put('me/support/tickets/{ticket}', function (Ticket $ticket) {
+            $user = auth()->guard('employee')->user();
+            abort_unless($user, 401);
+            abort_unless($ticket->user_type === \App\Models\EmployeeUser::class && (string) $ticket->user_id === (string) $user->id, 403);
+
+            $companyId = $user->employee?->company_id;
+            abort_unless($companyId && (int) $ticket->company_id === (int) $companyId, 422);
+
+            $validated = request()->validate([
+                'title' => ['required', 'string', 'max:255'],
+                'description' => ['required', 'string'],
+                'priority' => ['required', 'in:' . implode(',', [Ticket::PRIORITY_LOW, Ticket::PRIORITY_MEDIUM, Ticket::PRIORITY_HIGH, Ticket::PRIORITY_URGENT])],
+                'category_id' => [
+                    'nullable',
+                    Rule::exists('categories', 'id')->where(fn ($q) => $q->where('company_id', $companyId)),
+                ],
+                'department_id' => [
+                    'nullable',
+                    Rule::exists('departments', 'id')->where(fn ($q) => $q->where('company_id', $companyId)),
+                ],
+                'assigned_to' => ['nullable'],
+                'due_date' => ['nullable', 'date'],
+            ]);
+
+            $assignedTo = isset($validated['assigned_to']) ? (int) $validated['assigned_to'] : 0;
+            if ($assignedTo > 0) {
+                $assignee = User::query()
+                    ->where('id', $assignedTo)
+                    ->where('is_active', true)
+                    ->where(function ($q) use ($companyId) {
+                        $q->where('company_id', $companyId)
+                          ->orWhereHas('companies', fn ($c) => $c->where('companies.id', $companyId))
+                          ->orWhere(function ($qq) {
+                              $qq->whereNull('company_id')
+                                 ->where(function ($r) {
+                                     $r->where('role', 'admin')
+                                       ->orWhereHas('roleModel', fn ($m) => $m->where('name', 'admin'));
+                                 });
+                          });
+                    })
+                    ->where(function ($q) {
+                        $q->whereIn('role', ['admin', 'manager', 'supervisor', 'agent'])
+                          ->orWhereHas('roleModel', fn ($r) => $r->whereIn('name', ['admin', 'manager', 'supervisor', 'agent']));
+                    })
+                    ->first();
+
+                if (! $assignee) {
+                    return response()->json(['message' => 'assigned_to inválido'], 422);
+                }
+            } else {
+                $assignedTo = null;
+            }
+
+            $ticket->update([
+                'title' => $validated['title'],
+                'description' => $validated['description'],
+                'priority' => $validated['priority'],
+                'category_id' => $validated['category_id'] ?? null,
+                'department_id' => $validated['department_id'] ?? null,
+                'assigned_to' => $assignedTo,
+                'due_date' => $validated['due_date'] ?? null,
+            ]);
+
+            return response()->json([
+                'data' => [
+                    'id' => (string) $ticket->id,
+                    'company_id' => (string) $ticket->company_id,
+                    'title' => $ticket->title,
+                    'description' => $ticket->description,
+                    'status' => $ticket->status,
+                    'priority' => $ticket->priority,
+                    'category_id' => $ticket->category_id !== null ? (string) $ticket->category_id : null,
+                    'department_id' => $ticket->department_id !== null ? (string) $ticket->department_id : null,
+                    'user_id' => (string) $ticket->user_id,
+                    'user_type' => $ticket->user_type,
+                    'assigned_to' => $ticket->assigned_to !== null ? (string) $ticket->assigned_to : null,
+                    'due_date' => $ticket->due_date?->toIso8601String(),
+                    'resolved_at' => $ticket->resolved_at?->toIso8601String(),
+                    'created_at' => $ticket->created_at?->toIso8601String(),
+                    'updated_at' => $ticket->updated_at?->toIso8601String(),
+                ],
+            ]);
+        });
+
+        Route::post('me/support/tickets/{ticket}/attachments', function (Ticket $ticket) {
+            $employeeUser = auth()->guard('employee')->user();
+            abort_unless($employeeUser, 401);
+            abort_unless($ticket->user_type === \App\Models\EmployeeUser::class && (string) $ticket->user_id === (string) $employeeUser->id, 403);
+
+            $companyId = $employeeUser->employee?->company_id;
+            abort_unless($companyId && (int) $ticket->company_id === (int) $companyId, 422);
+
+            $validated = request()->validate([
+                'files' => ['required', 'array', 'min:1', 'max:10'],
+                'files.*' => ['file', 'max:' . (int) (\App\Models\TicketAttachment::getMaxFileSize() / 1024), 'mimetypes:' . implode(',', \App\Models\TicketAttachment::getAllowedMimeTypes())],
+            ]);
+
+            $uploaderId = User::query()->where('email', $employeeUser->email)->value('id');
+            if (! $uploaderId) {
+                $uploaderId = User::query()
+                    ->where('is_active', true)
+                    ->where(function ($q) use ($companyId) {
+                        $q->where('company_id', $companyId)->orWhereHas('companies', fn ($c) => $c->where('companies.id', $companyId));
+                    })
+                    ->where(function ($q) {
+                        $q->whereIn('role', ['admin', 'manager', 'supervisor', 'agent'])
+                          ->orWhereHas('roleModel', fn ($r) => $r->whereIn('name', ['admin', 'manager', 'supervisor', 'agent']));
+                    })
+                    ->orderBy('id')
+                    ->value('id');
+            }
+
+            if (! $uploaderId) {
+                return response()->json(['message' => 'Não foi possível identificar uploader para anexos'], 422);
+            }
+
+            $disk = 'public';
+            $created = [];
+
+            foreach ($validated['files'] as $file) {
+                if (!($file instanceof \Illuminate\Http\UploadedFile)) {
+                    continue;
+                }
+
+                $original = $file->getClientOriginalName();
+                $mime = (string) ($file->getClientMimeType() ?? $file->getMimeType() ?? 'application/octet-stream');
+                $size = (int) $file->getSize();
+
+                $stored = $file->store('tickets/' . $ticket->id, $disk);
+                if (! is_string($stored) || $stored === '') {
+                    continue;
+                }
+
+                $att = \App\Models\TicketAttachment::create([
+                    'ticket_id' => $ticket->id,
+                    'user_id' => (int) $uploaderId,
+                    'ticket_comment_id' => null,
+                    'original_name' => $original,
+                    'file_name' => basename($stored),
+                    'file_path' => $stored,
+                    'mime_type' => $mime,
+                    'file_size' => $size,
+                    'disk' => $disk,
+                ]);
+
+                $created[] = [
+                    'id' => (string) $att->id,
+                    'ticket_id' => (string) $att->ticket_id,
+                    'user_id' => (string) $att->user_id,
+                    'ticket_comment_id' => $att->ticket_comment_id !== null ? (string) $att->ticket_comment_id : null,
+                    'original_name' => $att->original_name,
+                    'file_name' => $att->file_name,
+                    'file_path' => $att->file_path,
+                    'mime_type' => $att->mime_type,
+                    'file_size' => (int) $att->file_size,
+                    'disk' => $att->disk,
+                    'created_at' => $att->created_at?->toIso8601String(),
+                    'updated_at' => $att->updated_at?->toIso8601String(),
+                ];
+            }
+
+            return response()->json(['data' => $created], 201);
+        });
+
         Route::post('me/support/tickets', function () {
             $user = auth()->guard('employee')->user();
             abort_unless($user, 401);

@@ -105,6 +105,7 @@ export default function MeSupportTicketDetail() {
   const categoriesForCompany = useMemo(() => categories.filter((c) => c.company_id === companyId), [categories, companyId])
   const departmentsForCompany = useMemo(() => departments.filter((d) => d.company_id === companyId), [departments, companyId])
   const assigneesForCompany = useMemo(() => users, [users])
+  const companyName = useMemo(() => companies.find((c) => c.id === companyId)?.name ?? "", [companies, companyId])
 
   useEffect(() => {
     if (categoryId !== "none" && !categoriesForCompany.some((c) => c.id === categoryId)) setCategoryId("none")
@@ -239,7 +240,7 @@ export default function MeSupportTicketDetail() {
         <div className="glass-card p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="md:col-span-2">
             <div className="text-xs text-muted-foreground mb-1">Empresa</div>
-            <Input value={companyId} disabled />
+            <Input value={companyName || companyId} disabled />
           </div>
 
           <div className="md:col-span-2">
@@ -393,7 +394,15 @@ export default function MeSupportTicketDetail() {
 
         <div className="md:col-span-2">
           <div className="text-xs text-muted-foreground mb-1">Mensagem</div>
-          <RichTextEditor value={description} onChange={setDescription} placeholder="Descreve o problema/solicitação…" />
+          <RichTextEditor
+              value={description}
+              onChange={setDescription}
+              placeholder="Descreve o problema/solicitação…"
+              onImageUpload={async () => {
+                toast({ title: "Aviso", description: "Crie o ticket primeiro para inserir imagens no texto.", variant: "default" })
+                throw new Error("Ticket ainda não foi guardado")
+              }}
+            />
         </div>
 
         <div>

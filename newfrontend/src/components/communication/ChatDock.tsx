@@ -318,8 +318,11 @@ export function ChatDock() {
           audio.pause();
           audio.currentTime = 0;
         }).catch(() => {});
-      } catch {
-        // ignore
+      } catch (e: any) {
+        const msg = String(e?.message ?? '').toLowerCase();
+        if (msg.includes('unauthorized') || msg.includes('unauthenticated') || msg.includes('401')) {
+          setChatDisabled(true);
+        }
       }
     };
 
@@ -409,8 +412,11 @@ export function ChatDock() {
             setTimeout(scrollToBottom, 0);
           }
         }
-      } catch {
-        // ignore
+      } catch (e: any) {
+        const msg = String(e?.message ?? '').toLowerCase();
+        if (msg.includes('unauthorized') || msg.includes('unauthenticated') || msg.includes('401')) {
+          setChatDisabled(true);
+        }
       }
     };
 
