@@ -8,7 +8,7 @@ import type { MainDashboardData } from '@/types';
  * Base URL pattern: /api/v1/email/...
  */
 
-import type { ApiResponse, Campaign, Contact, DashboardStats, Automation, AppNotification, EmailTemplate, Company, Department, User, Role, Employee, Payroll, Timesheet, Vacation, InternalMessage, AdminPost, AdminPostComment, VideoCallMeeting, BlissProduct, BlissCustomer, BlissOrder, BlissOrderProduct, BlissOrderStatus, MyFormulaProduct, MyFormulaCustomer, MyFormulaOrder, MyFormulaOrderProduct, MyFormulaOrderStatus, MyFormulaQuiz, SupportCategory, SupportTicket, SupportTicketStatus, SupportTicketPriority, EspacoAbsolutoCustomer, EspacoAbsolutoAppointment, EspacoAbsolutoUserGroup, EspacoAbsolutoUserMessage, SystemLog, Task, PersonalNote, TaskPriority, TaskStatus } from '@/types';
+import type { ApiResponse, Campaign, Contact, DashboardStats, Automation, AppNotification, EmailTemplate, Company, Department, User, Role, Employee, Payroll, Timesheet, Vacation, InternalMessage, AdminPost, AdminPostComment, VideoCallMeeting, BlissProduct, BlissCustomer, BlissOrder, BlissOrderProduct, BlissOrderStatus, MyFormulaProduct, MyFormulaCustomer, MyFormulaOrder, MyFormulaOrderProduct, MyFormulaOrderStatus, MyFormulaQuiz, SupportCategory, SupportTicket, SupportTicketAttachment, SupportTicketStatus, SupportTicketPriority, EspacoAbsolutoCustomer, EspacoAbsolutoAppointment, EspacoAbsolutoUserGroup, EspacoAbsolutoUserMessage, SystemLog, Task, PersonalNote, TaskPriority, TaskStatus } from '@/types';
 import { mockCampaigns, mockContacts, mockDashboardStats, mockAutomations, mockNotifications, mockCompanies, mockDepartments, mockSupportCategories, mockSupportTickets, mockUsers, mockRoles, mockEmployees, mockPayrolls, mockTimesheets, mockVacations, mockInternalMessages, mockAdminPosts, mockVideoCallMeetings, mockBlissProducts, mockBlissCustomers, mockBlissOrders, mockBlissOrderProducts, mockBlissOrderStatuses, mockMyFormulaProducts, mockMyFormulaCustomers, mockMyFormulaOrders, mockMyFormulaOrderProducts, mockMyFormulaOrderStatuses, mockMyFormulaQuizzes, mockEspacoAbsolutoCustomers, mockEspacoAbsolutoAppointments, mockEspacoAbsolutoUserGroups, mockEspacoAbsolutoUserMessages, mockSystemLogs, mockTasks, mockPersonalNotes } from './mockData';
 
 const delay = (ms = 400) => new Promise(r => setTimeout(r, ms + Math.random() * 200));
@@ -2159,6 +2159,46 @@ export async function createMySupportTicket(
   }
   const json = await response.json();
   return { data: json?.data as SupportTicket };
+}
+
+export async function updateMySupportTicket(
+  id: string,
+  payload: Pick<SupportTicket, 'title' | 'description' | 'priority' | 'category_id' | 'department_id' | 'assigned_to' | 'due_date'>
+): Promise<ApiResponse<SupportTicket>> {
+  const response = await apiFetch(`/api/v1/me/support/tickets/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to update my support ticket: ${response.statusText}`);
+    throw new Error(msg);
+  }
+  const json = await response.json();
+  return { data: json?.data as SupportTicket };
+}
+
+export async function uploadMySupportTicketAttachments(id: string, files: File[]): Promise<ApiResponse<SupportTicketAttachment[]>> {
+  const form = new FormData();
+  for (const f of files) {
+    form.append('files[]', f);
+  }
+
+  const response = await apiFetch(`/api/v1/me/support/tickets/${encodeURIComponent(id)}/attachments`, {
+    method: 'POST',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+    body: form,
+  });
+
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to upload ticket attachments: ${response.statusText}`);
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as SupportTicketAttachment[]) : [] };
 }
 
 const mapEmployee = (raw: any): Employee => {

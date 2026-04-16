@@ -1,9 +1,19 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useParams, useNavigate } from "react-router-dom"
-import { ArrowLeft, Save } from "lucide-react"
+import { ArrowLeft, Paperclip, Save } from "lucide-react"
 
 import type { Company, Department, SupportCategory, SupportTicket, SupportTicketPriority, User } from "@/types"
-import { createMySupportTicket, fetchMyCompanies, fetchMyDepartments, fetchMyEmployee, fetchMySupportAssignees, fetchMySupportCategories, fetchMySupportTicket } from "@/services/api"
+import {
+  createMySupportTicket,
+  fetchMyCompanies,
+  fetchMyDepartments,
+  fetchMyEmployee,
+  fetchMySupportAssignees,
+  fetchMySupportCategories,
+  fetchMySupportTicket,
+  updateMySupportTicket,
+  uploadMySupportTicketAttachments,
+} from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -33,6 +43,9 @@ export default function MeSupportTicketDetail() {
   const [departmentId, setDepartmentId] = useState<string>("none")
   const [assignedTo, setAssignedTo] = useState<string>("none")
   const [dueDate, setDueDate] = useState<string>("")
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [files, setFiles] = useState<File[]>([])
 
   useEffect(() => {
     let alive = true
@@ -107,6 +120,18 @@ export default function MeSupportTicketDetail() {
 
   const isNew = useMemo(() => !id, [id])
 
+  useEffect(() => {
+    if (!ticket) return
+    setCompanyId(String(ticket.company_id ?? ""))
+    setTitle(ticket.title ?? "")
+    setDescription(ticket.description ?? "")
+    setPriority((ticket.priority ?? "medium") as any)
+    setCategoryId(ticket.category_id ? String(ticket.category_id) : "none")
+    setDepartmentId(ticket.department_id ? String(ticket.department_id) : "none")
+    setAssignedTo(ticket.assigned_to ? String(ticket.assigned_to) : "none")
+    setDueDate(ticket.due_date ? String(ticket.due_date).slice(0, 16) : "")
+  }, [ticket])
+
   const submit = async () => {
     if (!companyId) {
       toast({ title: "Validação", description: "Empresa é obrigatória", variant: "destructive" })
@@ -123,8 +148,34 @@ export default function MeSupportTicketDetail() {
 
     setSaving(true)
     try {
-      await createMySupportTicket({
-        company_id: companyId,
+      if (isNew) {
+        const created = await createMySupportTicket({
+          company_id: companyId,
+          title,
+          description,
+          priority,
+          category_id: categoryId === "none" ? null : categoryId,
+          department_id: departmentId === "none" ? null : departmentId,
+          assigned_to: assignedTo === "none" ? null : assignedTo,
+          due_date: dueDate || null,
+        })
+
+        if (files.length > 0) {
+          await uploadMySupportTicketAttachments(created.data.id, files)
+          setFiles([])
+        }
+
+        toast({ title: "Sucesso", description: "Ticket criado" })
+        navigate("/me/support/tickets")
+        return
+      }
+
+      if (!ticket) {
+        toast({ title: "Erro", description: "Ticket não carregado", variant: "destructive" })
+        return
+      }
+
+      const updated = await updateMySupportTicket(ticket.id, {
         title,
         description,
         priority,
@@ -133,8 +184,14 @@ export default function MeSupportTicketDetail() {
         assigned_to: assignedTo === "none" ? null : assignedTo,
         due_date: dueDate || null,
       })
-      toast({ title: "Sucesso", description: "Ticket criado" })
-      navigate("/me/support/tickets")
+
+      if (files.length > 0) {
+        await uploadMySupportTicketAttachments(updated.data.id, files)
+        setFiles([])
+      }
+
+      setTicket(updated.data)
+      toast({ title: "Sucesso", description: "Ticket atualizado" })
     } catch (e: any) {
       toast({ title: "Erro", description: e?.message ?? "Falha ao criar ticket", variant: "destructive" })
     } finally {
@@ -172,21 +229,111 @@ export default function MeSupportTicketDetail() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="page-title">Ticket</h1>
-              <p className="page-subtitle">Suporte → Detalhes</p>
+              <p className="page-subtitle">Suporte → Editar</p>
               <div className="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
             </div>
             <Button asChild variant="outline"><Link to="/me/support/tickets"><ArrowLeft /> Voltar</Link></Button>
           </div>
         </div>
 
-        <div className="glass-card p-4 space-y-3">
-          <div className="text-lg font-semibold">{ticket.title}</div>
-          <div className="text-sm text-muted-foreground">{ticket.description}</div>
-          <div className="flex items-center gap-3 text-sm">
-            <span>Status: {ticket.status}</span>
-            <span className="text-muted-foreground">Prioridade: {ticket.priority}</span>
+        <div className="glass-card p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="md:col-span-2">
+            <div className="text-xs text-muted-foreground mb-1">Empresa</div>
+            <Input value={companyId} disabled />
           </div>
-          <div className="text-sm text-muted-foreground">ID: {ticket.id}</div>
+
+          <div className="md:col-span-2">
+            <div className="text-xs text-muted-foreground mb-1">Título</div>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+
+          <div className="md:col-span-2">
+            <div className="text-xs text-muted-foreground mb-1">Mensagem</div>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} />
+          </div>
+
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Prioridade</div>
+            <Select value={priority} onValueChange={(v) => setPriority(v as any)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low">Baixa</SelectItem>
+                <SelectItem value="medium">Média</SelectItem>
+                <SelectItem value="high">Alta</SelectItem>
+                <SelectItem value="urgent">Urgente</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Categoria</div>
+            <Select value={categoryId} onValueChange={setCategoryId}>
+              <SelectTrigger><SelectValue placeholder="Sem categoria" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem categoria</SelectItem>
+                {categoriesForCompany.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Departamento</div>
+            <Select value={departmentId} onValueChange={setDepartmentId}>
+              <SelectTrigger><SelectValue placeholder="Sem departamento" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem departamento</SelectItem>
+                {departmentsForCompany.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Atribuição</div>
+            <Select value={assignedTo} onValueChange={setAssignedTo}>
+              <SelectTrigger><SelectValue placeholder="Sem atribuição" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem atribuição</SelectItem>
+                {assigneesForCompany.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Vence em</div>
+            <Input type="datetime-local" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </div>
+
+          <div className="md:col-span-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+              style={{ display: "none" }}
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar"
+            />
+
+            <div className="flex items-center justify-between gap-3">
+              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <Paperclip />
+                Anexar ficheiros
+              </Button>
+              <div className="text-xs text-muted-foreground">{files.length ? `${files.length} ficheiro(s) selecionado(s)` : ""}</div>
+            </div>
+          </div>
+
+          <div className="md:col-span-2 flex justify-end">
+            <Button type="button" onClick={submit} disabled={saving}>
+              <Save />
+              Guardar
+            </Button>
+          </div>
         </div>
       </div>
     )
@@ -287,6 +434,25 @@ export default function MeSupportTicketDetail() {
         <div>
           <div className="text-xs text-muted-foreground mb-1">Vence em</div>
           <Input type="datetime-local" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+        </div>
+
+        <div className="md:col-span-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+            style={{ display: "none" }}
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar"
+          />
+
+          <div className="flex items-center justify-between gap-3">
+            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+              <Paperclip />
+              Anexar ficheiros
+            </Button>
+            <div className="text-xs text-muted-foreground">{files.length ? `${files.length} ficheiro(s) selecionado(s)` : ""}</div>
+          </div>
         </div>
 
         <div className="md:col-span-2 flex justify-end">
