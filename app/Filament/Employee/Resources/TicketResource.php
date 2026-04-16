@@ -170,10 +170,23 @@ class TicketResource extends Resource
                                     $companyId = Auth::user()?->employee?->company_id;
 
                                     $query->where('is_active', true)
-                                        ->when($companyId, fn ($q) => $q->where('company_id', $companyId))
+                                        ->where(function ($q) use ($companyId) {
+                                            if ($companyId) {
+                                                $q->where('company_id', $companyId)
+                                                  ->orWhere(function ($qq) {
+                                                      $qq->whereNull('company_id')
+                                                         ->where(function ($r) {
+                                                             $r->where('role', 'admin')
+                                                               ->orWhereHas('roleModel', fn ($m) => $m->where('name', 'admin'));
+                                                         });
+                                                  });
+                                            } else {
+                                                $q->whereNull('company_id')->orWhereNotNull('company_id');
+                                            }
+                                        })
                                         ->where(function ($q) {
-                                            $q->whereIn('role', ['manager', 'supervisor', 'agent'])
-                                              ->orWhereHas('roleModel', fn ($r) => $r->whereIn('name', ['manager', 'supervisor', 'agent']));
+                                            $q->whereIn('role', ['admin', 'manager', 'supervisor', 'agent'])
+                                              ->orWhereHas('roleModel', fn ($r) => $r->whereIn('name', ['admin', 'manager', 'supervisor', 'agent']));
                                         });
                                 }
                             )

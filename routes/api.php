@@ -3641,11 +3641,20 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             if (! $companyId) return response()->json(['data' => []]);
 
             $rows = User::query()
-                ->where('company_id', $companyId)
                 ->where('is_active', true)
+                ->where(function ($q) use ($companyId) {
+                    $q->where('company_id', $companyId)
+                      ->orWhere(function ($qq) {
+                          $qq->whereNull('company_id')
+                             ->where(function ($r) {
+                                 $r->where('role', 'admin')
+                                   ->orWhereHas('roleModel', fn ($m) => $m->where('name', 'admin'));
+                             });
+                      });
+                })
                 ->where(function ($q) {
-                    $q->whereIn('role', ['manager', 'supervisor', 'agent'])
-                      ->orWhereHas('roleModel', fn ($r) => $r->whereIn('name', ['manager', 'supervisor', 'agent']));
+                    $q->whereIn('role', ['admin', 'manager', 'supervisor', 'agent'])
+                      ->orWhereHas('roleModel', fn ($r) => $r->whereIn('name', ['admin', 'manager', 'supervisor', 'agent']));
                 })
                 ->orderBy('name')
                 ->get();
