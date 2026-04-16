@@ -2,18 +2,21 @@ import { useEffect, useMemo, useState } from "react"
 import { ArrowLeft, Save } from "lucide-react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 
-import type { Company, Department, SupportCategory, SupportTicket, SupportTicketPriority, SupportTicketStatus, User } from "@/types"
+import type { Company, Department, SupportCategory, SupportTicket, SupportTicketComment, SupportTicketPriority, SupportTicketStatus, User } from "@/types"
 import {
+  createSupportTicketComment,
   fetchCompanies,
   fetchDepartments,
   fetchSupportCategories,
   fetchSupportTicket,
+  fetchSupportTicketComments,
   fetchUsers,
   updateSupportTicket,
   uploadSupportInlineImage,
 } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -47,6 +50,10 @@ export default function SupportTicketDetail() {
   const [dueDate, setDueDate] = useState<string>("")
   const [resolvedAt, setResolvedAt] = useState<string>("")
 
+  const [comments, setComments] = useState<SupportTicketComment[]>([])
+  const [reply, setReply] = useState("")
+  const [replySaving, setReplySaving] = useState(false)
+
   useEffect(() => {
     let alive = true
     const ticketId = String(id ?? "").trim()
@@ -56,10 +63,11 @@ export default function SupportTicketDetail() {
     }
 
     setLoading(true)
-    Promise.all([fetchSupportTicket(ticketId), fetchCompanies(), fetchDepartments(), fetchSupportCategories(), fetchUsers()])
-      .then(([t, comps, deps, cats, us]) => {
+    Promise.all([fetchSupportTicket(ticketId), fetchSupportTicketComments(ticketId), fetchCompanies(), fetchDepartments(), fetchSupportCategories(), fetchUsers()] as const)
+      .then(([t, cms, comps, deps, cats, us]) => {
         if (!alive) return
         setTicket(t.data)
+        setComments(Array.isArray(cms.data) ? cms.data : [])
         setCompanies(comps.data)
         setDepartments(deps.data)
         setCategories(cats.data)
@@ -144,6 +152,26 @@ export default function SupportTicketDetail() {
       toast({ title: "Erro", description: String(e?.message ?? "Falha ao atualizar ticket"), variant: "destructive" })
     } finally {
       setSaving(false)
+    }
+  }
+
+  const submitReply = async () => {
+    if (!ticket?.id) return
+    if (!reply.trim()) {
+      toast({ title: "Validação", description: "Escreva uma resposta", variant: "destructive" })
+      return
+    }
+
+    setReplySaving(true)
+    try {
+      const res = await createSupportTicketComment(ticket.id, reply)
+      setComments((prev) => [...prev, res.data])
+      setReply("")
+      toast({ title: "Sucesso", description: "Resposta enviada" })
+    } catch (e: any) {
+      toast({ title: "Erro", description: String(e?.message ?? "Falha ao responder"), variant: "destructive" })
+    } finally {
+      setReplySaving(false)
     }
   }
 
@@ -348,6 +376,35 @@ export default function SupportTicketDetail() {
               <Input type="datetime-local" value={resolvedAt || toLocalInput(new Date().toISOString())} onChange={(e) => setResolvedAt(e.target.value)} />
             </div>
           ) : null}
+        </div>
+      </div>
+
+      <div className="glass-card p-6 space-y-4">
+        <div className="text-sm font-medium">Respostas</div>
+
+        <div className="space-y-3 max-h-[320px] overflow-auto">
+          {comments.length === 0 ? (
+            <div className="text-sm text-muted-foreground">Ainda sem respostas.</div>
+          ) : (
+            comments.map((c) => (
+              <div key={c.id} className="rounded-md border border-border p-3">
+                <div className="text-xs text-muted-foreground mb-1">
+                  {c.author_name || "Utilizador"} • {c.created_at ? new Date(c.created_at).toLocaleString("pt-PT") : "—"}
+                </div>
+                <div className="text-sm whitespace-pre-wrap">{c.comment}</div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <div className="text-xs text-muted-foreground">Responder</div>
+          <Textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={4} placeholder="Escreva uma resposta…" />
+          <div className="flex justify-end">
+            <Button type="button" onClick={submitReply} disabled={replySaving}>
+              {replySaving ? "A enviar…" : "Enviar resposta"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

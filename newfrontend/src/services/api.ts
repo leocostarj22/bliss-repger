@@ -8,7 +8,7 @@ import type { MainDashboardData } from '@/types';
  * Base URL pattern: /api/v1/email/...
  */
 
-import type { ApiResponse, Campaign, Contact, DashboardStats, Automation, AppNotification, EmailTemplate, Company, Department, User, Role, Employee, Payroll, Timesheet, Vacation, InternalMessage, AdminPost, AdminPostComment, VideoCallMeeting, BlissProduct, BlissCustomer, BlissOrder, BlissOrderProduct, BlissOrderStatus, MyFormulaProduct, MyFormulaCustomer, MyFormulaOrder, MyFormulaOrderProduct, MyFormulaOrderStatus, MyFormulaQuiz, SupportCategory, SupportTicket, SupportTicketAttachment, SupportTicketStatus, SupportTicketPriority, EspacoAbsolutoCustomer, EspacoAbsolutoAppointment, EspacoAbsolutoUserGroup, EspacoAbsolutoUserMessage, SystemLog, Task, PersonalNote, TaskPriority, TaskStatus } from '@/types';
+import type { ApiResponse, Campaign, Contact, DashboardStats, Automation, AppNotification, EmailTemplate, Company, Department, User, Role, Employee, Payroll, Timesheet, Vacation, InternalMessage, AdminPost, AdminPostComment, VideoCallMeeting, BlissProduct, BlissCustomer, BlissOrder, BlissOrderProduct, BlissOrderStatus, MyFormulaProduct, MyFormulaCustomer, MyFormulaOrder, MyFormulaOrderProduct, MyFormulaOrderStatus, MyFormulaQuiz, SupportCategory, SupportTicket, SupportTicketAttachment, SupportTicketComment, SupportTicketStatus, SupportTicketPriority, EspacoAbsolutoCustomer, EspacoAbsolutoAppointment, EspacoAbsolutoUserGroup, EspacoAbsolutoUserMessage, SystemLog, Task, PersonalNote, TaskPriority, TaskStatus } from '@/types';
 import { mockCampaigns, mockContacts, mockDashboardStats, mockAutomations, mockNotifications, mockCompanies, mockDepartments, mockSupportCategories, mockSupportTickets, mockUsers, mockRoles, mockEmployees, mockPayrolls, mockTimesheets, mockVacations, mockInternalMessages, mockAdminPosts, mockVideoCallMeetings, mockBlissProducts, mockBlissCustomers, mockBlissOrders, mockBlissOrderProducts, mockBlissOrderStatuses, mockMyFormulaProducts, mockMyFormulaCustomers, mockMyFormulaOrders, mockMyFormulaOrderProducts, mockMyFormulaOrderStatuses, mockMyFormulaQuizzes, mockEspacoAbsolutoCustomers, mockEspacoAbsolutoAppointments, mockEspacoAbsolutoUserGroups, mockEspacoAbsolutoUserMessages, mockSystemLogs, mockTasks, mockPersonalNotes } from './mockData';
 
 const delay = (ms = 400) => new Promise(r => setTimeout(r, ms + Math.random() * 200));
@@ -1936,6 +1936,35 @@ export async function fetchSupportTicket(id: string): Promise<ApiResponse<Suppor
   return { data: json?.data as SupportTicket };
 }
 
+export async function fetchSupportTicketComments(id: string): Promise<ApiResponse<SupportTicketComment[]>> {
+  const response = await apiFetch(`/api/v1/support/tickets/${encodeURIComponent(id)}/comments`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to fetch support ticket comments: ${response.statusText}`);
+    throw new Error(msg);
+  }
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as SupportTicketComment[]) : [] };
+}
+
+export async function createSupportTicketComment(id: string, comment: string, isInternal = false): Promise<ApiResponse<SupportTicketComment>> {
+  const response = await apiFetch(`/api/v1/support/tickets/${encodeURIComponent(id)}/comments`, {
+    method: 'POST',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ comment, is_internal: isInternal }),
+  });
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to create support ticket comment: ${response.statusText}`);
+    throw new Error(msg);
+  }
+  const json = await response.json();
+  return { data: json?.data as SupportTicketComment };
+}
+
 export type CreateSupportTicketPayload = {
   company_id: string
   title: string
@@ -2164,6 +2193,35 @@ export async function fetchMySupportTicket(id: string): Promise<ApiResponse<Supp
   }
   const json = await response.json();
   return { data: json?.data as SupportTicket };
+}
+
+export async function fetchMySupportTicketComments(id: string): Promise<ApiResponse<SupportTicketComment[]>> {
+  const response = await apiFetch(`/api/v1/me/support/tickets/${encodeURIComponent(id)}/comments`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to fetch my support ticket comments: ${response.statusText}`);
+    throw new Error(msg);
+  }
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? (json.data as SupportTicketComment[]) : [] };
+}
+
+export async function createMySupportTicketComment(id: string, comment: string): Promise<ApiResponse<SupportTicketComment>> {
+  const response = await apiFetch(`/api/v1/me/support/tickets/${encodeURIComponent(id)}/comments`, {
+    method: 'POST',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ comment }),
+  });
+  if (!response.ok) {
+    const msg = await pickErrorMessage(response, `Failed to create my support ticket comment: ${response.statusText}`);
+    throw new Error(msg);
+  }
+  const json = await response.json();
+  return { data: json?.data as SupportTicketComment };
 }
 
 export async function createMySupportTicket(

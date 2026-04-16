@@ -736,6 +736,7 @@ export interface SupportTicketComment {
   ticket_id: string;
   user_id: string;
   user_type: string;
+  author_name?: string | null;
   comment: string;
   is_internal: boolean;
   is_solution: boolean;

@@ -7,6 +7,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 use App\Models\Ticket;
+use App\Models\TicketComment;
 use App\Models\Post;
 use App\Models\PostLike;
 use App\Models\PostComment;
@@ -3354,6 +3355,77 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         ]);
     });
 
+    Route::get('support/tickets/{ticket}/comments', function (Ticket $ticket) {
+        $user = auth('web')->user();
+        abort_unless($user, 401);
+
+        $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.read') || $user->hasPermission('support.tickets.write');
+        abort_unless($allowed, 403);
+
+        if (! $user->isAdmin() && $user->company_id) {
+            abort_unless((int) $ticket->company_id === (int) $user->company_id, 403);
+        }
+
+        $rows = TicketComment::query()->with('user')->where('ticket_id', $ticket->id)->orderBy('created_at')->get();
+
+        return response()->json(['data' => $rows->map(function (TicketComment $c) {
+            $author = $c->user ? (string) ($c->user->name ?? '') : '';
+            return [
+                'id' => (string) $c->id,
+                'ticket_id' => (string) $c->ticket_id,
+                'user_id' => (string) $c->user_id,
+                'user_type' => (string) $c->user_type,
+                'author_name' => $author !== '' ? $author : null,
+                'comment' => (string) ($c->comment ?? ''),
+                'is_internal' => (bool) $c->is_internal,
+                'is_solution' => (bool) $c->is_solution,
+                'created_at' => $c->created_at?->toIso8601String(),
+                'updated_at' => $c->updated_at?->toIso8601String(),
+            ];
+        })->values()]);
+    });
+
+    Route::post('support/tickets/{ticket}/comments', function (Ticket $ticket) {
+        $user = auth('web')->user();
+        abort_unless($user, 401);
+
+        $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.write');
+        abort_unless($allowed, 403);
+
+        if (! $user->isAdmin() && $user->company_id) {
+            abort_unless((int) $ticket->company_id === (int) $user->company_id, 403);
+        }
+
+        $validated = request()->validate([
+            'comment' => ['required', 'string'],
+            'is_internal' => ['nullable', 'boolean'],
+        ]);
+
+        $row = TicketComment::create([
+            'ticket_id' => $ticket->id,
+            'user_id' => $user->id,
+            'user_type' => \App\Models\User::class,
+            'comment' => $validated['comment'],
+            'is_internal' => (bool) ($validated['is_internal'] ?? false),
+            'is_solution' => false,
+        ]);
+
+        return response()->json([
+            'data' => [
+                'id' => (string) $row->id,
+                'ticket_id' => (string) $row->ticket_id,
+                'user_id' => (string) $row->user_id,
+                'user_type' => (string) $row->user_type,
+                'author_name' => $user->name,
+                'comment' => (string) ($row->comment ?? ''),
+                'is_internal' => (bool) $row->is_internal,
+                'is_solution' => (bool) $row->is_solution,
+                'created_at' => $row->created_at?->toIso8601String(),
+                'updated_at' => $row->updated_at?->toIso8601String(),
+            ],
+        ], 201);
+    });
+
     Route::post('support/tickets', function () {
         $user = auth('web')->user();
         abort_unless($user, 401);
@@ -4000,6 +4072,69 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             }
 
             return response()->json(['data' => $created], 201);
+        });
+
+        Route::get('me/support/tickets/{ticket}/comments', function (Ticket $ticket) {
+            $user = auth()->guard('employee')->user();
+            abort_unless($user, 401);
+            abort_unless($ticket->user_type === \App\Models\EmployeeUser::class && (string) $ticket->user_id === (string) $user->id, 403);
+
+            $rows = TicketComment::query()
+                ->with('user')
+                ->where('ticket_id', $ticket->id)
+                ->where('is_internal', false)
+                ->orderBy('created_at')
+                ->get();
+
+            return response()->json(['data' => $rows->map(function (TicketComment $c) {
+                $author = $c->user ? (string) ($c->user->name ?? '') : '';
+                return [
+                    'id' => (string) $c->id,
+                    'ticket_id' => (string) $c->ticket_id,
+                    'user_id' => (string) $c->user_id,
+                    'user_type' => (string) $c->user_type,
+                    'author_name' => $author !== '' ? $author : null,
+                    'comment' => (string) ($c->comment ?? ''),
+                    'is_internal' => (bool) $c->is_internal,
+                    'is_solution' => (bool) $c->is_solution,
+                    'created_at' => $c->created_at?->toIso8601String(),
+                    'updated_at' => $c->updated_at?->toIso8601String(),
+                ];
+            })->values()]);
+        });
+
+        Route::post('me/support/tickets/{ticket}/comments', function (Ticket $ticket) {
+            $user = auth()->guard('employee')->user();
+            abort_unless($user, 401);
+            abort_unless($ticket->user_type === \App\Models\EmployeeUser::class && (string) $ticket->user_id === (string) $user->id, 403);
+
+            $validated = request()->validate([
+                'comment' => ['required', 'string'],
+            ]);
+
+            $row = TicketComment::create([
+                'ticket_id' => $ticket->id,
+                'user_id' => $user->id,
+                'user_type' => \App\Models\EmployeeUser::class,
+                'comment' => $validated['comment'],
+                'is_internal' => false,
+                'is_solution' => false,
+            ]);
+
+            return response()->json([
+                'data' => [
+                    'id' => (string) $row->id,
+                    'ticket_id' => (string) $row->ticket_id,
+                    'user_id' => (string) $row->user_id,
+                    'user_type' => (string) $row->user_type,
+                    'author_name' => $user->name,
+                    'comment' => (string) ($row->comment ?? ''),
+                    'is_internal' => (bool) $row->is_internal,
+                    'is_solution' => (bool) $row->is_solution,
+                    'created_at' => $row->created_at?->toIso8601String(),
+                    'updated_at' => $row->updated_at?->toIso8601String(),
+                ],
+            ], 201);
         });
 
         Route::post('me/support/tickets', function () {
