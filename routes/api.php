@@ -4638,6 +4638,11 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 'remind_at' => ['nullable', 'date'],
             ]);
 
+            $remindAt = null;
+            if (array_key_exists('remind_at', $validated) && $validated['remind_at']) {
+                $remindAt = \Carbon\Carbon::parse($validated['remind_at'])->toDateTimeString();
+            }
+
             $now = now();
             $id = DB::table('employee_personal_notes')->insertGetId([
                 'employee_user_id' => $u->id,
@@ -4645,7 +4650,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 'content' => $validated['content'] ?? null,
                 'color' => $validated['color'] ?? null,
                 'is_favorite' => (bool) $validated['is_favorite'],
-                'remind_at' => $validated['remind_at'] ?? null,
+                'remind_at' => $remindAt,
                 'last_modified_by_employee_user_id' => $u->id,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -4714,7 +4719,9 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         if (array_key_exists('content', $validated)) $update['content'] = $validated['content'];
         if (array_key_exists('color', $validated)) $update['color'] = $validated['color'];
         if (array_key_exists('is_favorite', $validated)) $update['is_favorite'] = (bool) $validated['is_favorite'];
-        if (array_key_exists('remind_at', $validated)) $update['remind_at'] = $validated['remind_at'];
+        if (array_key_exists('remind_at', $validated)) {
+            $update['remind_at'] = $validated['remind_at'] ? \Carbon\Carbon::parse($validated['remind_at'])->toDateTimeString() : null;
+        }
 
         DB::table('employee_personal_notes')->where('id', $id)->where('employee_user_id', $u->id)->update($update);
 
