@@ -49,8 +49,11 @@ class TicketResource extends Resource
         }
 
         $query->where(function ($q) use ($user) {
-            $q->where('user_id', $user->id)
-              ->orWhere('assigned_to', $user->id);
+            $q->where('assigned_to', $user->id)
+              ->orWhere(function ($qq) use ($user) {
+                  $qq->where('user_type', \App\Models\User::class)
+                     ->where('user_id', $user->id);
+              });
         });
 
         return $query;
@@ -434,8 +437,11 @@ class TicketResource extends Resource
         $query = static::getModel()::where('status', Ticket::STATUS_OPEN);
 
         $query->where(function ($q) use ($user) {
-            $q->where('user_id', $user->id)
-              ->orWhere('assigned_to', $user->id);
+            $q->where('assigned_to', $user->id)
+              ->orWhere(function ($qq) use ($user) {
+                  $qq->where('user_type', \App\Models\User::class)
+                     ->where('user_id', $user->id);
+              });
         });
 
         return (string) $query->count();
@@ -451,8 +457,11 @@ class TicketResource extends Resource
         $query = static::getModel()::where('status', Ticket::STATUS_OPEN);
 
         $query->where(function ($q) use ($user) {
-            $q->where('user_id', $user->id)
-              ->orWhere('assigned_to', $user->id);
+            $q->where('assigned_to', $user->id)
+              ->orWhere(function ($qq) use ($user) {
+                  $qq->where('user_type', \App\Models\User::class)
+                     ->where('user_id', $user->id);
+              });
         });
 
         $openTickets = (int) $query->count();

@@ -18,8 +18,11 @@ class StatsOverview extends BaseWidget
         
         if (!$user->isAdmin()) {
             $baseQuery->where(function ($q) use ($user) {
-                $q->where('user_id', $user->id)
-                  ->orWhere('assigned_to', $user->id);
+                $q->where('assigned_to', $user->id)
+                  ->orWhere(function ($qq) use ($user) {
+                      $qq->where('user_type', \App\Models\User::class)
+                         ->where('user_id', $user->id);
+                  });
             });
         }
         

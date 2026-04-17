@@ -48,8 +48,11 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
         if (! $user->isAdmin()) {
             $ticketQuery->where(function ($q) use ($user) {
-                $q->where('user_id', $user->id)
-                    ->orWhere('assigned_to', $user->id);
+                $q->where('assigned_to', $user->id)
+                    ->orWhere(function ($qq) use ($user) {
+                        $qq->where('user_type', \App\Models\User::class)
+                            ->where('user_id', $user->id);
+                    });
             });
         }
 
@@ -3241,8 +3244,11 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $query = Ticket::query()->orderByDesc('created_at');
 
         $query->where(function ($q) use ($user) {
-            $q->where('user_id', $user->id)
-              ->orWhere('assigned_to', $user->id);
+            $q->where('assigned_to', $user->id)
+              ->orWhere(function ($qq) use ($user) {
+                  $qq->where('user_type', \App\Models\User::class)
+                     ->where('user_id', $user->id);
+              });
         });
 
         if ($companyId !== '') {
@@ -3321,7 +3327,8 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         }
 
         abort_unless(
-            (int) $ticket->user_id === (int) $user->id || (int) $ticket->assigned_to === (int) $user->id,
+            (int) $ticket->assigned_to === (int) $user->id ||
+                ((string) $ticket->user_type === \App\Models\User::class && (int) $ticket->user_id === (int) $user->id),
             403
         );
 

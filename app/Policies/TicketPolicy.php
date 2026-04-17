@@ -24,7 +24,7 @@ class TicketPolicy
      */
     public function view(UserInterface $user, Ticket $ticket): bool
     {
-        return (int) $ticket->user_id === (int) $user->getId() || (int) $ticket->assigned_to === (int) $user->getId();
+        return (int) $ticket->assigned_to === (int) $user->getId() || ((string) $ticket->user_type === \App\Models\User::class && (int) $ticket->user_id === (int) $user->getId());
     }
 
     /**
@@ -41,7 +41,7 @@ class TicketPolicy
      */
     public function update(UserInterface $user, Ticket $ticket): bool
     {
-        return (int) $ticket->user_id === (int) $user->getId() || (int) $ticket->assigned_to === (int) $user->getId();
+        return (int) $ticket->assigned_to === (int) $user->getId() || ((string) $ticket->user_type === \App\Models\User::class && (int) $ticket->user_id === (int) $user->getId());
     }
 
     /**
@@ -49,7 +49,7 @@ class TicketPolicy
      */
     public function delete(UserInterface $user, Ticket $ticket): bool
     {
-        return (int) $ticket->user_id === (int) $user->getId() && !$ticket->assigned_to;
+        return (string) $ticket->user_type === \App\Models\User::class && (int) $ticket->user_id === (int) $user->getId() && !$ticket->assigned_to;
     }
 
     /**
@@ -57,6 +57,6 @@ class TicketPolicy
      */
     public function assign(UserInterface $user, Ticket $ticket): bool
     {
-        return (int) $ticket->user_id === (int) $user->getId() || (int) $ticket->assigned_to === (int) $user->getId();
+        return (int) $ticket->assigned_to === (int) $user->getId() || ((string) $ticket->user_type === \App\Models\User::class && (int) $ticket->user_id === (int) $user->getId());
     }
 }
