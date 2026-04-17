@@ -199,7 +199,7 @@ export function AppSidebar({
     );
 
     return { Logo, Nav, Footer };
-  }, [collapsed, location.pathname]);
+  }, [collapsed, location.pathname, brandName, brandIconUrl]);
 
   return (
     <>
