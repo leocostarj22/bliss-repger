@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, Check, Save, X } from "lucide-react"
 
 import type { Company, Employee, Vacation, VacationStatus, VacationType } from "@/types"
-import { createVacation, fetchCompanies, fetchEmployees, fetchVacation, updateVacation } from "@/services/api"
+import { createVacation, fetchCompanies, fetchEmployees, fetchHolidays, fetchVacation, updateVacation } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -50,7 +50,7 @@ const emptyForm = (): FormState => ({
   rejection_reason: "",
 })
 
-const daysBetweenInclusive = (start: string, end: string) => {
+const businessDaysBetweenInclusive = (start: string, end: string, holidaySet: Set<string>) => {
   if (!start || !end) return 0
   const s = new Date(`${start}T00:00:00`)
   const e = new Date(`${end}T00:00:00`)
@@ -61,9 +61,15 @@ const daysBetweenInclusive = (start: string, end: string) => {
   const cur = new Date(s)
   while (cur.getTime() <= e.getTime()) {
     const dow = cur.getDay()
-    if (dow >= 1 && dow <= 5) {
+    const yyyy = cur.getFullYear()
+    const mm = String(cur.getMonth() + 1).padStart(2, "0")
+    const dd = String(cur.getDate()).padStart(2, "0")
+    const key = `${yyyy}-${mm}-${dd}`
+
+    if (dow >= 1 && dow <= 5 && !holidaySet.has(key)) {
       days++
     }
+
     cur.setDate(cur.getDate() + 1)
   }
 
@@ -89,6 +95,7 @@ export default function VacationDetail() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
   const [form, setForm] = useState<FormState>(() => emptyForm())
+  const [holidaySet, setHolidaySet] = useState<Set<string>>(() => new Set())
   const [requestedAt, setRequestedAt] = useState<string | null>(null)
   const [approvedAt, setApprovedAt] = useState<string | null>(null)
   const [rejectedAt, setRejectedAt] = useState<string | null>(null)
@@ -101,9 +108,44 @@ export default function VacationDetail() {
     setForm((prev) => ({ ...prev, [key]: value }))
   }, [])
 
-  const requestedDays = useMemo(() => {
-    return daysBetweenInclusive(form.start_date, form.end_date)
+  useEffect(() => {
+    let alive = true
+
+    const startYear = (form.start_date ?? "").slice(0, 4)
+    const endYear = (form.end_date ?? "").slice(0, 4)
+    const years = Array.from(new Set([startYear, endYear].filter((y) => y && y.length === 4)))
+
+    if (!years.length) {
+      setHolidaySet(new Set())
+      return
+    }
+
+    Promise.all(years.map((y) => fetchHolidays({ year: y })))
+      .then((results) => {
+        if (!alive) return
+        const next = new Set<string>()
+        results.forEach((r) => {
+          r.data.forEach((h) => {
+            const d = String(h.holiday_date ?? "").trim()
+            if (d) next.add(d)
+          })
+        })
+        setHolidaySet(next)
+      })
+      .catch(() => {
+        if (!alive) return
+        setHolidaySet(new Set())
+      })
+
+    return () => {
+      alive = false
+    }
   }, [form.start_date, form.end_date])
+
+  const requestedDays = useMemo(
+    () => businessDaysBetweenInclusive(form.start_date, form.end_date, holidaySet),
+    [form.start_date, form.end_date, holidaySet],
+  )
 
   useEffect(() => {
     setField("requested_days", String(requestedDays))
@@ -170,9 +212,9 @@ export default function VacationDetail() {
       return
     }
 
-    const days = daysBetweenInclusive(form.start_date, form.end_date)
+    const days = requestedDays
     if (days <= 0) {
-      toast({ title: "Validação", description: "Período inválido", variant: "destructive" })
+      toast({ title: "Validação", description: "O período não contém dias úteis (feriados/fins-de-semana)", variant: "destructive" })
       return
     }
 
@@ -191,8 +233,8 @@ export default function VacationDetail() {
       vacation_type: (form.vacation_type ?? "other") as VacationType,
       start_date: form.start_date,
       end_date: form.end_date,
-      requested_days: days,
-      approved_days: status === "approved" ? days : status === "rejected" ? 0 : null,
+      requested_days: requestedDays,
+      approved_days: status === "approved" ? requestedDays : status === "rejected" ? 0 : null,
       vacation_year: vacationYear,
       status,
       requested_at: isEdit ? requestedAt ?? now : now,

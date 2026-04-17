@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, Save } from "lucide-react"
 
 import type { Employee, Vacation, VacationStatus, VacationType } from "@/types"
-import { createVacation, fetchMyEmployee, fetchUser, fetchVacation } from "@/services/api"
+import { createVacation, fetchHolidays, fetchMyEmployee, fetchUser, fetchVacation } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -40,7 +40,7 @@ const emptyForm = (): FormState => ({
   employee_notes: "",
 })
 
-const daysBetweenInclusive = (start: string, end: string) => {
+const businessDaysBetweenInclusive = (start: string, end: string, holidaySet: Set<string>) => {
   if (!start || !end) return 0
   const s = new Date(`${start}T00:00:00`)
   const e = new Date(`${end}T00:00:00`)
@@ -51,9 +51,15 @@ const daysBetweenInclusive = (start: string, end: string) => {
   const cur = new Date(s)
   while (cur.getTime() <= e.getTime()) {
     const dow = cur.getDay()
-    if (dow >= 1 && dow <= 5) {
+    const yyyy = cur.getFullYear()
+    const mm = String(cur.getMonth() + 1).padStart(2, "0")
+    const dd = String(cur.getDate()).padStart(2, "0")
+    const key = `${yyyy}-${mm}-${dd}`
+
+    if (dow >= 1 && dow <= 5 && !holidaySet.has(key)) {
       days++
     }
+
     cur.setDate(cur.getDate() + 1)
   }
 
@@ -79,6 +85,7 @@ export default function VacationDetail() {
   const [myEmployee, setMyEmployee] = useState<Employee | null>(null)
   const [vacation, setVacation] = useState<Vacation | null>(null)
   const [form, setForm] = useState<FormState>(() => emptyForm())
+  const [holidaySet, setHolidaySet] = useState<Set<string>>(() => new Set())
 
   const title = isEdit ? "Detalhe de férias" : "Nova solicitação de férias"
 
@@ -86,7 +93,44 @@ export default function VacationDetail() {
     setForm((prev) => ({ ...prev, [key]: value }))
   }, [])
 
-  const requestedDays = useMemo(() => daysBetweenInclusive(form.start_date, form.end_date), [form.start_date, form.end_date])
+  useEffect(() => {
+    let alive = true
+
+    const startYear = (form.start_date ?? "").slice(0, 4)
+    const endYear = (form.end_date ?? "").slice(0, 4)
+    const years = Array.from(new Set([startYear, endYear].filter((y) => y && y.length === 4)))
+
+    if (!years.length) {
+      setHolidaySet(new Set())
+      return
+    }
+
+    Promise.all(years.map((y) => fetchHolidays({ year: y })))
+      .then((results) => {
+        if (!alive) return
+        const next = new Set<string>()
+        results.forEach((r) => {
+          r.data.forEach((h) => {
+            const d = String(h.holiday_date ?? "").trim()
+            if (d) next.add(d)
+          })
+        })
+        setHolidaySet(next)
+      })
+      .catch(() => {
+        if (!alive) return
+        setHolidaySet(new Set())
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [form.start_date, form.end_date])
+
+  const requestedDays = useMemo(
+    () => businessDaysBetweenInclusive(form.start_date, form.end_date, holidaySet),
+    [form.start_date, form.end_date, holidaySet],
+  )
 
   useEffect(() => {
     setField("requested_days", String(requestedDays))
@@ -171,9 +215,9 @@ export default function VacationDetail() {
       return
     }
 
-    const days = daysBetweenInclusive(form.start_date, form.end_date)
+    const days = requestedDays
     if (days <= 0) {
-      toast({ title: "Validação", description: "Período inválido", variant: "destructive" })
+      toast({ title: "Validação", description: "O período não contém dias úteis (feriados/fins-de-semana)", variant: "destructive" })
       return
     }
 
@@ -186,7 +230,7 @@ export default function VacationDetail() {
       vacation_type: (form.vacation_type ?? "other") as VacationType,
       start_date: form.start_date,
       end_date: form.end_date,
-      requested_days: days,
+      requested_days: requestedDays,
       approved_days: null,
       vacation_year: vacationYear,
       status: "pending",

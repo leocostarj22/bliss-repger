@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class Vacation extends Model
@@ -103,16 +104,35 @@ class Vacation extends Model
             return 0;
         }
 
-        $start = $this->start_date->copy()->startOfDay();
-        $end = $this->end_date->copy()->startOfDay();
-        if ($end->lessThan($start)) {
+        return self::businessDaysExcludingHolidaysInclusive($this->start_date, $this->end_date);
+    }
+
+    public static function businessDaysExcludingHolidaysInclusive(Carbon $start, Carbon $end): int
+    {
+        $s = $start->copy()->startOfDay();
+        $e = $end->copy()->startOfDay();
+        if ($e->lessThan($s)) {
             return 0;
         }
 
+        $holidayDates = DB::table('holidays')
+            ->whereBetween('holiday_date', [$s->toDateString(), $e->toDateString()])
+            ->pluck('holiday_date')
+            ->map(fn ($d) => is_string($d) ? $d : (string) $d)
+            ->all();
+
+        $holidaySet = [];
+        foreach ($holidayDates as $d) {
+            $key = trim((string) $d);
+            if ($key !== '') {
+                $holidaySet[$key] = true;
+            }
+        }
+
         $days = 0;
-        $cursor = $start->copy();
-        while ($cursor->lessThanOrEqualTo($end)) {
-            if ($cursor->isWeekday()) {
+        $cursor = $s->copy();
+        while ($cursor->lessThanOrEqualTo($e)) {
+            if ($cursor->isWeekday() && !isset($holidaySet[$cursor->toDateString()])) {
                 $days++;
             }
             $cursor->addDay();

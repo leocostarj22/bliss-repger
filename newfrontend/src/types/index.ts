@@ -322,6 +322,20 @@ export interface Employee {
   updatedAt: string;
 }
 
+export type HolidayScope = 'universal' | 'portugal' | 'lisbon' | string;
+
+export interface Holiday {
+  id: string;
+  holiday_date: string;
+  name: string;
+  scope: HolidayScope;
+  is_optional?: boolean | null;
+  notes?: string | null;
+  created_by?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type VacationStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | string;
 
 export type VacationType =

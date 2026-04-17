@@ -8,7 +8,7 @@ import type { MainDashboardData } from '@/types';
  * Base URL pattern: /api/v1/email/...
  */
 
-import type { ApiResponse, Campaign, Contact, DashboardStats, Automation, AppNotification, EmailTemplate, Company, Department, User, Role, Employee, Payroll, Timesheet, Vacation, InternalMessage, AdminPost, AdminPostComment, VideoCallMeeting, BlissProduct, BlissCustomer, BlissOrder, BlissOrderProduct, BlissOrderStatus, MyFormulaProduct, MyFormulaCustomer, MyFormulaOrder, MyFormulaOrderProduct, MyFormulaOrderStatus, MyFormulaQuiz, SupportCategory, SupportTicket, SupportTicketAttachment, SupportTicketComment, SupportTicketStatus, SupportTicketPriority, EspacoAbsolutoCustomer, EspacoAbsolutoAppointment, EspacoAbsolutoUserGroup, EspacoAbsolutoUserMessage, SystemLog, Task, PersonalNote, TaskPriority, TaskStatus } from '@/types';
+import type { ApiResponse, Campaign, Contact, DashboardStats, Automation, AppNotification, EmailTemplate, Company, Department, User, Role, Employee, Payroll, Timesheet, Vacation, Holiday, InternalMessage, AdminPost, AdminPostComment, VideoCallMeeting, BlissProduct, BlissCustomer, BlissOrder, BlissOrderProduct, BlissOrderStatus, MyFormulaProduct, MyFormulaCustomer, MyFormulaOrder, MyFormulaOrderProduct, MyFormulaOrderStatus, MyFormulaQuiz, SupportCategory, SupportTicket, SupportTicketAttachment, SupportTicketComment, SupportTicketStatus, SupportTicketPriority, EspacoAbsolutoCustomer, EspacoAbsolutoAppointment, EspacoAbsolutoUserGroup, EspacoAbsolutoUserMessage, SystemLog, Task, PersonalNote, TaskPriority, TaskStatus } from '@/types';
 import { mockCampaigns, mockContacts, mockDashboardStats, mockAutomations, mockNotifications, mockCompanies, mockDepartments, mockSupportCategories, mockSupportTickets, mockUsers, mockRoles, mockEmployees, mockPayrolls, mockTimesheets, mockVacations, mockInternalMessages, mockAdminPosts, mockVideoCallMeetings, mockBlissProducts, mockBlissCustomers, mockBlissOrders, mockBlissOrderProducts, mockBlissOrderStatuses, mockMyFormulaProducts, mockMyFormulaCustomers, mockMyFormulaOrders, mockMyFormulaOrderProducts, mockMyFormulaOrderStatuses, mockMyFormulaQuizzes, mockEspacoAbsolutoCustomers, mockEspacoAbsolutoAppointments, mockEspacoAbsolutoUserGroups, mockEspacoAbsolutoUserMessages, mockSystemLogs, mockTasks, mockPersonalNotes } from './mockData';
 
 const delay = (ms = 400) => new Promise(r => setTimeout(r, ms + Math.random() * 200));
@@ -2793,6 +2793,119 @@ export async function deletePayroll(id: string): Promise<void> {
     throw new Error(msg);
   }
 } 
+
+// ── Holidays (HR) ──
+const mapHoliday = (row: any): Holiday => {
+  const raw = row?.data ? row.data : row;
+  return {
+    id: String(raw.id),
+    holiday_date: String(raw.holiday_date ?? raw.date ?? ''),
+    name: String(raw.name ?? ''),
+    scope: String(raw.scope ?? ''),
+    is_optional: raw.is_optional === undefined || raw.is_optional === null ? null : Boolean(raw.is_optional),
+    notes: raw.notes ?? null,
+    created_by: raw.created_by === undefined || raw.created_by === null ? null : String(raw.created_by),
+    createdAt: raw.createdAt ?? raw.created_at ?? new Date().toISOString(),
+    updatedAt: raw.updatedAt ?? raw.updated_at ?? new Date().toISOString(),
+  };
+};
+
+export async function fetchHolidays(params?: {
+  year?: string;
+  from?: string;
+  to?: string;
+  scope?: string;
+}): Promise<ApiResponse<Holiday[]>> {
+  const qs = new URLSearchParams();
+  if (params?.year) qs.set('year', params.year);
+  if (params?.from) qs.set('from', params.from);
+  if (params?.to) qs.set('to', params.to);
+  if (params?.scope) qs.set('scope', params.scope);
+
+  const url = `/api/v1/hr/holidays${qs.toString() ? `?${qs.toString()}` : ''}`;
+  const response = await apiFetch(url, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const msg = await pickHrEmployeeError(response, `Failed to fetch holidays: ${response.statusText}`);
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  const rows = Array.isArray(json?.data) ? json.data : [];
+  return { data: rows.map(mapHoliday) };
+}
+
+export async function createHoliday(payload: {
+  holiday_date: string;
+  name: string;
+  scope: string;
+  is_optional?: boolean | null;
+  notes?: string | null;
+}): Promise<ApiResponse<Holiday>> {
+  const response = await apiFetch('/api/v1/hr/holidays', {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const msg = await pickHrEmployeeError(response, `Failed to create holiday: ${response.statusText}`);
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  return { data: mapHoliday(json?.data ?? json) };
+}
+
+export async function updateHoliday(
+  id: string,
+  payload: Partial<{ holiday_date: string; name: string; scope: string; is_optional: boolean | null; notes: string | null }>,
+): Promise<ApiResponse<Holiday>> {
+  const response = await apiFetch(`/api/v1/hr/holidays/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const msg = await pickHrEmployeeError(response, `Failed to update holiday: ${response.statusText}`);
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+  return { data: mapHoliday(json?.data ?? json) };
+}
+
+export async function deleteHoliday(id: string): Promise<void> {
+  const response = await apiFetch(`/api/v1/hr/holidays/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const msg = await pickHrEmployeeError(response, `Failed to delete holiday: ${response.statusText}`);
+    throw new Error(msg);
+  }
+}
 
 // ── Vacations (HR) ──
 const HR_VACATIONS_STORAGE_KEY = 'bliss:hr:vacations';

@@ -44,6 +44,7 @@ import HrPayrolls from "@/pages/hr/Payrolls";
 import HrPayrollForm from "@/pages/hr/PayrollDetail";
 import HrVacations from "@/pages/hr/Vacations";
 import HrVacationForm from "@/pages/hr/VacationDetail";
+import HrHolidays from "@/pages/hr/Holidays";
 import HrTimesheets from "@/pages/hr/Timesheets";
 import HrTimesheetForm from "@/pages/hr/TimesheetDetail";
 import MeHrVacations from "@/pages/me/hr/Vacations";
@@ -673,6 +674,14 @@ const App = () => {
                 element={
                   <RequirePermission permission={["hr.vacations.read", "hr.vacations.write"]}>
                     <HrVacations />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/hr/holidays"
+                element={
+                  <RequirePermission permission={["hr.vacations.read", "hr.vacations.write"]}>
+                    <HrHolidays />
                   </RequirePermission>
                 }
               />

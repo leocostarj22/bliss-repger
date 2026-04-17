@@ -6353,6 +6353,103 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         return response()->json(['ok' => true]);
     });
 
+    Route::get('hr/holidays', function () use ($hrUser) {
+        $employeeUser = auth()->guard('employee')->user();
+        if (!$employeeUser) {
+            $hrUser();
+        }
+
+        $year = trim((string) request('year', ''));
+        $from = trim((string) request('from', ''));
+        $to = trim((string) request('to', ''));
+        $scope = trim((string) request('scope', ''));
+
+        $query = DB::table('holidays');
+
+        if ($scope !== '') {
+            $query->where('scope', $scope);
+        }
+
+        if ($from !== '' && $to !== '') {
+            $query->whereBetween('holiday_date', [$from, $to]);
+        } elseif ($year !== '') {
+            $query->whereBetween('holiday_date', [$year . '-01-01', $year . '-12-31']);
+        }
+
+        $rows = $query
+            ->orderBy('holiday_date')
+            ->get();
+
+        return response()->json(['data' => $rows]);
+    });
+
+    Route::post('hr/holidays', function () use ($hrUser) {
+        $hrUser();
+
+        $validated = request()->validate([
+            'holiday_date' => ['required', 'date'],
+            'name' => ['required', 'string', 'max:255'],
+            'scope' => ['required', 'in:universal,portugal,lisbon'],
+            'is_optional' => ['nullable', 'boolean'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        $now = now();
+        $id = DB::table('holidays')->insertGetId([
+            'holiday_date' => $validated['holiday_date'],
+            'name' => $validated['name'],
+            'scope' => $validated['scope'],
+            'is_optional' => array_key_exists('is_optional', $validated) ? (bool) $validated['is_optional'] : false,
+            'notes' => $validated['notes'] ?? null,
+            'created_by' => auth()->id(),
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $row = DB::table('holidays')->where('id', $id)->first();
+        return response()->json(['data' => $row], 201);
+    });
+
+    Route::put('hr/holidays/{holidayId}', function (string $holidayId) use ($hrUser) {
+        $hrUser();
+
+        $holiday = DB::table('holidays')->where('id', $holidayId)->first();
+        if (!$holiday) {
+            return response()->json(['message' => 'Feriado não encontrado'], 404);
+        }
+
+        $validated = request()->validate([
+            'holiday_date' => ['sometimes', 'required', 'date'],
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'scope' => ['sometimes', 'required', 'in:universal,portugal,lisbon'],
+            'is_optional' => ['nullable', 'boolean'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        $update = $validated;
+        if (array_key_exists('is_optional', $update)) {
+            $update['is_optional'] = $update['is_optional'] === null ? null : (bool) $update['is_optional'];
+        }
+        $update['updated_at'] = now();
+
+        DB::table('holidays')->where('id', $holidayId)->update($update);
+
+        $row = DB::table('holidays')->where('id', $holidayId)->first();
+        return response()->json(['data' => $row]);
+    });
+
+    Route::delete('hr/holidays/{holidayId}', function (string $holidayId) use ($hrUser) {
+        $hrUser();
+
+        $holiday = DB::table('holidays')->where('id', $holidayId)->first();
+        if (!$holiday) {
+            return response()->json(['message' => 'Feriado não encontrado'], 404);
+        }
+
+        DB::table('holidays')->where('id', $holidayId)->delete();
+        return response()->json(['ok' => true]);
+    });
+
     Route::get('hr/vacations', function () use ($hrUser) {
         $employeeUser = auth()->guard('employee')->user();
         if ($employeeUser) {
@@ -6414,20 +6511,25 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             $validated = request()->validate([
                 'start_date' => ['required', 'date'],
                 'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-                'requested_days' => ['required', 'integer', 'min:1'],
-                'vacation_year' => ['required', 'integer', 'min:2000'],
                 'vacation_type' => ['required', 'in:annual_leave,maternity_leave,paternity_leave,sick_leave,marriage_leave,bereavement_leave,study_leave,unpaid_leave,other,compensatory_leave,advance_leave'],
                 'employee_notes' => ['nullable', 'string'],
             ]);
+
+            $start = \Carbon\Carbon::parse($validated['start_date']);
+            $end = \Carbon\Carbon::parse($validated['end_date']);
+            $days = Vacation::businessDaysExcludingHolidaysInclusive($start, $end);
+            if ($days < 1) {
+                return response()->json(['message' => 'O período não contém dias úteis (feriados/fins-de-semana).'], 422);
+            }
 
             $vacation = Vacation::create([
                 'employee_id' => $employee->id,
                 'company_id' => $employee->company_id,
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'],
-                'requested_days' => $validated['requested_days'],
+                'requested_days' => $days,
                 'approved_days' => null,
-                'vacation_year' => $validated['vacation_year'],
+                'vacation_year' => $start->year,
                 'vacation_type' => $validated['vacation_type'],
                 'status' => 'pending',
                 'requested_at' => now(),
@@ -6451,9 +6553,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             'company_id' => ['required', 'exists:companies,id'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-            'requested_days' => ['required', 'integer', 'min:1'],
             'approved_days' => ['nullable', 'integer', 'min:0'],
-            'vacation_year' => ['required', 'integer', 'min:2000'],
             'vacation_type' => ['required', 'in:annual_leave,maternity_leave,paternity_leave,sick_leave,marriage_leave,bereavement_leave,study_leave,unpaid_leave,other,compensatory_leave,advance_leave'],
             'status' => ['required', 'in:pending,approved,rejected,cancelled'],
             'requested_at' => ['required', 'date'],
@@ -6463,6 +6563,16 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             'manager_notes' => ['nullable', 'string'],
             'rejection_reason' => ['nullable', 'string'],
         ]);
+
+        $start = \Carbon\Carbon::parse($validated['start_date']);
+        $end = \Carbon\Carbon::parse($validated['end_date']);
+        $days = Vacation::businessDaysExcludingHolidaysInclusive($start, $end);
+        if ($days < 1) {
+            return response()->json(['message' => 'O período não contém dias úteis (feriados/fins-de-semana).'], 422);
+        }
+
+        $validated['requested_days'] = $days;
+        $validated['vacation_year'] = $start->year;
 
         $status = $validated['status'];
         if ($status === 'approved') {
@@ -6505,9 +6615,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             'company_id' => ['sometimes', 'required', 'exists:companies,id'],
             'start_date' => ['sometimes', 'required', 'date'],
             'end_date' => ['sometimes', 'required', 'date', 'after_or_equal:start_date'],
-            'requested_days' => ['sometimes', 'required', 'integer', 'min:1'],
             'approved_days' => ['nullable', 'integer', 'min:0'],
-            'vacation_year' => ['sometimes', 'required', 'integer', 'min:2000'],
             'vacation_type' => ['sometimes', 'required', 'in:annual_leave,maternity_leave,paternity_leave,sick_leave,marriage_leave,bereavement_leave,study_leave,unpaid_leave,other,compensatory_leave,advance_leave'],
             'status' => ['sometimes', 'required', 'in:pending,approved,rejected,cancelled'],
             'requested_at' => ['nullable', 'date'],
@@ -6517,6 +6625,19 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             'manager_notes' => ['nullable', 'string'],
             'rejection_reason' => ['nullable', 'string'],
         ]);
+
+        $nextStart = array_key_exists('start_date', $validated) ? $validated['start_date'] : $vacation->start_date?->toDateString();
+        $nextEnd = array_key_exists('end_date', $validated) ? $validated['end_date'] : $vacation->end_date?->toDateString();
+        if ($nextStart && $nextEnd) {
+            $start = \Carbon\Carbon::parse($nextStart);
+            $end = \Carbon\Carbon::parse($nextEnd);
+            $days = Vacation::businessDaysExcludingHolidaysInclusive($start, $end);
+            if ($days < 1) {
+                return response()->json(['message' => 'O período não contém dias úteis (feriados/fins-de-semana).'], 422);
+            }
+            $validated['requested_days'] = $days;
+            $validated['vacation_year'] = $start->year;
+        }
 
         if (array_key_exists('status', $validated)) {
             $status = $validated['status'];

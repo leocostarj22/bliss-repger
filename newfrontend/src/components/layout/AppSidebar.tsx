@@ -74,6 +74,7 @@ export const humanResourcesNavItems = [
   { label: 'Funcionários', icon: Users, path: '/hr/employees', color: 'emerald' },
   { label: 'Vencimentos', icon: Receipt, path: '/hr/payrolls', color: 'amber' },
   { label: 'Férias', icon: CalendarDays, path: '/hr/vacations', color: 'violet' },
+  { label: 'Feriados', icon: CalendarDays, path: '/hr/holidays', color: 'fuchsia' },
   { label: 'Marcação de Ponto', icon: Clock, path: '/hr/timesheets', color: 'sky' },
 ] as const;
 
@@ -372,6 +373,7 @@ export function AppSidebar({
     '/hr/employees': ['hr.employees.read', 'hr.employees.write'],
     '/hr/payrolls': ['hr.payrolls.read', 'hr.payrolls.write'],
     '/hr/vacations': ['hr.vacations.read', 'hr.vacations.write'],
+    '/hr/holidays': ['hr.vacations.read', 'hr.vacations.write'],
     '/hr/timesheets': ['hr.timesheets.read', 'hr.timesheets.write'],
   };
 
