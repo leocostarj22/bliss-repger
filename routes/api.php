@@ -225,7 +225,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                             $candidate = basename($candidate);
                         }
                         if (! str_contains($candidate, '/') && preg_match('/\.(png|jpe?g|gif|webp|svg)$/i', $candidate)) {
-                            $featured = url('api/v1/communication/posts/images/view/' . rawurlencode($candidate));
+                            $featured = '/api/v1/communication/posts/images/view/' . rawurlencode($candidate);
                         }
                     }
 
@@ -1583,7 +1583,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                     report($e);
                     abort(404);
                 }
-            });
+            })->withoutMiddleware('auth:web');
 
             Route::get('list', function () {
                 $user = auth()->user();
@@ -1600,7 +1600,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
                         return [
                             'filename' => $filename,
-                            'url' => url('api/v1/communication/posts/images/view/' . rawurlencode($filename)),
+                            'url' => '/api/v1/communication/posts/images/view/' . rawurlencode($filename),
                             'size' => $disk->size($path),
                             'last_modified' => $disk->lastModified($path),
                         ];
@@ -1634,7 +1634,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 $stored = basename((string) $path);
 
                 return response()->json([
-                    'url' => url('api/v1/communication/posts/images/view/' . rawurlencode($stored)),
+                    'url' => '/api/v1/communication/posts/images/view/' . rawurlencode($stored),
                     'filename' => $stored,
                 ], 201);
             });
