@@ -24,18 +24,7 @@ class TicketPolicy
      */
     public function view(UserInterface $user, Ticket $ticket): bool
     {
-        // Admins podem ver todos os tickets
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        // Managers podem ver tickets da sua empresa
-        if ($user->isManager() && $user->getEmployee() && $user->getEmployee()->company_id === $ticket->company_id) {
-            return true;
-        }
-
-        // Usuários podem ver apenas tickets que criaram ou que foram atribuídos a eles
-        return $ticket->user_id === $user->getId() || $ticket->assigned_to === $user->getId();
+        return (int) $ticket->user_id === (int) $user->getId() || (int) $ticket->assigned_to === (int) $user->getId();
     }
 
     /**
@@ -52,18 +41,7 @@ class TicketPolicy
      */
     public function update(UserInterface $user, Ticket $ticket): bool
     {
-        // Admins podem editar todos os tickets
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        // Managers podem editar tickets da sua empresa
-        if ($user->isManager() && $user->getEmployee() && $user->getEmployee()->company_id === $ticket->company_id) {
-            return true;
-        }
-
-        // Usuários podem editar apenas tickets que criaram ou que foram atribuídos a eles
-        return $ticket->user_id === $user->getId() || $ticket->assigned_to === $user->getId();
+        return (int) $ticket->user_id === (int) $user->getId() || (int) $ticket->assigned_to === (int) $user->getId();
     }
 
     /**
@@ -71,18 +49,7 @@ class TicketPolicy
      */
     public function delete(UserInterface $user, Ticket $ticket): bool
     {
-        // Apenas admins podem deletar tickets
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        // Managers podem deletar tickets da sua empresa
-        if ($user->isManager() && $user->getEmployee() && $user->getEmployee()->company_id === $ticket->company_id) {
-            return true;
-        }
-
-        // Usuários podem deletar apenas tickets que criaram (e que ainda não foram atribuídos)
-        return $ticket->user_id === $user->getId() && !$ticket->assigned_to;
+        return (int) $ticket->user_id === (int) $user->getId() && !$ticket->assigned_to;
     }
 
     /**
@@ -90,12 +57,6 @@ class TicketPolicy
      */
     public function assign(UserInterface $user, Ticket $ticket): bool
     {
-        // Admins e managers podem atribuir tickets
-        if ($user->isAdmin() || $user->isManager()) {
-            return true;
-        }
-
-        // Agentes podem atribuir tickets que foram atribuídos a eles
-        return $ticket->assigned_to === $user->getId();
+        return (int) $ticket->user_id === (int) $user->getId() || (int) $ticket->assigned_to === (int) $user->getId();
     }
 }

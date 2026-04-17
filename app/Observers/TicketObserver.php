@@ -39,23 +39,6 @@ class TicketObserver
             $ticket->assignedTo->notify(new TicketCreatedNotification($ticket, false));
         }
 
-        // Notificar administradores/agentes da empresa
-        $adminsAndAgents = User::where('company_id', $ticket->company_id)
-            ->whereIn('role', ['admin', 'agent', 'manager'])
-            ->where('id', '!=', $ticket->user?->id)
-            ->where('id', '!=', $ticket->assignedTo?->id)
-            ->get();
-
-        foreach ($adminsAndAgents as $user) {
-            Notification::make()
-                ->title('Novo Ticket Criado!')
-                ->info()
-                ->body("Novo ticket criado: {$ticket->title}")
-                ->sendToDatabase($user);
-            
-            // Enviar notificação por e-mail para administradores
-            $user->notify(new TicketCreatedNotification($ticket, false));
-        }
     }
 
     /**
@@ -72,7 +55,11 @@ class TicketObserver
     
         // Obter as mudanças com valores antigos e novos
         $changes = $this->buildChangesArray($ticket);
-        $updatedBy = auth()->user() ?? $ticket->user;
+
+        $updatedBy = auth('web')->user();
+        if (! $updatedBy instanceof User) {
+            $updatedBy = null;
+        }
     
         // Notificar o criador do ticket (Filament Database)
         if ($ticket->user) {
@@ -100,26 +87,6 @@ class TicketObserver
             $ticket->assignedTo->notify(new TicketUpdatedNotification($ticket, $changes, $updatedBy, $isUpdater));
         }
         
-        // Notificar administradores se houve mudança de status ou prioridade
-        if ($ticket->wasChanged(['status', 'priority'])) {
-            $adminsAndAgents = User::where('company_id', $ticket->company_id)
-                ->whereIn('role', ['admin', 'agent', 'manager'])
-                ->where('id', '!=', $ticket->user?->id)
-                ->where('id', '!=', $ticket->assignedTo?->id)
-                ->get();
-    
-            foreach ($adminsAndAgents as $user) {
-                Notification::make()
-                    ->title('Ticket Atualizado!')
-                    ->warning()
-                    ->body("Ticket atualizado: {$ticket->title}")
-                    ->sendToDatabase($user);
-                
-                // Enviar notificação por e-mail para administradores
-                $isUpdater = $updatedBy && $updatedBy->id === $user->id;
-                $user->notify(new TicketUpdatedNotification($ticket, $changes, $updatedBy, $isUpdater));
-            }
-        }
     }
 
     /**

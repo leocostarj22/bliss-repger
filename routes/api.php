@@ -3244,12 +3244,10 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
         $query = Ticket::query()->orderByDesc('created_at');
 
-        if (! $user->isAdmin()) {
-            $query->where(function ($q) use ($user) {
-                $q->where('user_id', $user->id)
-                  ->orWhere('assigned_to', $user->id);
-            });
-        }
+        $query->where(function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->orWhere('assigned_to', $user->id);
+        });
 
         if ($companyId !== '') {
             $query->where('company_id', $companyId);
@@ -3322,13 +3320,14 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.read') || $user->hasPermission('support.tickets.write');
         abort_unless($allowed, 403);
 
-        if (! $user->isAdmin() && $user->company_id) {
+        if ($user->company_id) {
             abort_unless((int) $ticket->company_id === (int) $user->company_id, 403);
         }
 
-        if (! $user->isAdmin()) {
-            abort_unless((int) $ticket->user_id === (int) $user->id || (int) $ticket->assigned_to === (int) $user->id, 403);
-        }
+        abort_unless(
+            (int) $ticket->user_id === (int) $user->id || (int) $ticket->assigned_to === (int) $user->id,
+            403
+        );
 
         $ticket->load('user');
         $creatorName = $ticket->user ? (string) ($ticket->user->name ?? '') : '';
@@ -3362,9 +3361,14 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.read') || $user->hasPermission('support.tickets.write');
         abort_unless($allowed, 403);
 
-        if (! $user->isAdmin() && $user->company_id) {
+        if ($user->company_id) {
             abort_unless((int) $ticket->company_id === (int) $user->company_id, 403);
         }
+
+        abort_unless(
+            (int) $ticket->user_id === (int) $user->id || (int) $ticket->assigned_to === (int) $user->id,
+            403
+        );
 
         $rows = TicketComment::query()->with('user')->where('ticket_id', $ticket->id)->orderBy('created_at')->get();
 
@@ -3392,9 +3396,14 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.write');
         abort_unless($allowed, 403);
 
-        if (! $user->isAdmin() && $user->company_id) {
+        if ($user->company_id) {
             abort_unless((int) $ticket->company_id === (int) $user->company_id, 403);
         }
+
+        abort_unless(
+            (int) $ticket->user_id === (int) $user->id || (int) $ticket->assigned_to === (int) $user->id,
+            403
+        );
 
         $validated = request()->validate([
             'comment' => ['required', 'string'],
@@ -3502,13 +3511,14 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.write');
         abort_unless($allowed, 403);
 
-        if (! $user->isAdmin() && $user->company_id) {
+        if ($user->company_id) {
             abort_unless((int) $ticket->company_id === (int) $user->company_id, 403);
         }
 
-        if (! $user->isAdmin()) {
-            abort_unless((int) $ticket->user_id === (int) $user->id || (int) $ticket->assigned_to === (int) $user->id, 403);
-        }
+        abort_unless(
+            (int) $ticket->user_id === (int) $user->id || (int) $ticket->assigned_to === (int) $user->id,
+            403
+        );
 
         $validated = request()->validate([
             'company_id' => ['sometimes', 'required', 'exists:companies,id'],
@@ -3564,13 +3574,14 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.write');
         abort_unless($allowed, 403);
 
-        if (! $user->isAdmin() && $user->company_id) {
+        if ($user->company_id) {
             abort_unless((int) $ticket->company_id === (int) $user->company_id, 403);
         }
 
-        if (! $user->isAdmin()) {
-            abort_unless((int) $ticket->user_id === (int) $user->id || (int) $ticket->assigned_to === (int) $user->id, 403);
-        }
+        abort_unless(
+            (int) $ticket->user_id === (int) $user->id || (int) $ticket->assigned_to === (int) $user->id,
+            403
+        );
 
         $ticket->delete();
 

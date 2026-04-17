@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\TicketResource\Pages;
 use App\Filament\Resources\TicketResource\RelationManagers;
 use App\Models\Ticket;
+use App\Models\User;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -42,21 +43,16 @@ class TicketResource extends Resource
     {
         $user = auth()->user();
         $query = parent::getEloquentQuery()->with(['company', 'category', 'department', 'user', 'assignedTo']);
-        
-        // Se não for admin, aplicar filtros de acesso
-        if (!$user->isAdmin()) {
-            if ($user->isManager() && $user->employee && $user->employee->company_id) {
-                // Managers veem apenas tickets da sua empresa
-                $query->where('company_id', $user->employee->company_id);
-            } else {
-                // Outros usuários veem apenas tickets que criaram ou foram atribuídos a eles
-                $query->where(function ($q) use ($user) {
-                    $q->where('user_id', $user->id)
-                      ->orWhere('assigned_to', $user->id);
-                });
-            }
+
+        if (! $user) {
+            return $query->whereRaw('1 = 0');
         }
-        
+
+        $query->where(function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->orWhere('assigned_to', $user->id);
+        });
+
         return $query;
     }
 
@@ -123,8 +119,8 @@ class TicketResource extends Resource
                                     ->relationship(
                                         name: 'category',
                                         titleAttribute: 'name',
-                                        modifyQueryUsing: fn (Builder $query) => 
-                                            $query->where('company_id', auth()->user()->company_id)
+                                        modifyQueryUsing: fn (Builder $query, callable $get) =>
+                                            $query->where('company_id', $get('company_id'))
                                     )
                                     ->searchable()
                                     ->preload()
@@ -431,52 +427,42 @@ class TicketResource extends Resource
     public static function getNavigationBadge(): ?string
     {
         $user = auth()->user();
-        $query = static::getModel()::where('status', Ticket::STATUS_OPEN);
-        
-        // Aplicar a mesma filtragem do getEloquentQuery
-        if (!$user->isAdmin()) {
-            if ($user->isManager() && $user->employee && $user->employee->company_id) {
-                // Managers veem apenas tickets da sua empresa
-                $query->where('company_id', $user->employee->company_id);
-            } else {
-                // Outros usuários veem apenas tickets que criaram ou foram atribuídos a eles
-                $query->where(function ($q) use ($user) {
-                    $q->where('user_id', $user->id)
-                      ->orWhere('assigned_to', $user->id);
-                });
-            }
+        if (! $user) {
+            return null;
         }
-        
-        return $query->count();
+
+        $query = static::getModel()::where('status', Ticket::STATUS_OPEN);
+
+        $query->where(function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->orWhere('assigned_to', $user->id);
+        });
+
+        return (string) $query->count();
     }
     
     public static function getNavigationBadgeColor(): string|array|null
     {
         $user = auth()->user();
-        $query = static::getModel()::where('status', Ticket::STATUS_OPEN);
-        
-        // Aplicar a mesma filtragem do getEloquentQuery
-        if (!$user->isAdmin()) {
-            if ($user->isManager() && $user->employee && $user->employee->company_id) {
-                // Managers veem apenas tickets da sua empresa
-                $query->where('company_id', $user->employee->company_id);
-            } else {
-                // Outros usuários veem apenas tickets que criaram ou foram atribuídos a eles
-                $query->where(function ($q) use ($user) {
-                    $q->where('user_id', $user->id)
-                      ->orWhere('assigned_to', $user->id);
-                });
-            }
+        if (! $user) {
+            return null;
         }
-        
-        $openTickets = $query->count();
-        
+
+        $query = static::getModel()::where('status', Ticket::STATUS_OPEN);
+
+        $query->where(function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->orWhere('assigned_to', $user->id);
+        });
+
+        $openTickets = (int) $query->count();
+
         if ($openTickets > 10) {
             return 'danger';
         } elseif ($openTickets > 5) {
             return 'warning';
         }
-        
+
         return 'success';
     }
 }
