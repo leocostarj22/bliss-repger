@@ -17,16 +17,10 @@ class StatsOverview extends BaseWidget
         $baseQuery = Ticket::query();
         
         if (!$user->isAdmin()) {
-            if ($user->isManager() && $user->employee && $user->employee->company_id) {
-                // Managers veem apenas tickets da sua empresa
-                $baseQuery->where('company_id', $user->employee->company_id);
-            } else {
-                // Outros usuários veem apenas tickets que criaram ou foram atribuídos a eles
-                $baseQuery->where(function ($q) use ($user) {
-                    $q->where('user_id', $user->id)
-                      ->orWhere('assigned_to', $user->id);
-                });
-            }
+            $baseQuery->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhere('assigned_to', $user->id);
+            });
         }
         
         // Consulta otimizada com agregações aplicando os filtros

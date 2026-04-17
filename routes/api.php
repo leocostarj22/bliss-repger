@@ -47,14 +47,10 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $ticketQuery = Ticket::query();
 
         if (! $user->isAdmin()) {
-            if ($user->isManager() && $user->company_id) {
-                $ticketQuery->where('company_id', $user->company_id);
-            } else {
-                $ticketQuery->where(function ($q) use ($user) {
-                    $q->where('user_id', $user->id)
-                        ->orWhere('assigned_to', $user->id);
-                });
-            }
+            $ticketQuery->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                    ->orWhere('assigned_to', $user->id);
+            });
         }
 
         $ticketStats = (clone $ticketQuery)->selectRaw('
