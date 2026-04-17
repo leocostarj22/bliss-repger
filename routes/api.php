@@ -1563,7 +1563,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
         Route::prefix('posts/images')->group(function () {
             Route::get('view/{filename}', function (string $filename) {
-                $user = auth()->user();
+                $user = auth('web')->user() ?? auth('employee')->user();
                 abort_unless($user, 401);
 
                 $filename = trim($filename);
@@ -1571,32 +1571,18 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
                 $disk = Storage::disk('public');
                 $relative = 'posts/images/' . $filename;
-                abort_unless($disk->exists($relative), 404);
 
-                $mime = null;
                 try {
-                    $mime = $disk->mimeType($relative);
+                    abort_unless($disk->exists($relative), 404);
+
+                    return $disk->response($relative, $filename, [
+                        'Cache-Control' => 'private, max-age=0, must-revalidate',
+                        'Content-Disposition' => 'inline; filename="' . $filename . '"',
+                    ]);
                 } catch (\Throwable $e) {
-                    $mime = null;
+                    report($e);
+                    abort(404);
                 }
-                if (!is_string($mime) || trim($mime) === '') {
-                    $mime = 'application/octet-stream';
-                }
-
-                $stream = $disk->readStream($relative);
-                abort_unless(is_resource($stream), 404);
-
-                return response()->stream(function () use ($stream) {
-                    try {
-                        fpassthru($stream);
-                    } finally {
-                        fclose($stream);
-                    }
-                }, 200, [
-                    'Content-Type' => $mime,
-                    'Content-Disposition' => 'inline; filename="' . $filename . '"',
-                    'Cache-Control' => 'private, max-age=0, must-revalidate',
-                ]);
             });
 
             Route::get('list', function () {
