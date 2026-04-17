@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ImagePlus, MessageSquare, Search, Send, X, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, ExternalLink, ImagePlus, MessageSquare, Search, Send, Trash2, X } from 'lucide-react';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 
@@ -77,6 +77,39 @@ const ensureCsrfCookie = async (): Promise<void> => {
     },
   });
   if (!res.ok) throw new Error('Falha ao obter CSRF cookie');
+};
+
+const openInNewTab = (url: string) => {
+  const u = String(url ?? '').trim();
+  if (!u) return;
+  try {
+    window.open(u, '_blank', 'noopener,noreferrer');
+  } catch {
+    return;
+  }
+};
+
+const downloadUrl = async (url: string, filename?: string) => {
+  const u = String(url ?? '').trim();
+  if (!u) return;
+
+  try {
+    const res = await fetch(u, { credentials: 'include' });
+    if (!res.ok) throw new Error('download_failed');
+    const blob = await res.blob();
+    const href = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = String(filename ?? '').trim() || 'imagem';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(() => URL.revokeObjectURL(href), 2500);
+  } catch {
+    openInNewTab(u);
+  }
 };
 
 const getPusherConfig = () => {
@@ -1033,6 +1066,30 @@ export function ChatDock() {
                               onLoad={() => setImgLoadingByMsgId((prev) => ({ ...prev, [id]: false }))}
                               onError={() => setImgLoadingByMsgId((prev) => ({ ...prev, [id]: false }))}
                             />
+
+                            <div className="absolute top-2 right-2 flex gap-1">
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="icon"
+                                className="w-8 h-8 bg-background/80 hover:bg-background"
+                                onClick={() => openInNewTab(String(imgAttachment?.url ?? ''))}
+                                title="Abrir no browser"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="icon"
+                                className="w-8 h-8 bg-background/80 hover:bg-background"
+                                onClick={() => downloadUrl(String(imgAttachment?.url ?? ''), String(imgAttachment?.original_filename ?? 'imagem'))}
+                                title="Guardar imagem"
+                              >
+                                <Download className="w-4 h-4" />
+                              </Button>
+                            </div>
+
                             {imgLoading ? (
                               <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                                 <div className="h-6 w-6 rounded-full border-2 border-white/40 border-t-white animate-spin" />
