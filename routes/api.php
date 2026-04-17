@@ -277,8 +277,11 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             'bio' => $u->bio,
             'work_timezone' => Schema::hasColumn('users', 'work_timezone') ? ($u->work_timezone ?? null) : null,
             'work_schedule' => Schema::hasColumn('users', 'work_schedule') ? ($u->work_schedule ?? null) : null,
+            'notify_email' => Schema::hasColumn('users', 'notify_email') ? (bool) ($u->notify_email ?? true) : true,
+            'notify_sms' => Schema::hasColumn('users', 'notify_sms') ? (bool) ($u->notify_sms ?? false) : false,
+            'notify_audio' => Schema::hasColumn('users', 'notify_audio') ? (bool) ($u->notify_audio ?? true) : true,
             'permissions_allow' => is_array($u->permissions_allow) ? array_values($u->permissions_allow) : [],
-            'permissions_deny' => is_array($u->permissions_deny) ? array_values($u->permissions_deny) : [],
+            'permissions_deny' => is_array($u->permissions_deny) ? array_values($u->permissions_deny) : [] ,
         ];
     };
 
@@ -299,6 +302,9 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                     'bio' => null,
                     'work_timezone' => null,
                     'work_schedule' => null,
+                    'notify_email' => Schema::hasColumn('employee_users', 'notify_email') ? (bool) ($u->notify_email ?? true) : true,
+                    'notify_sms' => Schema::hasColumn('employee_users', 'notify_sms') ? (bool) ($u->notify_sms ?? false) : false,
+                    'notify_audio' => Schema::hasColumn('employee_users', 'notify_audio') ? (bool) ($u->notify_audio ?? true) : true,
                     'permissions_allow' => [],
                     'permissions_deny' => [],
                 ],
@@ -308,6 +314,45 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         if (! ($u instanceof User)) {
             return response()->json(['message' => 'Utilizador inválido'], 401);
         }
+
+        return response()->json(['data' => $buildUserResponse($u)]);
+    });
+
+    Route::put('me/notification-preferences', function () use ($buildUserResponse) {
+        $u = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($u, 401);
+
+        $validated = request()->validate([
+            'notify_email' => ['sometimes', 'required', 'boolean'],
+            'notify_sms' => ['sometimes', 'required', 'boolean'],
+            'notify_audio' => ['sometimes', 'required', 'boolean'],
+        ]);
+
+        if ($u instanceof EmployeeUser) {
+            if (! Schema::hasColumn('employee_users', 'notify_email')) unset($validated['notify_email']);
+            if (! Schema::hasColumn('employee_users', 'notify_sms')) unset($validated['notify_sms']);
+            if (! Schema::hasColumn('employee_users', 'notify_audio')) unset($validated['notify_audio']);
+
+            $u->fill($validated);
+            $u->save();
+
+            return response()->json([
+                'data' => [
+                    'notify_email' => Schema::hasColumn('employee_users', 'notify_email') ? (bool) ($u->notify_email ?? true) : true,
+                    'notify_sms' => Schema::hasColumn('employee_users', 'notify_sms') ? (bool) ($u->notify_sms ?? false) : false,
+                    'notify_audio' => Schema::hasColumn('employee_users', 'notify_audio') ? (bool) ($u->notify_audio ?? true) : true,
+                ],
+            ]);
+        }
+
+        abort_unless($u instanceof User, 403);
+
+        if (! Schema::hasColumn('users', 'notify_email')) unset($validated['notify_email']);
+        if (! Schema::hasColumn('users', 'notify_sms')) unset($validated['notify_sms']);
+        if (! Schema::hasColumn('users', 'notify_audio')) unset($validated['notify_audio']);
+
+        $u->fill($validated);
+        $u->save();
 
         return response()->json(['data' => $buildUserResponse($u)]);
     });

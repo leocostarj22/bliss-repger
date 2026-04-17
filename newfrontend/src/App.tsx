@@ -1087,6 +1087,7 @@ const App = () => {
                 }
               />
               <Route path="/admin/profile" element={<Profile />} />
+              <Route path="/settings" element={<AdminSettings />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

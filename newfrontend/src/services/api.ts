@@ -959,6 +959,9 @@ export async function fetchUser(): Promise<
     bio?: string | null
     work_timezone?: string | null
     work_schedule?: any | null
+    notify_email?: boolean
+    notify_sms?: boolean
+    notify_audio?: boolean
     permissions_allow?: string[] | null
     permissions_deny?: string[] | null
   }>
@@ -987,6 +990,14 @@ export async function fetchUser(): Promise<
 
   if (typeof window !== 'undefined' && idStr) {
     window.localStorage.setItem(COMM_CURRENT_USER_ID_KEY, idStr);
+
+    try {
+      if (typeof json?.data?.notify_email === 'boolean') window.localStorage.setItem('nexterp:notify_email', json.data.notify_email ? '1' : '0');
+      if (typeof json?.data?.notify_sms === 'boolean') window.localStorage.setItem('nexterp:notify_sms', json.data.notify_sms ? '1' : '0');
+      if (typeof json?.data?.notify_audio === 'boolean') window.localStorage.setItem('nexterp:notify_audio', json.data.notify_audio ? '1' : '0');
+    } catch {
+      // ignore
+    }
   }
 
   return {
@@ -1001,6 +1012,9 @@ export async function fetchUser(): Promise<
       bio: json?.data?.bio ?? null,
       work_timezone: json?.data?.work_timezone ?? null,
       work_schedule: json?.data?.work_schedule ?? null,
+      notify_email: typeof json?.data?.notify_email === 'boolean' ? Boolean(json.data.notify_email) : undefined,
+      notify_sms: typeof json?.data?.notify_sms === 'boolean' ? Boolean(json.data.notify_sms) : undefined,
+      notify_audio: typeof json?.data?.notify_audio === 'boolean' ? Boolean(json.data.notify_audio) : undefined,
       permissions_allow: Array.isArray(json?.data?.permissions_allow) ? (json.data.permissions_allow as string[]) : null,
       permissions_deny: Array.isArray(json?.data?.permissions_deny) ? (json.data.permissions_deny as string[]) : null,
     },
@@ -1028,6 +1042,9 @@ export async function updateMyProfile(payload: {
     bio?: string | null
     work_timezone?: string | null
     work_schedule?: any | null
+    notify_email?: boolean
+    notify_sms?: boolean
+    notify_audio?: boolean
     permissions_allow?: string[] | null
     permissions_deny?: string[] | null
   }>
@@ -1061,6 +1078,59 @@ export async function updateMyProfile(payload: {
 
   const json = await response.json();
   return { data: json?.data as any };
+}
+
+export async function updateMyNotificationPreferences(payload: {
+  notify_email?: boolean
+  notify_sms?: boolean
+  notify_audio?: boolean
+}): Promise<ApiResponse<{ notify_email: boolean; notify_sms: boolean; notify_audio: boolean }>> {
+  const response = await apiFetch('/api/v1/me/notification-preferences', {
+    method: 'PUT',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    let msg = `Failed to update notification preferences: ${response.statusText}`;
+    try {
+      const json = await response.json();
+      if (typeof json?.message === 'string') msg = json.message;
+      const errors = json?.errors;
+      if (errors && typeof errors === 'object') {
+        const firstKey = Object.keys(errors)[0];
+        const firstVal = (errors as any)[firstKey];
+        if (Array.isArray(firstVal) && typeof firstVal[0] === 'string') msg = firstVal[0];
+      }
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
+
+  const json = await response.json();
+
+  try {
+    if (typeof window !== 'undefined') {
+      if (typeof json?.data?.notify_email === 'boolean') window.localStorage.setItem('nexterp:notify_email', json.data.notify_email ? '1' : '0');
+      if (typeof json?.data?.notify_sms === 'boolean') window.localStorage.setItem('nexterp:notify_sms', json.data.notify_sms ? '1' : '0');
+      if (typeof json?.data?.notify_audio === 'boolean') window.localStorage.setItem('nexterp:notify_audio', json.data.notify_audio ? '1' : '0');
+    }
+  } catch {
+    // ignore
+  }
+
+  return {
+    data: {
+      notify_email: Boolean(json?.data?.notify_email),
+      notify_sms: Boolean(json?.data?.notify_sms),
+      notify_audio: Boolean(json?.data?.notify_audio),
+    },
+  };
 }
 
 export type MyAccessSnapshot = {

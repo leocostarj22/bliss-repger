@@ -5,8 +5,9 @@ import { ArrowLeft, Save, Settings as SettingsIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/use-toast"
-import { fetchBranding, updateAdminBranding } from "@/services/api"
+import { fetchBranding, fetchUser, updateAdminBranding, updateMyNotificationPreferences } from "@/services/api"
 
 type FormState = {
   app_name: string
@@ -52,6 +53,13 @@ export default function SettingsPage() {
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [savingNotifications, setSavingNotifications] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  const [notifyEmail, setNotifyEmail] = useState(true)
+  const [notifySms, setNotifySms] = useState(false)
+  const [notifyAudio, setNotifyAudio] = useState(true)
+
   const [appFaviconKey, setAppFaviconKey] = useState(0)
   const [crmFaviconKey, setCrmFaviconKey] = useState(0)
 
@@ -74,29 +82,49 @@ export default function SettingsPage() {
     let alive = true
     setLoading(true)
 
-    fetchBranding()
-      .then((r) => {
+    fetchUser()
+      .then(async (me) => {
         if (!alive) return
-        const app = r.data?.app
-        const crm = r.data?.crm
 
-        setForm({
-          app_name: String(app?.name ?? "").trim(),
-          app_title: String(app?.title ?? "").trim(),
-          app_favicon: String(app?.favicon_url ?? "").trim(),
-          app_favicon_file_name: "",
-          crm_name: String(crm?.name ?? "").trim(),
-          crm_title: String(crm?.title ?? "").trim(),
-          crm_favicon: String(crm?.favicon_url ?? "").trim(),
-          crm_favicon_file_name: "",
-        })
+        const admin = Boolean(me.data?.is_admin)
+        setIsAdmin(admin)
+
+        setNotifyEmail(typeof me.data?.notify_email === "boolean" ? Boolean(me.data.notify_email) : true)
+        setNotifySms(typeof me.data?.notify_sms === "boolean" ? Boolean(me.data.notify_sms) : false)
+        setNotifyAudio(typeof me.data?.notify_audio === "boolean" ? Boolean(me.data.notify_audio) : true)
+
+        if (!admin) {
+          setLoading(false)
+          return
+        }
+
+        try {
+          const r = await fetchBranding()
+          if (!alive) return
+          const app = r.data?.app
+          const crm = r.data?.crm
+
+          setForm({
+            app_name: String(app?.name ?? "").trim(),
+            app_title: String(app?.title ?? "").trim(),
+            app_favicon: String(app?.favicon_url ?? "").trim(),
+            app_favicon_file_name: "",
+            crm_name: String(crm?.name ?? "").trim(),
+            crm_title: String(crm?.title ?? "").trim(),
+            crm_favicon: String(crm?.favicon_url ?? "").trim(),
+            crm_favicon_file_name: "",
+          })
+        } catch {
+          if (!alive) return
+          toast({ title: "Erro", description: "Não foi possível carregar configurações", variant: "destructive" })
+        } finally {
+          if (!alive) return
+          setLoading(false)
+        }
       })
       .catch(() => {
         if (!alive) return
         toast({ title: "Erro", description: "Não foi possível carregar configurações", variant: "destructive" })
-      })
-      .finally(() => {
-        if (!alive) return
         setLoading(false)
       })
 
@@ -161,7 +189,7 @@ export default function SettingsPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!canSave) return
+    if (!isAdmin || !canSave) return
 
     const appFavicon = form.app_favicon.trim()
     const crmFavicon = form.crm_favicon.trim()
@@ -217,7 +245,7 @@ export default function SettingsPage() {
       <div className="space-y-6 animate-fade-in">
         <div className="page-header">
           <h1 className="page-title">Configurações</h1>
-          <p className="page-subtitle">Administração → Configurações</p>
+          <p className="page-subtitle">Conta → Configurações</p>
           <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
         </div>
         <div className="p-6 space-y-4 glass-card">
@@ -229,13 +257,34 @@ export default function SettingsPage() {
     )
   }
 
+  const onSaveNotifications = async () => {
+    setSavingNotifications(true)
+    try {
+      const r = await updateMyNotificationPreferences({
+        notify_email: notifyEmail,
+        notify_sms: notifySms,
+        notify_audio: notifyAudio,
+      })
+
+      setNotifyEmail(Boolean(r.data.notify_email))
+      setNotifySms(Boolean(r.data.notify_sms))
+      setNotifyAudio(Boolean(r.data.notify_audio))
+
+      toast({ title: "Sucesso", description: "Preferências de notificações atualizadas" })
+    } catch (e: any) {
+      toast({ title: "Erro", description: typeof e?.message === "string" && e.message.trim() ? e.message : "Falha ao guardar", variant: "destructive" })
+    } finally {
+      setSavingNotifications(false)
+    }
+  }
+
   return (
     <div className="space-y-6 animate-slide-up">
       <div className="page-header">
         <div className="flex gap-4 justify-between items-start">
           <div>
             <h1 className="page-title">Configurações</h1>
-            <p className="page-subtitle">Administração → Configurações</p>
+            <p className="page-subtitle">{isAdmin ? "Administração → Configurações" : "Conta → Configurações"}</p>
             <div className="mt-3 w-24 h-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-full" />
           </div>
 
@@ -246,103 +295,152 @@ export default function SettingsPage() {
                 Voltar
               </Link>
             </Button>
-            <Button type="submit" form="admin-settings" disabled={saving || !canSave}>
-              <Save />
-              {saving ? "A guardar…" : "Guardar"}
-            </Button>
+            {isAdmin && (
+              <Button type="submit" form="admin-settings" disabled={saving || !canSave}>
+                <Save />
+                {saving ? "A guardar…" : "Guardar"}
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
-      <form id="admin-settings" onSubmit={onSubmit} className="p-6 space-y-6 glass-card">
+      <div className="p-6 space-y-6 glass-card">
         <div className="flex gap-3 items-center">
           <div className="flex justify-center items-center w-10 h-10 bg-gradient-to-br rounded-xl border from-cyan-400/15 to-fuchsia-500/15 border-primary/20">
             <SettingsIcon className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <div className="font-semibold">Branding</div>
-            <div className="text-sm text-muted-foreground">Nome do sistema, título e favicon (inclui CRM)</div>
+            <div className="font-semibold">Notificações</div>
+            <div className="text-sm text-muted-foreground">Ativar ou desativar canais de notificação</div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="p-4 space-y-4 rounded-lg border border-border">
-            <div className="font-semibold">Sistema</div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Nome do sistema</label>
-              <Input value={form.app_name} onChange={(e) => setField("app_name", e.target.value)} placeholder="Ex.: NextERP" />
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border px-4 py-3">
+            <div>
+              <div className="font-medium">Email</div>
+              <div className="text-xs text-muted-foreground">Receber notificações por email</div>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Título (aba do navegador)</label>
-              <Input value={form.app_title} onChange={(e) => setField("app_title", e.target.value)} placeholder="Ex.: NextERP" />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Favicon</label>
-              <div className="flex gap-3 items-center">
-                <div className="flex overflow-hidden justify-center items-center w-10 h-10 rounded-lg border border-border bg-muted/20">
-                  {form.app_favicon.trim() ? (
-                    <img src={form.app_favicon} alt={form.app_name || "Favicon"} className="object-contain w-6 h-6" />
-                  ) : (
-                    <div className="text-xs text-muted-foreground">—</div>
-                  )}
-                </div>
-                <Input
-                  key={appFaviconKey}
-                  type="file"
-                  accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml,image/webp,image/jpeg"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (!file) return
-                    processFaviconFile(file, "app")
-                  }}
-                />
-              </div>
-              <div className="text-xs text-muted-foreground">Recomendado: PNG quadrado (32×32 ou 64×64).</div>
-            </div>
+            <Switch checked={notifyEmail} onCheckedChange={(v) => setNotifyEmail(Boolean(v))} />
           </div>
 
-          <div className="p-4 space-y-4 rounded-lg border border-border">
-            <div className="font-semibold">CRM</div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Nome do sistema</label>
-              <Input value={form.crm_name} onChange={(e) => setField("crm_name", e.target.value)} placeholder="Ex.: NextCRM" />
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border px-4 py-3">
+            <div>
+              <div className="font-medium">SMS</div>
+              <div className="text-xs text-muted-foreground">Receber notificações por SMS</div>
             </div>
+            <Switch checked={notifySms} onCheckedChange={(v) => setNotifySms(Boolean(v))} />
+          </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Título (aba do navegador)</label>
-              <Input value={form.crm_title} onChange={(e) => setField("crm_title", e.target.value)} placeholder="Ex.: NextCRM" />
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border px-4 py-3">
+            <div>
+              <div className="font-medium">Áudio</div>
+              <div className="text-xs text-muted-foreground">Tocar som quando chegam notificações</div>
             </div>
+            <Switch checked={notifyAudio} onCheckedChange={(v) => setNotifyAudio(Boolean(v))} />
+          </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Favicon</label>
-              <div className="flex gap-3 items-center">
-                <div className="flex overflow-hidden justify-center items-center w-10 h-10 rounded-lg border border-border bg-muted/20">
-                  {form.crm_favicon.trim() ? (
-                    <img src={form.crm_favicon} alt={form.crm_name || "Favicon"} className="object-contain w-6 h-6" />
-                  ) : (
-                    <div className="text-xs text-muted-foreground">—</div>
-                  )}
-                </div>
-                <Input
-                  key={crmFaviconKey}
-                  type="file"
-                  accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml,image/webp,image/jpeg"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (!file) return
-                    processFaviconFile(file, "crm")
-                  }}
-                />
-              </div>
-              <div className="text-xs text-muted-foreground">Recomendado: PNG quadrado (32×32 ou 64×64).</div>
-            </div>
+          <div className="flex justify-end">
+            <Button type="button" onClick={onSaveNotifications} disabled={savingNotifications}>
+              <Save />
+              {savingNotifications ? "A guardar…" : "Guardar notificações"}
+            </Button>
           </div>
         </div>
-      </form>
+      </div>
+
+      {isAdmin && (
+        <form id="admin-settings" onSubmit={onSubmit} className="p-6 space-y-6 glass-card">
+          <div className="flex gap-3 items-center">
+            <div className="flex justify-center items-center w-10 h-10 bg-gradient-to-br rounded-xl border from-cyan-400/15 to-fuchsia-500/15 border-primary/20">
+              <SettingsIcon className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <div className="font-semibold">Branding</div>
+              <div className="text-sm text-muted-foreground">Nome do sistema, título e favicon (inclui CRM)</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="p-4 space-y-4 rounded-lg border border-border">
+              <div className="font-semibold">Sistema</div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nome do sistema</label>
+                <Input value={form.app_name} onChange={(e) => setField("app_name", e.target.value)} placeholder="Ex.: NextERP" />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Título (aba do navegador)</label>
+                <Input value={form.app_title} onChange={(e) => setField("app_title", e.target.value)} placeholder="Ex.: NextERP" />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Favicon</label>
+                <div className="flex gap-3 items-center">
+                  <div className="flex overflow-hidden justify-center items-center w-10 h-10 rounded-lg border border-border bg-muted/20">
+                    {form.app_favicon.trim() ? (
+                      <img src={form.app_favicon} alt={form.app_name || "Favicon"} className="object-contain w-6 h-6" />
+                    ) : (
+                      <div className="text-xs text-muted-foreground">—</div>
+                    )}
+                  </div>
+                  <Input
+                    key={appFaviconKey}
+                    type="file"
+                    accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml,image/webp,image/jpeg"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      processFaviconFile(file, "app")
+                    }}
+                  />
+                </div>
+                <div className="text-xs text-muted-foreground">Recomendado: PNG quadrado (32×32 ou 64×64).</div>
+              </div>
+            </div>
+
+            <div className="p-4 space-y-4 rounded-lg border border-border">
+              <div className="font-semibold">CRM</div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nome do sistema</label>
+                <Input value={form.crm_name} onChange={(e) => setField("crm_name", e.target.value)} placeholder="Ex.: NextCRM" />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Título (aba do navegador)</label>
+                <Input value={form.crm_title} onChange={(e) => setField("crm_title", e.target.value)} placeholder="Ex.: NextCRM" />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Favicon</label>
+                <div className="flex gap-3 items-center">
+                  <div className="flex overflow-hidden justify-center items-center w-10 h-10 rounded-lg border border-border bg-muted/20">
+                    {form.crm_favicon.trim() ? (
+                      <img src={form.crm_favicon} alt={form.crm_name || "Favicon"} className="object-contain w-6 h-6" />
+                    ) : (
+                      <div className="text-xs text-muted-foreground">—</div>
+                    )}
+                  </div>
+                  <Input
+                    key={crmFaviconKey}
+                    type="file"
+                    accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml,image/webp,image/jpeg"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      processFaviconFile(file, "crm")
+                    }}
+                  />
+                </div>
+                <div className="text-xs text-muted-foreground">Recomendado: PNG quadrado (32×32 ou 64×64).</div>
+              </div>
+            </div>
+          </div>
+        </form>
+      )}
     </div>
   )
 }

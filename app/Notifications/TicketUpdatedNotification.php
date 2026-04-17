@@ -8,6 +8,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Log;
 
 class TicketUpdatedNotification extends Notification implements ShouldQueue
 {
@@ -38,7 +39,21 @@ class TicketUpdatedNotification extends Notification implements ShouldQueue
 
     public function via($notifiable)
     {
-        return ['database', 'mail'];
+        $channels = ['database'];
+
+        $emailEnabled = true;
+        if (is_object($notifiable) && method_exists($notifiable, 'getAttribute')) {
+            $pref = $notifiable->getAttribute('notify_email');
+            if ($pref !== null) {
+                $emailEnabled = (bool) $pref;
+            }
+        }
+
+        if ($emailEnabled) {
+            $channels[] = 'mail';
+        }
+
+        return $channels;
     }
 
     public function toMail($notifiable)
@@ -79,7 +94,7 @@ class TicketUpdatedNotification extends Notification implements ShouldQueue
                     ->line('Obrigado por usar nosso sistema de suporte!');
             }
         } catch (\Exception $e) {
-            \Log::error('Erro ao gerar email da TicketUpdatedNotification: ' . $e->getMessage());
+            logger()->error('Erro ao gerar email da TicketUpdatedNotification: ' . $e->getMessage(), ['exception' => $e]);
             
             // Fallback em caso de erro
             return (new MailMessage)
@@ -126,7 +141,7 @@ class TicketUpdatedNotification extends Notification implements ShouldQueue
                 ];
             }
         } catch (\Exception $e) {
-            \Log::error('Erro ao gerar dados de database da TicketUpdatedNotification: ' . $e->getMessage());
+            logger()->error('Erro ao gerar dados de database da TicketUpdatedNotification: ' . $e->getMessage(), ['exception' => $e]);
             
             // Fallback em caso de erro
             return [
@@ -164,7 +179,7 @@ class TicketUpdatedNotification extends Notification implements ShouldQueue
                 }
             }
         } catch (\Exception $e) {
-            \Log::error('Erro ao formatar mudanças para email: ' . $e->getMessage());
+            logger()->error('Erro ao formatar mudanças para email: ' . $e->getMessage(), ['exception' => $e]);
             return 'Alterações realizadas';
         }
         
@@ -189,7 +204,7 @@ class TicketUpdatedNotification extends Notification implements ShouldQueue
                 }
             }
         } catch (\Exception $e) {
-            \Log::error('Erro ao formatar mudanças para database: ' . $e->getMessage());
+            logger()->error('Erro ao formatar mudanças para database: ' . $e->getMessage(), ['exception' => $e]);
             return 'Alterações realizadas';
         }
         

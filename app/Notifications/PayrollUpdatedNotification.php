@@ -21,7 +21,21 @@ class PayrollUpdatedNotification extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return ['database', 'mail'];
+        $channels = ['database'];
+
+        $emailEnabled = true;
+        if (is_object($notifiable) && method_exists($notifiable, 'getAttribute')) {
+            $pref = $notifiable->getAttribute('notify_email');
+            if ($pref !== null) {
+                $emailEnabled = (bool) $pref;
+            }
+        }
+
+        if ($emailEnabled) {
+            $channels[] = 'mail';
+        }
+
+        return $channels;
     }
 
     public function toMail(object $notifiable): MailMessage

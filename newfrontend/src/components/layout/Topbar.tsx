@@ -95,23 +95,33 @@ export function Topbar() {
       const unread = items.filter((n) => !n.read).length;
 
       if (withSound && unreadRef.current !== null && unread > unreadRef.current) {
-        const newestUnread = items.find((n) => !n.read);
-        const hay = `${String(newestUnread?.title ?? '')} ${String(newestUnread?.message ?? '')}`.toLowerCase();
+        let audioEnabled = true;
+        try {
+          const raw = window.localStorage.getItem('nexterp:notify_audio');
+          if (raw !== null) audioEnabled = raw === '1' || raw === 'true';
+        } catch {
+          audioEnabled = true;
+        }
 
-        const looksLikeSent = hay.includes('mensagem enviada') || hay.includes('sua mensagem foi enviada') || hay.includes('message sent');
-        const looksLikeUpdated = hay.includes('mensagem atualizada') || hay.includes('message updated');
-        const looksLikeIncoming =
-          hay.includes('nova mensagem') ||
-          hay.includes('new message') ||
-          hay.includes('você recebeu') ||
-          hay.includes('voce recebeu') ||
-          hay.includes('you received');
+        if (audioEnabled) {
+          const newestUnread = items.find((n) => !n.read);
+          const hay = `${String(newestUnread?.title ?? '')} ${String(newestUnread?.message ?? '')}`.toLowerCase();
 
-        if (looksLikeIncoming && !looksLikeSent && !looksLikeUpdated) {
-          playSound('/sounds/message.mp3', { volume: 0.6 });
-        } else if (!looksLikeSent && !looksLikeUpdated) {
-          const isMessage = hay.includes('mensagem') || hay.includes('message');
-          playSound(isMessage ? '/sounds/message.mp3' : '/sounds/notification.mp3', { volume: 0.6 });
+          const looksLikeSent = hay.includes('mensagem enviada') || hay.includes('sua mensagem foi enviada') || hay.includes('message sent');
+          const looksLikeUpdated = hay.includes('mensagem atualizada') || hay.includes('message updated');
+          const looksLikeIncoming =
+            hay.includes('nova mensagem') ||
+            hay.includes('new message') ||
+            hay.includes('você recebeu') ||
+            hay.includes('voce recebeu') ||
+            hay.includes('you received');
+
+          if (looksLikeIncoming && !looksLikeSent && !looksLikeUpdated) {
+            playSound('/sounds/message.mp3', { volume: 0.6 });
+          } else if (!looksLikeSent && !looksLikeUpdated) {
+            const isMessage = hay.includes('mensagem') || hay.includes('message');
+            playSound(isMessage ? '/sounds/message.mp3' : '/sounds/notification.mp3', { volume: 0.6 });
+          }
         }
       }
 
@@ -682,6 +692,9 @@ export function Topbar() {
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem onSelect={(e) => { e.preventDefault(); navigate('/admin/profile'); }}>
               Editar perfil
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); navigate('/settings'); }}>
+              Configurações
             </DropdownMenuItem>
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"

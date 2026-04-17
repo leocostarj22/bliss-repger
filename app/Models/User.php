@@ -38,6 +38,9 @@ class User extends Authenticatable implements UserInterface, FilamentUser
         'last_login_at',
         'work_timezone',
         'work_schedule',
+        'notify_email',
+        'notify_sms',
+        'notify_audio',
     ];
 
     protected $hidden = [
@@ -53,6 +56,9 @@ class User extends Authenticatable implements UserInterface, FilamentUser
         'is_active' => 'boolean',
         'last_login_at' => 'datetime',
         'work_schedule' => 'array',
+        'notify_email' => 'boolean',
+        'notify_sms' => 'boolean',
+        'notify_audio' => 'boolean',
     ];
 
     /**

@@ -24,6 +24,9 @@ class EmployeeUser extends Authenticatable implements UserInterface, FilamentUse
         'employee_id',
         'is_active',
         'last_login_at',
+        'notify_email',
+        'notify_sms',
+        'notify_audio',
     ];
 
     protected $hidden = [
@@ -35,6 +38,9 @@ class EmployeeUser extends Authenticatable implements UserInterface, FilamentUse
         'email_verified_at' => 'datetime',
         'last_login_at' => 'datetime',
         'is_active' => 'boolean',
+        'notify_email' => 'boolean',
+        'notify_sms' => 'boolean',
+        'notify_audio' => 'boolean',
         'password' => 'hashed',
     ];
 
