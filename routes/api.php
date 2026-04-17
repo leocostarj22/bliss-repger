@@ -266,13 +266,20 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
     // Constrói o array de dados do utilizador autenticado para respostas da API.
     $buildUserResponse = function (User $u) use ($normalizePhotoUrl): array {
+        $photo = null;
+        if (Schema::hasColumn('users', 'photo_data') && is_string($u->photo_data ?? null) && trim((string) $u->photo_data) !== '') {
+            $photo = (string) $u->photo_data;
+        } else {
+            $photo = $normalizePhotoUrl($u->photo_path);
+        }
+
         return [
             'id' => (string) $u->id,
             'name' => $u->name,
             'email' => $u->email,
             'role' => $u->role,
             'is_admin' => (bool) $u->isAdmin(),
-            'photo_path' => $normalizePhotoUrl($u->photo_path),
+            'photo_path' => $photo,
             'phone' => $u->phone,
             'bio' => $u->bio,
             'work_timezone' => Schema::hasColumn('users', 'work_timezone') ? ($u->work_timezone ?? null) : null,
@@ -281,11 +288,11 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             'notify_sms' => Schema::hasColumn('users', 'notify_sms') ? (bool) ($u->notify_sms ?? false) : false,
             'notify_audio' => Schema::hasColumn('users', 'notify_audio') ? (bool) ($u->notify_audio ?? true) : true,
             'permissions_allow' => is_array($u->permissions_allow) ? array_values($u->permissions_allow) : [],
-            'permissions_deny' => is_array($u->permissions_deny) ? array_values($u->permissions_deny) : [] ,
+            'permissions_deny' => is_array($u->permissions_deny) ? array_values($u->permissions_deny) : [],
         ];
     };
 
-    Route::get('me', function () use ($buildUserResponse) {
+    Route::get('me', function () use ($buildUserResponse, $normalizePhotoUrl) {
         $u = auth('web')->user() ?? auth('employee')->user();
         abort_unless($u, 401);
 
@@ -297,7 +304,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                     'email' => (string) ($u->email ?? ''),
                     'role' => 'employee',
                     'is_admin' => false,
-                    'photo_path' => null,
+                    'photo_path' => $normalizePhotoUrl($u->employee?->photo_path ?? null),
                     'phone' => null,
                     'bio' => null,
                     'work_timezone' => null,
@@ -382,6 +389,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
         if (array_key_exists('photo_path', $validated)) {
             $incoming = $validated['photo_path'];
+            $hasPhotoData = Schema::hasColumn('users', 'photo_data');
 
             if ($u->photo_path && is_string($u->photo_path) && $u->photo_path !== '' && ! str_starts_with($u->photo_path, 'http://') && ! str_starts_with($u->photo_path, 'https://') && ! str_starts_with($u->photo_path, 'data:') && ! str_starts_with($u->photo_path, '/')) {
                 if (Storage::disk('public')->exists($u->photo_path)) {
@@ -391,16 +399,13 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
             if ($incoming === null || (is_string($incoming) && trim($incoming) === '')) {
                 $validated['photo_path'] = null;
+                if ($hasPhotoData) {
+                    $u->photo_data = null;
+                }
             } elseif (is_string($incoming) && str_starts_with($incoming, 'data:image/')) {
                 if (preg_match('/^data:(image\/(png|jpe?g|webp));base64,/', $incoming, $m) !== 1) {
                     abort(422, 'Formato de imagem inválido');
                 }
-                $ext = match ($m[1]) {
-                    'image/png' => 'png',
-                    'image/jpeg', 'image/jpg' => 'jpg',
-                    'image/webp' => 'webp',
-                    default => 'png',
-                };
 
                 $raw = substr($incoming, strpos($incoming, ',') + 1);
                 $bin = base64_decode($raw);
@@ -408,14 +413,35 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                     abort(422, 'Imagem inválida');
                 }
 
-                $path = 'user-photos/' . Str::uuid()->toString() . '.' . $ext;
-                Storage::disk('public')->put($path, $bin);
-                $validated['photo_path'] = $path;
+                $maxBytes = 2 * 1024 * 1024;
+                if (strlen($bin) > $maxBytes) {
+                    abort(422, 'A imagem deve ter no máximo 2MB');
+                }
+
+                if ($hasPhotoData) {
+                    $u->photo_data = $incoming;
+                    $validated['photo_path'] = null;
+                } else {
+                    $ext = match ($m[1]) {
+                        'image/png' => 'png',
+                        'image/jpeg', 'image/jpg' => 'jpg',
+                        'image/webp' => 'webp',
+                        default => 'png',
+                    };
+
+                    $path = 'user-photos/' . Str::uuid()->toString() . '.' . $ext;
+                    Storage::disk('public')->put($path, $bin);
+                    $validated['photo_path'] = $path;
+                }
             } elseif (is_string($incoming) && $incoming !== '') {
                 if (str_starts_with($incoming, '/storage/')) {
                     $validated['photo_path'] = ltrim(substr($incoming, strlen('/storage/')), '/');
                 } elseif (preg_match('~^https?://[^/]+/storage/(.+)$~', $incoming, $m) === 1) {
                     $validated['photo_path'] = ltrim($m[1], '/');
+                }
+
+                if ($hasPhotoData) {
+                    $u->photo_data = null;
                 }
             }
         }
