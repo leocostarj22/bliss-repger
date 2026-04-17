@@ -48,11 +48,14 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
         if (! $user->isAdmin()) {
             $ticketQuery->where(function ($q) use ($user) {
-                $q->where('assigned_to', $user->id)
-                    ->orWhere(function ($qq) use ($user) {
-                        $qq->where('user_type', \App\Models\User::class)
+                $q->where('assigned_to', $user->id);
+
+                if ($user instanceof User) {
+                    $q->orWhere(function ($qq) use ($user) {
+                        $qq->where('user_type', User::class)
                             ->where('user_id', $user->id);
                     });
+                }
             });
         }
 

@@ -3,18 +3,48 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
-    <title>NextERP - ERP Solution for Business</title>
-    <meta name="description" content="CRM Application" />
-    <meta name="author" content="CRM" />
+    <title>NextERP</title>
+    <meta name="description" content="NextERP" />
 
-    <!-- TODO: Update og:title to match your application name -->
-    <meta property="og:title" content="NextERP - ERP Solution for Business" />
-    <meta property="og:description" content="NextERP Application" />
+    <meta property="og:title" content="NextERP" />
+    <meta property="og:description" content="NextERP" />
     <meta property="og:type" content="website" />
 
-    <link rel="icon" type="image/png" href="/gmfavicon.png" />
+    <link rel="icon" type="image/png" href="%BASE_URL%gmfavicon.png" />
+    <link rel="shortcut icon" href="%BASE_URL%gmfavicon.png" />
 
+    <script>
+      try {
+        var raw = window.localStorage ? window.localStorage.getItem('nexterp:branding') : null;
+        if (raw) {
+          var b = JSON.parse(raw);
+          var app = b && b.app ? b.app : null;
+          var title = String((app && (app.title || app.name)) || '').trim();
+          if (title) document.title = title;
+
+          var desc = String((app && app.description) || '').trim();
+          var setMeta = function (selector, attr, value) {
+            var el = document.querySelector(selector);
+            if (el && value) el.setAttribute(attr, value);
+          };
+
+          if (title) setMeta("meta[property='og:title']", 'content', title);
+          if (desc) {
+            setMeta("meta[name='description']", 'content', desc);
+            setMeta("meta[property='og:description']", 'content', desc);
+          }
+
+          var url = String((app && app.favicon_url) || '').trim();
+          if (url) {
+            var href = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'v=' + String(Date.now());
+            var links = Array.prototype.slice.call(document.querySelectorAll("link[rel~='icon'], link[rel='shortcut icon']"));
+            for (var i = 0; i < links.length; i++) {
+              links[i].setAttribute('href', href);
+            }
+          }
+        }
+      } catch (e) {}
+    </script>
   </head>
 
   <body>

@@ -278,17 +278,37 @@ function Home() {
   return <Dashboard />
 }
 
-const applyHeadBranding = (input: { title?: string | null; favicon_url?: string | null }) => {
+const applyHeadBranding = (input: {
+  title?: string | null
+  name?: string | null
+  description?: string | null
+  favicon_url?: string | null
+}) => {
   if (typeof document === "undefined") return
 
-  const title = String(input?.title ?? "").trim()
+  const title = String(input?.title ?? input?.name ?? "").trim()
   if (title) document.title = title
 
-  const url = String(input?.favicon_url ?? "").trim()
-  if (!url) return
+  const desc = String(input?.description ?? "").trim()
+  if (desc) {
+    const metaDesc = document.querySelector<HTMLMetaElement>("meta[name='description']")
+    if (metaDesc) metaDesc.content = desc
 
-  const href = `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`
-  const links = Array.from(document.querySelectorAll<HTMLLinkElement>("link[rel~='icon']"))
+    const ogDesc = document.querySelector<HTMLMetaElement>("meta[property='og:description']")
+    if (ogDesc) ogDesc.content = desc
+  }
+
+  if (title) {
+    const ogTitle = document.querySelector<HTMLMetaElement>("meta[property='og:title']")
+    if (ogTitle) ogTitle.content = title
+  }
+
+  const url = String(input?.favicon_url ?? "").trim()
+  const fallback = `${import.meta.env.BASE_URL}gmfavicon.png`
+  const base = url || fallback
+
+  const href = `${base}${base.includes("?") ? "&" : "?"}v=${Date.now()}`
+  const links = Array.from(document.querySelectorAll<HTMLLinkElement>("link[rel~='icon'], link[rel='shortcut icon']"))
 
   if (links.length === 0) {
     const link = document.createElement("link")
@@ -308,6 +328,16 @@ const applyHeadBranding = (input: { title?: string | null; favicon_url?: string 
 const App = () => {
   useEffect(() => {
     let alive = true
+
+    try {
+      const raw = window.localStorage.getItem("nexterp:branding")
+      if (raw) {
+        const parsed = JSON.parse(raw) as any
+        applyHeadBranding(parsed?.app)
+      }
+    } catch {
+      // ignore
+    }
 
     fetchBranding()
       .then((r) => {
