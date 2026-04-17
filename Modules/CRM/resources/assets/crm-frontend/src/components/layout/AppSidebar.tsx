@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -78,6 +78,31 @@ export function AppSidebar({
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
 
+  const [brandName, setBrandName] = useState<string>('NextCRM');
+  const [brandIconUrl, setBrandIconUrl] = useState<string>('');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const fromStorage = () => {
+      try {
+        const raw = window.localStorage.getItem('nexterp:branding');
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as any;
+        const nextName = String(parsed?.crm?.name ?? '').trim();
+        const nextIcon = String(parsed?.crm?.favicon_url ?? '').trim();
+        if (nextName) setBrandName(nextName);
+        if (nextIcon) setBrandIconUrl(nextIcon);
+      } catch {
+        return;
+      }
+    };
+
+    fromStorage();
+    window.addEventListener('nexterp:branding:updated', fromStorage as EventListener);
+    return () => window.removeEventListener('nexterp:branding:updated', fromStorage as EventListener);
+  }, []);
+
   const content = useMemo(() => {
     const renderLink = (item: (typeof navItems)[number], opts?: { collapsed?: boolean; onNavigate?: () => void }) => {
       const active = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
@@ -123,12 +148,16 @@ export function AppSidebar({
         <div className="absolute inset-0 bg-gradient-to-r to-transparent opacity-0 transition-opacity duration-500 pointer-events-none from-cyan-500/10 via-purple-500/10 group-hover:opacity-100" />
         <div className="w-9 h-9 rounded-xl p-[2px] bg-gradient-to-br from-cyan-400 to-fuchsia-500 shrink-0 shadow-[0_0_15px_rgba(34,211,238,0.3)] group-hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] transition-shadow duration-300">
           <div className="w-full h-full rounded-[10px] bg-sidebar flex items-center justify-center backdrop-blur-sm">
-            <Mail className="w-4 h-4 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
+            {brandIconUrl.trim() ? (
+              <img src={brandIconUrl} alt={brandName} className="object-contain w-4 h-4" />
+            ) : (
+              <Mail className="w-4 h-4 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
+            )}
           </div>
         </div>
         {!collapsed && (
           <span className="text-lg font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-fuchsia-500 drop-shadow-[0_0_10px_rgba(34,211,238,0.2)]">
-            NextCRM
+            {brandName}
           </span>
         )}
       </div>
