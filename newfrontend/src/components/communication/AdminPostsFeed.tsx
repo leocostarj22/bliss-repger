@@ -44,6 +44,45 @@ const fmtDateTime = (iso?: string | null) => {
   }
 }
 
+const normalizePostMediaUrl = (input?: string | null) => {
+  const raw = String(input ?? "").trim()
+  if (!raw) return ""
+
+  if (raw.startsWith("/api/v1/communication/posts/images/view/")) return raw
+  if (raw.startsWith("/storage/posts/images/")) {
+    const filename = raw.split("/").pop() || ""
+    return filename ? `/api/v1/communication/posts/images/view/${encodeURIComponent(filename)}` : raw
+  }
+  if (raw.startsWith("posts/images/")) {
+    const filename = raw.split("/").pop() || ""
+    return filename ? `/api/v1/communication/posts/images/view/${encodeURIComponent(filename)}` : raw
+  }
+
+  try {
+    const u = new URL(raw)
+    if (u.pathname.startsWith("/api/v1/communication/posts/images/view/")) {
+      return `${u.pathname}${u.search}`
+    }
+    if (u.pathname.startsWith("/storage/posts/images/")) {
+      const filename = u.pathname.split("/").pop() || ""
+      return filename ? `/api/v1/communication/posts/images/view/${encodeURIComponent(filename)}` : raw
+    }
+  } catch {
+    return raw
+  }
+
+  return raw
+}
+
+const normalizePostMediaHtml = (html: string) => {
+  const raw = String(html ?? "")
+  if (!raw) return ""
+
+  return raw
+    .replace(/https?:\/\/[^"'\s)]+\/api\/v1\/communication\/posts\/images\/view\/([^"'\s)]+)/gi, (_m, p1) => `/api/v1/communication/posts/images/view/${p1}`)
+    .replace(/https?:\/\/[^"'\s)]+\/storage\/posts\/images\/([^"'\s)]+)/gi, (_m, p1) => `/api/v1/communication/posts/images/view/${encodeURIComponent(p1)}`)
+}
+
 
 const plainTextFromHtml = (html: string) => {
   const raw = (html ?? "").toString()
@@ -219,7 +258,7 @@ export default function AdminPostsFeed(props: Props) {
       setMediaItems(
         data.map((it: any) => ({
           filename: String(it.filename ?? ""),
-          url: String(it.url ?? ""),
+          url: normalizePostMediaUrl(String(it.url ?? "")),
         }))
       )
     } catch (e) {
@@ -240,11 +279,12 @@ export default function AdminPostsFeed(props: Props) {
   }
 
   const onPickMedia = (url: string) => {
-    if (!url) return
+    const normalized = normalizePostMediaUrl(url)
+    if (!normalized) return
     if (!imageUrlDraft.trim()) {
-      setImageUrlDraft(url)
+      setImageUrlDraft(normalized)
     } else {
-      setAttachmentUrlsDraft((prev) => Array.from(new Set([...prev, url])))
+      setAttachmentUrlsDraft((prev) => Array.from(new Set([...prev, normalized])))
     }
   }
 
@@ -325,7 +365,7 @@ export default function AdminPostsFeed(props: Props) {
     setImageUploading(true)
     try {
       const url = await handleImageUpload(file)
-      onPickMedia(url)
+      onPickMedia(normalizePostMediaUrl(url))
       toast({ title: "Imagem enviada", description: "A imagem foi adicionada ao post." })
     } catch (err: any) {
       toast({
@@ -883,7 +923,7 @@ export default function AdminPostsFeed(props: Props) {
             const when = p.published_at ?? p.created_at ?? null
             const expanded = !!expandedIds[p.id]
             const fullHtml = (p.content ?? "").toString()
-            const safeHtml = sanitizeHtml(fullHtml)
+            const safeHtml = normalizePostMediaHtml(sanitizeHtml(fullHtml))
             const text = plainTextFromHtml(fullHtml)
             const tooLong = text.length > 420
 
@@ -962,10 +1002,10 @@ export default function AdminPostsFeed(props: Props) {
                   </button>
                 ) : null}
 
-                {p.featured_image_url ? (
+                {normalizePostMediaUrl(p.featured_image_url) ? (
                   <div className="overflow-hidden mt-4 rounded-md border border-border/60">
                     <img
-                      src={p.featured_image_url}
+                      src={normalizePostMediaUrl(p.featured_image_url)}
                       alt={p.title ?? "Imagem"}
                       className="w-full max-h-[420px] object-cover"
                       loading="lazy"
@@ -992,7 +1032,7 @@ export default function AdminPostsFeed(props: Props) {
                     {p.attachment_urls.map((u) => (
                       <a
                         key={u}
-                        href={u}
+                        href={normalizePostMediaUrl(u) || u}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-2 py-1 text-xs rounded-md border border-border/60 bg-background/50 hover:bg-secondary/50"

@@ -30,6 +30,30 @@ const plainTextFromHtml = (html: string) => {
   }
 }
 
+const normalizePostMediaUrl = (input?: string | null) => {
+  const raw = String(input ?? "").trim()
+  if (!raw) return ""
+
+  if (raw.startsWith("/api/v1/communication/posts/images/view/")) return raw
+  if (raw.startsWith("/storage/posts/images/")) {
+    const filename = raw.split("/").pop() || ""
+    return filename ? `/api/v1/communication/posts/images/view/${encodeURIComponent(filename)}` : raw
+  }
+
+  try {
+    const u = new URL(raw)
+    if (u.pathname.startsWith("/api/v1/communication/posts/images/view/")) return `${u.pathname}${u.search}`
+    if (u.pathname.startsWith("/storage/posts/images/")) {
+      const filename = u.pathname.split("/").pop() || ""
+      return filename ? `/api/v1/communication/posts/images/view/${encodeURIComponent(filename)}` : raw
+    }
+  } catch {
+    return raw
+  }
+
+  return raw
+}
+
 const isRichTextEmpty = (html: string) => plainTextFromHtml(html).length === 0
 
 export default function AdminPostEdit() {
@@ -77,7 +101,7 @@ export default function AdminPostEdit() {
       setMediaItems(
         data.map((it: any) => ({
           filename: String(it.filename ?? ""),
-          url: String(it.url ?? ""),
+          url: normalizePostMediaUrl(String(it.url ?? "")),
         }))
       )
     } catch {
@@ -93,8 +117,9 @@ export default function AdminPostEdit() {
   }
 
   const onPickMedia = (url: string) => {
-    if (!url) return
-    setImageUrlDraft(url)
+    const normalized = normalizePostMediaUrl(url)
+    if (!normalized) return
+    setImageUrlDraft(normalized)
     setMediaDialogOpen(false)
   }
 
@@ -110,7 +135,7 @@ export default function AdminPostEdit() {
     setImageUploading(true)
     try {
       const url = await handleImageUpload(file)
-      setImageUrlDraft(url)
+      setImageUrlDraft(normalizePostMediaUrl(url))
       toast({ title: "Imagem enviada", description: "A capa foi atualizada." })
     } catch (err: any) {
       toast({
@@ -141,7 +166,7 @@ export default function AdminPostEdit() {
         setContentDraft((found.content ?? "").toString())
         setTypeDraft((found.type as any) || "announcement")
         setPriorityDraft((found.priority as any) || "normal")
-        setImageUrlDraft((found.featured_image_url ?? "").toString())
+        setImageUrlDraft(normalizePostMediaUrl((found.featured_image_url ?? "").toString()))
         setYoutubeUrlDraft((found.youtube_video_url ?? "").toString())
         setAttachmentUrlsDraft(Array.isArray(found.attachment_urls) ? found.attachment_urls.map((u) => String(u)) : [])
         setNewAttachmentUrlDraft("")
