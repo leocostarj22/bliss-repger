@@ -3606,14 +3606,18 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.write');
         abort_unless($allowed, 403);
 
-        if ($user->company_id) {
-            abort_unless((int) $ticket->company_id === (int) $user->company_id, 403);
-        }
+        if (! $user->isAdmin()) {
+            $isAssignee = (int) $ticket->assigned_to === (int) $user->id;
+            $isCreator = ((string) $ticket->user_type === \App\Models\User::class && (int) $ticket->user_id === (int) $user->id);
 
-        abort_unless(
-            (int) $ticket->user_id === (int) $user->id || (int) $ticket->assigned_to === (int) $user->id,
-            403
-        );
+            if ($user->company_id && ! $isAssignee && ! $isCreator) {
+                $sameCompany = (int) $ticket->company_id === (int) $user->company_id;
+                $member = $sameCompany ? true : $user->companies()->where('companies.id', $ticket->company_id)->exists();
+                abort_unless($member, 403);
+            }
+
+            abort_unless($isAssignee || $isCreator, 403);
+        }
 
         $validated = request()->validate([
             'company_id' => ['sometimes', 'required', 'exists:companies,id'],
@@ -3669,14 +3673,18 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.write');
         abort_unless($allowed, 403);
 
-        if ($user->company_id) {
-            abort_unless((int) $ticket->company_id === (int) $user->company_id, 403);
-        }
+        if (! $user->isAdmin()) {
+            $isAssignee = (int) $ticket->assigned_to === (int) $user->id;
+            $isCreator = ((string) $ticket->user_type === \App\Models\User::class && (int) $ticket->user_id === (int) $user->id);
 
-        abort_unless(
-            (int) $ticket->user_id === (int) $user->id || (int) $ticket->assigned_to === (int) $user->id,
-            403
-        );
+            if ($user->company_id && ! $isAssignee && ! $isCreator) {
+                $sameCompany = (int) $ticket->company_id === (int) $user->company_id;
+                $member = $sameCompany ? true : $user->companies()->where('companies.id', $ticket->company_id)->exists();
+                abort_unless($member, 403);
+            }
+
+            abort_unless($isAssignee || $isCreator, 403);
+        }
 
         $ticket->delete();
 
