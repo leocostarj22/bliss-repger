@@ -136,6 +136,8 @@ export function ChatDock() {
     photo_path: null,
   });
   const [meIsAdmin, setMeIsAdmin] = useState(false);
+  const [meIsEmployeeRole, setMeIsEmployeeRole] = useState(false);
+  const [meCanWrite, setMeCanWrite] = useState(false);
   const [chatDisabled, setChatDisabled] = useState(false);
 
   const [users, setUsers] = useState<CommunicationRecipient[]>([]);
@@ -196,6 +198,21 @@ export function ChatDock() {
   }, [users]);
 
   const isMobile = useIsMobile();
+
+  const recipients = useMemo(() => {
+    const meId = String(me.id || '').trim();
+    if (!meId) return [] as CommunicationRecipient[];
+
+    const rows = users.filter((u: any) => Boolean((u as any)?.is_active) && String((u as any)?.id ?? '').trim() !== meId);
+    rows.sort((a: any, b: any) => String(a?.name ?? '').localeCompare(String(b?.name ?? ''), 'pt-PT', { sensitivity: 'base' }));
+    return rows as any;
+  }, [me.id, users]);
+
+  const visibleRecipients = useMemo(() => {
+    const q = conversationSearch.trim().toLowerCase();
+    if (!q) return recipients;
+    return recipients.filter((u: any) => `${u.name} ${u.email}`.toLowerCase().includes(q));
+  }, [conversationSearch, recipients]);
 
   const unreadCount = useMemo(() => inbox.reduce((acc, m: any) => (msgReadAt(m) ? acc : acc + 1), 0), [inbox]);
 
@@ -334,9 +351,26 @@ export function ChatDock() {
   const canSend = useMemo(() => {
     const other = String(activeUserId || '').trim();
     if (!other) return false;
-    if (chatDisabled) return false;
+    if (!meCanWrite || chatDisabled) return false;
+
+    const rec: any = userById.get(other);
+    const isActive = typeof rec?.is_active === 'boolean' ? Boolean(rec.is_active) : true;
+    if (!isActive) return false;
+
+    if (meIsEmployeeRole && !meIsAdmin) {
+      const first = thread[0] as any;
+      const firstFrom = String(first?.from_user_id ?? '').trim();
+      const initiatedByOther = Boolean(first && firstFrom === other);
+
+      const cached: any = userDetailsById[other];
+      const role = String(cached?.role ?? rec?.role ?? '').trim().toLowerCase();
+      const otherIsAdmin = Boolean(cached?.is_admin ?? rec?.is_admin ?? false) || role === 'admin';
+
+      if (!initiatedByOther || !otherIsAdmin) return false;
+    }
+
     return true;
-  }, [activeUserId, chatDisabled]);
+  }, [activeUserId, chatDisabled, meCanWrite, meIsAdmin, meIsEmployeeRole, thread, userById, userDetailsById]);
 
   useEffect(() => {
     if (!ready) return;
@@ -376,10 +410,14 @@ export function ChatDock() {
         });
 
         const access = await fetchMyAccess();
+        const isAdmin = Boolean(access?.data?.isAdmin);
+        const isEmployeeRole = Boolean(access?.data?.isEmployeeRole);
         const perms = Array.isArray(access?.data?.permissions) ? access.data.permissions : [];
-        const canWrite = perms.includes('*') || perms.includes('communication.messages.write');
+        const canWrite = isAdmin || perms.includes('*') || perms.includes('communication.messages.write');
 
-        setMeIsAdmin(Boolean(access?.data?.isAdmin));
+        setMeIsAdmin(isAdmin);
+        setMeIsEmployeeRole(isEmployeeRole);
+        setMeCanWrite(canWrite);
         setChatDisabled(!canWrite);
       } finally {
         setReady(true);
@@ -957,58 +995,116 @@ export function ChatDock() {
               )}
             >
               {!activeUserId ? (
-                visibleConversations.length === 0 ? (
-                  <div className="text-xs text-muted-foreground">Sem conversas ainda.</div>
-                ) : (
-                  <div className="space-y-2">
-                    {visibleConversations.map((c) => {
-                      const selected = String(c.userId) === String(activeUserId);
-                      const photo = resolvePhotoUrl(userDetailsById[c.userId]?.photo_path ?? null) || '';
-                      return (
-                        <div
-                          key={c.userId}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => {
-                            setActiveUserId(String(c.userId));
-                            setActiveMeta({});
-                            ensureUserDetails(String(c.userId));
-                            setTimeout(scrollToBottom, 0);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
+                <div className="space-y-3">
+                  {visibleConversations.length === 0 ? (
+                    <div className="text-xs text-muted-foreground">Sem conversas ainda.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {visibleConversations.map((c) => {
+                        const selected = String(c.userId) === String(activeUserId);
+                        const photo = resolvePhotoUrl(userDetailsById[c.userId]?.photo_path ?? null) || '';
+                        return (
+                          <div
+                            key={c.userId}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
                               setActiveUserId(String(c.userId));
                               setActiveMeta({});
                               ensureUserDetails(String(c.userId));
                               setTimeout(scrollToBottom, 0);
-                            }
-                          }}
-                          className={cn(
-                            'flex items-center gap-3 rounded-xl border border-border/60 bg-background/40 px-3 py-2 hover:bg-background/70 transition-colors cursor-pointer select-none',
-                            selected && 'border-cyan-500/30 bg-cyan-500/5',
-                          )}
-                        >
-                          <Avatar className="w-9 h-9 border border-border shrink-0">
-                            <AvatarImage src={photo} alt={c.name} />
-                            <AvatarFallback className="text-[11px] font-semibold">{getInitials(c.name)}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex gap-2 justify-between items-center">
-                              <div className="text-sm font-medium truncate">{c.name}</div>
-                              <div className="text-[11px] text-muted-foreground shrink-0">{c.lastTime}</div>
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                setActiveUserId(String(c.userId));
+                                setActiveMeta({});
+                                ensureUserDetails(String(c.userId));
+                                setTimeout(scrollToBottom, 0);
+                              }
+                            }}
+                            className={cn(
+                              'flex items-center gap-3 rounded-xl border border-border/60 bg-background/40 px-3 py-2 hover:bg-background/70 transition-colors cursor-pointer select-none',
+                              selected && 'border-cyan-500/30 bg-cyan-500/5',
+                            )}
+                          >
+                            <Avatar className="w-9 h-9 border border-border shrink-0">
+                              <AvatarImage src={photo} alt={c.name} />
+                              <AvatarFallback className="text-[11px] font-semibold">{getInitials(c.name)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex gap-2 justify-between items-center">
+                                <div className="text-sm font-medium truncate">{c.name}</div>
+                                <div className="text-[11px] text-muted-foreground shrink-0">{c.lastTime}</div>
+                              </div>
+                              <div className="text-xs truncate text-muted-foreground">{c.preview}</div>
                             </div>
-                            <div className="text-xs truncate text-muted-foreground">{c.preview}</div>
+                            {c.unread > 0 ? (
+                              <div className="shrink-0 h-5 min-w-5 px-1 rounded-full bg-rose-500/20 text-rose-200 border border-rose-500/30 text-[11px] leading-5 text-center">
+                                {c.unread > 99 ? '99+' : c.unread}
+                              </div>
+                            ) : null}
                           </div>
-                          {c.unread > 0 ? (
-                            <div className="shrink-0 h-5 min-w-5 px-1 rounded-full bg-rose-500/20 text-rose-200 border border-rose-500/30 text-[11px] leading-5 text-center">
-                              {c.unread > 99 ? '99+' : c.unread}
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="pt-2 border-t border-border/60">
+                    <div className="text-[11px] font-semibold text-muted-foreground mb-2">Contactos</div>
+
+                    {meIsEmployeeRole && !meIsAdmin ? (
+                      <div className="text-xs text-muted-foreground">
+                        Colaboradores só podem responder a conversas iniciadas por Admin.
+                      </div>
+                    ) : visibleRecipients.length === 0 ? (
+                      <div className="text-xs text-muted-foreground">Sem contactos disponíveis.</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {visibleRecipients.map((u: any) => {
+                          const uid = String(u?.id ?? '').trim();
+                          const name = String(u?.name ?? uid).trim();
+                          const email = String(u?.email ?? '').trim();
+                          const photo = resolvePhotoUrl(userDetailsById[uid]?.photo_path ?? null) || '';
+
+                          return (
+                            <div
+                              key={uid}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => {
+                                if (!uid) return;
+                                setActiveUserId(uid);
+                                setActiveMeta({ name, email });
+                                ensureUserDetails(uid);
+                                setTimeout(scrollToBottom, 0);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key !== 'Enter') return;
+                                if (!uid) return;
+                                setActiveUserId(uid);
+                                setActiveMeta({ name, email });
+                                ensureUserDetails(uid);
+                                setTimeout(scrollToBottom, 0);
+                              }}
+                              className={cn(
+                                'flex items-center gap-3 rounded-xl border border-border/60 bg-background/40 px-3 py-2 hover:bg-background/70 transition-colors cursor-pointer select-none',
+                              )}
+                            >
+                              <Avatar className="w-9 h-9 border border-border shrink-0">
+                                <AvatarImage src={photo} alt={name} />
+                                <AvatarFallback className="text-[11px] font-semibold">{getInitials(name)}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium truncate">{name}</div>
+                                <div className="text-xs truncate text-muted-foreground">{email}</div>
+                              </div>
                             </div>
-                          ) : null}
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                )
+                </div>
               ) : conversation.length === 0 ? (
                 <div className="text-xs text-muted-foreground">Sem mensagens ainda.</div>
               ) : (
