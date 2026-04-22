@@ -3397,11 +3397,15 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $user = auth('web')->user();
         abort_unless($user instanceof \App\Models\User, 401);
 
-        $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.read') || $user->hasPermission('support.tickets.write');
-        abort_unless($allowed, 403);
-
         $isAssignee = (int) $ticket->assigned_to === (int) $user->id;
         $isCreator = ((string) $ticket->user_type === \App\Models\User::class && (int) $ticket->user_id === (int) $user->id);
+
+        $allowed = $user->isAdmin() ||
+            $user->hasPermission('support.tickets.read') ||
+            $user->hasPermission('support.tickets.write') ||
+            $isAssignee ||
+            $isCreator;
+        abort_unless($allowed, 403);
 
         if ($user->company_id && ! $user->isAdmin() && ! $isAssignee && ! $isCreator) {
             $sameCompany = (int) $ticket->company_id === (int) $user->company_id;
@@ -3440,11 +3444,15 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $user = auth('web')->user();
         abort_unless($user instanceof \App\Models\User, 401);
 
-        $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.read') || $user->hasPermission('support.tickets.write');
-        abort_unless($allowed, 403);
-
         $isAssignee = (int) $ticket->assigned_to === (int) $user->id;
         $isCreator = ((string) $ticket->user_type === \App\Models\User::class && (int) $ticket->user_id === (int) $user->id);
+
+        $allowed = $user->isAdmin() ||
+            $user->hasPermission('support.tickets.read') ||
+            $user->hasPermission('support.tickets.write') ||
+            $isAssignee ||
+            $isCreator;
+        abort_unless($allowed, 403);
 
         if ($user->company_id && ! $user->isAdmin() && ! $isAssignee && ! $isCreator) {
             $sameCompany = (int) $ticket->company_id === (int) $user->company_id;
@@ -3477,11 +3485,12 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $user = auth('web')->user();
         abort_unless($user instanceof \App\Models\User, 401);
 
-        $allowed = $user->isAdmin() || $user->hasPermission('support.tickets.write');
-        abort_unless($allowed, 403);
-
         $isAssignee = (int) $ticket->assigned_to === (int) $user->id;
         $isCreator = ((string) $ticket->user_type === \App\Models\User::class && (int) $ticket->user_id === (int) $user->id);
+
+        $canWrite = $user->isAdmin() || $user->hasPermission('support.tickets.write');
+        $allowed = $canWrite || $isAssignee || $isCreator;
+        abort_unless($allowed, 403);
 
         if ($user->company_id && ! $user->isAdmin() && ! $isAssignee && ! $isCreator) {
             $sameCompany = (int) $ticket->company_id === (int) $user->company_id;
@@ -3501,7 +3510,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             'user_id' => $user->id,
             'user_type' => \App\Models\User::class,
             'comment' => $validated['comment'],
-            'is_internal' => (bool) ($validated['is_internal'] ?? false),
+            'is_internal' => $canWrite ? (bool) ($validated['is_internal'] ?? false) : false,
             'is_solution' => false,
         ]);
 
