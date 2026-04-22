@@ -7039,6 +7039,22 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
         $query = User::query()->with('companies:id')->orderByDesc('created_at');
 
+        if (($me instanceof \App\Models\User) && ! $canSeeAll) {
+            $companyIds = [];
+            if ($me->company_id) $companyIds[] = (int) $me->company_id;
+            $more = $me->companies()->pluck('companies.id')->map(fn ($v) => (int) $v)->all();
+            $companyIds = array_values(array_unique(array_merge($companyIds, $more)));
+
+            if (count($companyIds) === 0) {
+                return response()->json(['data' => []]);
+            }
+
+            $query->where(function ($q) use ($companyIds) {
+                $q->whereIn('company_id', $companyIds)
+                    ->orWhereHas('companies', fn ($cq) => $cq->whereIn('companies.id', $companyIds));
+            });
+        }
+
         if ($companyId !== '') {
             $query->where(function ($q) use ($companyId) {
                 $q->where('company_id', $companyId)
