@@ -5088,14 +5088,20 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $user = auth('web')->user() ?? auth('employee')->user();
 
         $isAllowed = false;
+        $canSeeAll = false;
+
         if ($user instanceof \App\Models\EmployeeUser) {
             $deptSlug = Str::slug((string) ($user->employee?->department?->name ?? ''));
-            $isAllowed = $user->isAdmin() || in_array($deptSlug, ['recursos-humanos', 'rh'], true);
-        } elseif ($user) {
+            $canSeeAll = $user->isAdmin() || in_array($deptSlug, ['recursos-humanos', 'rh'], true);
+            $isAllowed = $canSeeAll;
+        } elseif ($user instanceof \App\Models\User) {
             $deptSlug = Str::slug((string) ($user->department?->name ?? ''));
-            $isAllowed = $user->isAdmin()
+            $canSeeAll = $user->isAdmin()
                 || ($user->isManager() && in_array($deptSlug, ['recursos-humanos', 'rh'], true))
-                || (method_exists($user, 'hasPermission') && ($user->hasPermission('admin.companies.read') || $user->hasPermission('hr.employees.read')));
+                || ($user->hasPermission('admin.companies.read') || $user->hasPermission('hr.employees.read'));
+
+            $canSupport = $user->hasPermission('support.tickets.read') || $user->hasPermission('support.tickets.write');
+            $isAllowed = $canSeeAll || $canSupport;
         }
 
         abort_unless($isAllowed, 403);
@@ -5103,6 +5109,15 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $search = trim((string) request('search', ''));
 
         $query = Company::query()->orderByDesc('created_at');
+
+        if (($user instanceof \App\Models\User) && ! $canSeeAll) {
+            $query->where(function ($q) use ($user) {
+                $q->whereHas('members', fn ($mq) => $mq->where('users.id', $user->id));
+                if ($user->company_id) {
+                    $q->orWhereKey($user->company_id);
+                }
+            });
+        }
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -5353,14 +5368,20 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $user = auth('web')->user() ?? auth('employee')->user();
 
         $isAllowed = false;
+        $canSeeAll = false;
+
         if ($user instanceof \App\Models\EmployeeUser) {
             $deptSlug = Str::slug((string) ($user->employee?->department?->name ?? ''));
-            $isAllowed = $user->isAdmin() || in_array($deptSlug, ['recursos-humanos', 'rh'], true);
-        } elseif ($user) {
+            $canSeeAll = $user->isAdmin() || in_array($deptSlug, ['recursos-humanos', 'rh'], true);
+            $isAllowed = $canSeeAll;
+        } elseif ($user instanceof \App\Models\User) {
             $deptSlug = Str::slug((string) ($user->department?->name ?? ''));
-            $isAllowed = $user->isAdmin()
+            $canSeeAll = $user->isAdmin()
                 || ($user->isManager() && in_array($deptSlug, ['recursos-humanos', 'rh'], true))
-                || (method_exists($user, 'hasPermission') && ($user->hasPermission('admin.departments.read') || $user->hasPermission('hr.employees.read')));
+                || ($user->hasPermission('admin.departments.read') || $user->hasPermission('hr.employees.read'));
+
+            $canSupport = $user->hasPermission('support.tickets.read') || $user->hasPermission('support.tickets.write');
+            $isAllowed = $canSeeAll || $canSupport;
         }
 
         abort_unless($isAllowed, 403);
@@ -5369,6 +5390,19 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $companyId = trim((string) request('company_id', ''));
 
         $query = Department::query()->orderByDesc('created_at');
+
+        if (($user instanceof \App\Models\User) && ! $canSeeAll) {
+            $companyIds = [];
+            if ($user->company_id) $companyIds[] = (int) $user->company_id;
+            $more = $user->companies()->pluck('companies.id')->map(fn ($v) => (int) $v)->all();
+            $companyIds = array_values(array_unique(array_merge($companyIds, $more)));
+
+            if (count($companyIds) === 0) {
+                return response()->json(['data' => []]);
+            }
+
+            $query->whereIn('company_id', $companyIds);
+        }
 
         if ($companyId !== '') {
             $query->where('company_id', $companyId);
@@ -6980,10 +7014,20 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
     Route::get('users', function () {
         $me = auth('web')->user() ?? auth('employee')->user();
-        $isAllowed = $me && (
-            (method_exists($me, 'isAdmin') && $me->isAdmin()) ||
-            (method_exists($me, 'hasPermission') && ($me->hasPermission('admin.users.read') || $me->hasPermission('admin.roles.read')))
-        );
+
+        $isAllowed = false;
+        $canSeeAll = false;
+
+        if ($me instanceof \App\Models\User) {
+            $canSeeAll = $me->isAdmin() || ($me->hasPermission('admin.users.read') || $me->hasPermission('admin.roles.read'));
+            $canSupport = $me->hasPermission('support.tickets.read') || $me->hasPermission('support.tickets.write');
+            $isAllowed = $canSeeAll || $canSupport;
+        } elseif ($me instanceof \App\Models\EmployeeUser) {
+            $deptSlug = Str::slug((string) ($me->employee?->department?->name ?? ''));
+            $isAllowed = $me->isAdmin() || in_array($deptSlug, ['recursos-humanos', 'rh'], true);
+            $canSeeAll = $isAllowed;
+        }
+
         abort_unless($isAllowed, 403);
 
         $search = trim((string) request('search', ''));
