@@ -464,6 +464,7 @@ export default function Employees() {
                 <th className="py-3 pr-4">Departamento</th>
                 <th className="py-3 pr-4">Cargo</th>
                 <th className="py-3 pr-4">Telefone</th>
+                <th className="py-3 pr-4">Nascimento</th>
                 <th className="py-3 pr-4">Estado</th>
                 <th className="py-3 text-right">Ações</th>
               </tr>
@@ -495,6 +496,9 @@ export default function Employees() {
                       <Skeleton className="w-28 h-4" />
                     </td>
                     <td className="py-4 pr-4">
+                      <Skeleton className="w-16 h-4" />
+                    </td>
+                    <td className="py-4 pr-4">
                       <Skeleton className="w-20 h-4" />
                     </td>
                     <td className="py-4 text-right">
@@ -507,7 +511,7 @@ export default function Employees() {
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center text-muted-foreground">
+                  <td colSpan={9} className="py-10 text-center text-muted-foreground">
                     Nenhum funcionário encontrado
                   </td>
                 </tr>
@@ -527,6 +531,19 @@ export default function Employees() {
                     <td className="py-4 pr-4">{departmentNameById[r.department_id ?? ""] ?? "—"}</td>
                     <td className="py-4 pr-4">{r.position ?? "—"}</td>
                     <td className="py-4 pr-4">{r.phone ?? "—"}</td>
+                    <td className="py-4 pr-4">
+                      {r.birth_date ? (() => {
+                        const month = parseInt(r.birth_date.slice(5, 7), 10)
+                        const day = r.birth_date.slice(8, 10)
+                        const isBirthdayMonth = month === new Date().getMonth() + 1
+                        return (
+                          <span className={isBirthdayMonth ? "inline-flex items-center gap-1 font-medium text-fuchsia-400" : ""}>
+                            {isBirthdayMonth && <Cake className="w-3 h-3" />}
+                            {`${day}/${String(month).padStart(2, "0")}`}
+                          </span>
+                        )
+                      })() : "—"}
+                    </td>
                     <td className="py-4 pr-4">{statusLabel(r.status)}</td>
                     <td className="py-4 text-right">
                       <div className="inline-flex gap-2 items-center">

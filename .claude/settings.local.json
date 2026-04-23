@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(php -l \"c:/Users/luism/Desktop/codes/bliss-repger_novo/routes/api.php\")",
-      "Bash(php artisan *)"
+      "Bash(php artisan *)",
+      "Bash(npx tsc *)"
     ]
   }
 }
