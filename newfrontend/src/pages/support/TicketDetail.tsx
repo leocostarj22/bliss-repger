@@ -100,6 +100,10 @@ export default function SupportTicketDetail() {
 
   const categoriesForCompany = useMemo(() => categories.filter((c) => c.company_id === companyId), [categories, companyId])
   const departmentsForCompany = useMemo(() => departments.filter((d) => d.company_id === companyId), [departments, companyId])
+  const usersForDepartment = useMemo(
+    () => departmentId !== "none" ? users.filter((u) => String(u.department_id) === departmentId) : users,
+    [users, departmentId],
+  )
 
   useEffect(() => {
     if (categoryId !== "none" && !categoriesForCompany.some((c) => c.id === categoryId)) setCategoryId("none")
@@ -110,8 +114,8 @@ export default function SupportTicketDetail() {
   }, [departmentId, departmentsForCompany])
 
   useEffect(() => {
-    if (assignedTo !== "none" && !users.some((u) => u.id === assignedTo)) setAssignedTo("none")
-  }, [assignedTo, users])
+    if (assignedTo !== "none" && !usersForDepartment.some((u) => u.id === assignedTo)) setAssignedTo("none")
+  }, [assignedTo, usersForDepartment])
 
   useEffect(() => {
     if (status !== "resolved") setResolvedAt("")
@@ -349,14 +353,17 @@ export default function SupportTicketDetail() {
           </div>
 
           <div>
-            <div className="text-xs text-muted-foreground mb-1">Atribuído a</div>
+            <div className="text-xs text-muted-foreground mb-1">
+              Atribuído a
+              {departmentId !== "none" && <span className="ml-1 text-muted-foreground/60">(filtrado por departamento)</span>}
+            </div>
             <Select value={assignedTo} onValueChange={setAssignedTo}>
               <SelectTrigger>
                 <SelectValue placeholder="Sem atribuição" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Sem atribuição</SelectItem>
-                {users.map((u) => (
+                {usersForDepartment.map((u) => (
                   <SelectItem key={u.id} value={u.id}>
                     {u.name}
                   </SelectItem>
