@@ -44,20 +44,16 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
     Route::get('dashboard', function () {
         $user = auth()->user();
 
-        $ticketQuery = Ticket::query();
+        $ticketQuery = Ticket::query()->where(function ($q) use ($user) {
+            $q->where('assigned_to', $user->id);
 
-        if (! $user->isAdmin()) {
-            $ticketQuery->where(function ($q) use ($user) {
-                $q->where('assigned_to', $user->id);
-
-                if ($user instanceof User) {
-                    $q->orWhere(function ($qq) use ($user) {
-                        $qq->where('user_type', User::class)
-                            ->where('user_id', $user->id);
-                    });
-                }
-            });
-        }
+            if ($user instanceof User) {
+                $q->orWhere(function ($qq) use ($user) {
+                    $qq->where('user_type', User::class)
+                        ->where('user_id', $user->id);
+                });
+            }
+        });
 
         $ticketStats = (clone $ticketQuery)->selectRaw('
             COUNT(*) as total,

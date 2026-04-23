@@ -19,6 +19,8 @@ const statusLabel = (s?: EmployeeStatus | null) => {
   return s ? String(s) : "—"
 }
 
+type SpecialFilter = "none" | "birthday_month" | "hired_this_month" | "near_retirement"
+
 export default function Employees() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
@@ -34,6 +36,7 @@ export default function Employees() {
   const [statusFilter, setStatusFilter] = useState<"all" | EmployeeStatus>("all")
   const [companyFilter, setCompanyFilter] = useState<string>("all")
   const [departmentFilter, setDepartmentFilter] = useState<string>("all")
+  const [specialFilter, setSpecialFilter] = useState<SpecialFilter>("none")
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -50,6 +53,13 @@ export default function Employees() {
 
   const onCardFilter = (next: "all" | EmployeeStatus) => {
     setStatusFilter(next)
+    setSpecialFilter("none")
+    focusList()
+  }
+
+  const onCardSpecial = (next: SpecialFilter) => {
+    setSpecialFilter(next)
+    setStatusFilter("all")
     focusList()
   }
 
@@ -77,7 +87,7 @@ export default function Employees() {
 
   useEffect(() => {
     setSelectedIds(new Set())
-  }, [companyFilter, departmentFilter, search, statusFilter])
+  }, [companyFilter, departmentFilter, search, statusFilter, specialFilter])
 
   const companyNameById = useMemo(() => {
     return companies.reduce<Record<string, string>>((acc, c) => {
@@ -136,10 +146,34 @@ export default function Employees() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
+    const now = new Date()
+    const currentMonth = now.getMonth() + 1
+    const currentYear = now.getFullYear()
+
     return rows.filter((r) => {
       if (companyFilter !== "all" && (r.company_id ?? "") !== companyFilter) return false
       if (departmentFilter !== "all" && (r.department_id ?? "") !== departmentFilter) return false
       if (statusFilter !== "all" && (r.status ?? "") !== statusFilter) return false
+
+      if (specialFilter === "birthday_month") {
+        if (!r.birth_date) return false
+        const month = parseInt(r.birth_date.slice(5, 7), 10)
+        if (month !== currentMonth) return false
+      }
+
+      if (specialFilter === "hired_this_month") {
+        if (!r.hire_date) return false
+        const hireMonth = parseInt(r.hire_date.slice(5, 7), 10)
+        const hireYear = parseInt(r.hire_date.slice(0, 4), 10)
+        if (hireMonth !== currentMonth || hireYear !== currentYear) return false
+      }
+
+      if (specialFilter === "near_retirement") {
+        if (!r.birth_date) return false
+        const birthYear = parseInt(r.birth_date.slice(0, 4), 10)
+        const age = currentYear - birthYear
+        if (age < 65) return false
+      }
 
       if (!q) return true
       const hay = `${r.employee_code ?? ""} ${r.name ?? ""} ${r.email ?? ""} ${r.nif ?? ""} ${r.phone ?? ""} ${r.position ?? ""}`
@@ -147,7 +181,7 @@ export default function Employees() {
         .trim()
       return hay.includes(q)
     })
-  }, [companyFilter, departmentFilter, rows, search, statusFilter])
+  }, [companyFilter, departmentFilter, rows, search, statusFilter, specialFilter])
 
   const toggleSelectAll = () => {
     if (filtered.length === 0) return
@@ -263,8 +297,8 @@ export default function Employees() {
 
         <button
           type="button"
-          onClick={() => onCardSoon("Contratações este Mês")}
-          className="flex justify-between items-center p-5 glass-card text-left w-full transition-all duration-300 hover:border-primary/30 hover:shadow-[0_0_30px_hsl(var(--ring)/0.12)]"
+          onClick={() => onCardSpecial("hired_this_month")}
+          className={`flex justify-between items-center p-5 glass-card text-left w-full transition-all duration-300 hover:border-primary/30 hover:shadow-[0_0_30px_hsl(var(--ring)/0.12)]${specialFilter === "hired_this_month" ? " ring-2 ring-amber-400/60" : ""}`}
         >
           <div>
             <div className="text-xs text-muted-foreground">Contratações este Mês</div>
@@ -277,8 +311,8 @@ export default function Employees() {
 
         <button
           type="button"
-          onClick={() => onCardSoon("Aniversariantes")}
-          className="flex justify-between items-center p-5 glass-card text-left w-full transition-all duration-300 hover:border-primary/30 hover:shadow-[0_0_30px_hsl(var(--ring)/0.12)]"
+          onClick={() => onCardSpecial("birthday_month")}
+          className={`flex justify-between items-center p-5 glass-card text-left w-full transition-all duration-300 hover:border-primary/30 hover:shadow-[0_0_30px_hsl(var(--ring)/0.12)]${specialFilter === "birthday_month" ? " ring-2 ring-fuchsia-400/60" : ""}`}
         >
           <div>
             <div className="text-xs text-muted-foreground">Aniversariantes</div>
@@ -333,8 +367,8 @@ export default function Employees() {
 
         <button
           type="button"
-          onClick={() => onCardSoon("Próximos da Aposentadoria")}
-          className="flex justify-between items-center p-5 glass-card text-left w-full transition-all duration-300 hover:border-primary/30 hover:shadow-[0_0_30px_hsl(var(--ring)/0.12)]"
+          onClick={() => onCardSpecial("near_retirement")}
+          className={`flex justify-between items-center p-5 glass-card text-left w-full transition-all duration-300 hover:border-primary/30 hover:shadow-[0_0_30px_hsl(var(--ring)/0.12)]${specialFilter === "near_retirement" ? " ring-2 ring-cyan-400/60" : ""}`}
         >
           <div>
             <div className="text-xs text-muted-foreground">Próximos da Aposentadoria</div>
@@ -393,7 +427,7 @@ export default function Employees() {
           </div>
 
           <div className="w-full lg:w-[200px]">
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as any); setSpecialFilter("none") }}>
               <SelectTrigger>
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
