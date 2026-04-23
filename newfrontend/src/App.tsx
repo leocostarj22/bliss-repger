@@ -33,6 +33,13 @@ import FinanceCostCenters from "@/pages/finance/FinanceCostCenters";
 import FinanceTransactions from "@/pages/finance/FinanceTransactions";
 import SystemLogs from "@/pages/reports/SystemLogs";
 import SystemLogDetail from "@/pages/reports/SystemLogDetail";
+import Changelog from "@/pages/reports/Changelog";
+import BlogFeed from "@/pages/blog/BlogFeed";
+import BlogArticle from "@/pages/blog/BlogArticle";
+import AdminBlogList from "@/pages/admin/blog/AdminBlogList";
+import AdminBlogForm from "@/pages/admin/blog/AdminBlogForm";
+import AdminChangelogList from "@/pages/admin/changelog/AdminChangelogList";
+import AdminChangelogForm from "@/pages/admin/changelog/AdminChangelogForm";
 import MyTasks from "@/pages/personal/MyTasks";
 import TaskForm from "@/pages/personal/TaskForm";
 import MyNotes from "@/pages/personal/MyNotes";
@@ -1000,7 +1007,7 @@ const App = () => {
               <Route
                 path="/reports"
                 element={
-                  <RequirePermission permission={["reports.system-logs.read", "reports.*"]}>
+                  <RequirePermission permission={["reports.system-logs.read", "reports.changelog.read", "reports.*"]}>
                     <Navigate to="/reports/system-logs" replace />
                   </RequirePermission>
                 }
@@ -1018,6 +1025,65 @@ const App = () => {
                 element={
                   <RequirePermission permission="reports.system-logs.read">
                     <SystemLogDetail />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/reports/changelog"
+                element={
+                  <RequirePermission permission="reports.changelog.read">
+                    <Changelog />
+                  </RequirePermission>
+                }
+              />
+
+              <Route path="/blog" element={<BlogFeed />} />
+              <Route path="/blog/:slug" element={<BlogArticle />} />
+              <Route
+                path="/admin/blog"
+                element={
+                  <RequirePermission permission="admin.*">
+                    <AdminBlogList />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/blog/new"
+                element={
+                  <RequirePermission permission="admin.*">
+                    <AdminBlogForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/blog/:id/edit"
+                element={
+                  <RequirePermission permission="admin.*">
+                    <AdminBlogForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/changelog"
+                element={
+                  <RequirePermission permission="admin.*">
+                    <AdminChangelogList />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/changelog/new"
+                element={
+                  <RequirePermission permission="admin.*">
+                    <AdminChangelogForm />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/admin/changelog/:id/edit"
+                element={
+                  <RequirePermission permission="admin.*">
+                    <AdminChangelogForm />
                   </RequirePermission>
                 }
               />

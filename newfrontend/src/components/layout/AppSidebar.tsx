@@ -17,6 +17,8 @@ import {
   Receipt,
   Ticket,
   ScrollText,
+  History,
+  Newspaper,
   ListTodo,
   NotebookPen,
   CalendarDays,
@@ -37,6 +39,7 @@ import { fetchAdminModules, fetchMyAccess } from '@/services/api';
 export const primaryNavItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/', color: 'cyan' },
   { label: 'Meu RH', icon: CalendarDays, path: '/me/hr', color: 'violet' },
+  { label: 'Últimas Atualizações', icon: Newspaper, path: '/blog', color: 'fuchsia' },
 ] as const;
 
 export const employeeHrNavItems = [
@@ -106,6 +109,7 @@ export const myFormulaNavItems = [
 
 export const reportsNavItems = [
   { label: 'Logs do Sistema', icon: ScrollText, path: '/reports/system-logs', color: 'fuchsia' },
+  { label: 'Changelog', icon: History, path: '/reports/changelog', color: 'violet' },
 ] as const;
 
 export const personalNavItems = [
@@ -391,6 +395,7 @@ export function AppSidebar({
 
   const reportsPermissionByPath: Record<string, string | string[]> = {
     '/reports/system-logs': 'reports.system-logs.read',
+    '/reports/changelog': 'reports.changelog.read',
   };
 
   const blissNaturaPermissionByPath: Record<string, string | string[]> = {

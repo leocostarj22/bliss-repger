@@ -7610,4 +7610,432 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
         return response()->json(['ok' => true]);
     });
+
+    // ── Últimas Atualizações — Blog Posts ──────────────────────────────────────
+
+    Route::get('blog/admin', function () {
+        $me = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+
+        $posts = \App\Models\BlogPost::with('author:id,name,photo_path')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json([
+            'data' => $posts->map(fn ($post) => [
+                'id' => (string) $post->id,
+                'title' => $post->title,
+                'slug' => $post->slug,
+                'summary' => $post->summary,
+                'content' => $post->content,
+                'cover_image_url' => $post->cover_image_url,
+                'youtube_video_url' => $post->youtube_video_url,
+                'category' => $post->category,
+                'tags' => $post->tags ?? [],
+                'status' => $post->status,
+                'is_featured' => (bool) $post->is_featured,
+                'reading_time_minutes' => $post->reading_time_minutes,
+                'views_count' => $post->views_count,
+                'author' => [
+                    'id' => (string) $post->author->id,
+                    'name' => $post->author->name,
+                    'photo_path' => $post->author->photo_path,
+                ],
+                'published_at' => $post->published_at?->toIso8601String(),
+                'createdAt' => $post->created_at->toIso8601String(),
+                'updatedAt' => $post->updated_at->toIso8601String(),
+            ])->values(),
+        ]);
+    });
+
+    Route::get('blog/admin/{post}', function (\App\Models\BlogPost $post) {
+        $me = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+
+        return response()->json([
+            'data' => [
+                'id' => (string) $post->id,
+                'title' => $post->title,
+                'slug' => $post->slug,
+                'summary' => $post->summary,
+                'content' => $post->content,
+                'cover_image_url' => $post->cover_image_url,
+                'youtube_video_url' => $post->youtube_video_url,
+                'youtube_embed_url' => $post->youtube_embed_url,
+                'category' => $post->category,
+                'tags' => $post->tags ?? [],
+                'status' => $post->status,
+                'is_featured' => (bool) $post->is_featured,
+                'reading_time_minutes' => $post->reading_time_minutes,
+                'views_count' => $post->views_count,
+                'author' => [
+                    'id' => (string) $post->author->id,
+                    'name' => $post->author->name,
+                    'photo_path' => $post->author->photo_path,
+                ],
+                'published_at' => $post->published_at?->toIso8601String(),
+                'createdAt' => $post->created_at->toIso8601String(),
+                'updatedAt' => $post->updated_at->toIso8601String(),
+            ],
+        ]);
+    });
+
+    Route::get('blog', function () {
+        $user = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($user, 401);
+
+        $category = request('category');
+        $tag = request('tag');
+        $featured = request()->boolean('featured');
+
+        $posts = \App\Models\BlogPost::published()
+            ->when($category, fn ($q) => $q->where('category', $category))
+            ->when($tag, fn ($q) => $q->whereJsonContains('tags', $tag))
+            ->when($featured, fn ($q) => $q->featured())
+            ->with('author:id,name,photo_path')
+            ->orderByDesc('is_featured')
+            ->orderByDesc('published_at')
+            ->get();
+
+        return response()->json([
+            'data' => $posts->map(fn ($post) => [
+                'id' => (string) $post->id,
+                'title' => $post->title,
+                'slug' => $post->slug,
+                'summary' => $post->summary,
+                'cover_image_url' => $post->cover_image_url,
+                'youtube_video_url' => $post->youtube_video_url,
+                'category' => $post->category,
+                'tags' => $post->tags ?? [],
+                'status' => $post->status,
+                'is_featured' => (bool) $post->is_featured,
+                'reading_time_minutes' => $post->reading_time_minutes,
+                'views_count' => $post->views_count,
+                'author' => [
+                    'id' => (string) $post->author->id,
+                    'name' => $post->author->name,
+                    'photo_path' => $post->author->photo_path,
+                ],
+                'published_at' => $post->published_at?->toIso8601String(),
+                'createdAt' => $post->created_at->toIso8601String(),
+                'updatedAt' => $post->updated_at->toIso8601String(),
+            ])->values(),
+        ]);
+    });
+
+    Route::get('blog/{slug}', function (string $slug) {
+        $user = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($user, 401);
+
+        $post = \App\Models\BlogPost::published()
+            ->where('slug', $slug)
+            ->with('author:id,name,photo_path')
+            ->firstOrFail();
+
+        $post->incrementViews();
+
+        return response()->json([
+            'data' => [
+                'id' => (string) $post->id,
+                'title' => $post->title,
+                'slug' => $post->slug,
+                'summary' => $post->summary,
+                'content' => $post->content,
+                'cover_image_url' => $post->cover_image_url,
+                'youtube_video_url' => $post->youtube_video_url,
+                'youtube_embed_url' => $post->youtube_embed_url,
+                'category' => $post->category,
+                'tags' => $post->tags ?? [],
+                'status' => $post->status,
+                'is_featured' => (bool) $post->is_featured,
+                'reading_time_minutes' => $post->reading_time_minutes,
+                'views_count' => $post->views_count,
+                'author' => [
+                    'id' => (string) $post->author->id,
+                    'name' => $post->author->name,
+                    'photo_path' => $post->author->photo_path,
+                ],
+                'published_at' => $post->published_at?->toIso8601String(),
+                'createdAt' => $post->created_at->toIso8601String(),
+                'updatedAt' => $post->updated_at->toIso8601String(),
+            ],
+        ]);
+    });
+
+    Route::post('blog', function () {
+        $me = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+
+        $validated = request()->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:255', 'unique:blog_posts,slug'],
+            'summary' => ['nullable', 'string', 'max:500'],
+            'content' => ['required', 'string'],
+            'cover_image_url' => ['nullable', 'string', 'max:2048'],
+            'youtube_video_url' => ['nullable', 'url', 'max:2048'],
+            'category' => ['required', 'in:feature,improvement,tutorial,announcement'],
+            'tags' => ['nullable', 'array'],
+            'tags.*' => ['string', 'max:50'],
+            'status' => ['required', 'in:draft,published'],
+            'is_featured' => ['nullable', 'boolean'],
+            'published_at' => ['nullable', 'date'],
+        ]);
+
+        if ($validated['status'] === 'published' && empty($validated['published_at'])) {
+            $validated['published_at'] = now();
+        }
+
+        $post = \App\Models\BlogPost::create(array_merge($validated, ['author_id' => $me->id]));
+
+        return response()->json(['data' => ['id' => (string) $post->id, 'slug' => $post->slug]], 201);
+    });
+
+    Route::put('blog/{post}', function (\App\Models\BlogPost $post) {
+        $me = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+
+        $validated = request()->validate([
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:255', 'unique:blog_posts,slug,' . $post->id],
+            'summary' => ['nullable', 'string', 'max:500'],
+            'content' => ['sometimes', 'required', 'string'],
+            'cover_image_url' => ['nullable', 'string', 'max:2048'],
+            'youtube_video_url' => ['nullable', 'url', 'max:2048'],
+            'category' => ['sometimes', 'required', 'in:feature,improvement,tutorial,announcement'],
+            'tags' => ['nullable', 'array'],
+            'tags.*' => ['string', 'max:50'],
+            'status' => ['sometimes', 'required', 'in:draft,published'],
+            'is_featured' => ['nullable', 'boolean'],
+            'published_at' => ['nullable', 'date'],
+        ]);
+
+        if (isset($validated['status']) && $validated['status'] === 'published' && !$post->published_at && empty($validated['published_at'])) {
+            $validated['published_at'] = now();
+        }
+
+        $post->update($validated);
+
+        return response()->json(['data' => ['id' => (string) $post->id, 'slug' => $post->slug]]);
+    });
+
+    Route::delete('blog/{post}', function (\App\Models\BlogPost $post) {
+        $me = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+
+        $post->delete();
+
+        return response()->json(['ok' => true]);
+    });
+
+    // ── Changelog ──────────────────────────────────────────────────────────────
+
+    Route::get('changelog/admin', function () {
+        $me = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+
+        $changelogs = \App\Models\Changelog::with(['entries.relatedBlogPost:id,title,slug'])
+            ->orderByDesc('release_date')
+            ->get();
+
+        return response()->json([
+            'data' => $changelogs->map(fn ($log) => [
+                'id' => (string) $log->id,
+                'version' => $log->version,
+                'title' => $log->title,
+                'summary' => $log->summary,
+                'release_date' => $log->release_date->toDateString(),
+                'is_major' => (bool) $log->is_major,
+                'is_published' => (bool) $log->is_published,
+                'entries' => $log->entries->map(fn ($entry) => [
+                    'id' => (string) $entry->id,
+                    'changelog_id' => (string) $entry->changelog_id,
+                    'type' => $entry->type,
+                    'description' => $entry->description,
+                    'module' => $entry->module,
+                    'sort_order' => $entry->sort_order,
+                    'related_blog_post' => $entry->relatedBlogPost ? [
+                        'id' => (string) $entry->relatedBlogPost->id,
+                        'title' => $entry->relatedBlogPost->title,
+                        'slug' => $entry->relatedBlogPost->slug,
+                    ] : null,
+                ])->values(),
+                'createdAt' => $log->created_at->toIso8601String(),
+                'updatedAt' => $log->updated_at->toIso8601String(),
+            ])->values(),
+        ]);
+    });
+
+    Route::get('changelog/admin/{changelog}', function (\App\Models\Changelog $changelog) {
+        $me = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+
+        return response()->json([
+            'data' => [
+                'id' => (string) $changelog->id,
+                'version' => $changelog->version,
+                'title' => $changelog->title,
+                'summary' => $changelog->summary,
+                'release_date' => $changelog->release_date->toDateString(),
+                'is_major' => (bool) $changelog->is_major,
+                'is_published' => (bool) $changelog->is_published,
+                'entries' => $changelog->entries->map(fn ($entry) => [
+                    'id' => (string) $entry->id,
+                    'changelog_id' => (string) $entry->changelog_id,
+                    'type' => $entry->type,
+                    'description' => $entry->description,
+                    'module' => $entry->module,
+                    'sort_order' => $entry->sort_order,
+                    'related_blog_post' => $entry->relatedBlogPost ? [
+                        'id' => (string) $entry->relatedBlogPost->id,
+                        'title' => $entry->relatedBlogPost->title,
+                        'slug' => $entry->relatedBlogPost->slug,
+                    ] : null,
+                ])->values(),
+                'createdAt' => $changelog->created_at->toIso8601String(),
+                'updatedAt' => $changelog->updated_at->toIso8601String(),
+            ],
+        ]);
+    });
+
+    Route::get('changelog', function () {
+        $user = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($user, 401);
+
+        $changelogs = \App\Models\Changelog::published()
+            ->with(['entries.relatedBlogPost:id,title,slug'])
+            ->orderByDesc('release_date')
+            ->get();
+
+        return response()->json([
+            'data' => $changelogs->map(fn ($log) => [
+                'id' => (string) $log->id,
+                'version' => $log->version,
+                'title' => $log->title,
+                'summary' => $log->summary,
+                'release_date' => $log->release_date->toDateString(),
+                'is_major' => (bool) $log->is_major,
+                'is_published' => (bool) $log->is_published,
+                'entries' => $log->entries->map(fn ($entry) => [
+                    'id' => (string) $entry->id,
+                    'changelog_id' => (string) $entry->changelog_id,
+                    'type' => $entry->type,
+                    'description' => $entry->description,
+                    'module' => $entry->module,
+                    'sort_order' => $entry->sort_order,
+                    'related_blog_post' => $entry->relatedBlogPost ? [
+                        'id' => (string) $entry->relatedBlogPost->id,
+                        'title' => $entry->relatedBlogPost->title,
+                        'slug' => $entry->relatedBlogPost->slug,
+                    ] : null,
+                ])->values(),
+                'createdAt' => $log->created_at->toIso8601String(),
+                'updatedAt' => $log->updated_at->toIso8601String(),
+            ])->values(),
+        ]);
+    });
+
+    Route::post('changelog', function () {
+        $me = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+
+        $validated = request()->validate([
+            'version' => ['required', 'string', 'max:20', 'unique:changelogs,version'],
+            'title' => ['required', 'string', 'max:255'],
+            'summary' => ['nullable', 'string'],
+            'release_date' => ['required', 'date'],
+            'is_major' => ['nullable', 'boolean'],
+            'is_published' => ['nullable', 'boolean'],
+            'entries' => ['nullable', 'array'],
+            'entries.*.type' => ['required', 'in:new,improvement,fix,breaking,security'],
+            'entries.*.description' => ['required', 'string'],
+            'entries.*.module' => ['nullable', 'string', 'max:100'],
+            'entries.*.related_blog_post_id' => ['nullable', 'exists:blog_posts,id'],
+            'entries.*.sort_order' => ['nullable', 'integer'],
+        ]);
+
+        $entries = $validated['entries'] ?? [];
+        unset($validated['entries']);
+
+        $changelog = \App\Models\Changelog::create(array_merge($validated, ['created_by' => $me->id]));
+
+        foreach ($entries as $index => $entry) {
+            $changelog->entries()->create(array_merge($entry, [
+                'sort_order' => $entry['sort_order'] ?? $index,
+            ]));
+        }
+
+        return response()->json(['data' => ['id' => (string) $changelog->id]], 201);
+    });
+
+    Route::put('changelog/{changelog}', function (\App\Models\Changelog $changelog) {
+        $me = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+
+        $validated = request()->validate([
+            'version' => ['sometimes', 'required', 'string', 'max:20', 'unique:changelogs,version,' . $changelog->id],
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'summary' => ['nullable', 'string'],
+            'release_date' => ['sometimes', 'required', 'date'],
+            'is_major' => ['nullable', 'boolean'],
+            'is_published' => ['nullable', 'boolean'],
+        ]);
+
+        $changelog->update($validated);
+
+        return response()->json(['data' => ['id' => (string) $changelog->id]]);
+    });
+
+    Route::delete('changelog/{changelog}', function (\App\Models\Changelog $changelog) {
+        $me = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+
+        $changelog->delete();
+
+        return response()->json(['ok' => true]);
+    });
+
+    Route::post('changelog/{changelog}/entries', function (\App\Models\Changelog $changelog) {
+        $me = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+
+        $validated = request()->validate([
+            'type' => ['required', 'in:new,improvement,fix,breaking,security'],
+            'description' => ['required', 'string'],
+            'module' => ['nullable', 'string', 'max:100'],
+            'related_blog_post_id' => ['nullable', 'exists:blog_posts,id'],
+            'sort_order' => ['nullable', 'integer'],
+        ]);
+
+        $entry = $changelog->entries()->create($validated);
+
+        return response()->json(['data' => ['id' => (string) $entry->id]], 201);
+    });
+
+    Route::put('changelog/{changelog}/entries/{entry}', function (\App\Models\Changelog $changelog, \App\Models\ChangelogEntry $entry) {
+        $me = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+        abort_unless($entry->changelog_id === $changelog->id, 404);
+
+        $validated = request()->validate([
+            'type' => ['sometimes', 'required', 'in:new,improvement,fix,breaking,security'],
+            'description' => ['sometimes', 'required', 'string'],
+            'module' => ['nullable', 'string', 'max:100'],
+            'related_blog_post_id' => ['nullable', 'exists:blog_posts,id'],
+            'sort_order' => ['nullable', 'integer'],
+        ]);
+
+        $entry->update($validated);
+
+        return response()->json(['data' => ['id' => (string) $entry->id]]);
+    });
+
+    Route::delete('changelog/{changelog}/entries/{entry}', function (\App\Models\Changelog $changelog, \App\Models\ChangelogEntry $entry) {
+        $me = auth('web')->user() ?? auth('employee')->user();
+        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+        abort_unless($entry->changelog_id === $changelog->id, 404);
+
+        $entry->delete();
+
+        return response()->json(['ok' => true]);
+    });
 });

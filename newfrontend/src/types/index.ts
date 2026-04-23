@@ -901,3 +901,66 @@ export interface ApiResponse<T> {
     totalPages: number;
   };
 }
+
+// ── Blog Posts (Últimas Atualizações) ──
+export type BlogPostCategory = 'feature' | 'improvement' | 'tutorial' | 'announcement' | string;
+export type BlogPostStatus = 'draft' | 'published';
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string | null;
+  content: string;
+  cover_image_url: string | null;
+  youtube_video_url: string | null;
+  youtube_embed_url: string | null;
+  category: BlogPostCategory;
+  tags: string[] | null;
+  status: BlogPostStatus;
+  is_featured: boolean;
+  reading_time_minutes: number;
+  views_count: number;
+  author: {
+    id: string;
+    name: string;
+    photo_path?: string | null;
+  };
+  published_at: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── Changelog ──
+export type ChangelogEntryType = 'new' | 'improvement' | 'fix' | 'breaking' | 'security' | string;
+
+export interface ChangelogEntry {
+  id: string;
+  changelog_id: string;
+  type: ChangelogEntryType;
+  description: string;
+  module: string | null;
+  sort_order: number;
+  related_blog_post?: {
+    id: string;
+    title: string;
+    slug: string;
+  } | null;
+}
+
+export interface Changelog {
+  id: string;
+  version: string;
+  title: string;
+  summary: string | null;
+  release_date: string;
+  is_major: boolean;
+  is_published: boolean;
+  entries: ChangelogEntry[];
+  creator?: {
+    id: string;
+    name: string;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+}
