@@ -318,7 +318,7 @@ export default function Quizzes() {
                         <td className="p-4">{genderLabel}</td>
                         <td className="p-4">{age ?? "—"}</td>
                         <td className="p-4">
-                          <span className="text-xs px-2 py-1 rounded-full bg-info/10 text-info-foreground">
+                          <span className="text-xs px-2 py-1 rounded-full bg-cyan-500/10 text-cyan-300">
                             {planLabel}
                           </span>
                         </td>
