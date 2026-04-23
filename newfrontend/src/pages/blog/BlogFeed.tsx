@@ -130,7 +130,7 @@ export default function BlogFeed() {
 
   const featured = posts.find(p => p.is_featured)
   const filtered = posts.filter(p =>
-    (activeCategory === 'all' || p.category === activeCategory) && !(p.is_featured && activeCategory === 'all')
+    activeCategory === 'all' || p.category === activeCategory
   )
   const usedCategories = Array.from(new Set(posts.map(p => p.category)))
 
@@ -178,12 +178,14 @@ export default function BlogFeed() {
             </div>
           )}
 
-          {filtered.length === 0 ? (
+          {posts.length === 0 ? (
             <div className="rounded-xl border border-border bg-card py-16 text-center">
               <Newspaper className="mx-auto mb-3 h-8 w-8 text-muted-foreground/30" />
-              <p className="text-sm text-muted-foreground">
-                {activeCategory === 'all' ? 'Ainda não há publicações.' : 'Nenhuma publicação nesta categoria.'}
-              </p>
+              <p className="text-sm text-muted-foreground">Ainda não há publicações.</p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="rounded-xl border border-border bg-card py-10 text-center">
+              <p className="text-sm text-muted-foreground">Nenhuma publicação nesta categoria.</p>
             </div>
           ) : (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
