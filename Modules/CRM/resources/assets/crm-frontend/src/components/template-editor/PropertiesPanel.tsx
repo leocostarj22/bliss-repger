@@ -8,12 +8,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { ImagePlus, Trash2 } from 'lucide-react';
+import { ImagePlus, Sparkles, Trash2 } from 'lucide-react';
 import { handleImageUpload } from '@/lib/tiptap-utils';
 import { toast } from 'react-hot-toast';
 import { fetchEmailMedia, deleteEmailMedia, type EmailMediaItem } from '@/services/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { v4Fallback } from '@/lib/id';
+import { AiTextDialog } from './AiTextDialog';
+import { StockMediaDialog } from './StockMediaDialog';
 
 // Função para extrair thumbnail de vídeo
 function getVideoThumbnailUrl(url: string): string | null {
@@ -55,6 +57,9 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
   const [mediaColumnIndex, setMediaColumnIndex] = useState<number | null>(null);
   const set = (key: string, val: unknown) => onChange({ ...p, [key]: val });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [aiTextOpen, setAiTextOpen] = useState(false);
+  const [stockOpen, setStockOpen] = useState(false);
+  const [stockDefaultType, setStockDefaultType] = useState<'images' | 'videos'>('images');
 
   // Efeito para carregar thumbnail automaticamente quando URL do vídeo mudar
   useEffect(() => {
@@ -250,29 +255,57 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
         Propriedades — {block.type}
       </h3>
 
+      <AiTextDialog
+        open={aiTextOpen}
+        onOpenChange={setAiTextOpen}
+        currentContent={block.type === 'text' ? String(p.content || '') : ''}
+        onApply={(html) => set('content', html)}
+      />
+
+      <StockMediaDialog
+        open={stockOpen}
+        onOpenChange={setStockOpen}
+        defaultType={stockDefaultType}
+        onSelectImage={(url, alt) => onChange({ ...p, src: url, alt })}
+        onSelectVideo={(url) => onChange({ ...p, url })}
+      />
+
       {block.type === 'text' && (
         <>
           <Field label="Conteúdo">
-            <RichTextEditor value={String(p.content || '')} onChange={(html) => set('content', html)} />
-          </Field>
-          <Field label="Espaçamento entre linhas">
-            <div className="flex items-center gap-3">
-              <Slider
-                value={[Number((p as any).lineHeight ?? 1.5)]}
-                onValueChange={([v]) => set('lineHeight', v)}
-                min={1}
-                max={2.4}
-                step={0.1}
-                className="flex-1"
-              />
-              <span className="text-xs text-muted-foreground w-8 text-right">{String((p as any).lineHeight ?? 1.5)}</span>
+            <div className="space-y-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full gap-1.5 border-dashed text-primary hover:text-primary hover:bg-primary/5"
+                onClick={() => setAiTextOpen(true)}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Escrever com IA
+              </Button>
+              <RichTextEditor value={String(p.content || '')} onChange={(html) => set('content', html)} />
             </div>
           </Field>
-          <Field label="Cor do texto">
-            <Input type="color" value={String(p.color)} onChange={e => set('color', e.target.value)} className="h-9 w-full" />
+          <Field label="Tamanho da fonte">
+            <SliderWithValue
+              value={Number((p as any).fontSize ?? 16)}
+              onChange={v => set('fontSize', v)}
+              min={10} max={48} step={1} suffix="px"
+            />
           </Field>
-          <Field label="Cor de fundo">
-            <Input type="color" value={String((p as any).bgColor || '#ffffff')} onChange={e => set('bgColor', e.target.value)} className="h-9 w-full" />
+          <Field label="Espaçamento entre linhas">
+            <SliderWithValue
+              value={Number((p as any).lineHeight ?? 1.5)}
+              onChange={v => set('lineHeight', v)}
+              min={1} max={2.4} step={0.1}
+            />
+          </Field>
+          <Field label="Cores">
+            <div className="grid grid-cols-2 gap-2">
+              <ColorSwatch label="Texto" value={String(p.color || '#333333')} onChange={v => set('color', v)} />
+              <ColorSwatch label="Fundo" value={String((p as any).bgColor || '#ffffff')} onChange={v => set('bgColor', v)} />
+            </div>
           </Field>
           <Field label="Alinhamento">
             <AlignSelect value={String(p.align)} onChange={v => set('align', v)} />
@@ -282,38 +315,97 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
 
       {block.type === 'image' && (
         <>
-          <Field label="URL da imagem">
+          <Field label="Imagem">
             <div className="flex gap-2">
-              <Input value={String(p.src)} onChange={e => set('src', e.target.value)} className="text-sm" />
-              <Button
-                variant="outline"
-                size="icon"
-                className="shrink-0"
-                onClick={() => fileInputRef.current?.click()}
-                title="Carregar do PC"
-              >
+              <Input value={String(p.src)} onChange={e => set('src', e.target.value)} className="text-sm" placeholder="https://..." />
+              <Button variant="outline" size="icon" className="shrink-0" onClick={() => fileInputRef.current?.click()} title="Carregar do PC">
                 <ImagePlus className="h-4 w-4" />
               </Button>
             </div>
-            <div className="mt-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => { setMediaColumnIndex(null); setMediaOpen(true); }}
-              >
+            {String(p.src) && (
+              <div className="mt-2 rounded-md overflow-hidden border border-border bg-muted aspect-video">
+                <img src={String(p.src)} alt={String(p.alt || '')} className="w-full h-full object-contain" />
+              </div>
+            )}
+            <div className="mt-2 flex flex-col gap-1.5">
+              <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => { setMediaColumnIndex(null); setMediaOpen(true); }}>
                 Escolher do servidor
+              </Button>
+              <Button type="button" variant="outline" size="sm" className="w-full gap-1.5 text-primary border-primary/40 hover:bg-primary/5"
+                onClick={() => { setStockDefaultType('images'); setStockOpen(true); }}>
+                <ImagePlus className="w-3.5 h-3.5" /> Banco de imagens (Pexels)
               </Button>
             </div>
           </Field>
+
+          <Field label="Largura">
+            {(() => {
+              const raw = String(p.width ?? '100%')
+              const pct = raw.match(/^(\d+)%$/) ? parseInt(raw) : null
+              return (
+                <div className="space-y-2">
+                  {pct !== null ? (
+                    <SliderWithValue value={pct} onChange={v => set('width', v + '%')} min={10} max={100} step={5} suffix="%" />
+                  ) : null}
+                  <Input value={raw} onChange={e => set('width', e.target.value)} className="text-sm" placeholder="100% ou 300px" />
+                </div>
+              )
+            })()}
+          </Field>
+
+          <Field label="Altura máxima">
+            {(() => {
+              const raw = String(p.maxHeight ?? 'auto')
+              const px = raw.match(/^(\d+)px$/) ? parseInt(raw) : null
+              return (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={raw !== 'auto'}
+                      onChange={e => set('maxHeight', e.target.checked ? '400px' : 'auto')}
+                      className="rounded"
+                      id="maxh-toggle"
+                    />
+                    <label htmlFor="maxh-toggle" className="text-xs text-muted-foreground cursor-pointer">Limitar altura</label>
+                  </div>
+                  {px !== null && (
+                    <SliderWithValue value={px} onChange={v => set('maxHeight', v + 'px')} min={50} max={800} step={10} suffix="px" />
+                  )}
+                </div>
+              )
+            })()}
+          </Field>
+
+          <Field label="Ajuste da imagem">
+            <Select value={String(p.objectFit ?? 'cover')} onValueChange={v => set('objectFit', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cover">Cobrir (recortar)</SelectItem>
+                <SelectItem value="contain">Conter (sem recorte)</SelectItem>
+                <SelectItem value="fill">Esticar</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+
+          <Field label="Borda arredondada">
+            <SliderWithValue
+              value={Number(p.borderRadius ?? 0)}
+              onChange={v => set('borderRadius', v)}
+              min={0} max={48} step={2} suffix="px"
+            />
+          </Field>
+
+          <Field label="Alinhamento">
+            <AlignSelect value={String(p.align ?? 'center')} onChange={v => set('align', v)} />
+          </Field>
+
+          <Field label="Texto alternativo">
+            <Input value={String(p.alt || '')} onChange={e => set('alt', e.target.value)} className="text-sm" placeholder="Descrição da imagem" />
+          </Field>
+
           <Field label="Hyperlink (opcional)">
             <Input value={String(p.hyperlink || '')} onChange={e => set('hyperlink', e.target.value)} className="text-sm" placeholder="https://exemplo.com" />
-          </Field>
-          <Field label="Texto alternativo">
-            <Input value={String(p.alt)} onChange={e => set('alt', e.target.value)} className="text-sm" />
-          </Field>
-          <Field label="Largura">
-            <Input value={String(p.width)} onChange={e => set('width', e.target.value)} className="text-sm" placeholder="100% ou 300px" />
           </Field>
         </>
       )}
@@ -324,44 +416,58 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
             <Input value={String(p.text)} onChange={e => set('text', e.target.value)} className="text-sm" />
           </Field>
           <Field label="URL">
-            <Input 
-              value={String(p.url)} 
-              onChange={e => {
-                const value = e.target.value;
-                set('url', value);
-              }} 
-              className="text-sm" 
-              placeholder="https://exemplo.com"
-            />
+            <Input value={String(p.url)} onChange={e => set('url', e.target.value)} className="text-sm" placeholder="https://exemplo.com" />
           </Field>
-          <Field label="Cor de fundo">
-            <Input type="color" value={String(p.bgColor)} onChange={e => set('bgColor', e.target.value)} className="h-9 w-full" />
+          <Field label="Cores">
+            <div className="grid grid-cols-2 gap-2">
+              <ColorSwatch label="Fundo" value={String(p.bgColor || '#1a8a8a')} onChange={v => set('bgColor', v)} />
+              <ColorSwatch label="Texto" value={String(p.textColor || '#ffffff')} onChange={v => set('textColor', v)} />
+            </div>
           </Field>
-          <Field label="Cor do texto">
-            <Input type="color" value={String(p.textColor)} onChange={e => set('textColor', e.target.value)} className="h-9 w-full" />
+          <Field label="Tamanho da fonte">
+            <SliderWithValue value={Number(p.fontSize ?? 16)} onChange={v => set('fontSize', v)} min={10} max={32} step={1} suffix="px" />
+          </Field>
+          <Field label="Padding (px)">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <span className="text-[11px] text-muted-foreground">Vertical</span>
+                <SliderWithValue value={Number(p.paddingV ?? 12)} onChange={v => set('paddingV', v)} min={4} max={32} step={2} suffix="px" />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[11px] text-muted-foreground">Horizontal</span>
+                <SliderWithValue value={Number(p.paddingH ?? 24)} onChange={v => set('paddingH', v)} min={8} max={64} step={4} suffix="px" />
+              </div>
+            </div>
+          </Field>
+          <Field label="Borda arredondada">
+            <SliderWithValue value={Number(p.borderRadius ?? 6)} onChange={v => set('borderRadius', v)} min={0} max={32} step={1} suffix="px" />
           </Field>
           <Field label="Alinhamento">
             <AlignSelect value={String(p.align)} onChange={v => set('align', v)} />
-          </Field>
-          <Field label="Borda arredondada">
-            <div className="flex items-center gap-3">
-              <Slider value={[Number(p.borderRadius)]} onValueChange={([v]) => set('borderRadius', v)} min={0} max={32} step={1} className="flex-1" />
-              <span className="text-xs text-muted-foreground w-8 text-right">{String(p.borderRadius)}px</span>
-            </div>
           </Field>
         </>
       )}
 
       {block.type === 'divider' && (
         <>
+          <Field label="Estilo">
+            <Select value={String(p.style ?? 'solid')} onValueChange={v => set('style', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="solid">Sólido</SelectItem>
+                <SelectItem value="dashed">Tracejado</SelectItem>
+                <SelectItem value="dotted">Pontilhado</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
           <Field label="Espessura">
-            <Slider value={[Number(p.height)]} onValueChange={([v]) => set('height', v)} min={1} max={8} step={1} />
+            <SliderWithValue value={Number(p.height ?? 1)} onChange={v => set('height', v)} min={1} max={8} step={1} suffix="px" />
           </Field>
           <Field label="Cor">
-            <Input type="color" value={String(p.color)} onChange={e => set('color', e.target.value)} className="h-9 w-full" />
+            <ColorSwatch label="Linha" value={String(p.color || '#e0e0e0')} onChange={v => set('color', v)} />
           </Field>
-          <Field label="Margem">
-            <Slider value={[Number(p.margin)]} onValueChange={([v]) => set('margin', v)} min={0} max={48} step={4} />
+          <Field label="Margem vertical">
+            <SliderWithValue value={Number(p.margin ?? 16)} onChange={v => set('margin', v)} min={0} max={48} step={4} suffix="px" />
           </Field>
         </>
       )}
@@ -464,12 +570,23 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
       {block.type === 'video' && (
         <>
           <Field label="URL do vídeo">
-            <Input 
-              value={String(p.url)} 
-              onChange={e => set('url', e.target.value)} 
-              className="text-sm" 
+            <Input
+              value={String(p.url)}
+              onChange={e => set('url', e.target.value)}
+              className="text-sm"
               placeholder="https://youtube.com/watch?v=... ou https://vimeo.com/..."
             />
+            <div className="mt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-1.5 text-primary border-primary/40 hover:bg-primary/5"
+                onClick={() => { setStockDefaultType('videos'); setStockOpen(true); }}
+              >
+                <ImagePlus className="w-4 h-4" />
+                Banco de vídeos (Pexels)
+              </Button>
+            </div>
           </Field>
           
           {/* Preview da thumbnail */}
@@ -477,12 +594,11 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
             <Field label="Thumbnail do vídeo">
               <div className="space-y-2">
                 <div className="relative w-full h-32 bg-gray-100 rounded-lg overflow-hidden">
-                  <img 
-                    src={videoThumbnail || p.thumbnailUrl} 
-                    alt="Thumbnail do vídeo" 
+                  <img
+                    src={videoThumbnail || String(p.thumbnailUrl ?? '')}
+                    alt="Thumbnail do vídeo"
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      // Se a imagem falhar, esconde o preview
+                    onError={() => {
                       setVideoThumbnail(null);
                     }}
                   />
@@ -573,18 +689,10 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
             </div>
           </Field>
           <Field label="Cor dos ícones">
-            <Input 
-              type="color" 
-              value={String(p.color || '#333333')} 
-              onChange={e => set('color', e.target.value)} 
-              className="h-9 w-full" 
-            />
+            <ColorSwatch label="Cor" value={String(p.color || '#333333')} onChange={v => set('color', v)} />
           </Field>
           <Field label="Tamanho dos ícones">
-            <div className="flex items-center gap-3">
-              <Slider value={[Number(p.iconSize)]} onValueChange={([v]) => set('iconSize', v)} min={20} max={48} step={2} className="flex-1" />
-              <span className="text-xs text-muted-foreground w-8 text-right">{String(p.iconSize)}px</span>
-            </div>
+            <SliderWithValue value={Number(p.iconSize ?? 28)} onChange={v => set('iconSize', v)} min={20} max={48} step={2} suffix="px" />
           </Field>
           <Field label="Alinhamento">
             <AlignSelect value={String(p.align)} onChange={v => set('align', v)} />
@@ -614,5 +722,35 @@ function AlignSelect({ value, onChange }: { value: string; onChange: (v: string)
         <SelectItem value="right">Direita</SelectItem>
       </SelectContent>
     </Select>
+  );
+}
+
+function ColorSwatch({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="space-y-1">
+      <span className="text-[11px] text-muted-foreground">{label}</span>
+      <label className="flex items-center gap-2 h-8 px-2 rounded-md border border-border bg-background cursor-pointer hover:bg-muted/40 transition-colors">
+        <input
+          type="color"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className="w-5 h-5 rounded cursor-pointer border-0 p-0 bg-transparent flex-shrink-0"
+          style={{ appearance: 'none' }}
+        />
+        <span className="text-xs font-mono text-muted-foreground truncate">{value}</span>
+      </label>
+    </div>
+  );
+}
+
+function SliderWithValue({ value, onChange, min, max, step, suffix = '' }: {
+  value: number; onChange: (v: number) => void;
+  min: number; max: number; step: number; suffix?: string
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Slider value={[value]} onValueChange={([v]) => onChange(v)} min={min} max={max} step={step} className="flex-1" />
+      <span className="text-xs text-muted-foreground w-12 text-right shrink-0">{value}{suffix}</span>
+    </div>
   );
 }

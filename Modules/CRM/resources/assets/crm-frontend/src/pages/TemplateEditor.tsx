@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
-import { ArrowLeft, Monitor, Smartphone, Save, Code2, Eye } from 'lucide-react';
+import { ArrowLeft, Monitor, Smartphone, Save, Code2, Eye, Sparkles } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { v4Fallback } from '@/lib/id';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { BlockPalette } from '@/components/template-editor/BlockPalette';
 import { EditorCanvas } from '@/components/template-editor/EditorCanvas';
 import { PropertiesPanel } from '@/components/template-editor/PropertiesPanel';
+import { AiTemplateDialog } from '@/components/template-editor/AiTemplateDialog';
 import type { TemplateBlock, BlockType } from '@/types/template';
 import { DEFAULT_BLOCK_PROPS } from '@/types/template';
 import { cn, playSound } from '@/lib/utils';
@@ -46,6 +47,7 @@ export default function TemplateEditor() {
   const isMobile = useIsMobile();
   const [panelWidth, setPanelWidth] = useState<number>(320);
   const [propsOpen, setPropsOpen] = useState(false);
+  const [aiTemplateOpen, setAiTemplateOpen] = useState(false);
 
   const startResize = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -326,6 +328,14 @@ export default function TemplateEditor() {
           >
             <Eye className="w-4 h-4" /> Propriedades
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-primary border-primary/40 hover:bg-primary/5"
+            onClick={() => setAiTemplateOpen(true)}
+          >
+            <Sparkles className="w-4 h-4" /> Gerar com IA
+          </Button>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setJsonOpen(true)}>
             <Code2 className="w-4 h-4" /> JSON
           </Button>
@@ -395,6 +405,15 @@ export default function TemplateEditor() {
           )}
         </div>
       </DragDropContext>
+
+      <AiTemplateDialog
+        open={aiTemplateOpen}
+        onOpenChange={setAiTemplateOpen}
+        onApply={(generatedBlocks) => {
+          setBlocks(generatedBlocks);
+          setSelectedId(null);
+        }}
+      />
 
       {/* JSON Modal */}
       <Dialog open={jsonOpen} onOpenChange={setJsonOpen}>

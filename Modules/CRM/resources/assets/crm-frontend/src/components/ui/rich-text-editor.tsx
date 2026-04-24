@@ -21,6 +21,73 @@ import {
 import { useCallback, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+
+function ColorPickerPopover({
+  colors,
+  currentColor,
+  onSelect,
+  onClear,
+  title,
+  icon,
+}: {
+  colors: string[]
+  currentColor: string
+  onSelect: (color: string) => void
+  onClear: () => void
+  title: string
+  icon: React.ReactNode
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          title={title}
+          className="flex items-center gap-0.5 p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground"
+        >
+          {icon}
+          <span
+            className="w-4 h-1.5 rounded-sm border border-border/60 block"
+            style={{ backgroundColor: currentColor }}
+          />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-2.5" align="start" sideOffset={4}>
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {colors.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => onSelect(c)}
+              className="w-6 h-6 rounded border border-border/50 hover:scale-110 transition-transform focus:outline-none focus:ring-1 focus:ring-primary"
+              style={{ backgroundColor: c }}
+              title={c}
+            />
+          ))}
+        </div>
+        <div className="flex items-center gap-1.5 pt-1.5 border-t border-border">
+          <input
+            type="color"
+            value={currentColor}
+            onChange={(e) => onSelect(e.target.value)}
+            className="w-7 h-7 p-0 border rounded cursor-pointer flex-shrink-0"
+            title="Cor personalizada"
+          />
+          <span className="text-[11px] text-muted-foreground flex-1">Personalizar</span>
+          <button
+            type="button"
+            onClick={onClear}
+            className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            title="Remover cor"
+          >
+            <Eraser className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
 
 interface RichTextEditorProps {
   value: string
@@ -276,63 +343,23 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
           </Select>
         </div>
 
-        <div className="flex items-center gap-1">
-          <Droplet className="w-4 h-4 text-muted-foreground" title="Cor do texto" />
-          <div className="flex items-center gap-1">
-            {['#000000','#333333','#666666','#999999','#FFFFFF','#1A8A8A','#0E7490','#14B8A6','#E11D48','#F59E0B','#10B981','#3B82F6','#7C3AED'].map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => editor?.chain().focus().setColor(c).run()}
-                className="w-5 h-5 rounded border"
-                style={{ backgroundColor: c }}
-                title={c}
-              />
-            ))}
-          </div>
-          <input
-            type="color"
-            value={String(editor?.getAttributes('textStyle')?.color || '#000000')}
-            onChange={(e) => {
-              if (!editor) return;
-              editor.chain().focus().setColor(e.target.value).run();
-            }}
-            title="Cor do texto (seleção)"
-            className="w-8 h-8 p-0 border rounded"
-          />
-          <ToolbarButton onClick={() => editor?.chain().focus().unsetColor().run()} title="Remover cor">
-            <Eraser className="w-4 h-4" />
-          </ToolbarButton>
-        </div>
+        <ColorPickerPopover
+          colors={['#000000','#333333','#666666','#999999','#FFFFFF','#1A8A8A','#0E7490','#14B8A6','#E11D48','#F59E0B','#10B981','#3B82F6','#7C3AED']}
+          currentColor={String(editor?.getAttributes('textStyle')?.color || '#000000')}
+          onSelect={(c) => editor?.chain().focus().setColor(c).run()}
+          onClear={() => editor?.chain().focus().unsetColor().run()}
+          title="Cor do texto"
+          icon={<Droplet className="w-4 h-4" />}
+        />
 
-        <div className="flex items-center gap-1">
-          <Droplet className="w-4 h-4 text-muted-foreground" title="Fundo (highlight)" />
-          <div className="flex items-center gap-1">
-            {['#FFFACD','#FEF08A','#FDE68A','#E9D5FF','#BFDBFE','#D1FAE5','#FBCFE8','#FCA5A5','#E5E7EB'].map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => editor?.chain().focus().setHighlight({ color: c }).run()}
-                className="w-5 h-5 rounded border"
-                style={{ backgroundColor: c }}
-                title={c}
-              />
-            ))}
-          </div>
-          <input
-            type="color"
-            value={String(editor?.getAttributes('highlight')?.color || '#FFFACD')}
-            onChange={(e) => {
-              if (!editor) return;
-              editor.chain().focus().setHighlight({ color: e.target.value }).run();
-            }}
-            title="Cor de fundo (seleção)"
-            className="w-8 h-8 p-0 border rounded"
-          />
-          <ToolbarButton onClick={() => editor?.chain().focus().unsetHighlight().run()} title="Remover fundo">
-            <Eraser className="w-4 h-4" />
-          </ToolbarButton>
-        </div>
+        <ColorPickerPopover
+          colors={['#FFFACD','#FEF08A','#FDE68A','#E9D5FF','#BFDBFE','#D1FAE5','#FBCFE8','#FCA5A5','#E5E7EB']}
+          currentColor={String(editor?.getAttributes('highlight')?.color || '#FFFACD')}
+          onSelect={(c) => editor?.chain().focus().setHighlight({ color: c }).run()}
+          onClear={() => editor?.chain().focus().unsetHighlight().run()}
+          title="Cor de fundo do texto"
+          icon={<Droplet className="w-4 h-4 text-yellow-500" />}
+        />
 
         <div className="w-px h-6 bg-border mx-1" />
 

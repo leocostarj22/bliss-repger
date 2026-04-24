@@ -1,3 +1,4 @@
+import React from 'react';
 import type { TemplateBlock } from '@/types/template';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
 
@@ -27,27 +28,38 @@ export function BlockRenderer({ block, onSelect, onDelete, isNested = false }: B
         />
       );
 
-    case 'image':
+    case 'image': {
+      const imgAlign = String(p.align ?? 'center')
+      const justifyMap: Record<string, string> = { left: 'flex-start', center: 'center', right: 'flex-end' }
+      const justifyContent = justifyMap[imgAlign] ?? 'center'
+      const borderRadius = Number(p.borderRadius ?? 0)
+      const maxHeight = String(p.maxHeight ?? 'auto')
+      const objectFit = String(p.objectFit ?? 'cover') as React.CSSProperties['objectFit']
+
+      const imgStyle: React.CSSProperties = {
+        width: String(p.width),
+        maxWidth: '100%',
+        borderRadius: `${borderRadius}px`,
+        display: 'block',
+        ...(maxHeight !== 'auto' ? { maxHeight, objectFit } : { height: 'auto' }),
+      }
+
       const imageElement = (
-        <img
-          src={String(p.src)}
-          alt={String(p.alt)}
-          style={{ width: String(p.width), maxWidth: '100%' }}
-          className="rounded"
-        />
-      );
-      
+        <img src={String(p.src)} alt={String(p.alt)} style={imgStyle} />
+      )
+
       return p.hyperlink ? (
-        <div className="flex justify-center">
+        <div className="flex" style={{ justifyContent }}>
           <a href={String(p.hyperlink)} onClick={(e) => e.preventDefault()} className="inline-block">
             {imageElement}
           </a>
         </div>
       ) : (
-        <div className="flex justify-center">
+        <div className="flex" style={{ justifyContent }}>
           {imageElement}
         </div>
-      );
+      )
+    }
 
     case 'button':
       return (

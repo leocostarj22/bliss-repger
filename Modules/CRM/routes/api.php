@@ -192,6 +192,191 @@ Route::prefix('v1')->group(function () {
         Route::get('templates/{id}', [TemplateController::class, 'show']);
         Route::put('templates/{id}', [TemplateController::class, 'update']);
         Route::delete('templates/{id}', [TemplateController::class, 'destroy']);
+
+        // ── Banco de Imagens / Vídeos (Pexels) ────────────────────
+        Route::get('stock', function (Request $request) {
+            $apiKey = env('PEXELS_API_KEY', '');
+            if (! $apiKey) {
+                return response()->json(['error' => 'PEXELS_API_KEY não configurada no servidor.'], 503);
+            }
+
+            $type        = $request->input('type', 'images'); // images | videos
+            $query       = trim((string) $request->input('q', 'business'));
+            $page        = max(1, (int) $request->input('page', 1));
+            $perPage     = min(30, max(6, (int) $request->input('per_page', 18)));
+            $orientation = $request->input('orientation', 'all');
+            $sslVerify   = filter_var(env('GROQ_SSL_VERIFY', 'true'), FILTER_VALIDATE_BOOLEAN);
+
+            if ($query === '') {
+                $query = 'business';
+            }
+
+            $validOrientations = ['landscape', 'portrait', 'square'];
+            $orientationParam  = in_array($orientation, $validOrientations) ? "&orientation={$orientation}" : '';
+
+            $endpoint = $type === 'videos'
+                ? "https://api.pexels.com/videos/search?query={$query}&per_page={$perPage}&page={$page}"
+                : "https://api.pexels.com/v1/search?query={$query}&per_page={$perPage}&page={$page}{$orientationParam}";
+
+            try {
+                $pexels = \Illuminate\Support\Facades\Http::withHeaders(['Authorization' => $apiKey])
+                    ->withOptions(['verify' => $sslVerify])
+                    ->timeout(15)
+                    ->get($endpoint);
+
+                if (! $pexels->successful()) {
+                    Log::error('Pexels API error', ['status' => $pexels->status()]);
+                    return response()->json(['error' => 'Erro ao contactar o Pexels.'], 502);
+                }
+
+                $raw = $pexels->json();
+
+                if ($type === 'videos') {
+                    $items = collect($raw['videos'] ?? [])->map(function ($v) {
+                        $mp4 = collect($v['video_files'] ?? [])
+                            ->where('file_type', 'video/mp4')
+                            ->sortByDesc('width')
+                            ->first();
+                        return [
+                            'id'           => $v['id'],
+                            'thumbnail'    => $v['image'] ?? '',
+                            'duration'     => $v['duration'] ?? 0,
+                            'author'       => $v['user']['name'] ?? '',
+                            'author_url'   => $v['user']['url'] ?? '',
+                            'video_url'    => $mp4['link'] ?? '',
+                            'pexels_url'   => $v['url'] ?? '',
+                        ];
+                    })->values();
+                } else {
+                    $items = collect($raw['photos'] ?? [])->map(function ($p) {
+                        return [
+                            'id'          => $p['id'],
+                            'alt'         => $p['alt'] ?? '',
+                            'thumb'       => $p['src']['small'] ?? '',
+                            'medium'      => $p['src']['large2x'] ?? $p['src']['large'] ?? '',
+                            'original'    => $p['src']['original'] ?? '',
+                            'author'      => $p['photographer'] ?? '',
+                            'author_url'  => $p['photographer_url'] ?? '',
+                            'pexels_url'  => $p['url'] ?? '',
+                        ];
+                    })->values();
+                }
+
+                return response()->json([
+                    'data' => $items,
+                    'meta' => [
+                        'total'    => $raw['total_results'] ?? 0,
+                        'page'     => $raw['page'] ?? $page,
+                        'per_page' => $raw['per_page'] ?? $perPage,
+                    ],
+                ]);
+
+            } catch (\Throwable $e) {
+                Log::error('Pexels stock failed', ['error' => $e->getMessage()]);
+                return response()->json(['error' => 'Falha ao carregar banco de mídia.'], 500);
+            }
+        });
+
+        // ── IA / Groq ──────────────────────────────────────────────
+        Route::post('ai/generate', function (Request $request) {
+            $apiKey = env('GROQ_API_KEY', '');
+            if (! $apiKey) {
+                return response()->json(['error' => 'GROQ_API_KEY não configurada no servidor.'], 503);
+            }
+
+            $action         = $request->input('action', 'generate_text');
+            $prompt         = trim((string) $request->input('prompt', ''));
+            $currentContent = trim((string) $request->input('current_content', ''));
+            $tone           = $request->input('tone', 'formal');
+            $model          = env('GROQ_MODEL', 'llama-3.3-70b-versatile');
+
+            if (! $prompt && ! $currentContent) {
+                return response()->json(['error' => 'Forneça um prompt ou conteúdo.'], 422);
+            }
+
+            $toneMap = [
+                'formal'     => 'tom formal e profissional',
+                'informal'   => 'tom informal e descontraído',
+                'persuasivo' => 'tom persuasivo e convincente',
+                'direto'     => 'tom direto e objetivo',
+                'amigavel'   => 'tom amigável e caloroso',
+            ];
+            $toneDesc = $toneMap[$tone] ?? 'tom profissional';
+
+            switch ($action) {
+                case 'improve_text':
+                    $system = "Você é um especialista em copywriting para email marketing em português. Melhore o texto fornecido mantendo a ideia principal, mas com melhor fluidez, clareza e impacto. Use {$toneDesc}. Retorne APENAS o HTML melhorado (use <p>, <strong>, <em>, <br> se necessário), sem explicações.";
+                    $user   = $currentContent ?: $prompt;
+                    break;
+
+                case 'rewrite':
+                    $system = "Você é um especialista em copywriting para email marketing em português. Reescreva completamente o seguinte texto com {$toneDesc}, mantendo a mensagem principal mas com palavras e estrutura totalmente diferentes. Retorne APENAS o HTML reescrito, sem explicações.";
+                    $user   = $currentContent ?: $prompt;
+                    break;
+
+                case 'summarize':
+                    $system = "Você é um especialista em copywriting para email marketing em português. Resuma o texto a seguir de forma concisa, mantendo os pontos principais. Use {$toneDesc}. Retorne APENAS o HTML do resumo, sem explicações.";
+                    $user   = $currentContent ?: $prompt;
+                    break;
+
+                case 'generate_cta':
+                    $system = "Você é um especialista em email marketing em português. Gere 5 textos de call-to-action (CTA) para um botão de email com {$toneDesc}. Os textos devem ser curtos (2-5 palavras), diretos e motivadores. Retorne APENAS um array JSON de strings, ex: [\"Saiba mais\",\"Ver oferta\"]. Nenhum outro texto.";
+                    $user   = $prompt ?: 'Botão de call-to-action para email marketing';
+                    break;
+
+                case 'generate_template':
+                    $system = 'Você é um especialista em email marketing em português. Gere uma estrutura JSON de template de email completo baseado na descrição fornecida.'
+                        . "\n\nRetorne APENAS um array JSON válido de blocos, SEM explicações, SEM markdown, SEM blocos de código. Apenas o JSON puro."
+                        . "\n\nEstruturas permitidas:"
+                        . "\n{\"type\":\"text\",\"props\":{\"content\":\"<p>texto</p>\",\"fontSize\":16,\"lineHeight\":1.6,\"color\":\"#333333\",\"align\":\"left\",\"bgColor\":\"#ffffff\"}}"
+                        . "\n{\"type\":\"image\",\"props\":{\"src\":\"https://placehold.co/600x200/1a8a8a/ffffff?text=Imagem\",\"alt\":\"Imagem\",\"width\":\"100%\",\"hyperlink\":\"\"}}"
+                        . "\n{\"type\":\"button\",\"props\":{\"text\":\"Clique aqui\",\"url\":\"#\",\"bgColor\":\"#1a8a8a\",\"textColor\":\"#ffffff\",\"align\":\"center\",\"borderRadius\":6}}"
+                        . "\n{\"type\":\"divider\",\"props\":{\"height\":1,\"color\":\"#e0e0e0\",\"margin\":16}}"
+                        . "\n{\"type\":\"spacer\",\"props\":{\"height\":16}}"
+                        . "\n\nUse conteúdo realista em português baseado na descrição. Gere entre 5 e 10 blocos.";
+                    $user = $prompt;
+                    break;
+
+                default: // generate_text
+                    $system = "Você é um especialista em copywriting para email marketing em português. Escreva um texto de email com {$toneDesc} baseado na descrição a seguir. Retorne APENAS o HTML do corpo do email (use <p>, <strong>, <em>, <br>), sem assunto, sem explicações.";
+                    $user   = $prompt;
+                    break;
+            }
+
+            try {
+                $maxTokens = $action === 'generate_template' ? 2000 : 800;
+                $sslVerify  = filter_var(env('GROQ_SSL_VERIFY', 'true'), FILTER_VALIDATE_BOOLEAN);
+                $groqResponse = \Illuminate\Support\Facades\Http::withToken($apiKey)
+                    ->withOptions(['verify' => $sslVerify])
+                    ->timeout(45)
+                    ->post('https://api.groq.com/openai/v1/chat/completions', [
+                        'model'    => $model,
+                        'messages' => [
+                            ['role' => 'system', 'content' => $system],
+                            ['role' => 'user',   'content' => $user],
+                        ],
+                        'temperature' => 0.7,
+                        'max_tokens'  => $maxTokens,
+                    ]);
+
+                if (! $groqResponse->successful()) {
+                    Log::error('Groq API error', ['status' => $groqResponse->status(), 'body' => $groqResponse->body()]);
+                    return response()->json(['error' => 'Erro ao contactar a IA. Verifique a chave configurada.'], 502);
+                }
+
+                $content = trim((string) ($groqResponse->json('choices.0.message.content') ?? ''));
+
+                if (! $content) {
+                    return response()->json(['error' => 'A IA não retornou conteúdo.'], 502);
+                }
+
+                return response()->json(['data' => ['content' => $content]]);
+
+            } catch (\Throwable $e) {
+                Log::error('Groq AI generate failed', ['error' => $e->getMessage()]);
+                return response()->json(['error' => 'Falha na geração: ' . $e->getMessage()], 500);
+            }
+        });
     });
 
     Route::prefix('bliss')->middleware(['web', 'auth:web,employee'])->group(function () {

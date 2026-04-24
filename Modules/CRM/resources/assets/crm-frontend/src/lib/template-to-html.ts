@@ -50,18 +50,29 @@ export function blocksToHtml(blocks: TemplateBlock[] | string): string {
         </div>`;
       }
       
-      case 'image':
-        const imgTag = `<img src="${p.src}" alt="${p.alt}" style="width: ${p.width}; max-width: 100%; height: auto; border-radius: 4px; display: inline-block;" />`;
-        return p.hyperlink 
-          ? `<p style="text-align: center; margin: 10px 0;"><a href="${p.hyperlink}" target="_blank" style="text-decoration: none;">${imgTag}</a></p>`
-          : `<p style="text-align: center; margin: 10px 0;">${imgTag}</p>`;
-      
-      case 'button':
-        return `<p style="text-align: ${p.align}; margin: 10px 0;"><a href="${p.url}" style="background-color: ${p.bgColor}; color: ${p.textColor}; border-radius: ${p.borderRadius}px; padding: 12px 24px; display: inline-block; text-decoration: none; font-family: sans-serif; font-weight: bold; font-size: 16px;">${p.text}</a></p>`;
-      
+      case 'image': {
+        const imgAlign = String(p.align ?? 'center')
+        const imgBorderRadius = Number(p.borderRadius ?? 0)
+        const imgMaxHeight = String(p.maxHeight ?? 'auto')
+        const imgObjectFit = String(p.objectFit ?? 'cover')
+        const imgMaxHeightStyle = imgMaxHeight !== 'auto' ? `max-height: ${imgMaxHeight}; object-fit: ${imgObjectFit};` : 'height: auto;'
+        const imgTag = `<img src="${p.src}" alt="${p.alt || ''}" style="width: ${p.width}; max-width: 100%; ${imgMaxHeightStyle} border-radius: ${imgBorderRadius}px; display: inline-block;" />`
+        return p.hyperlink
+          ? `<p style="text-align: ${imgAlign}; margin: 10px 0;"><a href="${p.hyperlink}" target="_blank" style="text-decoration: none;">${imgTag}</a></p>`
+          : `<p style="text-align: ${imgAlign}; margin: 10px 0;">${imgTag}</p>`
+      }
+
+      case 'button': {
+        const btnFontSize = Number(p.fontSize ?? 16)
+        const btnPaddingV = Number(p.paddingV ?? 12)
+        const btnPaddingH = Number(p.paddingH ?? 24)
+        return `<p style="text-align: ${p.align}; margin: 10px 0;"><a href="${p.url}" style="background-color: ${p.bgColor}; color: ${p.textColor}; border-radius: ${p.borderRadius}px; padding: ${btnPaddingV}px ${btnPaddingH}px; display: inline-block; text-decoration: none; font-family: sans-serif; font-weight: bold; font-size: ${btnFontSize}px;">${p.text}</a></p>`
+      }
+
       case 'divider': {
-        const margin = Math.max(Number(p.margin ?? 10), 10);
-        return `<div style="margin: ${margin}px 0;"><hr style="border: 0; border-top: ${p.height}px solid ${p.color};" /></div>`;
+        const margin = Math.max(Number(p.margin ?? 10), 0)
+        const divStyle = String(p.style ?? 'solid')
+        return `<div style="margin: ${margin}px 0;"><hr style="border: 0; border-top: ${p.height}px ${divStyle} ${p.color};" /></div>`
       }
       
       case 'spacer':
