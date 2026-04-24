@@ -2160,7 +2160,9 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
         $search = trim((string) request('search', ''));
         $companyId = trim((string) request('company_id', ''));
-        if (! $user->isAdmin() && $user->company_id) {
+
+        // Não-admins sem company_id explícito: restringir à própria empresa
+        if (! $user->isAdmin() && $companyId === '' && $user->company_id) {
             $companyId = (string) $user->company_id;
         }
 
@@ -2168,10 +2170,6 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
         $isActive = $hasIsActive ? filter_var(request('is_active'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
 
         $query = Category::query()->orderByDesc('created_at');
-
-        if (! $user->isAdmin() && $user->company_id) {
-            $companyId = (string) $user->company_id;
-        }
 
         if ($companyId !== '') {
             $query->where('company_id', $companyId);
