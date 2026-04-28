@@ -303,6 +303,22 @@ export async function deleteTemplate(id: string): Promise<ApiResponse<void>> {
   return { data: undefined };
 }
 
+export async function duplicateTemplate(id: string): Promise<ApiResponse<EmailTemplate>> {
+  const response = await fetch(`/api/v1/email/templates/${id}/duplicate`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to duplicate template: ${response.statusText}`);
+  }
+  const json = await response.json();
+  return { data: mapTemplate(json.data ?? json) };
+}
+
 // ── Campaigns: /api/v1/email/campaigns ──
 export async function fetchCampaigns(params?: {
   page?: number;

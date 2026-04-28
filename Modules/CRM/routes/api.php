@@ -192,6 +192,7 @@ Route::prefix('v1')->group(function () {
         Route::get('templates/{id}', [TemplateController::class, 'show']);
         Route::put('templates/{id}', [TemplateController::class, 'update']);
         Route::delete('templates/{id}', [TemplateController::class, 'destroy']);
+        Route::post('templates/{id}/duplicate', [TemplateController::class, 'duplicate']);
 
         // ── Banco de Imagens / Vídeos (Pexels) ────────────────────
         Route::get('stock', function (Request $request) {

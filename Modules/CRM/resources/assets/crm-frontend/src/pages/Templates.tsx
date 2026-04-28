@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchTemplates, deleteTemplate } from '@/services/api';
+import { fetchTemplates, deleteTemplate, duplicateTemplate } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -12,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Trash2, Edit, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Edit, Loader2, Copy } from 'lucide-react';
 import { EmailTemplate } from '@/types';
 import { useToast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
@@ -245,6 +245,17 @@ export default function Templates() {
     navigate(`/templates/editor/${template.id}`);
   };
 
+  const handleDuplicate = async (template: EmailTemplate) => {
+    try {
+      await duplicateTemplate(template.id);
+      playSound('/sounds/recycle.wav', { volume: 0.4 });
+      toast({ title: 'Sucesso', description: `"${template.name}" duplicado com sucesso` });
+      loadTemplates();
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao duplicar template', variant: 'destructive' });
+    }
+  };
+
   return (
     <div className="space-y-6 animate-slide-up">
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
@@ -313,6 +324,9 @@ export default function Templates() {
                 <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(template)}>
                   <Edit className="mr-2 w-4 h-4" />
                   Editar
+                </Button>
+                <Button variant="ghost" size="icon" title="Duplicar template" onClick={() => handleDuplicate(template)}>
+                  <Copy className="w-4 h-4" />
                 </Button>
                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => requestDelete(template.id)}>
                   <Trash2 className="w-4 h-4" />

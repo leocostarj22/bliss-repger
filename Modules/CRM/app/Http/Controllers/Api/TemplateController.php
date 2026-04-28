@@ -67,6 +67,16 @@ class TemplateController extends Controller
         return response()->json(['data' => $this->transform($t)]);
     }
 
+    public function duplicate($id)
+    {
+        $original = Template::findOrFail($id);
+        $copy = $original->replicate();
+        $copy->name = $original->name . ' (Cópia)';
+        $copy->status = 'draft';
+        $copy->save();
+        return response()->json(['data' => $this->transform($copy)], 201);
+    }
+
     public function destroy($id)
     {
         $t = Template::findOrFail($id);
