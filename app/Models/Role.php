@@ -38,7 +38,12 @@ class Role extends Model
     // Métodos auxiliares
     public function hasPermission(string $permission): bool
     {
-        return in_array($permission, $this->permissions ?? []);
+        foreach ($this->permissions ?? [] as $granted) {
+            if ($granted === '*') return true;
+            if ($granted === $permission) return true;
+            if (str_ends_with($granted, '.*') && str_starts_with($permission, substr($granted, 0, -1))) return true;
+        }
+        return false;
     }
 
     public function givePermission(string $permission): void

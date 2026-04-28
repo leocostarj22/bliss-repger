@@ -7609,7 +7609,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
     Route::get('blog/admin', function () {
         $me = auth('web')->user() ?? auth('employee')->user();
-        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+        abort_unless($me instanceof \App\Models\User && ($me->isAdmin() || $me->hasPermission('blog.read')), 403);
 
         $posts = \App\Models\BlogPost::with('author:id,name,photo_path')
             ->orderByDesc('created_at')
@@ -7644,7 +7644,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
     Route::get('blog/admin/{post}', function (\App\Models\BlogPost $post) {
         $me = auth('web')->user() ?? auth('employee')->user();
-        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+        abort_unless($me instanceof \App\Models\User && ($me->isAdmin() || $me->hasPermission('blog.read')), 403);
 
         return response()->json([
             'data' => [
@@ -7758,7 +7758,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
     Route::post('blog', function () {
         $me = auth('web')->user() ?? auth('employee')->user();
-        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+        abort_unless($me instanceof \App\Models\User && ($me->isAdmin() || $me->hasPermission('blog.write')), 403);
 
         $validated = request()->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -7770,7 +7770,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             'category' => ['required', 'in:feature,improvement,tutorial,announcement'],
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string', 'max:50'],
-            'status' => ['required', 'in:draft,published'],
+            'status' => ['required', 'in:draft,scheduled,published'],
             'is_featured' => ['nullable', 'boolean'],
             'published_at' => ['nullable', 'date'],
         ]);
@@ -7786,7 +7786,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
     Route::put('blog/{post}', function (\App\Models\BlogPost $post) {
         $me = auth('web')->user() ?? auth('employee')->user();
-        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+        abort_unless($me instanceof \App\Models\User && ($me->isAdmin() || $me->hasPermission('blog.write')), 403);
 
         $validated = request()->validate([
             'title' => ['sometimes', 'required', 'string', 'max:255'],
@@ -7798,7 +7798,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             'category' => ['sometimes', 'required', 'in:feature,improvement,tutorial,announcement'],
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string', 'max:50'],
-            'status' => ['sometimes', 'required', 'in:draft,published'],
+            'status' => ['sometimes', 'required', 'in:draft,scheduled,published'],
             'is_featured' => ['nullable', 'boolean'],
             'published_at' => ['nullable', 'date'],
         ]);
@@ -7814,7 +7814,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
 
     Route::delete('blog/{post}', function (\App\Models\BlogPost $post) {
         $me = auth('web')->user() ?? auth('employee')->user();
-        abort_unless($me && method_exists($me, 'isAdmin') && $me->isAdmin(), 403);
+        abort_unless($me instanceof \App\Models\User && ($me->isAdmin() || $me->hasPermission('blog.write')), 403);
 
         $post->delete();
 

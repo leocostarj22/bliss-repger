@@ -1042,7 +1042,7 @@ const App = () => {
               <Route
                 path="/admin/blog"
                 element={
-                  <RequirePermission permission="admin.*">
+                  <RequirePermission permission={["admin.*", "blog.read", "blog.write", "blog.*"]}>
                     <AdminBlogList />
                   </RequirePermission>
                 }
@@ -1050,7 +1050,7 @@ const App = () => {
               <Route
                 path="/admin/blog/new"
                 element={
-                  <RequirePermission permission="admin.*">
+                  <RequirePermission permission={["admin.*", "blog.write", "blog.*"]}>
                     <AdminBlogForm />
                   </RequirePermission>
                 }
@@ -1058,7 +1058,7 @@ const App = () => {
               <Route
                 path="/admin/blog/:id/edit"
                 element={
-                  <RequirePermission permission="admin.*">
+                  <RequirePermission permission={["admin.*", "blog.write", "blog.*"]}>
                     <AdminBlogForm />
                   </RequirePermission>
                 }
