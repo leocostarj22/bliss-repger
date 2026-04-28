@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
-import { ArrowLeft, Check, ChevronsUpDown, Save, Users as UsersIcon } from "lucide-react"
+import { ArrowLeft, Check, ChevronsUpDown, RefreshCw, Save, Users as UsersIcon } from "lucide-react"
 
-import type { Task, TaskPriority, TaskStatus, User } from "@/types"
+import type { TaskPriority, TaskStatus, User } from "@/types"
 import { createTask, fetchTask, fetchUsers, updateTask } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -62,6 +62,8 @@ export default function TaskForm() {
   const [sharedWithUserIds, setSharedWithUserIds] = useState<string[]>([])
   const [location, setLocation] = useState("")
   const [notes, setNotes] = useState("")
+  const [recurrence, setRecurrence] = useState<"none" | "daily" | "weekly" | "biweekly" | "monthly">("none")
+  const [recurrenceUntil, setRecurrenceUntil] = useState("")
 
   const pageTitle = useMemo(() => (isEdit ? "Editar tarefa" : "Nova tarefa"), [isEdit])
 
@@ -111,6 +113,13 @@ export default function TaskForm() {
         setSharedWithUserIds((t.shared_with_user_ids ?? []).filter(Boolean))
         setLocation(htmlToPlainText(t.location ?? ""))
         setNotes(htmlToPlainText(t.notes ?? ""))
+        if (t.recurrence_rule) {
+          try {
+            const rule = JSON.parse(String(t.recurrence_rule))
+            setRecurrence(rule.freq ?? "none")
+            setRecurrenceUntil(rule.until ?? "")
+          } catch {}
+        }
       })
       .catch(() => {
         toast({ title: "Erro", description: "Tarefa não encontrada", variant: "destructive" })
@@ -146,6 +155,20 @@ export default function TaskForm() {
     return `${names.slice(0, 2).join(", ")} +${names.length - 2}`
   }, [isPrivate, sharedWithUserIds, users])
 
+  const generateRecurringDates = (base: Date, freq: string, until: Date): Date[] => {
+    const dates: Date[] = []
+    const current = new Date(base)
+    while (current <= until) {
+      dates.push(new Date(current))
+      if (freq === "daily")    current.setDate(current.getDate() + 1)
+      else if (freq === "weekly")   current.setDate(current.getDate() + 7)
+      else if (freq === "biweekly") current.setDate(current.getDate() + 14)
+      else if (freq === "monthly")  current.setMonth(current.getMonth() + 1)
+      else break
+    }
+    return dates
+  }
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -163,39 +186,38 @@ export default function TaskForm() {
 
       const shared = isPrivate ? [] : sharedWithUserIds
 
+      const recurrenceRule = recurrence !== "none"
+        ? JSON.stringify({ freq: recurrence, until: recurrenceUntil })
+        : null
+
+      const basePayload = {
+        title: cleanTitle,
+        description: description.trim() ? description : null,
+        priority,
+        status,
+        start_date: start,
+        completed_at: completedAt,
+        is_all_day: isAllDay,
+        is_private: isPrivate,
+        shared_with_user_ids: shared,
+        location: location.trim() ? location : null,
+        notes: notes.trim() ? notes : null,
+        recurrence_rule: recurrenceRule,
+      }
+
       if (isEdit && id) {
-        await updateTask(id, {
-          title: cleanTitle,
-          description: description.trim() ? description : null,
-          priority,
-          status,
-          due_date: due,
-          start_date: start,
-          completed_at: completedAt,
-          is_all_day: isAllDay,
-          is_private: isPrivate,
-          shared_with_user_ids: shared,
-          location: location.trim() ? location : null,
-          notes: notes.trim() ? notes : null,
-        })
+        await updateTask(id, { ...basePayload, due_date: due })
         toast({ title: "Sucesso", description: "Tarefa atualizada" })
+      } else if (recurrence !== "none" && dueDate && recurrenceUntil) {
+        const dates = generateRecurringDates(new Date(dueDate), recurrence, new Date(recurrenceUntil))
+        await Promise.all(
+          dates.map((date) =>
+            createTask({ ...basePayload, due_date: date.toISOString(), attachments: [] })
+          )
+        )
+        toast({ title: "Sucesso", description: `${dates.length} tarefa(s) criada(s)` })
       } else {
-        await createTask({
-          title: cleanTitle,
-          description: description.trim() ? description : null,
-          priority,
-          status,
-          due_date: due,
-          start_date: start,
-          completed_at: completedAt,
-          is_all_day: isAllDay,
-          location: location.trim() ? location : null,
-          notes: notes.trim() ? notes : null,
-          attachments: [],
-          recurrence_rule: null,
-          is_private: isPrivate,
-          shared_with_user_ids: shared,
-        })
+        await createTask({ ...basePayload, due_date: due, attachments: [] })
         toast({ title: "Sucesso", description: "Tarefa criada" })
       }
 
@@ -298,6 +320,36 @@ export default function TaskForm() {
           <div>
             <div className="text-xs text-muted-foreground mb-1">Vencimento</div>
             <Input value={dueDate} onChange={(e) => setDueDate(e.target.value)} type="date" />
+          </div>
+
+          <div>
+            <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+              <RefreshCw className="w-3 h-3" />
+              Repetição
+            </div>
+            <Select value={recurrence} onValueChange={(v) => setRecurrence(v as any)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Não repetir</SelectItem>
+                <SelectItem value="daily">Diária</SelectItem>
+                <SelectItem value="weekly">Semanal</SelectItem>
+                <SelectItem value="biweekly">Quinzenal</SelectItem>
+                <SelectItem value="monthly">Mensal</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Repetir até</div>
+            <Input
+              value={recurrenceUntil}
+              onChange={(e) => setRecurrenceUntil(e.target.value)}
+              type="date"
+              min={dueDate}
+              disabled={recurrence === "none"}
+            />
           </div>
 
           <div className="flex items-center justify-between rounded-lg border border-border p-4 md:col-span-2">
