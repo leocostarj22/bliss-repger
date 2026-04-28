@@ -74,6 +74,11 @@ class RoleResource extends Resource
                                 'companies.edit' => 'Editar Empresas',
                                 'companies.delete' => 'Eliminar Empresas',
                                 'reports.view' => 'Ver Relatórios',
+                                'reports.system-logs.read' => 'Logs do sistema (ver)',
+                                'reports.blog.read' => 'Blog (ver)',
+                                'reports.blog.write' => 'Blog (editar)',
+                                'reports.changelog.read' => 'Changelog (ver)',
+                                'reports.changelog.write' => 'Changelog (editar)',
                                 'settings.manage' => 'Gerir Configurações',
                                 'admin.access' => 'Acesso Administrativo',
                             ])

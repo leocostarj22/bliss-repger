@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Loader2, Upload, X, Star } from 'lucide-react'
+import { ArrowLeft, Loader2, Upload, X, Star, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -50,7 +50,8 @@ export default function AdminBlogForm() {
   const [summary, setSummary] = useState('')
   const [content, setContent] = useState('')
   const [category, setCategory] = useState<string>('feature')
-  const [status, setStatus] = useState<'draft' | 'published'>('draft')
+  const [status, setStatus] = useState<'draft' | 'scheduled' | 'published'>('draft')
+  const [scheduledAt, setScheduledAt] = useState('')
   const [isFeatured, setIsFeatured] = useState(false)
   const [coverUrl, setCoverUrl] = useState('')
   const [youtubeUrl, setYoutubeUrl] = useState('')
@@ -74,7 +75,11 @@ export default function AdminBlogForm() {
         setSummary(p.summary ?? '')
         setContent(p.content)
         setCategory(p.category)
-        setStatus(p.status)
+        setStatus(p.status as 'draft' | 'scheduled' | 'published')
+        if (p.published_at) {
+          const d = new Date(p.published_at)
+          setScheduledAt(d.toISOString().slice(0, 16))
+        }
         setIsFeatured(p.is_featured)
         setCoverUrl(p.cover_image_url ?? '')
         setYoutubeUrl(p.youtube_video_url ?? '')
@@ -134,6 +139,7 @@ export default function AdminBlogForm() {
         content,
         category,
         status,
+        published_at: status === 'scheduled' && scheduledAt ? scheduledAt : null,
         is_featured: isFeatured,
         cover_image_url: coverUrl || null,
         youtube_video_url: youtubeUrl || null,
@@ -237,6 +243,27 @@ export default function AdminBlogForm() {
                 Publicar
               </button>
             </div>
+            <button
+              type="button"
+              onClick={() => setStatus('scheduled')}
+              className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all ${status === 'scheduled' ? 'border-amber-500/50 bg-amber-500/15 text-amber-300' : 'border-border text-muted-foreground hover:border-border'}`}
+            >
+              <Clock className={`h-4 w-4 ${status === 'scheduled' ? 'text-amber-400' : ''}`} />
+              Agendar publicação
+            </button>
+            {status === 'scheduled' && (
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Data e hora de publicação</label>
+                <input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={e => setScheduledAt(e.target.value)}
+                  min={new Date().toISOString().slice(0, 16)}
+                  className="w-full rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200 focus:outline-none focus:ring-1 focus:ring-amber-500/50"
+                  required
+                />
+              </div>
+            )}
             <button
               type="button"
               onClick={() => setIsFeatured(v => !v)}

@@ -124,7 +124,13 @@ const QUICK_PERMISSION_GROUPS = [
   {
     key: "reports",
     label: "Relatórios e Logs",
-    items: [{ value: "reports.system-logs.read", label: "Logs do sistema (ver)" }],
+    items: [
+      { value: "reports.system-logs.read", label: "Logs do sistema (ver)" },
+      { value: "reports.blog.read", label: "Blog (ver)" },
+      { value: "reports.blog.write", label: "Blog (editar)" },
+      { value: "reports.changelog.read", label: "Changelog (ver)" },
+      { value: "reports.changelog.write", label: "Changelog (editar)" },
+    ],
   },
   {
     key: "blissnatura",
@@ -367,7 +373,7 @@ export default function RoleForm() {
                   <div key={g.key} className="space-y-2">
                     <div className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">{g.label}</div>
                     <div className="flex flex-wrap gap-2">
-                      {g.items.map((it) => {
+                      {g.items.map((it: { value: string; label: string }) => {
                         const selected = currentPermissions.includes(it.value)
                         const disabled = hasAll && it.value !== "*"
                         return (
