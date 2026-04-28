@@ -209,9 +209,29 @@
   .prose pre {
     @apply border bg-muted text-foreground border-border;
   }
-  
+
   .prose code {
     @apply px-1 py-0.5 font-normal rounded text-primary bg-muted/50 before:content-none after:content-none;
+  }
+
+  /* Template email editor — matches BlockRenderer output (Tailwind Preflight resets p margin to 0) */
+  .tiptap-email-editor p {
+    margin: 0;
+  }
+  .tiptap-email-editor strong { font-weight: bold; }
+  .tiptap-email-editor em { font-style: italic; }
+  .tiptap-email-editor u { text-decoration: underline; }
+  .tiptap-email-editor s { text-decoration: line-through; }
+  .tiptap-email-editor h1 { font-size: 1.5em; font-weight: 700; }
+  .tiptap-email-editor h2 { font-size: 1.25em; font-weight: 700; }
+  .tiptap-email-editor h3 { font-size: 1.1em; font-weight: 600; }
+  .tiptap-email-editor ul { list-style-type: disc; padding-left: 1.5em; }
+  .tiptap-email-editor ol { list-style-type: decimal; padding-left: 1.5em; }
+  .tiptap-email-editor a { color: #1a8a8a; text-decoration: underline; }
+  .tiptap-email-editor blockquote {
+    border-left: 3px solid hsl(var(--border));
+    padding-left: 1em;
+    color: hsl(var(--muted-foreground));
   }
 }
 

@@ -122,7 +122,7 @@ const ToolbarButton = ({
 
 export function RichTextEditor({ value, onChange, placeholder, className }: RichTextEditorProps) {
   const editor = useEditor({
-    extensions: [
+    extensions: ([
       StarterKit,
       TextStyle,
       Color,
@@ -153,14 +153,14 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
       Placeholder.configure({
         placeholder: placeholder || 'Comece a escrever...',
       }),
-    ],
+    ] as any[]),
     content: value,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML())
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm dark:prose-invert max-w-none min-h-[150px] p-4 focus:outline-none',
+        class: 'tiptap-email-editor max-w-none min-h-[150px] p-3 focus:outline-none',
       },
     },
   })
