@@ -43,6 +43,7 @@ const QUICK_PERMISSION_GROUPS = [
       { value: "hr.*", label: "Recursos Humanos (tudo)" },
       { value: "communication.*", label: "Comunicação (tudo)" },
       { value: "crm.*", label: "CRM (tudo)" },
+      { value: "blog.*", label: "Blog (tudo)" },
       { value: "reports.*", label: "Relatórios (tudo)" },
       { value: "blissnatura.*", label: "Bliss Natura (tudo)" },
       { value: "espacoabsoluto.*", label: "Espaço Absoluto (tudo)" },
@@ -126,8 +127,6 @@ const QUICK_PERMISSION_GROUPS = [
     label: "Relatórios e Logs",
     items: [
       { value: "reports.system-logs.read", label: "Logs do sistema (ver)" },
-      { value: "reports.blog.read", label: "Blog (ver)" },
-      { value: "reports.blog.write", label: "Blog (editar)" },
       { value: "reports.changelog.read", label: "Changelog (ver)" },
       { value: "reports.changelog.write", label: "Changelog (editar)" },
     ],

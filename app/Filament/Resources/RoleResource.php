@@ -22,7 +22,7 @@ class RoleResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return auth()->user()->isAdmin();
+        return auth()->user()?->isAdmin() ?? false;
     }
     protected static ?int $navigationSort = 2;
 
@@ -73,10 +73,9 @@ class RoleResource extends Resource
                                 'companies.create' => 'Criar Empresas',
                                 'companies.edit' => 'Editar Empresas',
                                 'companies.delete' => 'Eliminar Empresas',
+                                'blog.*' => 'Blog (tudo)',
                                 'reports.view' => 'Ver Relatórios',
                                 'reports.system-logs.read' => 'Logs do sistema (ver)',
-                                'reports.blog.read' => 'Blog (ver)',
-                                'reports.blog.write' => 'Blog (editar)',
                                 'reports.changelog.read' => 'Changelog (ver)',
                                 'reports.changelog.write' => 'Changelog (editar)',
                                 'settings.manage' => 'Gerir Configurações',
