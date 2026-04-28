@@ -123,6 +123,14 @@ const QUICK_PERMISSION_GROUPS = [
     items: [{ value: "crm.access", label: "CRM (acesso)" }],
   },
   {
+    key: "blog",
+    label: "Blog",
+    items: [
+      { value: "blog.read", label: "Blog (ver)" },
+      { value: "blog.write", label: "Blog (editar)" },
+    ],
+  },
+  {
     key: "reports",
     label: "Relatórios e Logs",
     items: [

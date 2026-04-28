@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\RoleResource\Pages;
 use App\Models\Role;
+use Illuminate\Support\Facades\Auth;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -22,7 +23,7 @@ class RoleResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return Auth::user()?->isAdmin() ?? false;
     }
     protected static ?int $navigationSort = 2;
 
@@ -74,6 +75,8 @@ class RoleResource extends Resource
                                 'companies.edit' => 'Editar Empresas',
                                 'companies.delete' => 'Eliminar Empresas',
                                 'blog.*' => 'Blog (tudo)',
+                                'blog.read' => 'Blog (ver)',
+                                'blog.write' => 'Blog (editar)',
                                 'reports.view' => 'Ver Relatórios',
                                 'reports.system-logs.read' => 'Logs do sistema (ver)',
                                 'reports.changelog.read' => 'Changelog (ver)',
