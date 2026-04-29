@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Pencil, Trash2, Eye, Loader2, Newspaper, ArrowLeft, Globe, FileText } from 'lucide-react'
+import { Plus, Pencil, Trash2, Eye, Loader2, Newspaper, ArrowLeft, Globe, FileText, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/use-toast'
@@ -36,7 +36,7 @@ export default function AdminBlogList() {
   const [allPosts, setAllPosts] = useState<BlogPost[]>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
-  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'scheduled' | 'draft'>('all')
 
   const load = async () => {
     setLoading(true)
@@ -87,9 +87,9 @@ export default function AdminBlogList() {
       </div>
 
       <div className="flex gap-2">
-        {(['all', 'published', 'draft'] as const).map(s => (
+        {(['all', 'published', 'scheduled', 'draft'] as const).map(s => (
           <button key={s} onClick={() => setStatusFilter(s)} className={tabCls(statusFilter === s)}>
-            {s === 'all' ? 'Todos' : s === 'published' ? 'Publicados' : 'Rascunhos'}
+            {s === 'all' ? 'Todos' : s === 'published' ? 'Publicados' : s === 'scheduled' ? 'Agendados' : 'Rascunhos'}
           </button>
         ))}
       </div>
@@ -143,13 +143,18 @@ export default function AdminBlogList() {
                     </Badge>
                   </td>
                   <td className="hidden px-4 py-3 md:table-cell">
-                    <Badge variant="outline" className={post.status === 'published'
-                      ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-300 text-[10px]'
-                      : 'bg-muted text-muted-foreground border-border text-[10px]'
+                    <Badge variant="outline" className={
+                      post.status === 'published'
+                        ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-300 text-[10px]'
+                        : post.status === 'scheduled'
+                          ? 'bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-300 text-[10px]'
+                          : 'bg-muted text-muted-foreground border-border text-[10px]'
                     }>
                       {post.status === 'published'
                         ? <><Globe className="mr-1 h-2.5 w-2.5" />Publicado</>
-                        : <><FileText className="mr-1 h-2.5 w-2.5" />Rascunho</>}
+                        : post.status === 'scheduled'
+                          ? <><Clock className="mr-1 h-2.5 w-2.5" />Agendado</>
+                          : <><FileText className="mr-1 h-2.5 w-2.5" />Rascunho</>}
                     </Badge>
                   </td>
                   <td className="hidden px-4 py-3 text-muted-foreground lg:table-cell">{fmtDate(post.published_at)}</td>

@@ -904,7 +904,7 @@ export interface ApiResponse<T> {
 
 // ── Blog Posts (Últimas Atualizações) ──
 export type BlogPostCategory = 'feature' | 'improvement' | 'tutorial' | 'announcement' | string;
-export type BlogPostStatus = 'draft' | 'published';
+export type BlogPostStatus = 'draft' | 'scheduled' | 'published';
 
 export interface BlogPost {
   id: string;

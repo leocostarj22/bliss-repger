@@ -7803,8 +7803,11 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             'published_at' => ['nullable', 'date'],
         ]);
 
-        if (isset($validated['status']) && $validated['status'] === 'published' && !$post->published_at && empty($validated['published_at'])) {
-            $validated['published_at'] = now();
+        if (isset($validated['status']) && $validated['status'] === 'published') {
+            $futureOrNull = empty($validated['published_at']) || \Carbon\Carbon::parse($validated['published_at'])->isFuture();
+            if ($futureOrNull) {
+                $validated['published_at'] = now();
+            }
         }
 
         $post->update($validated);
