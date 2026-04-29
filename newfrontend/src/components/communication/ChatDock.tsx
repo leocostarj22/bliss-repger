@@ -1,21 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Download, ExternalLink, ImagePlus, MessageSquare, Mic, Search, Send, Square, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Download, ExternalLink, ImagePlus, MessageSquare, Mic, Search, Send, Square, Trash2, Users, X } from 'lucide-react';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 
-import type { InternalMessage, User as AppUser } from '@/types';
+import type { ChatGroup, InternalMessage, User as AppUser } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
   addInternalMessageReaction,
+  createChatGroup,
+  deleteConversation,
   deleteInternalMessageRecipient,
   fetchAdminUser,
+  fetchChatGroups,
   fetchChatThread,
   fetchCommunicationRecipients,
+  fetchGroupThread,
   fetchInternalMessages,
   fetchMyAccess,
   fetchUser,
   markInternalMessageRead,
   removeInternalMessageReaction,
+  sendGroupMessage,
   sendInternalMessage,
   sendInternalMessageWithAttachment,
   type ChatThreadCursor,
@@ -183,6 +188,21 @@ export function ChatDock() {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const [deleteConvOpen, setDeleteConvOpen] = useState(false);
+  const [deletingConv, setDeletingConv] = useState(false);
+
+  const [groups, setGroups] = useState<ChatGroup[]>([]);
+  const [activeGroupId, setActiveGroupId] = useState('');
+  const [groupThread, setGroupThread] = useState<InternalMessage[]>([]);
+  const [groupThreadCursorId, setGroupThreadCursorId] = useState<string | null>(null);
+  const [groupThreadHasMore, setGroupThreadHasMore] = useState(false);
+  const groupThreadLoadingRef = useRef(false);
+
+  const [createGroupOpen, setCreateGroupOpen] = useState(false);
+  const [createGroupName, setCreateGroupName] = useState('');
+  const [createGroupMemberIds, setCreateGroupMemberIds] = useState<string[]>([]);
+  const [creatingGroup, setCreatingGroup] = useState(false);
+
   const listRef = useRef<HTMLDivElement | null>(null);
   const inboxRef = useRef<InternalMessage[]>([]);
   const userDetailsRef = useRef<Record<string, { name?: string; email?: string; photo_path?: string | null; role?: string | null; is_admin?: boolean }>>({});
@@ -312,6 +332,16 @@ export function ChatDock() {
     return { name: activeMeta.name ?? id, email: activeMeta.email ?? '' };
   }, [activeMeta.email, activeMeta.name, activeUserId, userById, userDetailsById]);
 
+  const activeGroup = useMemo(
+    () => (activeGroupId ? groups.find((g) => g.id === activeGroupId) ?? null : null),
+    [activeGroupId, groups],
+  );
+
+  const canSendGroup = useMemo(
+    () => Boolean(activeGroupId && meCanWrite && !chatDisabled && activeGroup),
+    [activeGroupId, activeGroup, meCanWrite, chatDisabled],
+  );
+
   const ensureUserDetails = async (id: string) => {
     const uid = String(id || '').trim();
     if (!uid || uid === me.id) return;
@@ -438,6 +468,13 @@ export function ChatDock() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!ready || chatDisabled) return;
+    fetchChatGroups()
+      .then((res) => setGroups(res.data ?? []))
+      .catch(() => {});
+  }, [ready, chatDisabled]);
 
   useEffect(() => {
     if (!ready || chatDisabled) return;
@@ -744,6 +781,64 @@ export function ChatDock() {
 
   loadThreadRef.current = loadThread;
 
+  const loadGroupThread = async (opts?: { reset?: boolean }) => {
+    const gid = String(activeGroupId || '').trim();
+    if (!gid || groupThreadLoadingRef.current) return;
+    const reset = Boolean(opts?.reset);
+    if (!reset && !groupThreadHasMore) return;
+
+    groupThreadLoadingRef.current = true;
+    try {
+      const resp = await fetchGroupThread(gid, reset ? null : groupThreadCursorId);
+      const incoming = resp.items.slice().sort((a: any, b: any) => {
+        const ta = Date.parse(msgWhenIso(a)) || 0;
+        const tb = Date.parse(msgWhenIso(b)) || 0;
+        return ta !== tb ? ta - tb : msgId(a).localeCompare(msgId(b));
+      });
+
+      setGroupThread((prev) => {
+        if (reset) return incoming;
+        const map = new Map<string, any>();
+        prev.forEach((m) => map.set(msgId(m), m));
+        incoming.forEach((m: any) => map.set(msgId(m), m));
+        return Array.from(map.values()).sort((a: any, b: any) => {
+          const ta = Date.parse(msgWhenIso(a)) || 0;
+          const tb = Date.parse(msgWhenIso(b)) || 0;
+          return ta !== tb ? ta - tb : msgId(a).localeCompare(msgId(b));
+        });
+      });
+
+      setGroupThreadCursorId(resp.nextCursorId);
+      setGroupThreadHasMore(resp.hasMore);
+      if (reset) requestAnimationFrame(scrollToBottom);
+    } catch {
+      return;
+    } finally {
+      groupThreadLoadingRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (!open || !activeGroupId) {
+      setGroupThread([]);
+      setGroupThreadCursorId(null);
+      setGroupThreadHasMore(false);
+      return;
+    }
+    setGroupThread([]);
+    setGroupThreadCursorId(null);
+    setGroupThreadHasMore(false);
+    loadGroupThread({ reset: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeGroupId, open]);
+
+  useEffect(() => {
+    if (!open || !activeGroupId || realtimeActive || chatDisabled) return;
+    const id = window.setInterval(() => loadGroupThread({ reset: true }), 5000);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, activeGroupId, realtimeActive, chatDisabled]);
+
   useEffect(() => {
     if (!pendingFile) {
       setPendingPreviewUrl('');
@@ -954,6 +1049,78 @@ export function ChatDock() {
     }
   };
 
+  const onSendGroup = async () => {
+    const gid = String(activeGroupId || '').trim();
+    const text = draft.trim();
+    const file = pendingFile;
+    if (!gid || (!text && !file) || !canSendGroup) return;
+
+    setSending(true);
+    try {
+      const res = await sendGroupMessage(gid, { body: text || undefined, file: file ?? undefined });
+      const created = res?.data as any;
+      if (created) {
+        setGroupThread((prev) => {
+          const map = new Map<string, any>();
+          prev.forEach((m) => map.set(msgId(m), m));
+          map.set(msgId(created), created);
+          return Array.from(map.values()).sort((a: any, b: any) => {
+            const ta = Date.parse(msgWhenIso(a)) || 0;
+            const tb = Date.parse(msgWhenIso(b)) || 0;
+            return ta !== tb ? ta - tb : msgId(a).localeCompare(msgId(b));
+          });
+        });
+      }
+      setDraft('');
+      setPendingFile(null);
+      setTimeout(scrollToBottom, 0);
+    } catch {
+      return;
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const confirmDeleteConv = async () => {
+    const id = String(activeUserId || '').trim();
+    if (!id) return;
+    setDeletingConv(true);
+    try {
+      await deleteConversation(id);
+      setThread([]);
+      setInbox((prev) => prev.filter((m: any) => msgFromId(m) !== id && msgToId(m) !== id));
+      setSent((prev) => prev.filter((m: any) => msgFromId(m) !== id && msgToId(m) !== id));
+      setDeleteConvOpen(false);
+      setActiveUserId('');
+      setActiveMeta({});
+    } catch {
+      return;
+    } finally {
+      setDeletingConv(false);
+    }
+  };
+
+  const confirmCreateGroup = async () => {
+    const name = createGroupName.trim();
+    if (!name || createGroupMemberIds.length === 0) return;
+    setCreatingGroup(true);
+    try {
+      const res = await createChatGroup({ name, member_ids: createGroupMemberIds.map(Number) });
+      const newGroup = res?.data;
+      if (newGroup) {
+        setGroups((prev) => [newGroup, ...prev]);
+        setActiveGroupId(newGroup.id);
+      }
+      setCreateGroupOpen(false);
+      setCreateGroupName('');
+      setCreateGroupMemberIds([]);
+    } catch {
+      return;
+    } finally {
+      setCreatingGroup(false);
+    }
+  };
+
   if (chatDisabled) return null;
 
   const isMinimized = !open;
@@ -993,15 +1160,19 @@ export function ChatDock() {
               )}
             >
               <div className="flex-1 min-w-0">
-                {activeUserId ? (
-                  <div className="flex gap-2 items-start">
+                {(activeUserId || activeGroupId) ? (
+                  <div className="flex gap-2 items-start flex-1 min-w-0">
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
                       onClick={() => {
-                        setActiveUserId('');
-                        setActiveMeta({});
+                        if (activeGroupId) {
+                          setActiveGroupId('');
+                        } else {
+                          setActiveUserId('');
+                          setActiveMeta({});
+                        }
                         setPendingFile(null);
                       }}
                       className="rounded-full hover:bg-muted/60 shrink-0"
@@ -1009,10 +1180,29 @@ export function ChatDock() {
                     >
                       <ArrowLeft className="w-4 h-4" />
                     </Button>
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold truncate">{`Chat com ${activeUser.name}`}</div>
-                      <div className="text-xs truncate text-muted-foreground">{activeUser.email}</div>
-                    </div>
+                    {activeGroupId ? (
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold truncate">{activeGroup?.name ?? 'Grupo'}</div>
+                        <div className="text-xs truncate text-muted-foreground">{activeGroup?.members.length ?? 0} membros</div>
+                      </div>
+                    ) : (
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold truncate">{`Chat com ${activeUser.name}`}</div>
+                        <div className="text-xs truncate text-muted-foreground">{activeUser.email}</div>
+                      </div>
+                    )}
+                    {activeUserId && !activeGroupId ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeleteConvOpen(true)}
+                        className="rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive shrink-0"
+                        title="Apagar conversa"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    ) : null}
                   </div>
                 ) : (
                   <>
@@ -1068,7 +1258,7 @@ export function ChatDock() {
                 isMobile && 'mt-0 flex-1 min-h-0 rounded-none border-0 bg-background/40 p-4',
               )}
             >
-              {!activeUserId ? (
+              {!activeUserId && !activeGroupId ? (
                 <div className="space-y-3">
                   {visibleConversations.length === 0 ? (
                     <div className="text-xs text-muted-foreground">Sem conversas ainda.</div>
@@ -1178,7 +1368,111 @@ export function ChatDock() {
                       </div>
                     )}
                   </div>
+
+                  <div className="pt-2 border-t border-border/60">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-[11px] font-semibold text-muted-foreground">Grupos</div>
+                      {!meIsEmployeeRole || meIsAdmin ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-[11px]"
+                          onClick={() => setCreateGroupOpen(true)}
+                        >
+                          + Novo
+                        </Button>
+                      ) : null}
+                    </div>
+                    {groups.length === 0 ? (
+                      <div className="text-xs text-muted-foreground">Sem grupos ainda.</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {groups.map((g) => (
+                          <div
+                            key={g.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setActiveGroupId(g.id)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') setActiveGroupId(g.id); }}
+                            className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/40 px-3 py-2 hover:bg-background/70 transition-colors cursor-pointer select-none"
+                          >
+                            <div className="w-9 h-9 rounded-full border border-border shrink-0 flex items-center justify-center bg-muted">
+                              <Users className="w-4 h-4 text-muted-foreground" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium truncate">{g.name}</div>
+                              <div className="text-xs truncate text-muted-foreground">{g.members.length} membros</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
+              ) : activeGroupId ? (
+                groupThread.length === 0 ? (
+                  <div className="text-xs text-muted-foreground">Sem mensagens no grupo ainda.</div>
+                ) : (
+                  groupThread.map((m: any) => {
+                    const id = msgId(m);
+                    const from = msgFromId(m);
+                    const mine = from === me.id;
+                    const isLocal = Boolean((m as any)?._local_status);
+                    const text = plainTextFromHtml(String(m?.body ?? ''));
+                    const time = fmtTime(msgWhenIso(m));
+                    const attachments = Array.isArray((m as any)?.attachments) ? ((m as any).attachments as any[]) : [];
+                    const imgAttachment = attachments.find((a) => String(a?.mime_type ?? '').toLowerCase().startsWith('image/')) ?? null;
+                    const audioAttachment = attachments.find((a) => String(a?.mime_type ?? '').toLowerCase().startsWith('audio/')) ?? null;
+                    const senderName = String((m as any)?.sender_name ?? userDetailsById[from]?.name ?? userById.get(from)?.name ?? from ?? '');
+                    const meta = mine
+                      ? { name: me.name || 'Eu', photo_path: me.photo_path }
+                      : { name: senderName, photo_path: userDetailsById[from]?.photo_path ?? null };
+                    const img = resolvePhotoUrl(meta.photo_path) || '';
+
+                    return (
+                      <div key={id} className={cn('flex gap-2 items-end', mine ? 'justify-end' : 'justify-start')}>
+                        {!mine ? (
+                          <Avatar className="w-8 h-8 border border-border shrink-0">
+                            <AvatarImage src={img} alt={meta.name} />
+                            <AvatarFallback className="text-[11px] font-semibold">{getInitials(meta.name)}</AvatarFallback>
+                          </Avatar>
+                        ) : null}
+                        <div className={cn(
+                          'max-w-[78%] rounded-2xl px-3 py-2 text-sm border shadow-sm',
+                          mine
+                            ? 'bg-gradient-to-br from-cyan-500/15 to-fuchsia-500/10 text-foreground border-cyan-500/20'
+                            : 'bg-muted/80 text-foreground border-border',
+                        )}>
+                          {!mine ? <div className="text-[11px] font-semibold text-cyan-400 mb-1">{meta.name}</div> : null}
+                          {imgAttachment ? (
+                            <div className={cn('relative overflow-hidden rounded-xl bg-muted/70', text ? 'mb-2' : '')}>
+                              <img src={String(imgAttachment?.url ?? '')} alt={String(imgAttachment?.original_filename ?? 'Imagem')} className="object-cover w-full h-auto max-h-[240px]" loading="lazy" />
+                            </div>
+                          ) : null}
+                          {audioAttachment ? (
+                            <audio controls src={String(audioAttachment?.url ?? '')} className={cn('w-full max-w-[220px]', text ? 'mb-2' : '')} />
+                          ) : null}
+                          {text ? <div className="whitespace-pre-wrap break-words">{text}</div> : null}
+                          <div className="mt-1 flex items-center justify-end gap-2 text-[11px] opacity-70">
+                            <span>{time}</span>
+                            {!isLocal ? (
+                              <Button type="button" variant="ghost" size="icon" onClick={() => onDelete(m)} title="Apagar" className="p-0 w-6 h-6">
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
+                        {mine ? (
+                          <Avatar className="w-8 h-8 border border-border shrink-0">
+                            <AvatarImage src={resolvePhotoUrl(me.photo_path) || ''} alt={me.name || 'Eu'} />
+                            <AvatarFallback className="text-[11px] font-semibold">{getInitials(me.name || 'Eu')}</AvatarFallback>
+                          </Avatar>
+                        ) : null}
+                      </div>
+                    );
+                  })
+                )
               ) : conversation.length === 0 ? (
                 <div className="text-xs text-muted-foreground">Sem mensagens ainda.</div>
               ) : (
@@ -1368,7 +1662,7 @@ export function ChatDock() {
                     variant="ghost"
                     size="sm"
                     className="px-1 h-8"
-                    disabled={!activeUserId || sending || !canSend}
+                    disabled={(!activeUserId && !activeGroupId) || sending || !(canSend || canSendGroup)}
                     onClick={() => setDraft((prev) => `${prev}${emo}`)}
                   >
                     <span className="text-base leading-none">{emo}</span>
@@ -1387,8 +1681,8 @@ export function ChatDock() {
                     <Button
                       type="button"
                       size="icon"
-                      onClick={onSend}
-                      disabled={sending || !activeUserId || !canSend}
+                      onClick={activeGroupId ? onSendGroup : onSend}
+                      disabled={sending || (!activeUserId && !activeGroupId) || !(canSend || canSendGroup)}
                       className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-fuchsia-600 hover:from-cyan-400 hover:to-fuchsia-500 text-white shrink-0"
                       title="Enviar áudio"
                     >
@@ -1440,7 +1734,7 @@ export function ChatDock() {
                       type="button"
                       variant="outline"
                       size="icon"
-                      disabled={!activeUserId || sending || !canSend}
+                      disabled={(!activeUserId && !activeGroupId) || sending || !(canSend || canSendGroup)}
                       onClick={() => fileInputRef.current?.click()}
                       title="Enviar imagem"
                       className="bg-background/60 border-border/60 hover:bg-background/80"
@@ -1451,7 +1745,7 @@ export function ChatDock() {
                       type="button"
                       variant="outline"
                       size="icon"
-                      disabled={!activeUserId || sending || !canSend}
+                      disabled={(!activeUserId && !activeGroupId) || sending || !(canSend || canSendGroup)}
                       onClick={startRecording}
                       title="Mensagem de voz"
                       className="bg-background/60 border-border/60 hover:bg-background/80"
@@ -1462,7 +1756,7 @@ export function ChatDock() {
                       value={draft}
                       onChange={(e) => setDraft(e.target.value)}
                       onPaste={(e) => {
-                        if (!activeUserId || !canSend) return;
+                        if ((!activeUserId && !activeGroupId) || !(canSend || canSendGroup)) return;
                         const f = e.clipboardData?.files?.[0] ?? null;
                         if (!f) return;
                         if (String(f.type || '').toLowerCase().startsWith('image/')) {
@@ -1470,19 +1764,25 @@ export function ChatDock() {
                           setPendingFile(f);
                         }
                       }}
-                      placeholder={activeUserId ? `Mensagem para ${activeUser.name}…` : 'Mensagem…'}
+                      placeholder={
+                        activeGroupId
+                          ? `Mensagem para ${activeGroup?.name ?? 'Grupo'}…`
+                          : activeUserId
+                          ? `Mensagem para ${activeUser.name}…`
+                          : 'Mensagem…'
+                      }
                       onKeyDown={(e) => {
                         if (e.key !== 'Enter') return;
                         e.preventDefault();
-                        onSend();
+                        if (activeGroupId) onSendGroup(); else onSend();
                       }}
-                      disabled={!activeUserId || sending || !canSend}
+                      disabled={(!activeUserId && !activeGroupId) || sending || !(canSend || canSendGroup)}
                       className="bg-background/60 border-border/60 focus-visible:ring-1 focus-visible:ring-cyan-400/40"
                     />
                     <Button
                       type="button"
-                      onClick={onSend}
-                      disabled={!activeUserId || sending || (!draft.trim() && !pendingFile) || !canSend}
+                      onClick={activeGroupId ? onSendGroup : onSend}
+                      disabled={(!activeUserId && !activeGroupId) || sending || (!draft.trim() && !pendingFile) || !(canSend || canSendGroup)}
                       className="p-0 w-10 h-10 bg-gradient-to-br from-cyan-500 to-fuchsia-600 rounded-full hover:from-cyan-400 hover:to-fuchsia-500"
                     >
                       <Send className="w-4 h-4" />
@@ -1522,6 +1822,91 @@ export function ChatDock() {
                   </Button>
                   <Button type="button" variant="destructive" onClick={confirmDelete} disabled={deleting}>
                     Eliminar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {deleteConvOpen && (
+            <div
+              className="fixed inset-0 z-[240] flex items-center justify-center bg-black/60 p-4"
+              onClick={() => { if (deletingConv) return; setDeleteConvOpen(false); }}
+            >
+              <div className="p-6 w-full max-w-sm glass-card" onClick={(e) => e.stopPropagation()}>
+                <div className="space-y-2">
+                  <div className="text-lg font-semibold">Apagar conversa?</div>
+                  <div className="text-sm text-muted-foreground">
+                    Todas as mensagens com <strong>{activeUser.name}</strong> serão removidas permanentemente.
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end mt-5">
+                  <Button type="button" variant="outline" onClick={() => setDeleteConvOpen(false)} disabled={deletingConv}>
+                    Cancelar
+                  </Button>
+                  <Button type="button" variant="destructive" onClick={confirmDeleteConv} disabled={deletingConv}>
+                    {deletingConv ? 'A apagar…' : 'Apagar tudo'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {createGroupOpen && (
+            <div
+              className="fixed inset-0 z-[240] flex items-center justify-center bg-black/60 p-4"
+              onClick={() => { if (creatingGroup) return; setCreateGroupOpen(false); }}
+            >
+              <div className="p-6 w-full max-w-sm glass-card space-y-4" onClick={(e) => e.stopPropagation()}>
+                <div className="text-lg font-semibold">Novo grupo</div>
+
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground font-medium">Nome do grupo</div>
+                  <Input
+                    value={createGroupName}
+                    onChange={(e) => setCreateGroupName(e.target.value)}
+                    placeholder="Ex: Equipa de vendas"
+                    className="bg-background/60 border-border/60"
+                    disabled={creatingGroup}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground font-medium">Membros</div>
+                  <div className="max-h-[200px] overflow-y-auto space-y-1 rounded-md border border-border/60 p-2 bg-background/40">
+                    {recipients.map((u: any) => {
+                      const uid = String(u?.id ?? '').trim();
+                      const name = String(u?.name ?? uid).trim();
+                      const checked = createGroupMemberIds.includes(uid);
+                      return (
+                        <label key={uid} className="flex items-center gap-2 cursor-pointer py-1 px-1 rounded hover:bg-muted/40">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={creatingGroup}
+                            onChange={() => setCreateGroupMemberIds((prev) =>
+                              checked ? prev.filter((id) => id !== uid) : [...prev, uid]
+                            )}
+                            className="accent-cyan-500"
+                          />
+                          <span className="text-sm">{name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  <Button type="button" variant="outline" onClick={() => setCreateGroupOpen(false)} disabled={creatingGroup}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={confirmCreateGroup}
+                    disabled={creatingGroup || !createGroupName.trim() || createGroupMemberIds.length === 0}
+                    className="bg-gradient-to-br from-cyan-500 to-fuchsia-600 hover:from-cyan-400 hover:to-fuchsia-500 text-white"
+                  >
+                    {creatingGroup ? 'A criar…' : 'Criar grupo'}
                   </Button>
                 </div>
               </div>

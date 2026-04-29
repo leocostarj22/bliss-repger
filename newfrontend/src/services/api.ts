@@ -8,7 +8,7 @@ import type { MainDashboardData } from '@/types';
  * Base URL pattern: /api/v1/email/...
  */
 
-import type { ApiResponse, Campaign, Contact, DashboardStats, Automation, AppNotification, EmailTemplate, Company, Department, User, Role, Employee, Payroll, Timesheet, Vacation, Holiday, InternalMessage, AdminPost, AdminPostComment, VideoCallMeeting, BlissProduct, BlissCustomer, BlissOrder, BlissOrderProduct, BlissOrderStatus, MyFormulaProduct, MyFormulaCustomer, MyFormulaOrder, MyFormulaOrderProduct, MyFormulaOrderStatus, MyFormulaQuiz, SupportCategory, SupportTicket, SupportTicketAttachment, SupportTicketComment, SupportTicketStatus, SupportTicketPriority, EspacoAbsolutoCustomer, EspacoAbsolutoAppointment, EspacoAbsolutoUserGroup, EspacoAbsolutoUserMessage, SystemLog, Task, PersonalNote, TaskPriority, TaskStatus } from '@/types';
+import type { ApiResponse, Campaign, Contact, DashboardStats, Automation, AppNotification, EmailTemplate, Company, Department, User, Role, Employee, Payroll, Timesheet, Vacation, Holiday, InternalMessage, ChatGroup, AdminPost, AdminPostComment, VideoCallMeeting, BlissProduct, BlissCustomer, BlissOrder, BlissOrderProduct, BlissOrderStatus, MyFormulaProduct, MyFormulaCustomer, MyFormulaOrder, MyFormulaOrderProduct, MyFormulaOrderStatus, MyFormulaQuiz, SupportCategory, SupportTicket, SupportTicketAttachment, SupportTicketComment, SupportTicketStatus, SupportTicketPriority, EspacoAbsolutoCustomer, EspacoAbsolutoAppointment, EspacoAbsolutoUserGroup, EspacoAbsolutoUserMessage, SystemLog, Task, PersonalNote, TaskPriority, TaskStatus } from '@/types';
 import { mockCampaigns, mockContacts, mockDashboardStats, mockAutomations, mockNotifications, mockCompanies, mockDepartments, mockSupportCategories, mockSupportTickets, mockUsers, mockRoles, mockEmployees, mockPayrolls, mockTimesheets, mockVacations, mockInternalMessages, mockAdminPosts, mockVideoCallMeetings, mockBlissProducts, mockBlissCustomers, mockBlissOrders, mockBlissOrderProducts, mockBlissOrderStatuses, mockMyFormulaProducts, mockMyFormulaCustomers, mockMyFormulaOrders, mockMyFormulaOrderProducts, mockMyFormulaOrderStatuses, mockMyFormulaQuizzes, mockEspacoAbsolutoCustomers, mockEspacoAbsolutoAppointments, mockEspacoAbsolutoUserGroups, mockEspacoAbsolutoUserMessages, mockSystemLogs, mockTasks, mockPersonalNotes } from './mockData';
 
 const delay = (ms = 400) => new Promise(r => setTimeout(r, ms + Math.random() * 200));
@@ -3650,6 +3650,88 @@ export async function deleteInternalMessageRecipient(id: string): Promise<ApiRes
 
   const json = await response.json();
   return { data: { id: String(json?.data?.id ?? id) } };
+}
+
+export async function deleteConversation(userId: string): Promise<void> {
+  const response = await apiFetch(`/api/v1/communication/messages/conversation/${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+  if (!response.ok) throw new Error(`Failed to delete conversation: ${response.statusText}`);
+}
+
+export async function fetchChatGroups(): Promise<ApiResponse<ChatGroup[]>> {
+  const response = await apiFetch('/api/v1/communication/groups', {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+  if (!response.ok) throw new Error(`Failed to fetch groups: ${response.statusText}`);
+  const json = await response.json();
+  return { data: Array.isArray(json?.data) ? json.data : [] };
+}
+
+export async function createChatGroup(payload: { name: string; member_ids: number[] }): Promise<ApiResponse<ChatGroup>> {
+  const response = await apiFetch('/api/v1/communication/groups', {
+    method: 'POST',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    let msg = `Failed to create group: ${response.statusText}`;
+    try { const j = await response.json(); if (typeof j?.message === 'string') msg = j.message; } catch {}
+    throw new Error(msg);
+  }
+  const json = await response.json();
+  return { data: json?.data };
+}
+
+export async function fetchGroupThread(groupId: string, cursorId?: string | null): Promise<{ items: InternalMessage[]; hasMore: boolean; nextCursorId: string | null }> {
+  const qs = new URLSearchParams({ limit: '30' });
+  if (cursorId) qs.set('cursor_id', cursorId);
+  const response = await apiFetch(`/api/v1/communication/groups/${encodeURIComponent(groupId)}/messages?${qs.toString()}`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+  if (!response.ok) throw new Error(`Failed to fetch group thread: ${response.statusText}`);
+  const json = await response.json();
+  return {
+    items: Array.isArray(json?.data) ? json.data : [],
+    hasMore: Boolean(json?.meta?.has_more),
+    nextCursorId: json?.meta?.next_cursor_id ?? null,
+  };
+}
+
+export async function sendGroupMessage(groupId: string, payload: { body?: string; file?: File }): Promise<ApiResponse<InternalMessage>> {
+  const formData = new FormData();
+  if (payload.body) formData.append('body', payload.body);
+  if (payload.file) formData.append('file', payload.file);
+
+  const response = await apiFetch(`/api/v1/communication/groups/${encodeURIComponent(groupId)}/messages`, {
+    method: 'POST',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+    body: formData,
+  });
+  if (!response.ok) {
+    let msg = `Failed to send group message: ${response.statusText}`;
+    try { const j = await response.json(); if (typeof j?.message === 'string') msg = j.message; } catch {}
+    throw new Error(msg);
+  }
+  const json = await response.json();
+  return { data: json?.data };
+}
+
+export async function deleteChatGroup(groupId: string): Promise<void> {
+  const response = await apiFetch(`/api/v1/communication/groups/${encodeURIComponent(groupId)}`, {
+    method: 'DELETE',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+  if (!response.ok) throw new Error(`Failed to delete group: ${response.statusText}`);
 }
 
 const readAdminPosts = (): AdminPost[] => {

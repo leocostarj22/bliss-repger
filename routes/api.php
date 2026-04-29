@@ -14,6 +14,7 @@ use App\Models\PostComment;
 use App\Models\InternalMessage;
 use App\Models\MessageRecipient;
 use App\Models\MessageAttachment;
+use App\Models\ChatGroup;
 use App\Events\MessageReactionsUpdated;
 use App\Models\VideoCall;
 use App\Models\Company;
@@ -912,6 +913,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
             $cursorId = trim((string) request('cursor_id', ''));
 
             $q = MessageRecipient::query()
+                ->where('is_deleted', false)
                 ->whereHas('message', function ($mq) {
                     $mq->where('status', 'sent')->where('subject', '(Chat)');
                 })
@@ -1422,6 +1424,26 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 'id' => (string) $recipient->id,
                 'reactions' => $reactions,
             ]]);
+        });
+
+        Route::delete('messages/conversation/{userId}', function (string $userId) {
+            $user = auth('web')->user();
+            abort_unless($user, 401);
+            abort_unless(trim($userId) !== '', 422);
+
+            // soft-delete both sides of the conversation for the current user
+            MessageRecipient::query()
+                ->where(function ($w) use ($user, $userId) {
+                    $w->where('recipient_id', $user->id)
+                        ->whereHas('message', fn ($mq) => $mq->where('sender_id', $userId));
+                })
+                ->orWhere(function ($w) use ($user, $userId) {
+                    $w->where('recipient_id', $userId)
+                        ->whereHas('message', fn ($mq) => $mq->where('sender_id', $user->id));
+                })
+                ->update(['is_deleted' => true]);
+
+            return response()->json(['ok' => true]);
         });
 
         Route::delete('messages/{recipient}', function (MessageRecipient $recipient) {
@@ -2148,6 +2170,250 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                     'updatedAt' => $call->updated_at?->toIso8601String(),
                 ],
             ], 201);
+        });
+
+        // ── Group chat routes ────────────────────────────────────────────────
+        Route::get('groups', function () {
+            $user = auth('web')->user();
+            abort_unless($user, 401);
+
+            $groups = ChatGroup::whereHas('members', fn ($q) => $q->where('user_id', $user->id))
+                ->with(['members:id,name'])
+                ->orderByDesc('updated_at')
+                ->get();
+
+            $data = $groups->map(function (ChatGroup $g) {
+                return [
+                    'id' => (string) $g->id,
+                    'name' => (string) $g->name,
+                    'created_by_id' => (string) $g->created_by_id,
+                    'members' => $g->members->map(fn (User $u) => [
+                        'id' => (string) $u->id,
+                        'name' => (string) $u->name,
+                    ])->values(),
+                    'createdAt' => $g->created_at?->toIso8601String(),
+                    'updatedAt' => $g->updated_at?->toIso8601String(),
+                ];
+            })->values();
+
+            return response()->json(['data' => $data]);
+        });
+
+        Route::post('groups', function () {
+            $user = auth('web')->user();
+            abort_unless($user, 401);
+
+            $validated = request()->validate([
+                'name' => ['required', 'string', 'max:100'],
+                'member_ids' => ['required', 'array', 'min:1'],
+                'member_ids.*' => ['integer', 'exists:users,id'],
+            ]);
+
+            $group = ChatGroup::create([
+                'name' => trim($validated['name']),
+                'created_by_id' => $user->id,
+            ]);
+
+            $memberIds = array_unique(array_merge([(int) $user->id], array_map('intval', $validated['member_ids'])));
+            $syncData = [];
+            foreach ($memberIds as $mid) {
+                $syncData[$mid] = ['joined_at' => now()];
+            }
+            $group->members()->sync($syncData);
+            $group->load('members:id,name');
+
+            return response()->json([
+                'data' => [
+                    'id' => (string) $group->id,
+                    'name' => (string) $group->name,
+                    'created_by_id' => (string) $group->created_by_id,
+                    'members' => $group->members->map(fn (User $u) => [
+                        'id' => (string) $u->id,
+                        'name' => (string) $u->name,
+                    ])->values(),
+                    'createdAt' => $group->created_at?->toIso8601String(),
+                    'updatedAt' => $group->updated_at?->toIso8601String(),
+                ],
+            ], 201);
+        });
+
+        Route::get('groups/{group}/messages', function (ChatGroup $group) {
+            $user = auth('web')->user();
+            abort_unless($user, 401);
+            abort_unless($group->hasMember((int) $user->id), 403);
+
+            $limit = (int) request('limit', 30);
+            if ($limit < 1) $limit = 1;
+            if ($limit > 100) $limit = 100;
+
+            $cursorId = (int) request('cursor_id', 0);
+
+            $q = InternalMessage::query()
+                ->where('group_id', $group->id)
+                ->where('status', 'sent')
+                ->with(['sender:id,name', 'attachments'])
+                ->orderByDesc('sent_at')
+                ->orderByDesc('id');
+
+            if ($cursorId > 0) {
+                $q->where('id', '<', $cursorId);
+            }
+
+            $rows = $q->limit($limit + 1)->get();
+            $hasMore = $rows->count() > $limit;
+            if ($hasMore) $rows = $rows->take($limit);
+
+            $data = $rows->map(function (InternalMessage $m) {
+                $attachments = $m->attachments->map(function (MessageAttachment $a) {
+                    return [
+                        'id' => (string) $a->id,
+                        'filename' => (string) ($a->filename ?? ''),
+                        'original_filename' => (string) ($a->original_filename ?? ''),
+                        'mime_type' => (string) ($a->mime_type ?? ''),
+                        'file_size' => (int) ($a->file_size ?? 0),
+                        'url' => url('api/v1/communication/messages/attachments/view/' . $a->id),
+                    ];
+                })->values()->all();
+
+                return [
+                    'id' => (string) $m->id,
+                    'group_id' => (string) $m->group_id,
+                    'from_user_id' => (string) $m->sender_id,
+                    'to_user_id' => null,
+                    'subject' => '(Group Chat)',
+                    'body' => (string) ($m->body ?? ''),
+                    'folder' => 'group',
+                    'read_at' => null,
+                    'sent_at' => $m->sent_at?->toIso8601String(),
+                    'created_at' => $m->created_at?->toIso8601String(),
+                    'updated_at' => $m->updated_at?->toIso8601String(),
+                    'attachments' => $attachments,
+                    'reactions' => [],
+                    'sender_name' => (string) ($m->sender?->name ?? ''),
+                ];
+            })->values();
+
+            $nextCursorId = null;
+            if ($hasMore && $rows->isNotEmpty()) {
+                $nextCursorId = (string) $rows->last()?->id;
+            }
+
+            return response()->json([
+                'data' => $data,
+                'meta' => ['has_more' => $hasMore, 'next_cursor_id' => $nextCursorId],
+            ]);
+        });
+
+        Route::post('groups/{group}/messages', function (ChatGroup $group) {
+            $user = auth('web')->user();
+            abort_unless($user, 401);
+            abort_unless($group->hasMember((int) $user->id), 403);
+
+            $validated = request()->validate([
+                'body' => ['nullable', 'string', 'max:10000'],
+                'file' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,gif,webp,webm,ogg,mp4,m4a,wav'],
+            ]);
+
+            $body = trim((string) ($validated['body'] ?? ''));
+            $file = request()->file('file');
+            abort_unless($body !== '' || $file !== null, 422);
+
+            $message = InternalMessage::create([
+                'subject' => '(Group Chat)',
+                'body' => $body,
+                'priority' => 'normal',
+                'status' => 'sent',
+                'sender_id' => $user->id,
+                'group_id' => $group->id,
+                'sent_at' => now(),
+            ]);
+
+            if ($file !== null) {
+                $originalName = (string) $file->getClientOriginalName();
+                $ext = strtolower((string) $file->getClientOriginalExtension());
+                $base = \Illuminate\Support\Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) ?: (string) \Illuminate\Support\Str::uuid();
+                $filename = $base . '-' . \Illuminate\Support\Str::uuid() . ($ext ? ('.' . $ext) : '');
+                $path = $file->storeAs('messages/attachments', $filename, 'local');
+
+                MessageAttachment::create([
+                    'message_id' => $message->id,
+                    'filename' => $filename,
+                    'original_filename' => $originalName,
+                    'file_path' => $path,
+                    'mime_type' => (string) $file->getMimeType(),
+                    'file_size' => (int) $file->getSize(),
+                ]);
+            }
+
+            $message->load(['sender:id,name', 'attachments']);
+
+            $attachments = $message->attachments->map(function (MessageAttachment $a) {
+                return [
+                    'id' => (string) $a->id,
+                    'filename' => (string) ($a->filename ?? ''),
+                    'original_filename' => (string) ($a->original_filename ?? ''),
+                    'mime_type' => (string) ($a->mime_type ?? ''),
+                    'file_size' => (int) ($a->file_size ?? 0),
+                    'url' => url('api/v1/communication/messages/attachments/view/' . $a->id),
+                ];
+            })->values()->all();
+
+            return response()->json([
+                'data' => [
+                    'id' => (string) $message->id,
+                    'group_id' => (string) $message->group_id,
+                    'from_user_id' => (string) $message->sender_id,
+                    'to_user_id' => null,
+                    'subject' => '(Group Chat)',
+                    'body' => (string) ($message->body ?? ''),
+                    'folder' => 'group',
+                    'read_at' => null,
+                    'sent_at' => $message->sent_at?->toIso8601String(),
+                    'created_at' => $message->created_at?->toIso8601String(),
+                    'updated_at' => $message->updated_at?->toIso8601String(),
+                    'attachments' => $attachments,
+                    'reactions' => [],
+                    'sender_name' => (string) ($message->sender?->name ?? ''),
+                ],
+            ], 201);
+        });
+
+        Route::delete('groups/{group}', function (ChatGroup $group) {
+            $user = auth('web')->user();
+            abort_unless($user, 401);
+            abort_unless((int) $group->created_by_id === (int) $user->id, 403);
+
+            InternalMessage::where('group_id', $group->id)->delete();
+            $group->members()->detach();
+            $group->delete();
+
+            return response()->json(['ok' => true]);
+        });
+
+        Route::post('groups/{group}/members', function (ChatGroup $group) {
+            $user = auth('web')->user();
+            abort_unless($user, 401);
+            abort_unless((int) $group->created_by_id === (int) $user->id, 403);
+
+            $validated = request()->validate([
+                'user_id' => ['required', 'integer', 'exists:users,id'],
+            ]);
+
+            $group->members()->syncWithoutDetaching([(int) $validated['user_id'] => ['joined_at' => now()]]);
+
+            return response()->json(['ok' => true]);
+        });
+
+        Route::delete('groups/{group}/members/{userId}', function (ChatGroup $group, string $userId) {
+            $user = auth('web')->user();
+            abort_unless($user, 401);
+            $isCreator = (int) $group->created_by_id === (int) $user->id;
+            $isSelf = (int) $userId === (int) $user->id;
+            abort_unless($isCreator || $isSelf, 403);
+
+            $group->members()->detach((int) $userId);
+
+            return response()->json(['ok' => true]);
         });
     });
 

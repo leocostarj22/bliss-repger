@@ -448,13 +448,24 @@ export interface Timesheet {
   updatedAt: string;
 }
 
-export type CommunicationMessageFolder = 'inbox' | 'sent' | 'archived' | string;
+export type CommunicationMessageFolder = 'inbox' | 'sent' | 'archived' | 'group' | string;
+
+export interface ChatGroup {
+  id: string;
+  name: string;
+  created_by_id: string;
+  members: Array<{ id: string; name: string }>;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface InternalMessage {
   id: string;
   thread_id?: string | null;
+  group_id?: string | null;
   from_user_id: string;
-  to_user_id: string;
+  to_user_id: string | null;
+  sender_name?: string;
   subject: string;
   body: string;
   attachments?: Array<{

@@ -19,6 +19,7 @@ class InternalMessage extends Model
         'priority',
         'status',
         'sender_id',
+        'group_id',
         'is_broadcast',
         'sent_at',
     ];
@@ -31,6 +32,11 @@ class InternalMessage extends Model
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sender_id');
+    }
+
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(ChatGroup::class, 'group_id');
     }
 
     public function recipients(): HasMany
