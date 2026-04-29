@@ -189,17 +189,21 @@ export function ChatDock() {
   const prevInboxIdsRef = useRef<Set<string>>(new Set());
   const audioUnlockedRef = useRef(false);
 
+  // refs always-current para evitar closures stale nos listeners WebSocket
+  const openRef = useRef(false);
+  const activeUserIdRef = useRef('');
+  const loadThreadRef = useRef<((opts?: { reset?: boolean }) => Promise<void>) | null>(null);
+
   const [userDetailsById, setUserDetailsById] = useState<
     Record<string, { name?: string; email?: string; photo_path?: string | null; role?: string | null; is_admin?: boolean }>
   >({});
 
-  useEffect(() => {
-    inboxRef.current = inbox;
-  }, [inbox]);
+  useEffect(() => { inboxRef.current = inbox; }, [inbox]);
+  useEffect(() => { userDetailsRef.current = userDetailsById; }, [userDetailsById]);
 
-  useEffect(() => {
-    userDetailsRef.current = userDetailsById;
-  }, [userDetailsById]);
+  // manter refs sempre actualizados — sem deps para correr em cada render
+  openRef.current = open;
+  activeUserIdRef.current = activeUserId;
 
   const userById = useMemo(() => {
     const map = new Map<string, CommunicationRecipient>();
@@ -593,13 +597,13 @@ export function ChatDock() {
           .private(`messages.${String(me.id)}`)
           .listen('.message.sent', () => {
             inboxTickRef.current?.();
-            if (open) sentTickRef.current?.();
-            if (open && activeUserId) loadThread({ reset: true });
+            if (openRef.current) sentTickRef.current?.();
+            if (openRef.current && activeUserIdRef.current) loadThreadRef.current?.({ reset: true });
           })
           .listen('.message.reactions.updated', () => {
             inboxTickRef.current?.();
-            if (open) sentTickRef.current?.();
-            if (open && activeUserId) loadThread({ reset: true });
+            if (openRef.current) sentTickRef.current?.();
+            if (openRef.current && activeUserIdRef.current) loadThreadRef.current?.({ reset: true });
           });
 
         setRealtimeActive(true);
@@ -644,7 +648,7 @@ export function ChatDock() {
   }, [activeUserId, inbox, me.id, open]);
 
   const loadThread = async (opts?: { reset?: boolean }) => {
-    const other = String(activeUserId || '').trim();
+    const other = String(activeUserIdRef.current || '').trim();
     const meId = String(me.id || '').trim();
     if (!other || !meId) return;
 
@@ -719,6 +723,8 @@ export function ChatDock() {
       setThreadLoadingOlder(false);
     }
   };
+
+  loadThreadRef.current = loadThread;
 
   useEffect(() => {
     if (!pendingFile) {
@@ -1359,6 +1365,16 @@ export function ChatDock() {
                     <audio controls src={pendingPreviewUrl} className="flex-1 h-8 min-w-0" />
                     <Button type="button" variant="ghost" size="icon" className="w-8 h-8" onClick={() => setPendingFile(null)} disabled={sending}>
                       <X className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      onClick={onSend}
+                      disabled={sending || !activeUserId || !canSend}
+                      className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-fuchsia-600 hover:from-cyan-400 hover:to-fuchsia-500 text-white shrink-0"
+                      title="Enviar áudio"
+                    >
+                      {sending ? <span className="h-3 w-3 rounded-full border-2 border-white/40 border-t-white animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                     </Button>
                   </div>
                 ) : (
