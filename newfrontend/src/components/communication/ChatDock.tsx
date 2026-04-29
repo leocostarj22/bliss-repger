@@ -485,6 +485,15 @@ export function ChatDock() {
           return !msgReadAt(m);
         });
 
+        // se há mensagens novas do utilizador activo, recarrega o thread imediatamente
+        const activeId = activeUserIdRef.current;
+        if (activeId && openRef.current) {
+          const hasNewFromActive = next.some(
+            (m: any) => !prevIds.has(msgId(m)) && msgFromId(m) === activeId,
+          );
+          if (hasNewFromActive) loadThreadRef.current?.({ reset: true });
+        }
+
         const last = newUnread[newUnread.length - 1] as any;
         if (last) {
           const from = msgFromId(last);
@@ -534,6 +543,15 @@ export function ChatDock() {
     const id = window.setInterval(tick, 7000);
     return () => window.clearInterval(id);
   }, [me.id, open, realtimeActive]);
+
+  // polling dedicado ao thread activo — garante actualizações mesmo sem WebSocket
+  useEffect(() => {
+    if (!me.id || !open || !activeUserId || realtimeActive || chatDisabled) return;
+    const id = window.setInterval(() => {
+      loadThreadRef.current?.({ reset: true });
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, [me.id, open, activeUserId, realtimeActive, chatDisabled]);
 
   useEffect(() => {
     const onOpen = (ev: Event) => {
