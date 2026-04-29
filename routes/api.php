@@ -1230,7 +1230,7 @@ Route::prefix('v1')->middleware(['web', 'auth:web,employee'])->group(function ()
                 'to_user_id' => ['required', 'exists:users,id'],
                 'subject' => ['nullable', 'string', 'max:255'],
                 'body' => ['nullable', 'string', 'required_without:file'],
-                'file' => ['nullable', 'file', 'required_without:body', 'max:15360', 'mimes:png,jpg,jpeg,gif,webp'],
+                'file' => ['nullable', 'file', 'required_without:body', 'max:15360', 'mimes:png,jpg,jpeg,gif,webp,webm,ogg,mp4,m4a,wav'],
             ]);
 
             $subject = trim((string) ($validated['subject'] ?? ''));

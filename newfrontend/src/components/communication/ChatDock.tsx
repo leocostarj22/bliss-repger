@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Download, ExternalLink, ImagePlus, MessageSquare, Search, Send, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Download, ExternalLink, ImagePlus, MessageSquare, Mic, Search, Send, Square, Trash2, X } from 'lucide-react';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 
@@ -37,6 +37,9 @@ const msgToId = (m: any) => String(m?.to_user_id ?? m?.toUserId ?? '').trim();
 const msgReadAt = (m: any) => String(m?.read_at ?? m?.readAt ?? '').trim();
 const msgWhenIso = (m: any) =>
   String(m?.sent_at ?? m?.sentAt ?? m?.createdAt ?? getAny(m, 'created_at') ?? getAny(m, 'createdAt') ?? '').trim();
+
+const fmtDuration = (s: number) =>
+  `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
 const fmtTime = (iso?: string | null) => {
   const raw = String(iso ?? '').trim();
@@ -168,6 +171,13 @@ export function ChatDock() {
   const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string>('');
   const [imgLoadingByMsgId, setImgLoadingByMsgId] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordingCancelledRef = useRef(false);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -750,6 +760,46 @@ export function ChatDock() {
     setDeleteOpen(true);
   };
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+      const recorder = new MediaRecorder(stream, { mimeType });
+      audioChunksRef.current = [];
+      recordingCancelledRef.current = false;
+
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      recorder.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setIsRecording(false);
+        setRecordingSeconds(0);
+        if (recordingCancelledRef.current) return;
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        const ext = mimeType.includes('webm') ? 'webm' : 'ogg';
+        setPendingFile(new File([blob], `audio-${Date.now()}.${ext}`, { type: mimeType }));
+      };
+
+      recorder.start(100);
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      recordingTimerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+    } catch {
+      // microfone negado ou indisponível
+    }
+  };
+
+  const stopRecording = () => {
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    mediaRecorderRef.current?.stop();
+  };
+
+  const cancelRecording = () => {
+    recordingCancelledRef.current = true;
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    mediaRecorderRef.current?.stop();
+  };
+
   const confirmDelete = async () => {
     const id = String(pendingDeleteId || '').trim();
     if (!id) return;
@@ -1119,6 +1169,8 @@ export function ChatDock() {
                   const attachments = Array.isArray((m as any)?.attachments) ? ((m as any).attachments as any[]) : [];
                   const imgAttachment =
                     attachments.find((a) => String(a?.mime_type ?? '').toLowerCase().startsWith('image/')) ?? null;
+                  const audioAttachment =
+                    attachments.find((a) => String(a?.mime_type ?? '').toLowerCase().startsWith('audio/')) ?? null;
                   const imgLoading = Boolean(imgAttachment) && (isLocal || imgLoadingByMsgId[id] !== false);
                   const reactions = Array.isArray((m as any)?.reactions) ? ((m as any).reactions as any[]) : [];
 
@@ -1192,6 +1244,13 @@ export function ChatDock() {
                               </div>
                             ) : null}
                           </div>
+                        ) : null}
+                        {audioAttachment ? (
+                          <audio
+                            controls
+                            src={String(audioAttachment?.url ?? '')}
+                            className={cn('w-full max-w-[220px]', text ? 'mb-2' : '')}
+                          />
                         ) : null}
                         {text ? <div className="whitespace-pre-wrap break-words">{text}</div> : null}
 
@@ -1294,22 +1353,25 @@ export function ChatDock() {
               </div>
 
               {pendingFile && pendingPreviewUrl ? (
-                <div className="flex gap-2 items-center p-2 rounded-md border border-border/60 bg-background/40">
-                  <div className="overflow-hidden w-10 h-10 rounded-md bg-muted">
-                    <img src={pendingPreviewUrl} alt="Pré-visualização" className="object-cover w-full h-full" />
+                pendingFile.type.startsWith('audio/') ? (
+                  <div className="flex gap-2 items-center p-2 rounded-md border border-amber-500/30 bg-amber-500/10">
+                    <Mic className="w-4 h-4 shrink-0 text-amber-400" />
+                    <audio controls src={pendingPreviewUrl} className="flex-1 h-8 min-w-0" />
+                    <Button type="button" variant="ghost" size="icon" className="w-8 h-8" onClick={() => setPendingFile(null)} disabled={sending}>
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <div className="flex-1 min-w-0 text-xs truncate text-muted-foreground">{pendingFile.name}</div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="w-8 h-8"
-                    onClick={() => setPendingFile(null)}
-                    disabled={sending}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
+                ) : (
+                  <div className="flex gap-2 items-center p-2 rounded-md border border-border/60 bg-background/40">
+                    <div className="overflow-hidden w-10 h-10 rounded-md bg-muted">
+                      <img src={pendingPreviewUrl} alt="Pré-visualização" className="object-cover w-full h-full" />
+                    </div>
+                    <div className="flex-1 min-w-0 text-xs truncate text-muted-foreground">{pendingFile.name}</div>
+                    <Button type="button" variant="ghost" size="icon" className="w-8 h-8" onClick={() => setPendingFile(null)} disabled={sending}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )
               ) : null}
 
               <div className="flex gap-2 items-center">
@@ -1324,46 +1386,75 @@ export function ChatDock() {
                     if (f) setPendingFile(f);
                   }}
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  disabled={!activeUserId || sending || !canSend}
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Enviar imagem"
-                  className="bg-background/60 border-border/60 hover:bg-background/80"
-                >
-                  <ImagePlus className="w-4 h-4" />
-                </Button>
-                <Input
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onPaste={(e) => {
-                    if (!activeUserId || !canSend) return;
-                    const f = e.clipboardData?.files?.[0] ?? null;
-                    if (!f) return;
-                    if (String(f.type || '').toLowerCase().startsWith('image/')) {
-                      e.preventDefault();
-                      setPendingFile(f);
-                    }
-                  }}
-                  placeholder={activeUserId ? `Mensagem para ${activeUser.name}…` : 'Mensagem…'}
-                  onKeyDown={(e) => {
-                    if (e.key !== 'Enter') return;
-                    e.preventDefault();
-                    onSend();
-                  }}
-                  disabled={!activeUserId || sending || !canSend}
-                  className="bg-background/60 border-border/60 focus-visible:ring-1 focus-visible:ring-cyan-400/40"
-                />
-                <Button
-                  type="button"
-                  onClick={onSend}
-                  disabled={!activeUserId || sending || (!draft.trim() && !pendingFile) || !canSend}
-                  className="p-0 w-10 h-10 bg-gradient-to-br from-cyan-500 to-fuchsia-600 rounded-full hover:from-cyan-400 hover:to-fuchsia-500"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
+
+                {isRecording ? (
+                  <>
+                    <div className="flex flex-1 items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2">
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-red-500 animate-pulse" />
+                      <span className="font-mono text-sm text-red-400">{fmtDuration(recordingSeconds)}</span>
+                    </div>
+                    <Button type="button" variant="outline" size="icon" onClick={cancelRecording} title="Cancelar" className="bg-background/60 border-border/60">
+                      <X className="w-4 h-4" />
+                    </Button>
+                    <Button type="button" size="icon" onClick={stopRecording} title="Parar e enviar" className="bg-red-500 hover:bg-red-600 text-white">
+                      <Square className="w-4 h-4" />
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      disabled={!activeUserId || sending || !canSend}
+                      onClick={() => fileInputRef.current?.click()}
+                      title="Enviar imagem"
+                      className="bg-background/60 border-border/60 hover:bg-background/80"
+                    >
+                      <ImagePlus className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      disabled={!activeUserId || sending || !canSend}
+                      onClick={startRecording}
+                      title="Mensagem de voz"
+                      className="bg-background/60 border-border/60 hover:bg-background/80"
+                    >
+                      <Mic className="w-4 h-4" />
+                    </Button>
+                    <Input
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      onPaste={(e) => {
+                        if (!activeUserId || !canSend) return;
+                        const f = e.clipboardData?.files?.[0] ?? null;
+                        if (!f) return;
+                        if (String(f.type || '').toLowerCase().startsWith('image/')) {
+                          e.preventDefault();
+                          setPendingFile(f);
+                        }
+                      }}
+                      placeholder={activeUserId ? `Mensagem para ${activeUser.name}…` : 'Mensagem…'}
+                      onKeyDown={(e) => {
+                        if (e.key !== 'Enter') return;
+                        e.preventDefault();
+                        onSend();
+                      }}
+                      disabled={!activeUserId || sending || !canSend}
+                      className="bg-background/60 border-border/60 focus-visible:ring-1 focus-visible:ring-cyan-400/40"
+                    />
+                    <Button
+                      type="button"
+                      onClick={onSend}
+                      disabled={!activeUserId || sending || (!draft.trim() && !pendingFile) || !canSend}
+                      className="p-0 w-10 h-10 bg-gradient-to-br from-cyan-500 to-fuchsia-600 rounded-full hover:from-cyan-400 hover:to-fuchsia-500"
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
