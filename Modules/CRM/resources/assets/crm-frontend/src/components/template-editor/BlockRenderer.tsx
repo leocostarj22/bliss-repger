@@ -152,11 +152,20 @@ export function BlockRenderer({ block, onSelect, onDelete, isNested = false }: B
         );
       }
       return (
-        <div
-          className="overflow-x-auto"
-          style={{ maxWidth: '100%' }}
-          dangerouslySetInnerHTML={{ __html: String(p.code) }}
-        />
+        <div className="html-block-wrapper overflow-hidden">
+          <div
+            className="html-content"
+            style={{ maxWidth: '100%' }}
+            dangerouslySetInnerHTML={{ __html: String(p.code) }}
+          />
+          <style>{`
+            .html-block-wrapper img { max-width: 100% !important; height: auto !important; }
+            .html-block-wrapper table { max-width: 100% !important; table-layout: fixed !important; }
+            .html-block-wrapper td, .html-block-wrapper th { word-break: break-word !important; overflow-wrap: break-word !important; }
+            .html-block-wrapper div, .html-block-wrapper p, .html-block-wrapper span { max-width: 100% !important; box-sizing: border-box !important; }
+            .html-block-wrapper * { box-sizing: border-box !important; }
+          `}</style>
+        </div>
       );
 case 'video':
       return (
