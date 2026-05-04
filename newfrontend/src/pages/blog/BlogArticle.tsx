@@ -134,8 +134,18 @@ export default function BlogArticle() {
         )}
 
         {/* Rich text content */}
+        <style>{`
+          .blog-content p { margin-bottom: 1rem !important; }
+          .blog-content p:last-child { margin-bottom: 0 !important; }
+          .blog-content h1, .blog-content h2, .blog-content h3 { margin-top: 1.5rem !important; margin-bottom: 0.75rem !important; }
+          .blog-content ul, .blog-content ol { margin-left: 1.5rem !important; margin-bottom: 1rem !important; }
+          .blog-content blockquote { margin: 1rem 0 !important; }
+          .blog-content pre { margin: 1rem 0 !important; }
+          .blog-content table { margin: 1rem 0 !important; }
+          .blog-content hr { margin: 2rem 0 !important; }
+        `}</style>
         <div
-          className="prose prose-sm sm:prose-base mt-8 max-w-none
+          className="blog-content prose prose-sm sm:prose-base max-w-none
             dark:prose-invert
             prose-headings:text-foreground
             prose-p:text-foreground/80 prose-p:leading-relaxed
