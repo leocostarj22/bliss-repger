@@ -1,2 +1,2 @@
-import{v as r}from"./index-CgIbzyLM.js";function o(t){const e=t.match(/<style[^>]*>([\s\S]*?)<\/style>/gi);return e?e.join(`
+import{v as r}from"./index-AF2l6FtV.js";function o(t){const e=t.match(/<style[^>]*>([\s\S]*?)<\/style>/gi);return e?e.join(`
 `):""}function s(t){return t.replace(/<style[^>]*>[\s\S]*?<\/style>/gi,"")}function c(t){return t.trim()?[{id:r(),type:"html",props:{code:t}}]:[]}export{o as extractStyleBlocks,c as htmlToBlocks,s as stripStyleTags};

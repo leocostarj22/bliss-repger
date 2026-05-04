@@ -18,7 +18,7 @@ export function HtmlVisualEditor({ html, onChange, onConvertToBlocks }: HtmlVisu
   const [codeValue, setCodeValue] = useState(html);
   const [selectedElement, setSelectedElement] = useState<HTMLElement | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editType, setEditType] = useState<'text' | 'image' | 'link'>('text');
+  const [editType, setEditType] = useState<'text' | 'image' | 'link' | 'button'>('text');
   const [editValue, setEditValue] = useState('');
   const [editHref, setEditHref] = useState('');
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -84,6 +84,16 @@ export function HtmlVisualEditor({ html, onChange, onConvertToBlocks }: HtmlVisu
           a[data-editable]:hover::after {
             content: '🔗';
           }
+          
+          /* Buttons */
+          button[data-editable]:hover,
+          [data-editable="button"]:hover {
+            outline: 2px dashed #8b5cf6 !important;
+          }
+          button[data-editable]:hover::after,
+          [data-editable="button"]:hover::after {
+            content: '🔘';
+          }
         </style>
       </head>
       <body>
@@ -108,6 +118,16 @@ export function HtmlVisualEditor({ html, onChange, onConvertToBlocks }: HtmlVisu
           document.querySelectorAll('a[href]').forEach(a => {
             if (a.getAttribute('href') && a.getAttribute('href') !== '#') {
               a.setAttribute('data-editable', 'link');
+            }
+          });
+          
+          // Mark buttons and button-like elements as editable links
+          document.querySelectorAll('button, [role="button"], .btn, .button').forEach(el => {
+            if (!el.getAttribute('data-editable')) {
+              const hasAction = el.getAttribute('onclick') || el.getAttribute('data-href') || el.getAttribute('data-url') || el.tagName === 'BUTTON';
+              if (hasAction) {
+                el.setAttribute('data-editable', 'button');
+              }
             }
           });
           
@@ -150,9 +170,10 @@ export function HtmlVisualEditor({ html, onChange, onConvertToBlocks }: HtmlVisu
             } else if (editType === 'image') {
               message.src = target.getAttribute('src');
               message.alt = target.getAttribute('alt') || '';
-            } else if (editType === 'link') {
-              message.href = target.getAttribute('href');
-              message.textContent = target.textContent;
+            } else if (editType === 'link' || editType === 'button') {
+              message.href = target.getAttribute('href') || target.getAttribute('data-href') || target.getAttribute('data-url') || '';
+              message.textContent = target.textContent || target.innerText || '';
+              message.isButton = editType === 'button';
             }
             
             window.parent.postMessage(message, '*');
@@ -185,7 +206,8 @@ export function HtmlVisualEditor({ html, onChange, onConvertToBlocks }: HtmlVisu
         } else if (data.editType === 'image') {
           setEditValue(data.src || '');
           setEditHref(data.alt || '');
-        } else if (data.editType === 'link') {
+        } else if (data.editType === 'link' || data.editType === 'button') {
+          setEditType(data.editType);
           setEditValue(data.href || '');
           setEditHref(data.textContent || '');
         }
@@ -210,8 +232,15 @@ export function HtmlVisualEditor({ html, onChange, onConvertToBlocks }: HtmlVisu
     } else if (editType === 'image') {
       selected.setAttribute('src', editValue);
       if (editHref) selected.setAttribute('alt', editHref);
-    } else if (editType === 'link') {
-      selected.setAttribute('href', editValue);
+    } else if (editType === 'link' || editType === 'button') {
+      if (selected.getAttribute('href') !== null) {
+        selected.setAttribute('href', editValue);
+      } else if (selected.getAttribute('data-href') !== null) {
+        selected.setAttribute('data-href', editValue);
+      } else if (selected.getAttribute('data-url') !== null) {
+        selected.setAttribute('data-url', editValue);
+      }
+      if (editHref) selected.textContent = editHref;
     }
 
     // Get updated HTML
@@ -311,6 +340,7 @@ export function HtmlVisualEditor({ html, onChange, onConvertToBlocks }: HtmlVisu
               {editType === 'text' && <><Pencil className="w-4 h-4" /> Editar Texto</>}
               {editType === 'image' && <><Image className="w-4 h-4" /> Editar Imagem</>}
               {editType === 'link' && <><Link className="w-4 h-4" /> Editar Link</>}
+              {editType === 'button' && <><Link className="w-4 h-4" /> Editar Botão</>}
             </DialogTitle>
           </DialogHeader>
 
@@ -354,6 +384,22 @@ export function HtmlVisualEditor({ html, onChange, onConvertToBlocks }: HtmlVisu
                 <div className="space-y-2">
                   <Label>Texto do Link</Label>
                   <Input value={editHref} onChange={(e) => setEditHref(e.target.value)} />
+                </div>
+              </div>
+            )}
+
+            {editType === 'button' && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>URL do Botão</Label>
+                  <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} placeholder="https://..." />
+                </div>
+                <div className="space-y-2">
+                  <Label>Texto do Botão</Label>
+                  <Input value={editHref} onChange={(e) => setEditHref(e.target.value)} />
+                </div>
+                <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
+                  💡 O editor atualiza automaticamente o atributo <code>href</code>, <code>data-href</code> ou <code>data-url</code> do botão.
                 </div>
               </div>
             )}

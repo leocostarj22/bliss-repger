@@ -164,6 +164,13 @@ export function RichTextEditor({ value, onChange, placeholder, className, onImag
 
   return (
     <div className={cn("border rounded-md bg-background", className)}>
+      <style>{`
+        .ProseMirror p { margin-bottom: 0.75rem; }
+        .ProseMirror p:last-child { margin-bottom: 0; }
+        .ProseMirror h1, .ProseMirror h2, .ProseMirror h3 { margin-top: 1.25rem; margin-bottom: 0.5rem; }
+        .ProseMirror ul, .ProseMirror ol { margin-left: 1.5rem; margin-bottom: 0.75rem; }
+        .ProseMirror blockquote { margin: 1rem 0; border-left: 3px solid hsl(var(--border)); padding-left: 1rem; }
+      `}</style>
       <div className="flex flex-wrap items-center gap-1 border-b p-2 bg-muted/30">
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}
