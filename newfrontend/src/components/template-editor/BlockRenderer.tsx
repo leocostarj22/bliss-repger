@@ -124,6 +124,15 @@ export function BlockRenderer({ block, onSelect, onDelete, isNested = false }: B
       );
 
     case 'html':
+      if (block.children && block.children.length > 0) {
+        return (
+          <div className="space-y-0">
+            {block.children.map((child) => (
+              <BlockRenderer key={child.id} block={child} isNested={true} />
+            ))}
+          </div>
+        );
+      }
       return <div dangerouslySetInnerHTML={{ __html: String(p.code) }} />;
 case 'video':
       return (

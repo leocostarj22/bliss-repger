@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
-import { ArrowLeft, Monitor, Smartphone, Save, Code2, Eye, Sparkles, Undo2, Redo2, History, FileCode, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Monitor, Smartphone, Save, Code2, Eye, Sparkles, Undo2, Redo2, History, ChevronDown } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { v4Fallback } from '@/lib/id';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ import { PropertiesPanel } from '@/components/template-editor/PropertiesPanel';
 import { GlobalStylesPanel } from '@/components/template-editor/GlobalStylesPanel';
 import { AiTemplateDialog } from '@/components/template-editor/AiTemplateDialog';
 import { VersionHistoryDialog, saveVersion, type TemplateVersion } from '@/components/template-editor/VersionHistoryDialog';
-import { HTMLImportDialog } from '@/components/template-editor/HTMLImportDialog';
+
 import type { TemplateBlock, BlockType, GlobalStyles } from '@/types/template';
 import { DEFAULT_BLOCK_PROPS, DEFAULT_GLOBAL_STYLES } from '@/types/template';
 import { cn, playSound } from '@/lib/utils';
@@ -58,7 +58,6 @@ export default function TemplateEditor() {
   const [propsOpen, setPropsOpen] = useState(false);
   const [aiTemplateOpen, setAiTemplateOpen] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
-  const [htmlImportOpen, setHtmlImportOpen] = useState(false);
   const [globalStyles, setGlobalStyles] = useState<GlobalStyles>(DEFAULT_GLOBAL_STYLES);
 
   // History system (undo/redo)
@@ -380,16 +379,22 @@ export default function TemplateEditor() {
     }
   };
 
-  const handleHTMLImport = useCallback((imported: TemplateBlock[], mode: 'replace' | 'append') => {
-    pushToHistory();
-    if (mode === 'replace') {
-      setBlocks(imported);
+  const handleConvertHtml = useCallback((htmlCode: string) => {
+    import('@/lib/html-to-blocks').then(mod => {
+      const parsed = mod.htmlToBlocks(htmlCode);
+      if (parsed.length === 0 || !selectedId) return;
+      pushToHistory();
+      setBlocks(prev => {
+        const idx = prev.findIndex(b => b.id === selectedId);
+        if (idx === -1) return prev;
+        const copy = [...prev];
+        copy.splice(idx, 1, ...parsed);
+        return copy;
+      });
       setSelectedId(null);
-    } else {
-      setBlocks(prev => [...prev, ...imported]);
-    }
-    toast({ title: `${imported.length} bloco${imported.length !== 1 ? 's' : ''} importado${imported.length !== 1 ? 's' : ''}` });
-  }, [pushToHistory, toast]);
+      toast({ title: `${parsed.length} bloco${parsed.length !== 1 ? 's' : ''} criado${parsed.length !== 1 ? 's' : ''}` });
+    });
+  }, [selectedId, pushToHistory, toast]);
 
   const handleRestore = (version: TemplateVersion) => {
     setBlocks(version.blocks);
@@ -498,9 +503,6 @@ export default function TemplateEditor() {
               <DropdownMenuItem onClick={() => setVersionsOpen(true)} className="gap-2">
                 <History className="w-4 h-4" /> Histórico
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setHtmlImportOpen(true)} className="gap-2">
-                <FileCode className="w-4 h-4" /> Importar HTML
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setJsonOpen(true)} className="gap-2">
                 <Code2 className="w-4 h-4" /> JSON
               </DropdownMenuItem>
@@ -547,7 +549,7 @@ export default function TemplateEditor() {
           <div className="hidden md:block">
             <div style={{ width: panelWidth }} className="shrink-0 h-full">
               {selectedBlock ? (
-                <PropertiesPanel block={selectedBlock} onChange={handlePropsChange} onUpdateBlock={handleUpdateSelectedBlock} />
+                <PropertiesPanel block={selectedBlock} onChange={handlePropsChange} onUpdateBlock={handleUpdateSelectedBlock} onConvertHtml={handleConvertHtml} />
               ) : (
                 <GlobalStylesPanel value={globalStyles} onChange={setGlobalStyles} />
               )}
@@ -559,7 +561,7 @@ export default function TemplateEditor() {
               <SheetContent side="right" className="w-full sm:max-w-md bg-card p-0">
                 <div className="h-full overflow-y-auto p-4">
                   {selectedBlock ? (
-                    <PropertiesPanel block={selectedBlock} onChange={handlePropsChange} onUpdateBlock={handleUpdateSelectedBlock} />
+                    <PropertiesPanel block={selectedBlock} onChange={handlePropsChange} onUpdateBlock={handleUpdateSelectedBlock} onConvertHtml={handleConvertHtml} />
                   ) : (
                     <GlobalStylesPanel value={globalStyles} onChange={setGlobalStyles} />
                   )}
@@ -584,12 +586,6 @@ export default function TemplateEditor() {
         onOpenChange={setVersionsOpen}
         templateId={id}
         onRestore={handleRestore}
-      />
-
-      <HTMLImportDialog
-        open={htmlImportOpen}
-        onOpenChange={setHtmlImportOpen}
-        onImport={handleHTMLImport}
       />
 
       {/* JSON Modal */}

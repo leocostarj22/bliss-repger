@@ -45,9 +45,10 @@ interface Props {
   block: TemplateBlock;
   onChange: (props: Record<string, unknown>) => void;
   onUpdateBlock?: (block: TemplateBlock) => void;
+  onConvertHtml?: (htmlCode: string) => void;
 }
 
-export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
+export function PropertiesPanel({ block, onChange, onUpdateBlock, onConvertHtml }: Props) {
   const p = block.props;
   const [videoThumbnail, setVideoThumbnail] = useState<string | null>(null);
   const [isLoadingThumbnail, setIsLoadingThumbnail] = useState(false);
@@ -654,7 +655,40 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
 
       {block.type === 'html' && (
         <Field label="Código HTML">
-          <Textarea value={String(p.code)} onChange={e => set('code', e.target.value)} rows={8} className="font-mono text-xs" />
+          <div className="space-y-3">
+            <Textarea
+              value={String(p.code)}
+              onChange={e => set('code', e.target.value)}
+              rows={12}
+              className="font-mono text-xs resize-y"
+              placeholder="Cole ou edite o HTML aqui..."
+              spellCheck={false}
+            />
+            {String(p.code).trim() && (
+              <div className="space-y-2">
+                {onConvertHtml && (
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    className="w-full gap-1.5"
+                    onClick={() => onConvertHtml(String(p.code))}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" /> Converter em blocos editáveis
+                  </Button>
+                )}
+                <div className="rounded-md border border-border overflow-hidden bg-white">
+                  <div className="px-2 py-1 bg-muted text-[10px] font-medium text-muted-foreground border-b border-border">
+                    Pré-visualização
+                  </div>
+                  <div
+                    className="p-3 max-h-64 overflow-auto prose prose-sm"
+                    dangerouslySetInnerHTML={{ __html: String(p.code) }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </Field>
       )}
       {block.type === 'video' && (

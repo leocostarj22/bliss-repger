@@ -1,17 +1,26 @@
 {
+  "resources/assets/crm-frontend/src/lib/html-to-blocks.ts": {
+    "file": "assets/html-to-blocks-36c2cd6f.js",
+    "imports": [
+      "resources/assets/crm-frontend/src/main.tsx"
+    ],
+    "isDynamicEntry": true,
+    "src": "resources/assets/crm-frontend/src/lib/html-to-blocks.ts"
+  },
   "resources/assets/crm-frontend/src/main.css": {
-    "file": "assets/main-1b996e0e.css",
+    "file": "assets/main-b9ad7ce3.css",
     "src": "resources/assets/crm-frontend/src/main.css"
   },
   "resources/assets/crm-frontend/src/main.tsx": {
     "css": [
-      "assets/main-1b996e0e.css"
+      "assets/main-b9ad7ce3.css"
     ],
     "dynamicImports": [
       "resources/assets/crm-frontend/src/services/mockData.ts",
-      "resources/assets/crm-frontend/src/services/mockData.ts"
+      "resources/assets/crm-frontend/src/services/mockData.ts",
+      "resources/assets/crm-frontend/src/lib/html-to-blocks.ts"
     ],
-    "file": "assets/main-de76e727.js",
+    "file": "assets/main-3858042b.js",
     "isEntry": true,
     "src": "resources/assets/crm-frontend/src/main.tsx"
   },

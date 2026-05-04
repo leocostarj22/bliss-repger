@@ -236,6 +236,22 @@ export default function TemplateEditor() {
     setBlocks(prev => prev.map(b => b.id === updated.id ? updated : b));
   }, []);
 
+  const handleConvertHtml = useCallback((htmlCode: string) => {
+    import('@/lib/html-to-blocks').then(mod => {
+      const parsed = mod.htmlToBlocks(htmlCode);
+      if (parsed.length === 0 || !selectedId) return;
+      setBlocks(prev => {
+        const idx = prev.findIndex(b => b.id === selectedId);
+        if (idx === -1) return prev;
+        const copy = [...prev];
+        copy.splice(idx, 1, ...parsed);
+        return copy;
+      });
+      setSelectedId(null);
+      toast.success(`${parsed.length} bloco${parsed.length !== 1 ? 's' : ''} criado${parsed.length !== 1 ? 's' : ''}`);
+    });
+  }, [selectedId, toast]);
+
   const handleSave = async () => {
     if (!templateName.trim()) {
       toast({ title: 'Erro', description: 'O nome do template é obrigatório.', variant: 'destructive' });
@@ -349,7 +365,7 @@ export default function TemplateEditor() {
           />
           {selectedBlock ? (
             <div style={{ width: panelWidth }} className="shrink-0 h-full">
-              <PropertiesPanel block={selectedBlock} onChange={handlePropsChange} onUpdateBlock={handleUpdateSelectedBlock} />
+              <PropertiesPanel block={selectedBlock} onChange={handlePropsChange} onUpdateBlock={handleUpdateSelectedBlock} onConvertHtml={handleConvertHtml} />
             </div>
           ) : (
             <div style={{ width: panelWidth }} className="shrink-0 h-full border-l border-border bg-card p-4 flex items-center justify-center">
