@@ -22,8 +22,9 @@ export function BlockRenderer({ block, onSelect, onDelete, isNested = false }: B
             color: String(p.color),
             textAlign: p.align as 'left' | 'center' | 'right' | 'justify',
             backgroundColor: String((p as any).bgColor),
+            fontFamily: (p as any).fontFamily ? String((p as any).fontFamily) : undefined,
           }}
-          className="min-h-[24px] break-words"
+          className="min-h-[24px] break-words [&_p]:mb-[1em] [&_p:last-child]:mb-0 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-[0.5em] [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-[0.5em] [&_h3]:text-lg [&_h3]:font-bold [&_h3]:mb-[0.4em] [&_ul]:pl-6 [&_ul]:list-disc [&_ul]:mb-[1em] [&_ol]:pl-6 [&_ol]:list-decimal [&_ol]:mb-[1em] [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_a]:text-blue-600 [&_a]:underline"
           dangerouslySetInnerHTML={{ __html: String(p.content || '') }}
         />
       );
@@ -86,12 +87,19 @@ export function BlockRenderer({ block, onSelect, onDelete, isNested = false }: B
         </div>
       );
 
-    case 'columns':
-      const columnsContent = (p.columnsContent as string[]) || [];
+    case 'columns': {
+      const columnBgColors = (p.columnBgColors as string[] | undefined) || [];
+      const containerBg = String(p.bgColor || '#ffffff');
+      const containerRadius = Number(p.borderRadius || 0);
       return (
         <div
-          style={{ gap: `${Number(p.gap)}px`, gridTemplateColumns: `repeat(${Number(p.columns)}, 1fr)` }}
-          className="grid min-h-[60px] rounded border border-dashed border-border/60"
+          style={{
+            gap: `${Number(p.gap)}px`,
+            gridTemplateColumns: `repeat(${Number(p.columns)}, 1fr)`,
+            backgroundColor: containerBg,
+            borderRadius: `${containerRadius}px`,
+          }}
+          className="grid min-h-[60px] border border-dashed border-border/60 overflow-hidden"
         >
           {Array.from({ length: Number(p.columns) }).map((_, i) => (
             <Droppable key={`${block.id}-col-${i}`} droppableId={`${block.id}-col-${i}`}>
@@ -99,12 +107,10 @@ export function BlockRenderer({ block, onSelect, onDelete, isNested = false }: B
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className={`min-h-[50px] relative p-2 ${
-                    snapshot.isDraggingOver ? 'bg-blue-50 border-blue-200' : ''
-                  } border-2 border-dashed rounded transition-colors`}
-                  style={{ 
+                  className="min-h-[50px] relative p-2 border-2 border-dashed rounded transition-colors"
+                  style={{
                     borderColor: snapshot.isDraggingOver ? '#3b82f6' : '#e5e7eb',
-                    backgroundColor: snapshot.isDraggingOver ? '#eff6ff' : 'transparent'
+                    backgroundColor: snapshot.isDraggingOver ? '#eff6ff' : (columnBgColors[i] || 'transparent'),
                   }}
                 >
                   {block.children && block.children[i] ? (
@@ -114,9 +120,8 @@ export function BlockRenderer({ block, onSelect, onDelete, isNested = false }: B
                           ref={prov.innerRef}
                           {...prov.draggableProps}
                           {...prov.dragHandleProps}
-                          className={`bg-white rounded border ${
-                            dragSnap.isDragging ? 'shadow-lg' : 'shadow-sm'
-                          }`}
+                          className={`rounded border ${dragSnap.isDragging ? 'shadow-lg' : 'shadow-sm'}`}
+                          style={{ backgroundColor: columnBgColors[i] || '#ffffff' }}
                         >
                           <BlockRenderer block={block.children[i]} isNested={true} />
                         </div>
@@ -134,6 +139,7 @@ export function BlockRenderer({ block, onSelect, onDelete, isNested = false }: B
           ))}
         </div>
       );
+    }
 
     case 'html':
       return <div dangerouslySetInnerHTML={{ __html: String(p.code) }} />;

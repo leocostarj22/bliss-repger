@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useMemo } from 'react';
 import type { TemplateBlock, BlockType } from '@/types/template';
-import { DEFAULT_BLOCK_PROPS } from '@/types/template';
+import { DEFAULT_BLOCK_PROPS, SAFE_FONTS } from '@/types/template';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { ImagePlus, Sparkles, Trash2 } from 'lucide-react';
+import { ImagePlus, Sparkles, Trash2, Link } from 'lucide-react';
 import { handleImageUpload } from '@/lib/tiptap-utils';
 import { toast } from 'react-hot-toast';
 import { fetchEmailMedia, deleteEmailMedia, type EmailMediaItem } from '@/services/api';
@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { v4Fallback } from '@/lib/id';
 import { AiTextDialog } from './AiTextDialog';
 import { StockMediaDialog } from './StockMediaDialog';
+import { UTMBuilderDialog } from './UTMBuilderDialog';
 
 // Função para extrair thumbnail de vídeo
 function getVideoThumbnailUrl(url: string): string | null {
@@ -60,6 +61,8 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
   const [aiTextOpen, setAiTextOpen] = useState(false);
   const [stockOpen, setStockOpen] = useState(false);
   const [stockDefaultType, setStockDefaultType] = useState<'images' | 'videos'>('images');
+  const [utmOpen, setUtmOpen] = useState(false);
+  const [utmTarget, setUtmTarget] = useState<'url' | 'hyperlink'>('url');
 
   // Efeito para carregar thumbnail automaticamente quando URL do vídeo mudar
   useEffect(() => {
@@ -270,6 +273,13 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
         onSelectVideo={(url) => onChange({ ...p, url })}
       />
 
+      <UTMBuilderDialog
+        open={utmOpen}
+        onOpenChange={setUtmOpen}
+        baseUrl={utmTarget === 'url' ? String(p.url || '') : String(p.hyperlink || '')}
+        onApply={(url) => set(utmTarget, url)}
+      />
+
       {block.type === 'text' && (
         <>
           <Field label="Conteúdo">
@@ -309,6 +319,22 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
           </Field>
           <Field label="Alinhamento">
             <AlignSelect value={String(p.align)} onChange={v => set('align', v)} />
+          </Field>
+          <Field label="Família de fontes">
+            <Select
+              value={String((p as any).fontFamily || '')}
+              onValueChange={v => set('fontFamily', v)}
+            >
+              <SelectTrigger><SelectValue placeholder="Herdar do template" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Herdar do template</SelectItem>
+                {SAFE_FONTS.map(f => (
+                  <SelectItem key={f.value} value={f.value} style={{ fontFamily: f.css }}>
+                    {f.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
         </>
       )}
@@ -405,7 +431,16 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
           </Field>
 
           <Field label="Hyperlink (opcional)">
-            <Input value={String(p.hyperlink || '')} onChange={e => set('hyperlink', e.target.value)} className="text-sm" placeholder="https://exemplo.com" />
+            <div className="flex gap-2">
+              <Input value={String(p.hyperlink || '')} onChange={e => set('hyperlink', e.target.value)} className="text-sm" placeholder="https://exemplo.com" />
+              <Button
+                type="button" variant="outline" size="icon" className="shrink-0"
+                title="Construir URL com parâmetros UTM"
+                onClick={() => { setUtmTarget('hyperlink'); setUtmOpen(true); }}
+              >
+                <Link className="h-4 w-4" />
+              </Button>
+            </div>
           </Field>
         </>
       )}
@@ -416,7 +451,16 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
             <Input value={String(p.text)} onChange={e => set('text', e.target.value)} className="text-sm" />
           </Field>
           <Field label="URL">
-            <Input value={String(p.url)} onChange={e => set('url', e.target.value)} className="text-sm" placeholder="https://exemplo.com" />
+            <div className="flex gap-2">
+              <Input value={String(p.url)} onChange={e => set('url', e.target.value)} className="text-sm" placeholder="https://exemplo.com" />
+              <Button
+                type="button" variant="outline" size="icon" className="shrink-0"
+                title="Construir URL com parâmetros UTM"
+                onClick={() => { setUtmTarget('url'); setUtmOpen(true); }}
+              >
+                <Link className="h-4 w-4" />
+              </Button>
+            </div>
           </Field>
           <Field label="Cores">
             <div className="grid grid-cols-2 gap-2">
@@ -484,23 +528,43 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Espaçamento">
-            <Slider value={[Number(p.gap)]} onValueChange={([v]) => set('gap', v)} min={0} max={32} step={4} />
+          <Field label="Espaçamento entre colunas">
+            <SliderWithValue value={Number(p.gap ?? 16)} onChange={v => set('gap', v)} min={0} max={32} step={4} suffix="px" />
           </Field>
 
-          <div className="pt-4 border-t border-border mt-4 space-y-3">
+          <div className="pt-3 border-t border-border space-y-3">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Aparência do Container</h4>
+            <Field label="Cor de fundo do container">
+              <ColorSwatch label="Fundo geral" value={String(p.bgColor || '#ffffff')} onChange={v => set('bgColor', v)} />
+            </Field>
+            <Field label="Cantos arredondados">
+              <SliderWithValue value={Number(p.borderRadius ?? 0)} onChange={v => set('borderRadius', v)} min={0} max={24} step={2} suffix="px" />
+            </Field>
+          </div>
+
+          <div className="pt-3 border-t border-border space-y-3">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Conteúdo das Colunas</h4>
             {Array.from({ length: Number(p.columns) }).map((_, i) => {
               const child = block.children?.[i] as TemplateBlock | undefined;
+              const colBgColors = (p.columnBgColors as string[] | undefined) || [];
+              const colBg = colBgColors[i] || '#ffffff';
+              const setColBg = (color: string) => {
+                const updated = [...colBgColors];
+                updated[i] = color;
+                set('columnBgColors', updated);
+              };
               return (
-                <div key={i} className="rounded-lg border border-border p-2">
+                <div key={i} className="rounded-lg border border-border p-2 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="text-xs font-medium">Coluna {i + 1}</div>
                     {child && (
                       <Button variant="outline" size="sm" onClick={() => updateChild(i, undefined)}>Limpar</Button>
                     )}
                   </div>
-                  <div className="mt-2 space-y-2">
+
+                  <ColorSwatch label="Cor de fundo da coluna" value={colBg} onChange={setColBg} />
+
+                  <div>
                     {!child ? (
                       <Select onValueChange={(v) => createChildOfType(i, v as BlockType)}>
                         <SelectTrigger><SelectValue placeholder="Escolher tipo de bloco" /></SelectTrigger>
@@ -524,7 +588,33 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
                           className="text-sm"
                           placeholder="URL da imagem"
                         />
-                        <Button variant="outline" size="sm" onClick={() => { setMediaColumnIndex(i); setMediaOpen(true); }}>Escolher do servidor</Button>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" className="flex-1" onClick={() => { setMediaColumnIndex(i); setMediaOpen(true); }}>
+                            Escolher do servidor
+                          </Button>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-muted-foreground">Borda arredondada</Label>
+                          <SliderWithValue
+                            value={Number((child.props as any)?.borderRadius ?? 0)}
+                            onChange={v => updateChildProp(i, 'borderRadius', v)}
+                            min={0} max={48} step={2} suffix="px"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-muted-foreground">Ajuste da imagem</Label>
+                          <Select
+                            value={String((child.props as any)?.objectFit ?? 'cover')}
+                            onValueChange={v => updateChildProp(i, 'objectFit', v)}
+                          >
+                            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="cover">Cobrir (recortar)</SelectItem>
+                              <SelectItem value="contain">Conter</SelectItem>
+                              <SelectItem value="fill">Esticar</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     ) : child.type === 'button' ? (
                       <div className="space-y-2">

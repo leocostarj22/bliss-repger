@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
-import { ArrowLeft, Monitor, Smartphone, Save, Code2, Eye, Sparkles } from 'lucide-react';
+import { ArrowLeft, Monitor, Smartphone, Save, Code2, Eye, Sparkles, Undo2, Redo2, History } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { v4Fallback } from '@/lib/id';
 import { Button } from '@/components/ui/button';
@@ -8,9 +8,11 @@ import { Input } from '@/components/ui/input';
 import { BlockPalette } from '@/components/template-editor/BlockPalette';
 import { EditorCanvas } from '@/components/template-editor/EditorCanvas';
 import { PropertiesPanel } from '@/components/template-editor/PropertiesPanel';
+import { GlobalStylesPanel } from '@/components/template-editor/GlobalStylesPanel';
 import { AiTemplateDialog } from '@/components/template-editor/AiTemplateDialog';
-import type { TemplateBlock, BlockType } from '@/types/template';
-import { DEFAULT_BLOCK_PROPS } from '@/types/template';
+import { VersionHistoryDialog, saveVersion, type TemplateVersion } from '@/components/template-editor/VersionHistoryDialog';
+import type { TemplateBlock, BlockType, GlobalStyles } from '@/types/template';
+import { DEFAULT_BLOCK_PROPS, DEFAULT_GLOBAL_STYLES } from '@/types/template';
 import { cn, playSound } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -48,6 +50,20 @@ export default function TemplateEditor() {
   const [panelWidth, setPanelWidth] = useState<number>(320);
   const [propsOpen, setPropsOpen] = useState(false);
   const [aiTemplateOpen, setAiTemplateOpen] = useState(false);
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [globalStyles, setGlobalStyles] = useState<GlobalStyles>(DEFAULT_GLOBAL_STYLES);
+
+  // History system (undo/redo)
+  const blocksRef = useRef<TemplateBlock[]>([]);
+  const historyPast = useRef<TemplateBlock[][]>([]);
+  const historyFuture = useRef<TemplateBlock[][]>([]);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const propHistoryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isChangingPropsRef = useRef(false);
+
+  // Keep blocksRef in sync for use inside stable callbacks
+  useEffect(() => { blocksRef.current = blocks; }, [blocks]);
 
   const startResize = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -71,16 +87,85 @@ export default function TemplateEditor() {
     window.addEventListener('mouseup', onUp);
   }, [panelWidth]);
 
+  // Pushes a snapshot of current blocks into the past stack
+  const pushToHistory = useCallback(() => {
+    historyPast.current = [...historyPast.current, JSON.parse(JSON.stringify(blocksRef.current))].slice(-50);
+    historyFuture.current = [];
+    setCanUndo(true);
+    setCanRedo(false);
+  }, []);
+
+  const undo = useCallback(() => {
+    if (!historyPast.current.length) return;
+    const previous = historyPast.current.pop()!;
+    historyFuture.current = [JSON.parse(JSON.stringify(blocksRef.current)), ...historyFuture.current].slice(0, 50);
+    setBlocks(previous);
+    setSelectedId(null);
+    setCanUndo(historyPast.current.length > 0);
+    setCanRedo(true);
+  }, []);
+
+  const redo = useCallback(() => {
+    if (!historyFuture.current.length) return;
+    const next = historyFuture.current.shift()!;
+    historyPast.current = [...historyPast.current, JSON.parse(JSON.stringify(blocksRef.current))].slice(-50);
+    setBlocks(next);
+    setSelectedId(null);
+    setCanUndo(true);
+    setCanRedo(historyFuture.current.length > 0);
+  }, []);
+
+  const handleDuplicate = useCallback((id: string) => {
+    const block = blocksRef.current.find(b => b.id === id);
+    if (!block) return;
+    const cloneWithNewId = (b: TemplateBlock): TemplateBlock => ({
+      ...b,
+      id: v4Fallback(),
+      props: { ...b.props },
+      children: b.children?.map(cloneWithNewId),
+    });
+    const duplicate = cloneWithNewId(block);
+    pushToHistory();
+    setBlocks(prev => {
+      const copy = [...prev];
+      const idx = copy.findIndex(b => b.id === id);
+      copy.splice(idx + 1, 0, duplicate);
+      return copy;
+    });
+    setSelectedId(duplicate.id);
+  }, [pushToHistory]);
+
+  // Keyboard shortcuts: Ctrl+Z, Ctrl+Shift+Z, Ctrl+D
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.isContentEditable || target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') return;
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if ((e.key === 'z' && e.shiftKey) || e.key === 'y') {
+        e.preventDefault();
+        redo();
+      } else if (e.key === 'd' && selectedId) {
+        e.preventDefault();
+        handleDuplicate(selectedId);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [undo, redo, selectedId, handleDuplicate]);
+
   const selectedBlock = blocks.find(b => b.id === selectedId) ?? null;
 
-  // Auto-save simulation
+  // Auto-save to localStorage
   useEffect(() => {
     if (blocks.length === 0) return;
     const t = setTimeout(() => {
-      localStorage.setItem('template-draft', JSON.stringify(blocks));
+      localStorage.setItem('template-draft', JSON.stringify({ blocks, globalStyles }));
     }, 1000);
     return () => clearTimeout(t);
-  }, [blocks]);
+  }, [blocks, globalStyles]);
 
   // Load draft or existing template
   useEffect(() => {
@@ -93,15 +178,20 @@ export default function TemplateEditor() {
           const c = tpl.content;
           if (Array.isArray(c)) {
             setBlocks(c);
+          } else if (c && typeof c === 'object' && 'blocks' in (c as object)) {
+            const payload = c as { blocks: TemplateBlock[]; globalStyles?: GlobalStyles };
+            setBlocks(payload.blocks || []);
+            if (payload.globalStyles) setGlobalStyles(payload.globalStyles);
           } else if (typeof c === 'string') {
-            setBlocks([{
-              id: v4Fallback(),
-              type: 'html',
-              props: { code: c }
-            }]);
+            setBlocks([{ id: v4Fallback(), type: 'html', props: { code: c } }]);
           } else {
             setBlocks([]);
           }
+          // Clear history when loading a saved template
+          historyPast.current = [];
+          historyFuture.current = [];
+          setCanUndo(false);
+          setCanRedo(false);
         })
         .catch(() => {
           toast({ title: 'Erro', description: 'Template não encontrado', variant: 'destructive' });
@@ -112,17 +202,15 @@ export default function TemplateEditor() {
 
     const saved = localStorage.getItem('template-draft');
     if (saved) {
-      try { 
+      try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
           setBlocks(parsed);
+        } else if (parsed && typeof parsed === 'object' && 'blocks' in parsed) {
+          setBlocks(parsed.blocks || []);
+          if (parsed.globalStyles) setGlobalStyles(parsed.globalStyles);
         } else if (typeof parsed === 'string') {
-          // Legacy support: convert string content to HTML block
-          setBlocks([{
-            id: v4Fallback(),
-            type: 'html',
-            props: { code: parsed }
-          }]);
+          setBlocks([{ id: v4Fallback(), type: 'html', props: { code: parsed } }]);
         }
       } catch { /* ignore */ }
     }
@@ -140,6 +228,7 @@ export default function TemplateEditor() {
         type,
         props: { ...DEFAULT_BLOCK_PROPS[type] },
       };
+      pushToHistory();
       setBlocks(prev => {
         const copy = [...prev];
         copy.splice(destination.index, 0, newBlock);
@@ -157,10 +246,11 @@ export default function TemplateEditor() {
         type,
         props: { ...DEFAULT_BLOCK_PROPS[type] },
       };
-      
+
       const [parentId, colIndex] = destination.droppableId.split('-col-');
       const colIdx = parseInt(colIndex);
-      
+
+      pushToHistory();
       setBlocks(prev => prev.map(block => {
         if (block.id === parentId && block.type === 'columns') {
           const newChildren = [...(block.children || [])];
@@ -175,6 +265,7 @@ export default function TemplateEditor() {
 
     // Reorder within canvas
     if (source.droppableId === 'canvas' && destination.droppableId === 'canvas') {
+      pushToHistory();
       setBlocks(prev => {
         const copy = [...prev];
         const [moved] = copy.splice(source.index, 1);
@@ -187,11 +278,12 @@ export default function TemplateEditor() {
     if (source.droppableId === 'canvas' && destination.droppableId.includes('-col-')) {
       const [parentId, colIndex] = destination.droppableId.split('-col-');
       const colIdx = parseInt(colIndex);
-      
+
+      pushToHistory();
       setBlocks(prev => {
         const copy = [...prev];
         const [moved] = copy.splice(source.index, 1);
-        
+
         return copy.map(block => {
           if (block.id === parentId && block.type === 'columns') {
             const newChildren = [...(block.children || [])];
@@ -210,9 +302,10 @@ export default function TemplateEditor() {
       const [destParentId, destColIndex] = destination.droppableId.split('-col-');
       const sourceIdx = parseInt(sourceColIndex);
       const destIdx = parseInt(destColIndex);
-      
+
       if (sourceParentId !== destParentId || sourceIdx === destIdx) return;
-      
+
+      pushToHistory();
       setBlocks(prev => prev.map(block => {
         if (block.id === sourceParentId && block.type === 'columns') {
           const newChildren = [...(block.children || [])];
@@ -225,22 +318,31 @@ export default function TemplateEditor() {
       }));
       return;
     }
-  }, []);
+  }, [pushToHistory]);
 
   const handleDelete = useCallback((id: string) => {
+    pushToHistory();
     playSound('/sounds/recycle.wav', { volume: 0.6 });
     setBlocks(prev => prev.filter(b => b.id !== id));
     if (selectedId === id) setSelectedId(null);
-  }, [selectedId]);
+  }, [selectedId, pushToHistory]);
 
   const handlePropsChange = useCallback((props: Record<string, unknown>) => {
     if (!selectedId) return;
+    // Push to history only at the START of a prop editing session (debounced reset)
+    if (!isChangingPropsRef.current) {
+      pushToHistory();
+      isChangingPropsRef.current = true;
+    }
+    if (propHistoryTimer.current) clearTimeout(propHistoryTimer.current);
+    propHistoryTimer.current = setTimeout(() => { isChangingPropsRef.current = false; }, 1000);
     setBlocks(prev => prev.map(b => b.id === selectedId ? { ...b, props } : b));
-  }, [selectedId]);
+  }, [selectedId, pushToHistory]);
 
   const handleUpdateSelectedBlock = useCallback((updated: TemplateBlock) => {
+    pushToHistory();
     setBlocks(prev => prev.map(b => b.id === updated.id ? updated : b));
-  }, []);
+  }, [pushToHistory]);
 
   const handleSave = async () => {
     if (!templateName.trim()) {
@@ -249,18 +351,15 @@ export default function TemplateEditor() {
     }
 
     setIsSaving(true);
+    const content = { blocks, globalStyles };
     try {
       if (id) {
-        await updateTemplate(id, {
-          name: templateName,
-          content: blocks,
-        });
+        await updateTemplate(id, { name: templateName, content });
+        saveVersion(id, templateName, blocks, globalStyles, v4Fallback());
         toast({ title: 'Sucesso', description: 'Template atualizado com sucesso.' });
       } else {
-        await createTemplate({
-          name: templateName,
-          content: blocks,
-        });
+        await createTemplate({ name: templateName, content });
+        saveVersion(undefined, templateName, blocks, globalStyles, v4Fallback());
         toast({ title: 'Sucesso', description: 'Template salvo com sucesso.' });
         localStorage.removeItem('template-draft');
       }
@@ -271,6 +370,16 @@ export default function TemplateEditor() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleRestore = (version: TemplateVersion) => {
+    setBlocks(version.blocks);
+    setGlobalStyles(version.globalStyles);
+    setSelectedId(null);
+    historyPast.current = [];
+    historyFuture.current = [];
+    setCanUndo(false);
+    setCanRedo(false);
   };
 
   const templateJson = JSON.stringify(blocks, null, 2);
@@ -295,6 +404,30 @@ export default function TemplateEditor() {
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
+          {/* Undo / Redo */}
+          <div className="flex items-center gap-0.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="px-2"
+              onClick={undo}
+              disabled={!canUndo}
+              title="Desfazer (Ctrl+Z)"
+            >
+              <Undo2 className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="px-2"
+              onClick={redo}
+              disabled={!canRedo}
+              title="Refazer (Ctrl+Shift+Z)"
+            >
+              <Redo2 className="w-4 h-4" />
+            </Button>
+          </div>
+
           {/* Preview toggle */}
           <div className="flex items-center bg-secondary rounded-lg p-0.5">
             <button
@@ -336,6 +469,9 @@ export default function TemplateEditor() {
           >
             <Sparkles className="w-4 h-4" /> Gerar com IA
           </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setVersionsOpen(true)}>
+            <History className="w-4 h-4" /> Histórico
+          </Button>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setJsonOpen(true)}>
             <Code2 className="w-4 h-4" /> JSON
           </Button>
@@ -362,11 +498,13 @@ export default function TemplateEditor() {
             blocks={blocks}
             selectedId={selectedId}
             previewMode={previewMode}
+            globalStyles={globalStyles}
             onSelect={(nextId) => {
               setSelectedId(nextId);
               if (isMobile) setPropsOpen(true);
             }}
             onDelete={handleDelete}
+            onDuplicate={handleDuplicate}
           />
 
           <div
@@ -376,18 +514,13 @@ export default function TemplateEditor() {
           />
 
           <div className="hidden md:block">
-            {selectedBlock ? (
-              <div style={{ width: panelWidth }} className="shrink-0 h-full">
+            <div style={{ width: panelWidth }} className="shrink-0 h-full">
+              {selectedBlock ? (
                 <PropertiesPanel block={selectedBlock} onChange={handlePropsChange} onUpdateBlock={handleUpdateSelectedBlock} />
-              </div>
-            ) : (
-              <div style={{ width: panelWidth }} className="shrink-0 h-full border-l border-border bg-card p-4 flex items-center justify-center">
-                <p className="text-sm text-muted-foreground text-center">
-                  <Eye className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  Selecione um bloco para editar suas propriedades
-                </p>
-              </div>
-            )}
+              ) : (
+                <GlobalStylesPanel value={globalStyles} onChange={setGlobalStyles} />
+              )}
+            </div>
           </div>
 
           {isMobile && (
@@ -397,7 +530,7 @@ export default function TemplateEditor() {
                   {selectedBlock ? (
                     <PropertiesPanel block={selectedBlock} onChange={handlePropsChange} onUpdateBlock={handleUpdateSelectedBlock} />
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center">Selecione um bloco para editar</p>
+                    <GlobalStylesPanel value={globalStyles} onChange={setGlobalStyles} />
                   )}
                 </div>
               </SheetContent>
@@ -413,6 +546,13 @@ export default function TemplateEditor() {
           setBlocks(generatedBlocks);
           setSelectedId(null);
         }}
+      />
+
+      <VersionHistoryDialog
+        open={versionsOpen}
+        onOpenChange={setVersionsOpen}
+        templateId={id}
+        onRestore={handleRestore}
       />
 
       {/* JSON Modal */}

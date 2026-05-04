@@ -1,6 +1,7 @@
 import { Droppable, Draggable } from '@hello-pangea/dnd';
-import { Trash2, GripVertical } from 'lucide-react';
-import type { TemplateBlock } from '@/types/template';
+import { Trash2, GripVertical, Copy } from 'lucide-react';
+import type { TemplateBlock, GlobalStyles } from '@/types/template';
+import { getFontCss } from '@/types/template';
 import { BlockRenderer } from './BlockRenderer';
 import { cn } from '@/lib/utils';
 
@@ -10,16 +11,21 @@ interface Props {
   previewMode: 'desktop' | 'mobile';
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  onDuplicate?: (id: string) => void;
+  globalStyles?: GlobalStyles;
 }
 
-export function EditorCanvas({ blocks, selectedId, previewMode, onSelect, onDelete }: Props) {
+export function EditorCanvas({ blocks, selectedId, previewMode, onSelect, onDelete, onDuplicate, globalStyles }: Props) {
+  const canvasBg = globalStyles?.canvasBgColor ?? '#f4f4f4';
+  const contentBg = globalStyles?.contentBgColor ?? '#ffffff';
+  const fontFamily = getFontCss(globalStyles?.fontFamily ?? 'Arial');
+  const maxWidth = previewMode === 'mobile' ? '375px' : `${globalStyles?.contentMaxWidth ?? 600}px`;
+
   return (
-    <div className="flex-1 overflow-auto p-4 md:p-6 bg-muted/30">
+    <div className="flex-1 overflow-auto p-4 md:p-6" style={{ backgroundColor: canvasBg }}>
       <div
-        className={cn(
-          'mx-auto bg-white rounded-lg shadow-lg transition-all duration-300 min-h-[600px]',
-          previewMode === 'desktop' ? 'max-w-[600px]' : 'max-w-[375px]'
-        )}
+        className="mx-auto rounded-lg shadow-lg transition-all duration-300 min-h-[600px]"
+        style={{ backgroundColor: contentBg, maxWidth, fontFamily }}
       >
         {/* Email header preview */}
         <div className="px-6 py-4 border-b border-gray-100">
@@ -67,13 +73,23 @@ export function EditorCanvas({ blocks, selectedId, previewMode, onSelect, onDele
                         <GripVertical className="w-4 h-4" />
                       </div>
 
-                      {/* Delete button */}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onDelete(block.id); }}
-                        className="absolute right-2 top-2 md:-right-8 md:top-1/2 md:-translate-y-1/2 translate-y-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {/* Action buttons (duplicate + delete) */}
+                      <div className="absolute right-2 top-2 md:-right-8 md:top-1/2 md:-translate-y-1/2 flex flex-col gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onDuplicate?.(block.id); }}
+                          className="text-gray-400 hover:text-blue-500"
+                          title="Duplicar bloco (Ctrl+D)"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onDelete(block.id); }}
+                          className="text-gray-400 hover:text-red-500"
+                          title="Eliminar bloco"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
 
                       <div className="p-3">
                         <BlockRenderer block={block} />
