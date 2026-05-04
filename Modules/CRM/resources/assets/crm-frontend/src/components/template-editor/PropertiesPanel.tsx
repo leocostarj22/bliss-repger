@@ -322,12 +322,12 @@ export function PropertiesPanel({ block, onChange, onUpdateBlock }: Props) {
           </Field>
           <Field label="Família de fontes">
             <Select
-              value={String((p as any).fontFamily || '')}
-              onValueChange={v => set('fontFamily', v)}
+              value={String((p as any).fontFamily || 'inherit')}
+              onValueChange={v => set('fontFamily', v === 'inherit' ? '' : v)}
             >
-              <SelectTrigger><SelectValue placeholder="Herdar do template" /></SelectTrigger>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Herdar do template</SelectItem>
+                <SelectItem value="inherit">Herdar do template</SelectItem>
                 {SAFE_FONTS.map(f => (
                   <SelectItem key={f.value} value={f.value} style={{ fontFamily: f.css }}>
                     {f.label}
