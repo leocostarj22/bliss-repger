@@ -265,7 +265,7 @@ export function HtmlVisualEditor({ html, onChange, onConvertToBlocks }: HtmlVisu
               ref={iframeRef}
               className="w-full border-0"
               style={{ minHeight: '400px', maxHeight: '600px' }}
-              sandbox="allow-same-origin"
+              sandbox="allow-same-origin allow-scripts"
               title="HTML Editor Preview"
             />
           </div>
