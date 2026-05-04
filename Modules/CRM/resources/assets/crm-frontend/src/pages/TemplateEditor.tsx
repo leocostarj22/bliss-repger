@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
-import { ArrowLeft, Monitor, Smartphone, Save, Code2, Eye, Sparkles, Undo2, Redo2, History } from 'lucide-react';
+import { ArrowLeft, Monitor, Smartphone, Save, Code2, Eye, Sparkles, Undo2, Redo2, History, FileCode } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { v4Fallback } from '@/lib/id';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { PropertiesPanel } from '@/components/template-editor/PropertiesPanel';
 import { GlobalStylesPanel } from '@/components/template-editor/GlobalStylesPanel';
 import { AiTemplateDialog } from '@/components/template-editor/AiTemplateDialog';
 import { VersionHistoryDialog, saveVersion, type TemplateVersion } from '@/components/template-editor/VersionHistoryDialog';
+import { HTMLImportDialog } from '@/components/template-editor/HTMLImportDialog';
 import type { TemplateBlock, BlockType, GlobalStyles } from '@/types/template';
 import { DEFAULT_BLOCK_PROPS, DEFAULT_GLOBAL_STYLES } from '@/types/template';
 import { cn, playSound } from '@/lib/utils';
@@ -51,6 +52,7 @@ export default function TemplateEditor() {
   const [propsOpen, setPropsOpen] = useState(false);
   const [aiTemplateOpen, setAiTemplateOpen] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
+  const [htmlImportOpen, setHtmlImportOpen] = useState(false);
   const [globalStyles, setGlobalStyles] = useState<GlobalStyles>(DEFAULT_GLOBAL_STYLES);
 
   // History system (undo/redo)
@@ -372,6 +374,17 @@ export default function TemplateEditor() {
     }
   };
 
+  const handleHTMLImport = useCallback((imported: TemplateBlock[], mode: 'replace' | 'append') => {
+    pushToHistory();
+    if (mode === 'replace') {
+      setBlocks(imported);
+      setSelectedId(null);
+    } else {
+      setBlocks(prev => [...prev, ...imported]);
+    }
+    toast({ title: `${imported.length} bloco${imported.length !== 1 ? 's' : ''} importado${imported.length !== 1 ? 's' : ''}` });
+  }, [pushToHistory, toast]);
+
   const handleRestore = (version: TemplateVersion) => {
     setBlocks(version.blocks);
     setGlobalStyles(version.globalStyles);
@@ -472,6 +485,9 @@ export default function TemplateEditor() {
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setVersionsOpen(true)}>
             <History className="w-4 h-4" /> Histórico
           </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setHtmlImportOpen(true)}>
+            <FileCode className="w-4 h-4" /> Importar HTML
+          </Button>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setJsonOpen(true)}>
             <Code2 className="w-4 h-4" /> JSON
           </Button>
@@ -553,6 +569,12 @@ export default function TemplateEditor() {
         onOpenChange={setVersionsOpen}
         templateId={id}
         onRestore={handleRestore}
+      />
+
+      <HTMLImportDialog
+        open={htmlImportOpen}
+        onOpenChange={setHtmlImportOpen}
+        onImport={handleHTMLImport}
       />
 
       {/* JSON Modal */}
