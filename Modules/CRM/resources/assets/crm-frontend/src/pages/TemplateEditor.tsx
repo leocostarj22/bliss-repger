@@ -1,10 +1,16 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
-import { ArrowLeft, Monitor, Smartphone, Save, Code2, Eye, Sparkles, Undo2, Redo2, History, FileCode } from 'lucide-react';
+import { ArrowLeft, Monitor, Smartphone, Save, Code2, Eye, Sparkles, Undo2, Redo2, History, FileCode, ChevronDown } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { v4Fallback } from '@/lib/id';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { BlockPalette } from '@/components/template-editor/BlockPalette';
 import { EditorCanvas } from '@/components/template-editor/EditorCanvas';
 import { PropertiesPanel } from '@/components/template-editor/PropertiesPanel';
@@ -482,15 +488,24 @@ export default function TemplateEditor() {
           >
             <Sparkles className="w-4 h-4" /> Gerar com IA
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setVersionsOpen(true)}>
-            <History className="w-4 h-4" /> Histórico
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setHtmlImportOpen(true)}>
-            <FileCode className="w-4 h-4" /> Importar HTML
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setJsonOpen(true)}>
-            <Code2 className="w-4 h-4" /> JSON
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                Ferramentas <ChevronDown className="w-3.5 h-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setVersionsOpen(true)} className="gap-2">
+                <History className="w-4 h-4" /> Histórico
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setHtmlImportOpen(true)} className="gap-2">
+                <FileCode className="w-4 h-4" /> Importar HTML
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setJsonOpen(true)} className="gap-2">
+                <Code2 className="w-4 h-4" /> JSON
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             variant="destructive"
             size="sm"
