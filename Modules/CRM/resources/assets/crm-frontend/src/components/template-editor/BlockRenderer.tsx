@@ -151,7 +151,13 @@ export function BlockRenderer({ block, onSelect, onDelete, isNested = false }: B
           </div>
         );
       }
-      return <div dangerouslySetInnerHTML={{ __html: String(p.code) }} />;
+      return (
+        <div
+          className="overflow-x-auto"
+          style={{ maxWidth: '100%' }}
+          dangerouslySetInnerHTML={{ __html: String(p.code) }}
+        />
+      );
 case 'video':
       return (
         <div className="flex justify-center">

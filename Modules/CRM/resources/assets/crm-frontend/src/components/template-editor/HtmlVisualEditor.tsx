@@ -37,8 +37,11 @@ export function HtmlVisualEditor({ html, onChange, onConvertToBlocks }: HtmlVisu
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-          * { cursor: pointer !important; }
-          body { margin: 0; padding: 0; }
+          * { cursor: pointer !important; box-sizing: border-box !important; }
+          body { margin: 0; padding: 0; overflow-x: hidden; }
+          img { max-width: 100% !important; height: auto !important; }
+          table { max-width: 100% !important; }
+          td, th { word-break: break-word !important; }
           
           /* Highlight editable elements on hover */
           [data-editable]:hover {

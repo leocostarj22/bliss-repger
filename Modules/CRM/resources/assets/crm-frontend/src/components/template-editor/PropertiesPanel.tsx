@@ -16,6 +16,7 @@ import { AiTextDialog } from './AiTextDialog';
 import { StockMediaDialog } from './StockMediaDialog';
 import { UTMBuilderDialog } from './UTMBuilderDialog';
 import { HtmlVisualEditor } from './HtmlVisualEditor';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 function getVideoThumbnailUrl(url: string): string | null {
   if (!url) return null;
