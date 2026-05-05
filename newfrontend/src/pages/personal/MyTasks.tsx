@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { AlertTriangle, CheckCircle, Clock, Pencil, Plus, Search, Trash2, Zap, ListTodo } from "lucide-react"
+import { AlertTriangle, CheckCircle, Clock, Pencil, Plus, RefreshCw, Search, Trash2, Zap, ListTodo } from "lucide-react"
 import { pt } from "date-fns/locale"
 
 import type { Task, TaskPriority, TaskStatus, User } from "@/types"
@@ -73,6 +73,25 @@ const toLocalDateKey = (d: Date) => {
 const isoToDateKey = (iso?: string | null) => {
   if (!iso) return null
   return String(iso).slice(0, 10)
+}
+
+const recurrenceFreqLabel = (freq: string) => {
+  if (freq === "daily") return "Diária"
+  if (freq === "weekly") return "Semanal"
+  if (freq === "biweekly") return "Quinzenal"
+  if (freq === "monthly") return "Mensal"
+  return freq
+}
+
+const parseRecurrenceRule = (rule: any): { freq: string; until: string } | null => {
+  if (!rule) return null
+  try {
+    const parsed = typeof rule === "string" ? JSON.parse(rule) : rule
+    if (!parsed?.freq || parsed.freq === "none") return null
+    return { freq: parsed.freq, until: parsed.until ?? "" }
+  } catch {
+    return null
+  }
 }
 
 export default function MyTasks() {
@@ -440,6 +459,16 @@ export default function MyTasks() {
                             {htmlToPlainText(t.description || t.notes)}
                           </div>
                         ) : null}
+                        {(() => {
+                          const rec = parseRecurrenceRule(t.recurrence_rule)
+                          if (!rec) return null
+                          return (
+                            <div className="mt-1 flex items-center gap-1 text-xs text-cyan-600 dark:text-cyan-400">
+                              <RefreshCw className="w-3 h-3" />
+                              <span>{recurrenceFreqLabel(rec.freq)}{rec.until ? ` · até ${new Date(rec.until).toLocaleDateString("pt-PT")}` : ""}</span>
+                            </div>
+                          )
+                        })()}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <Button
@@ -526,6 +555,16 @@ export default function MyTasks() {
                       <tr key={t.id} className="border-b border-border/60 hover:bg-white/5 transition-colors">
                         <td className="py-4 pr-4">
                           <div className="font-medium">{t.title}</div>
+                          {(() => {
+                            const rec = parseRecurrenceRule(t.recurrence_rule)
+                            if (!rec) return null
+                            return (
+                              <div className="mt-0.5 flex items-center gap-1 text-xs text-cyan-600 dark:text-cyan-400">
+                                <RefreshCw className="w-3 h-3" />
+                                <span>{recurrenceFreqLabel(rec.freq)}{rec.until ? ` · até ${new Date(rec.until).toLocaleDateString("pt-PT")}` : ""}</span>
+                              </div>
+                            )
+                          })()}
                         </td>
                         <td className="py-4 text-right">
                           <div className="inline-flex items-center gap-2">

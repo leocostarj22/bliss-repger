@@ -115,9 +115,11 @@ export default function TaskForm() {
         setNotes(htmlToPlainText(t.notes ?? ""))
         if (t.recurrence_rule) {
           try {
-            const rule = JSON.parse(String(t.recurrence_rule))
+            const rule = typeof t.recurrence_rule === "string"
+              ? JSON.parse(t.recurrence_rule)
+              : t.recurrence_rule
             setRecurrence(rule.freq ?? "none")
-            setRecurrenceUntil(rule.until ?? "")
+            setRecurrenceUntil(rule.until ? String(rule.until).slice(0, 10) : "")
           } catch {}
         }
       })
