@@ -375,7 +375,7 @@ export default function Templates() {
 
       {/* Preview Modal */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-5xl w-full h-[96vh] flex flex-col p-0 gap-0">
+        <DialogContent className="max-w-5xl w-full h-[130vh] flex flex-col p-0 gap-0">
           <DialogHeader className="flex flex-row items-center justify-between px-4 py-3 border-b border-border shrink-0">
             <DialogTitle>Pré-visualização</DialogTitle>
             <div className="flex items-center bg-secondary rounded-lg p-0.5">
