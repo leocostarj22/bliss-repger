@@ -187,7 +187,7 @@ export default function TaskForm() {
       const shared = isPrivate ? [] : sharedWithUserIds
 
       const recurrenceRule = recurrence !== "none"
-        ? JSON.stringify({ freq: recurrence, until: recurrenceUntil })
+        ? { freq: recurrence, until: recurrenceUntil }
         : null
 
       const basePayload = {
