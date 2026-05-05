@@ -375,7 +375,7 @@ export default function Templates() {
 
       {/* Preview Modal */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-5xl w-full h-[130vh] flex flex-col p-0 gap-0">
+        <DialogContent className="max-w-5xl w-full h-[90vh] flex flex-col p-0 gap-0">
           <DialogHeader className="flex flex-row items-center justify-between px-4 py-3 border-b border-border shrink-0">
             <DialogTitle>Pré-visualização</DialogTitle>
             <div className="flex items-center bg-secondary rounded-lg p-0.5">
@@ -401,13 +401,13 @@ export default function Templates() {
               </button>
             </div>
           </DialogHeader>
-          <div className="flex-1 overflow-auto bg-muted flex items-start justify-center p-6">
+          <div className="flex-1 min-h-0 overflow-hidden bg-muted flex items-start justify-center p-6">
             <iframe
               key={previewDevice}
               srcDoc={previewHtml}
               title="Preview"
               className="bg-white shadow-xl rounded transition-all duration-300"
-              style={{ width: previewDevice === 'desktop' ? 600 : 375, minHeight: 500, border: 'none' }}
+              style={{ width: previewDevice === 'desktop' ? 600 : 375, height: '100%', border: 'none' }}
               sandbox="allow-same-origin"
             />
           </div>

@@ -643,13 +643,13 @@ export default function TemplateEditor() {
               </button>
             </div>
           </DialogHeader>
-          <div className="flex-1 overflow-auto bg-muted flex items-start justify-center p-6">
+          <div className="flex-1 min-h-0 overflow-hidden bg-muted flex items-start justify-center p-6">
             <iframe
               key={previewDevice}
               srcDoc={previewHtml}
               title="Preview"
               className="bg-white shadow-xl rounded transition-all duration-300"
-              style={{ width: previewDevice === 'desktop' ? 600 : 375, minHeight: 500, border: 'none' }}
+              style={{ width: previewDevice === 'desktop' ? 600 : 375, height: '100%', border: 'none' }}
               sandbox="allow-same-origin"
             />
           </div>
