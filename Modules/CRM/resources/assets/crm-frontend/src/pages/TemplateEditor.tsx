@@ -411,18 +411,18 @@ export default function TemplateEditor() {
   };
 
   const openPreview = useCallback(() => {
-    const body = blocksToHtml(blocks);
+    const body = blocksToHtml(blocks, globalStyles);
     setPreviewHtml(`<!DOCTYPE html>
 <html lang="pt">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { background: #f3f4f6; }</style>
+<style>*, *::before, *::after { box-sizing: border-box; } body { margin: 0; padding: 0; }</style>
 </head>
 <body>${body}</body>
 </html>`);
     setPreviewOpen(true);
-  }, [blocks]);
+  }, [blocks, globalStyles]);
 
   const templateJson = JSON.stringify(blocks, null, 2);
 

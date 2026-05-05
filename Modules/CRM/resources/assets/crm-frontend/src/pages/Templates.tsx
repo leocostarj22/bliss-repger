@@ -20,6 +20,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn, playSound } from '@/lib/utils';
 import { blocksToHtml } from '@/lib/template-to-html';
+import type { GlobalStyles, TemplateBlock } from '@/types/template';
 
 
 // Componente para gerar thumbnail do template (renderização abstrata melhorada)
@@ -251,20 +252,25 @@ export default function Templates() {
   };
 
   const openPreview = (template: EmailTemplate) => {
-    let blocks: any[] = [];
+    let blocks: TemplateBlock[] = [];
+    let globalStyles: GlobalStyles | undefined;
     const c = template.content;
-    if (Array.isArray(c)) blocks = c;
-    else if (c && typeof c === 'object' && 'blocks' in (c as object)) blocks = (c as any).blocks || [];
-    else if (typeof c === 'string') {
+    if (Array.isArray(c)) {
+      blocks = c as TemplateBlock[];
+    } else if (c && typeof c === 'object' && 'blocks' in (c as object)) {
+      const payload = c as { blocks: TemplateBlock[]; globalStyles?: GlobalStyles };
+      blocks = payload.blocks || [];
+      globalStyles = payload.globalStyles;
+    } else if (typeof c === 'string') {
       try { blocks = JSON.parse(c); } catch { blocks = []; }
     }
-    const body = blocksToHtml(blocks);
+    const body = blocksToHtml(blocks, globalStyles);
     setPreviewHtml(`<!DOCTYPE html>
 <html lang="pt">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { background: #f3f4f6; }</style>
+<style>*, *::before, *::after { box-sizing: border-box; } body { margin: 0; padding: 0; }</style>
 </head>
 <body>${body}</body>
 </html>`);
