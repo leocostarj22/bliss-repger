@@ -121,7 +121,6 @@ export function BlockRenderer({ block, onSelect, onDelete, isNested = false }: B
                           {...prov.draggableProps}
                           {...prov.dragHandleProps}
                           className={dragSnap.isDragging ? 'rounded shadow-lg' : 'rounded'}
-                          style={{ backgroundColor: columnBgColors[i] || '#ffffff' }}
                         >
                           <BlockRenderer block={block.children[i]} isNested={true} />
                         </div>
