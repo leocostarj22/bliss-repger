@@ -107,7 +107,7 @@ export function BlockRenderer({ block, onSelect, onDelete, isNested = false }: B
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className="min-h-[50px] relative p-2 border-2 border-dashed rounded transition-colors"
+                  className={`min-h-[50px] relative p-2 rounded transition-colors ${!(block.children && block.children[i]) || snapshot.isDraggingOver ? 'border-2 border-dashed' : ''}`}
                   style={{
                     borderColor: snapshot.isDraggingOver ? '#3b82f6' : '#e5e7eb',
                     backgroundColor: snapshot.isDraggingOver ? '#eff6ff' : (columnBgColors[i] || 'transparent'),
@@ -120,7 +120,7 @@ export function BlockRenderer({ block, onSelect, onDelete, isNested = false }: B
                           ref={prov.innerRef}
                           {...prov.draggableProps}
                           {...prov.dragHandleProps}
-                          className={`rounded border ${dragSnap.isDragging ? 'shadow-lg' : 'shadow-sm'}`}
+                          className={dragSnap.isDragging ? 'rounded shadow-lg' : 'rounded'}
                           style={{ backgroundColor: columnBgColors[i] || '#ffffff' }}
                         >
                           <BlockRenderer block={block.children[i]} isNested={true} />
