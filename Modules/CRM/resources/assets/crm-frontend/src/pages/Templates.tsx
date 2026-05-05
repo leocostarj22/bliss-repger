@@ -12,12 +12,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Trash2, Edit, Loader2, Copy } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Plus, Trash2, Edit, Eye, Loader2, Copy, Monitor, Smartphone } from 'lucide-react';
 import { EmailTemplate } from '@/types';
 import { useToast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { playSound } from '@/lib/utils';
+import { cn, playSound } from '@/lib/utils';
+import { blocksToHtml } from '@/lib/template-to-html';
 
 
 // Componente para gerar thumbnail do template (renderização abstrata melhorada)
@@ -203,6 +205,9 @@ export default function Templates() {
   const [loading, setLoading] = useState(true);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
 
   useEffect(() => {
     loadTemplates();
@@ -243,6 +248,28 @@ export default function Templates() {
 
   const handleEdit = (template: EmailTemplate) => {
     navigate(`/templates/editor/${template.id}`);
+  };
+
+  const openPreview = (template: EmailTemplate) => {
+    let blocks: any[] = [];
+    const c = template.content;
+    if (Array.isArray(c)) blocks = c;
+    else if (c && typeof c === 'object' && 'blocks' in (c as object)) blocks = (c as any).blocks || [];
+    else if (typeof c === 'string') {
+      try { blocks = JSON.parse(c); } catch { blocks = []; }
+    }
+    const body = blocksToHtml(blocks);
+    setPreviewHtml(`<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { background: #f3f4f6; }</style>
+</head>
+<body>${body}</body>
+</html>`);
+    setPreviewDevice('desktop');
+    setPreviewOpen(true);
   };
 
   const handleDuplicate = async (template: EmailTemplate) => {
@@ -325,6 +352,9 @@ export default function Templates() {
                   <Edit className="mr-2 w-4 h-4" />
                   Editar
                 </Button>
+                <Button variant="ghost" size="icon" title="Pré-visualizar" onClick={() => openPreview(template)}>
+                  <Eye className="w-4 h-4" />
+                </Button>
                 <Button variant="ghost" size="icon" title="Duplicar template" onClick={() => handleDuplicate(template)}>
                   <Copy className="w-4 h-4" />
                 </Button>
@@ -336,6 +366,47 @@ export default function Templates() {
           ))}
         </div>
       )}
+
+      {/* Preview Modal */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-5xl w-full h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="flex flex-row items-center justify-between px-4 py-3 border-b border-border shrink-0">
+            <DialogTitle>Pré-visualização</DialogTitle>
+            <div className="flex items-center bg-secondary rounded-lg p-0.5">
+              <button
+                onClick={() => setPreviewDevice('desktop')}
+                className={cn(
+                  'p-1.5 rounded-md transition-colors',
+                  previewDevice === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                )}
+                title="Desktop"
+              >
+                <Monitor className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setPreviewDevice('mobile')}
+                className={cn(
+                  'p-1.5 rounded-md transition-colors',
+                  previewDevice === 'mobile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                )}
+                title="Mobile"
+              >
+                <Smartphone className="w-4 h-4" />
+              </button>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto bg-muted flex items-start justify-center p-6">
+            <iframe
+              key={previewDevice}
+              srcDoc={previewHtml}
+              title="Preview"
+              className="bg-white shadow-xl rounded transition-all duration-300"
+              style={{ width: previewDevice === 'desktop' ? 600 : 375, minHeight: 500, border: 'none' }}
+              sandbox="allow-same-origin"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -17,6 +17,7 @@ import { PropertiesPanel } from '@/components/template-editor/PropertiesPanel';
 import { GlobalStylesPanel } from '@/components/template-editor/GlobalStylesPanel';
 import { AiTemplateDialog } from '@/components/template-editor/AiTemplateDialog';
 import { VersionHistoryDialog, saveVersion, type TemplateVersion } from '@/components/template-editor/VersionHistoryDialog';
+import { blocksToHtml } from '@/lib/template-to-html';
 
 import type { TemplateBlock, BlockType, GlobalStyles } from '@/types/template';
 import { DEFAULT_BLOCK_PROPS, DEFAULT_GLOBAL_STYLES } from '@/types/template';
@@ -59,6 +60,9 @@ export default function TemplateEditor() {
   const [aiTemplateOpen, setAiTemplateOpen] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [globalStyles, setGlobalStyles] = useState<GlobalStyles>(DEFAULT_GLOBAL_STYLES);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
 
   // History system (undo/redo)
   const blocksRef = useRef<TemplateBlock[]>([]);
@@ -406,6 +410,20 @@ export default function TemplateEditor() {
     setCanRedo(false);
   };
 
+  const openPreview = useCallback(() => {
+    const body = blocksToHtml(blocks);
+    setPreviewHtml(`<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { background: #f3f4f6; }</style>
+</head>
+<body>${body}</body>
+</html>`);
+    setPreviewOpen(true);
+  }, [blocks]);
+
   const templateJson = JSON.stringify(blocks, null, 2);
 
   return (
@@ -484,6 +502,15 @@ export default function TemplateEditor() {
             disabled={!selectedBlock}
           >
             <Eye className="w-4 h-4" /> Propriedades
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={openPreview}
+            disabled={blocks.length === 0}
+          >
+            <Eye className="w-4 h-4" /> Preview
           </Button>
           <Button
             variant="outline"
@@ -587,6 +614,47 @@ export default function TemplateEditor() {
         templateId={id}
         onRestore={handleRestore}
       />
+
+      {/* Preview Modal */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-5xl w-full h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="flex flex-row items-center justify-between px-4 py-3 border-b border-border shrink-0">
+            <DialogTitle>Preview do Template</DialogTitle>
+            <div className="flex items-center bg-secondary rounded-lg p-0.5">
+              <button
+                onClick={() => setPreviewDevice('desktop')}
+                className={cn(
+                  'p-1.5 rounded-md transition-colors',
+                  previewDevice === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                )}
+                title="Desktop"
+              >
+                <Monitor className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setPreviewDevice('mobile')}
+                className={cn(
+                  'p-1.5 rounded-md transition-colors',
+                  previewDevice === 'mobile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                )}
+                title="Mobile"
+              >
+                <Smartphone className="w-4 h-4" />
+              </button>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto bg-muted flex items-start justify-center p-6">
+            <iframe
+              key={previewDevice}
+              srcDoc={previewHtml}
+              title="Preview"
+              className="bg-white shadow-xl rounded transition-all duration-300"
+              style={{ width: previewDevice === 'desktop' ? 600 : 375, minHeight: 500, border: 'none' }}
+              sandbox="allow-same-origin"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* JSON Modal */}
       <Dialog open={jsonOpen} onOpenChange={setJsonOpen}>
